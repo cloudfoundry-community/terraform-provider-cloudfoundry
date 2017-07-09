@@ -4,47 +4,32 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const saResource = `
 
-resource "cf_service_broker" "mysql" {
-	name = "test-mysql"
-	url = "http://mysql-broker.local.pcfdev.io"
+resource "cf_service_broker" "redis" {
+	name = "test-redis"
+	url = "http://redis-broker.local.pcfdev.io"
 	username = "admin"
 	password = "admin"
 }
 
-resource "cf_service_access" "mysql-access" {
-	plan = "${cf_service_broker.mysql.service_plans["p-mysql/512mb"]}"
-	org = "%s"
-}
-`
-
-const saResourceUpdated = `
-
-resource "cf_service_broker" "mysql" {
-	name = "test-mysql"
-	url = "http://mysql-broker.local.pcfdev.io"
-	username = "admin"
-	password = "admin"
-}
-
-resource "cf_service_access" "mysql-access" {
-	plan = "${cf_service_broker.mysql.service_plans["p-mysql/1gb"]}"
+resource "cf_service_access" "redis-access" {
+	plan = "${cf_service_broker.redis.service_plans["p-redis/shared-vm"]}"
 	org = "%s"
 }
 `
 
 func TestAccServiceAccess_normal(t *testing.T) {
 
-	deleteMySQLServiceBroker("p-mysql")
+	deleteServiceBroker("p-redis")
 
 	var servicePlanAccessGUID string
-	ref := "cf_service_access.mysql-access"
+	ref := "cf_service_access.redis-access"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -55,20 +40,6 @@ func TestAccServiceAccess_normal(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(saResource, defaultPcfDevOrgID()),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckServiceAccessExists(ref,
-							func(guid string) {
-								servicePlanAccessGUID = guid
-							}),
-						resource.TestCheckResourceAttrSet(
-							ref, "plan"),
-						resource.TestCheckResourceAttr(
-							ref, "org", defaultPcfDevOrgID()),
-					),
-				},
-
-				resource.TestStep{
-					Config: fmt.Sprintf(saResourceUpdated, defaultPcfDevOrgID()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceAccessExists(ref,
 							func(guid string) {

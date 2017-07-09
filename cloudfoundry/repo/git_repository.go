@@ -2,6 +2,7 @@ package repo
 
 import (
 	"fmt"
+	"sync"
 
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -18,6 +19,8 @@ const (
 type GitRepository struct {
 	repoPath string
 	gitRepo  *git.Repository
+
+	mutex *sync.Mutex
 }
 
 // GetPath -
@@ -27,6 +30,9 @@ func (r *GitRepository) GetPath() string {
 
 // SetVersion -
 func (r *GitRepository) SetVersion(version string, versionType VersionType) (err error) {
+
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
 	var (
 		w       *git.Worktree

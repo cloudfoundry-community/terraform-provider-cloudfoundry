@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
@@ -33,17 +34,23 @@ type Repository interface {
 // RepoManager -
 type RepoManager struct {
 	workspace string
+
+	gitMutex *sync.Mutex
 }
 
 // NewRepoManager -
 func NewRepoManager(workspace string) *RepoManager {
 	return &RepoManager{
 		workspace: workspace,
+		gitMutex:  &sync.Mutex{},
 	}
 }
 
 // GetGitRepository -
 func (rm *RepoManager) GetGitRepository(repoURL string, user, password, privateKey *string) (repo Repository, err error) {
+
+	rm.gitMutex.Lock()
+	defer rm.gitMutex.Unlock()
 
 	var r *git.Repository
 
@@ -108,6 +115,7 @@ func (rm *RepoManager) GetGitRepository(repoURL string, user, password, privateK
 	repo = &GitRepository{
 		repoPath: p,
 		gitRepo:  r,
+		mutex:    rm.gitMutex,
 	}
 	return
 }

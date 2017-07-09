@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const userOrgRoleAssoc = `
 
 resource "cf_user" "u" {
-    name = "user"
+    name = "user@acme.com"
 }
 resource "cf_org" "o1" {
     name = "org1"
@@ -80,7 +80,7 @@ resource "cf_user_org_role" "u" {
 const userOrgRoleAssocUpdate = `
 
 resource "cf_user" "u" {
-    name = "user"
+    name = "user@acme.com"
 }
 resource "cf_org" "o1" {
     name = "org1"
@@ -148,7 +148,7 @@ resource "cf_user_org_role" "u" {
 const userOrgRoleAssocDeleted = `
 
 resource "cf_user" "u" {
-    name = "user"
+    name = "user@acme.com"
 }
 resource "cf_org" "o1" {
     name = "org1"
@@ -179,7 +179,7 @@ resource "cf_org" "o8" {
 func TestAccUserOrgRoleAssoc_normal(t *testing.T) {
 
 	ref := "cf_user_org_role.u"
-	username := "user"
+	username := "user@acme.com"
 
 	resource.Test(t,
 		resource.TestCase{

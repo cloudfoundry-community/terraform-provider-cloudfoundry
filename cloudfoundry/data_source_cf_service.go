@@ -5,8 +5,8 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/models"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func dataSourceService() *schema.Resource {
@@ -56,6 +56,9 @@ func dataSourceServiceRead(d *schema.ResourceData, meta interface{}) (err error)
 		service, err = sm.FindServiceByName(name)
 	} else {
 		service, err = sm.FindSpaceService(name, space)
+	}
+	if err != nil {
+		return err
 	}
 
 	d.SetId(service.GUID)

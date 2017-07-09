@@ -6,10 +6,10 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/errors"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/kr/pretty"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const appResourceSpringMusic = `
@@ -50,8 +50,7 @@ resource "cf_app" "spring-music" {
 	name = "spring-music"
 	space = "${data.cf_space.space.id}"
 	memory = "512"
-	//url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
-	url = "file:///Users/msamaratunga/tmp/spring-music.war"
+	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
 		service_instance = "${cf_service_instance.db.id}"
@@ -117,8 +116,7 @@ resource "cf_app" "spring-music" {
 	memory = "768"
 	disk_quota = "1024"
 
-	//url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
-	url = "file:///Users/msamaratunga/tmp/spring-music.war"
+	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
 		service_instance = "${cf_service_instance.db.id}"

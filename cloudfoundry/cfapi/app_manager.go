@@ -293,13 +293,13 @@ func (am *AppManager) StartApp(appID string, timeout time.Duration) (err error) 
 			return
 		}
 
-		err = am.waitForAppToStart(app, timeout)
+		err = am.WaitForAppToStart(app, timeout)
 	}
 	return
 }
 
-// waitForAppToStart -
-func (am *AppManager) waitForAppToStart(app CCApp, timeout time.Duration) (err error) {
+// WaitForAppToStart -
+func (am *AppManager) WaitForAppToStart(app CCApp, timeout time.Duration) (err error) {
 
 	am.log.UI.Say("Waiting for app %s to start.", terminal.EntityNameColor(app.Name))
 
@@ -370,12 +370,12 @@ func (am *AppManager) RestageApp(appID string, timeout time.Duration) (err error
 	app := resource.Entity
 	app.ID = resource.Metadata.GUID
 
-	err = am.waitForAppToStage(app, timeout)
+	err = am.WaitForAppToStage(app, timeout)
 	return
 }
 
-// waitForAppToStage -
-func (am *AppManager) waitForAppToStage(app CCApp, timeout time.Duration) (err error) {
+// WaitForAppToStage -
+func (am *AppManager) WaitForAppToStage(app CCApp, timeout time.Duration) (err error) {
 
 	am.log.UI.Say("Waiting for app %s to finish staging.", terminal.EntityNameColor(app.Name))
 

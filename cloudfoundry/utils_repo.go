@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/user"
 
-	"github.com/hashicorp/terraform/builtin/providers/cf/repo"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/repo"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 

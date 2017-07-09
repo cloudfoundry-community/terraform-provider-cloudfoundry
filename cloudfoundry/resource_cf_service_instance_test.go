@@ -6,9 +6,9 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/errors"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const serviceInstanceResourceCreate = `
@@ -21,18 +21,19 @@ data "cf_space" "space" {
 	org = "${data.cf_org.org.id}"
 }
 
-data "cf_service" "redis" {
-    name = "p-redis"
+data "cf_service" "mysql" {
+    name = "p-mysql"
 }
-data "cf_service_plan" "redis" {
-    name = "shared-vm"
-    service = "${data.cf_service.redis.id}"
+data "cf_service_plan" "mysql" {
+    name = "1gb"
+    service = "${data.cf_service.mysql.id}"
 }
 
-resource "cf_service_instance" "redis1" {
-	name = "redis1"
-    space = "${cf_space.space.id}"
-    servicePlan = "${data.cf_service_plan.redis.id}"
+resource "cf_service_instance" "mysql" {
+	name = "mysql"
+    space = "${data.cf_space.space.id}"
+    servicePlan = "${data.cf_service_plan.mysql.id}"
+	tags = [ "tag-1" , "tag-2" ]
 }
 `
 
@@ -46,31 +47,31 @@ data "cf_space" "space" {
 	org = "${data.cf_org.org.id}"
 }
 
-data "cf_service" "redis" {
-    name = "p-redis"
+data "cf_service" "mysql" {
+    name = "p-mysql"
 }
-data "cf_service_plan" "redis" {
-    name = "shared-vm"
-    service = "${data.cf_service.redis.id}"
+data "cf_service_plan" "mysql" {
+    name = "1gb"
+    service = "${data.cf_service.mysql.id}"
 }
 
-resource "cf_service_instance" "redis1" {
-	name = "redis-new-name"
-    space = "${cf_space.space.id}"
-    servicePlan = "${data.cf_service_plan.redis.id}"
-	tags = [ "redis" , "data-grid" ]
+resource "cf_service_instance" "mysql" {
+	name = "mysql-updated"
+    space = "${data.cf_space.space.id}"
+    servicePlan = "${data.cf_service_plan.mysql.id}"
+	tags = [ "tag-2", "tag-3", "tag-4" ]
 }
 `
 
 func TestAccServiceInstance_normal(t *testing.T) {
 
-	ref := "cf_service_instance.redis1"
+	ref := "cf_service_instance.mysql"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceInstanceDestroyed("redis1", "cf_space.space1"),
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"mysql", "mysql-updated"}, "data.cf_space.space"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -78,9 +79,13 @@ func TestAccServiceInstance_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "redis1"),
-						resource.TestCheckNoResourceAttr(
-							ref, "tags"),
+							ref, "name", "mysql"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.#", "2"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.0", "tag-1"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.1", "tag-2"),
 					),
 				},
 
@@ -89,13 +94,15 @@ func TestAccServiceInstance_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "redis-new-name"),
+							ref, "name", "mysql-updated"),
 						resource.TestCheckResourceAttr(
-							ref, "tags.#", "2"),
+							ref, "tags.#", "3"),
 						resource.TestCheckResourceAttr(
-							ref, "tags.0", "redis"),
+							ref, "tags.0", "tag-2"),
 						resource.TestCheckResourceAttr(
-							ref, "tags.1", "data-grid"),
+							ref, "tags.1", "tag-3"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.2", "tag-4"),
 					),
 				},
 			},
@@ -135,7 +142,7 @@ func testAccCheckServiceInstanceExists(resource string) resource.TestCheckFunc {
 	}
 }
 
-func testAccCheckServiceInstanceDestroyed(name string, spaceResource string) resource.TestCheckFunc {
+func testAccCheckServiceInstanceDestroyed(names []string, spaceResource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
@@ -146,17 +153,21 @@ func testAccCheckServiceInstanceDestroyed(name string, spaceResource string) res
 			return fmt.Errorf("space '%s' not found in terraform state", spaceResource)
 		}
 
-		session.Log.DebugMessage("checking ServiceInstance is Destroyed %s", name)
+		for _, n := range names {
 
-		if _, err := session.ServiceManager().FindServiceInstance(name, rs.Primary.ID); err != nil {
-			switch err.(type) {
-			case *errors.ModelNotFoundError:
-				return nil
+			session.Log.DebugMessage("checking ServiceInstance is Destroyed %s", n)
 
-			default:
-				return err
+			if _, err := session.ServiceManager().FindServiceInstance(n, rs.Primary.ID); err != nil {
+				switch err.(type) {
+				case *errors.ModelNotFoundError:
+					return nil
+
+				default:
+					break
+				}
 			}
+			return fmt.Errorf("service instance with name '%s' still exists in cloud foundry", n)
 		}
-		return fmt.Errorf("service instance with name '%s' still exists in cloud foundry", name)
+		return nil
 	}
 }

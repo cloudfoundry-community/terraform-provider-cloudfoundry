@@ -6,16 +6,16 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/errors"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const sbResource = `
 
-resource "cf_service_broker" "mysql" {
-	name = "test-mysql"
-	url = "http://mysql-broker.local.pcfdev.io"
+resource "cf_service_broker" "redis" {
+	name = "test-redis"
+	url = "http://redis-broker.local.pcfdev.io"
 	username = "admin"
 	password = "admin"
 }
@@ -23,9 +23,9 @@ resource "cf_service_broker" "mysql" {
 
 const sbResourceUpdate = `
 
-resource "cf_service_broker" "mysql" {
-	name = "test-mysql-renamed"
-	url = "http://mysql-broker.local.pcfdev.io"
+resource "cf_service_broker" "redis" {
+	name = "test-redis-renamed"
+	url = "http://redis-broker.local.pcfdev.io"
 	username = "admin"
 	password = "admin"
 }
@@ -33,15 +33,15 @@ resource "cf_service_broker" "mysql" {
 
 func TestAccServiceBroker_normal(t *testing.T) {
 
-	deleteMySQLServiceBroker("p-mysql")
+	deleteServiceBroker("p-redis")
 
-	ref := "cf_service_broker.mysql"
+	ref := "cf_service_broker.redis"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceBrokerDestroyed("test-mysql"),
+			CheckDestroy: testAccCheckServiceBrokerDestroyed("test-redis"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -49,15 +49,13 @@ func TestAccServiceBroker_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceBrokerExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "test-mysql"),
+							ref, "name", "test-redis"),
 						resource.TestCheckResourceAttr(
-							ref, "url", "http://mysql-broker.local.pcfdev.io"),
+							ref, "url", "http://redis-broker.local.pcfdev.io"),
 						resource.TestCheckResourceAttr(
 							ref, "username", "admin"),
 						resource.TestCheckResourceAttrSet(
-							ref, "service_plans.p-mysql/512mb"),
-						resource.TestCheckResourceAttrSet(
-							ref, "service_plans.p-mysql/1gb"),
+							ref, "service_plans.p-redis/shared-vm"),
 					),
 				},
 
@@ -66,7 +64,7 @@ func TestAccServiceBroker_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceBrokerExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "test-mysql-renamed"),
+							ref, "name", "test-redis-renamed"),
 					),
 				},
 			},

@@ -12,10 +12,10 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/terminal"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
-	"github.com/hashicorp/terraform/builtin/providers/cf/repo"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/repo"
 )
 
 func resourceApp() *schema.Resource {
@@ -615,8 +615,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 				return
 			}
 		}
+	} else if restage {
+		err = am.WaitForAppToStart(app, timeout)
 	}
-
 	return
 }
 

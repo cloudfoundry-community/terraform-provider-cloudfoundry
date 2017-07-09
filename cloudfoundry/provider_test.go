@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 var testAccProviders map[string]terraform.ResourceProvider
@@ -141,7 +141,7 @@ func defaultPcfDevSpaceID() string {
 	return pcfDevSpaceID
 }
 
-func deleteMySQLServiceBroker(name string) {
+func deleteServiceBroker(name string) {
 
 	session := testSession()
 	sm := session.ServiceManager()

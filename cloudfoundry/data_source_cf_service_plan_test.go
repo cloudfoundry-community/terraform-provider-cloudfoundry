@@ -4,25 +4,25 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const servicePlanDataResource = `
 
-data "cf_service" "redis" {
-    name = "p-redis"
+data "cf_service" "mysql" {
+    name = "p-mysql"
 }
-data "cf_service_plan" "redis" {
-    name = "shared-vm"
-	service = "${data.cf_service.redis.id}"
+data "cf_service_plan" "mysql" {
+    name = "512mb"
+	service = "${data.cf_service.mysql.id}"
 }
 `
 
 func TestAccDataSourceServicePlan_normal(t *testing.T) {
 
-	ref := "data.cf_service_plan.redis"
+	ref := "data.cf_service_plan.mysql"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -35,7 +35,7 @@ func TestAccDataSourceServicePlan_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceServicePlanExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "shared-vm"),
+							ref, "name", "512mb"),
 					),
 				},
 			},

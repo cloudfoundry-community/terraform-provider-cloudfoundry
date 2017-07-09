@@ -6,9 +6,9 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/errors"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const routeResource = `
@@ -24,7 +24,7 @@ data "cf_space" "space" {
 	org = "${data.cf_org.org.id}"
 }
 
-resource "cf_app" "test-app" {
+resource "cf_app" "test-app-8080" {
 	name = "test-app"
 	space = "${data.cf_space.space.id}"
 	command = "test-app --ports=8080"
@@ -33,13 +33,13 @@ resource "cf_app" "test-app" {
 		url = "https://github.com/mevansam/test-app.git"
 	}
 }
-resource "cf_route" "test-app" {
+resource "cf_route" "test-app-route" {
 	domain = "${data.cf_domain.local.id}"
 	space = "${data.cf_space.space.id}"
-	hostname = "test-app"
+	hostname = "test-app-single"
 
 	target {
-		app = "${cf_app.test-app.id}"
+		app = "${cf_app.test-app-8080.id}"
 	}
 }
 `
@@ -57,8 +57,8 @@ data "cf_space" "space" {
 	org = "${data.cf_org.org.id}"
 }
 
-resource "cf_app" "test-app" {
-	name = "test-app"
+resource "cf_app" "test-app-8080" {
+	name = "test-app-8080"
 	space = "${data.cf_space.space.id}"
 	command = "test-app --ports=8080"
 
@@ -86,7 +86,7 @@ resource "cf_app" "test-app-9999" {
 		url = "https://github.com/mevansam/test-app.git"
 	}
 }
-resource "cf_route" "test-app" {
+resource "cf_route" "test-app-route" {
 	domain = "${data.cf_domain.local.id}"
 	space = "${data.cf_space.space.id}"
 	hostname = "test-app-multi"
@@ -100,20 +100,20 @@ resource "cf_route" "test-app" {
 		port = 8888
 	}
 	target {
-		app = "${cf_app.test-app.id}"
+		app = "${cf_app.test-app-8080.id}"
 	}
 }
 `
 
 func TestAccRoute_normal(t *testing.T) {
 
-	refRoute := "cf_route.test-app"
+	refRoute := "cf_route.test-app-route"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckRouteDestroyed([]string{"test-app", "test-app-updated"}, "local.pcfdev.io"),
+			CheckDestroy: testAccCheckRouteDestroyed([]string{"test-app-single", "test-app-multi"}, "local.pcfdev.io"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -122,13 +122,13 @@ func TestAccRoute_normal(t *testing.T) {
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
 							responses := []string{"8080"}
-							if err = assertHTTPResponse("http://test-app.local.pcfdev.io/port", 200, &responses); err != nil {
+							if err = assertHTTPResponse("http://test-app-single.local.pcfdev.io/port", 200, &responses); err != nil {
 								return err
 							}
 							return
 						}),
 						resource.TestCheckResourceAttr(
-							refRoute, "hostname", "test-app"),
+							refRoute, "hostname", "test-app-single"),
 						resource.TestCheckResourceAttr(
 							refRoute, "target.#", "1"),
 					),
