@@ -369,6 +369,14 @@ func (um *UserManager) UpdateRoles(
 	return
 }
 
+// AddUserToOrg -
+func (um *UserManager) AddUserToOrg(userID string, orgID string) error {
+
+	return um.ccGateway.CreateResource(um.config.APIEndpoint(),
+		fmt.Sprintf("/v2/users/%s/organizations/%s", userID, orgID),
+		bytes.NewReader([]byte{}))
+}
+
 // RemoveUserFromOrg -
 func (um *UserManager) RemoveUserFromOrg(userID string, orgID string) error {
 
