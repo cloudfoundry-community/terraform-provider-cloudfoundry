@@ -282,6 +282,39 @@ func (s *Session) AppManager() *AppManager {
 	return s.appManager
 }
 
+// GetFeatureFlags -
+func (s *Session) GetFeatureFlags() (featurFlags map[string]bool, err error) {
+
+	featurFlags = make(map[string]bool)
+
+	response := []interface{}{}
+	if err = s.ccGateway.GetResource(
+		fmt.Sprintf("%s/v2/config/feature_flags", s.config.APIEndpoint()),
+		&response); err != nil {
+		return
+	}
+	for _, v := range response {
+		m := v.(map[string]interface{})
+		featurFlags[m["name"].(string)] = m["enabled"].(bool)
+	}
+	return
+}
+
+// SetFeatureFlags -
+func (s *Session) SetFeatureFlags(featureFlags map[string]bool) (err error) {
+
+	for k, v := range featureFlags {
+
+		if err = s.ccGateway.UpdateResource(s.config.APIEndpoint(),
+			fmt.Sprintf("/v2/config/feature_flags/%s", k),
+			strings.NewReader(fmt.Sprintf("{\"enabled\":%t}", v))); err != nil {
+
+			return
+		}
+	}
+	return
+}
+
 // noopPersistor - No Op Persistor for CF CLI session
 type noopPersistor struct {
 }
