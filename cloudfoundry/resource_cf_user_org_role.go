@@ -3,9 +3,9 @@ package cloudfoundry
 import (
 	"fmt"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func resourceUserOrgRole() *schema.Resource {
@@ -140,7 +140,7 @@ func resourceUserOrgRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 			session.Log.DebugMessage(
 				"associating user '%s' with org '%s' with role '%s'", userID, o, t)
 
-			err := om.AddUsers(o, []string{userID}, typeToOrgRoleMap[t])
+			err := om.AddUser(o, userID, typeToOrgRoleMap[t])
 			if err != nil {
 				return err
 			}
@@ -153,7 +153,7 @@ func resourceUserOrgRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 			session.Log.DebugMessage(
 				"removing user '%s's role '%s' from org '%s'", userID, t, o)
 
-			err := om.RemoveUsers(o, []string{userID}, typeToOrgRoleMap[t])
+			err := om.RemoveUser(o, userID, typeToOrgRoleMap[t])
 			if err != nil {
 				return err
 			}
@@ -181,7 +181,7 @@ func resourceUserOrgRoleDelete(d *schema.ResourceData, meta interface{}) error {
 			t := orgRole["type"].(string)
 			o := orgRole["org"].(string)
 
-			err := om.RemoveUsers(o, []string{userID}, typeToOrgRoleMap[t])
+			err := om.RemoveUser(o, userID, typeToOrgRoleMap[t])
 			if err != nil {
 				return err
 			}
