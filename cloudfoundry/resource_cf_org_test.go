@@ -6,9 +6,9 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/errors"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const orgResource = `
@@ -26,10 +26,30 @@ resource "cf_quota" "runaway" {
     total_services = -1
     total_route_ports = 0
 }
+resource "cf_user" "u1" {
+    name = "test-user1@acme.com"
+}
+resource "cf_user" "u2" {
+    name = "test-user2@acme.com"
+}
+resource "cf_user" "u3" {
+    name = "test-user3@acme.com"
+}
+resource "cf_user" "u4" {
+    name = "test-user4@acme.com"
+}
+resource "cf_user" "u5" {
+    name = "test-user5@acme.com"
+}
+
 resource "cf_org" "org1" {
 
 	name = "organization-one"
     quota = "${cf_quota.runaway.id}"
+
+	managers = [ "${cf_user.u1.id}", "${cf_user.u2.id}" ]
+	billing_managers = [ "${cf_user.u3.id}", "${cf_user.u4.id}" ]
+	auditors = [ "${cf_user.u5.id}" ]
 }
 `
 
@@ -48,10 +68,30 @@ resource "cf_quota" "runaway" {
     total_services = -1
     total_route_ports = 0
 }
+resource "cf_user" "u1" {
+    name = "test-user1@acme.com"
+}
+resource "cf_user" "u2" {
+    name = "test-user2@acme.com"
+}
+resource "cf_user" "u3" {
+    name = "test-user3@acme.com"
+}
+resource "cf_user" "u4" {
+    name = "test-user4@acme.com"
+}
+resource "cf_user" "u5" {
+    name = "test-user5@acme.com"
+}
+
 resource "cf_org" "org1" {
 
 	name = "organization-one-updated"
     quota = "${data.cf_quota.default.id}"
+
+	managers = [ "${cf_user.u1.id}" ]
+	billing_managers = [ "${cf_user.u2.id}", "${cf_user.u3.id}" ]
+	auditors = [ "${cf_user.u5.id}" ]
 }
 `
 
@@ -60,6 +100,7 @@ func TestAccOrg_normal(t *testing.T) {
 	refOrg := "cf_org.org1"
 	refQuotaRunway := "cf_quota.runaway"
 	refQuotaDefault := "data.cf_quota.default"
+	refUserRemoved := "cf_user.user4"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -71,25 +112,37 @@ func TestAccOrg_normal(t *testing.T) {
 				resource.TestStep{
 					Config: orgResource,
 					Check: resource.ComposeTestCheckFunc(
-						testAccCheckOrgExists(refOrg, refQuotaRunway),
+						testAccCheckOrgExists(refOrg, refQuotaRunway, nil),
 						resource.TestCheckResourceAttr(
 							refOrg, "name", "organization-one"),
+						resource.TestCheckResourceAttr(
+							refOrg, "managers.#", "2"),
+						resource.TestCheckResourceAttr(
+							refOrg, "billing_managers.#", "2"),
+						resource.TestCheckResourceAttr(
+							refOrg, "auditors.#", "1"),
 					),
 				},
 
 				resource.TestStep{
 					Config: orgResourceUpdate,
 					Check: resource.ComposeTestCheckFunc(
-						testAccCheckOrgExists(refOrg, refQuotaDefault),
+						testAccCheckOrgExists(refOrg, refQuotaDefault, &refUserRemoved),
 						resource.TestCheckResourceAttr(
 							refOrg, "name", "organization-one-updated"),
+						resource.TestCheckResourceAttr(
+							refOrg, "managers.#", "1"),
+						resource.TestCheckResourceAttr(
+							refOrg, "billing_managers.#", "2"),
+						resource.TestCheckResourceAttr(
+							refOrg, "auditors.#", "1"),
 					),
 				},
 			},
 		})
 }
 
-func testAccCheckOrgExists(resOrg, resQuota string) resource.TestCheckFunc {
+func testAccCheckOrgExists(resOrg, resQuota string, refUserRemoved *string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) (err error) {
 
@@ -127,6 +180,19 @@ func testAccCheckOrgExists(resOrg, resQuota string) resource.TestCheckFunc {
 		if org.QuotaGUID != rs.Primary.ID {
 			return fmt.Errorf("expected org '%s' to be associated with quota '%s' but it was not", resOrg, resQuota)
 		}
+
+		for t, r := range orgRoleMap {
+			var users []interface{}
+			if users, err = om.ListUsers(id, r); err != nil {
+				return
+			}
+			if err = assertSetEquals(attributes, t, users); err != nil {
+				return
+			}
+		}
+
+		err = testUserRemovedFromOrg(refUserRemoved, id, om, s)
+
 		return
 	}
 }
@@ -146,4 +212,37 @@ func testAccCheckOrgDestroyed(orgname string) resource.TestCheckFunc {
 		}
 		return fmt.Errorf("org with name '%s' still exists in cloud foundry", orgname)
 	}
+}
+
+func testUserRemovedFromOrg(refUserRemoved *string, orgID string,
+	om *cfapi.OrgManager, s *terraform.State) (err error) {
+
+	if refUserRemoved != nil {
+
+		rs, found := s.RootModule().Resources[*refUserRemoved]
+		if !found {
+			err = fmt.Errorf("expected user resource '%s' was not found", *refUserRemoved)
+			return
+		}
+
+		var users []interface{}
+		if users, err = om.ListUsers(orgID, cfapi.OrgRoleMember); err != nil {
+			return
+		}
+
+		found = false
+		for _, u := range users {
+			if rs.Primary.ID == u {
+				found = true
+				break
+			}
+		}
+		if found {
+			err = fmt.Errorf(
+				"expected user resource '%s' with if '%s' to be removed from the organization but it was not",
+				*refUserRemoved, rs.Primary.ID)
+			return
+		}
+	}
+	return
 }
