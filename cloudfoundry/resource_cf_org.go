@@ -3,8 +3,8 @@ package cloudfoundry
 import (
 	"fmt"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func resourceOrg() *schema.Resource {
@@ -27,8 +27,32 @@ func resourceOrg() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"managers": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      resourceStringHash,
+			},
+			"billing_managers": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      resourceStringHash,
+			},
+			"auditors": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      resourceStringHash,
+			},
 		},
 	}
+}
+
+var orgRoleMap = map[string]cfapi.OrgRole{
+	"managers":         cfapi.OrgRoleManager,
+	"billing_managers": cfapi.OrgRoleBillingManager,
+	"auditors":         cfapi.OrgRoleAuditor,
 }
 
 func resourceOrgCreate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -75,6 +99,15 @@ func resourceOrgRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	d.Set("name", org.Name)
 	d.Set("quota", org.QuotaGUID)
+
+	var users []interface{}
+	for t, r := range orgRoleMap {
+		if users, err = om.ListUsers(id, r); err != nil {
+			return
+		}
+		d.Set(t, schema.NewSet(resourceStringHash, users))
+	}
+
 	return
 }
 
@@ -114,6 +147,23 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
+	for t, r := range orgRoleMap {
+		old, new := d.GetChange(t)
+		remove, add := getListChanges(old, new)
+
+		for _, uid := range remove {
+			session.Log.DebugMessage("Removing user '%s' from organization '%s' with role '%s'.", uid, id, r)
+			if err = om.RemoveUser(id, uid, r); err != nil {
+				return
+			}
+		}
+		for _, uid := range add {
+			session.Log.DebugMessage("Adding user '%s' to organization '%s' with role '%s'.", uid, id, r)
+			if err = om.AddUser(id, uid, r); err != nil {
+				return
+			}
+		}
+	}
 	return
 }
 
@@ -124,6 +174,21 @@ func resourceOrgDelete(d *schema.ResourceData, meta interface{}) (err error) {
 		return fmt.Errorf("client is nil")
 	}
 
-	err = session.OrgManager().DeleteOrg(d.Id())
+	om := session.OrgManager()
+	sm := session.SpaceManager()
+
+	id := d.Id()
+
+	var spaces []cfapi.CCSpace
+	if spaces, err = sm.FindSpacesInOrg(id); err != nil {
+		return
+	}
+	for _, s := range spaces {
+		if err = sm.DeleteSpace(s.ID); err != nil {
+			return
+		}
+	}
+
+	err = om.DeleteOrg(d.Id())
 	return
 }

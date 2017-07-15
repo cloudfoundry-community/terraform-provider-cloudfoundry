@@ -27,6 +27,9 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the Org in Cloud Foundry
 * `quota` - (Optional) The quota or plan to be given to this Org
+* `managers` - (Optional) List of users to assign [OrgManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to
+* `billing_managers` - (Optional) List of users to assign [BillingManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to
+* `auditors` - (Optional) List of users to assign [OrgAuditor](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to
 
 ## Attributes Reference
 

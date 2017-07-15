@@ -146,62 +146,55 @@ func (om *OrgManager) UpdateOrg(org CCOrg) (err error) {
 	return
 }
 
-// AddUsers -
-func (om *OrgManager) AddUsers(orgID string, userIDs []string, role OrgRole) (err error) {
+// AddUser -
+func (om *OrgManager) AddUser(orgID string, userID string, role OrgRole) (err error) {
 
-	for _, uid := range userIDs {
-		err = om.ccGateway.UpdateResource(om.apiEndpoint,
-			fmt.Sprintf("/v2/organizations/%s/%s/%s", orgID, role, uid),
-			strings.NewReader(""))
-	}
+	err = om.ccGateway.UpdateResource(om.apiEndpoint,
+		fmt.Sprintf("/v2/organizations/%s/%s/%s", orgID, role, userID),
+		strings.NewReader(""))
 	return
 }
 
-// RemoveUsers -
-func (om *OrgManager) RemoveUsers(orgID string, userIDs []string, role OrgRole) (err error) {
+// RemoveUser -
+func (om *OrgManager) RemoveUser(orgID string, userID string, role OrgRole) (err error) {
 
-	for _, uid := range userIDs {
+	err = om.ccGateway.DeleteResource(om.apiEndpoint,
+		fmt.Sprintf("/v2/organizations/%s/%s/%s", orgID, role, userID))
 
-		err = om.ccGateway.DeleteResource(om.apiEndpoint,
-			fmt.Sprintf("/v2/organizations/%s/%s/%s", orgID, role, uid))
+	if err != nil {
+		if strings.HasSuffix(err.Error(), "Please delete the user associations for your spaces in the org.") {
 
-		if err != nil {
-			if strings.HasSuffix(err.Error(), "Please delete the user associations for your spaces in the org.") {
+			om.log.DebugMessage("removing user '%s' from all spaces associated with org '%s'", userID, role, orgID)
 
-				om.log.DebugMessage("removing user '%s' from all spaces associated with org '%s'", uid, role, orgID)
+			spaceRepo := spaces.NewCloudControllerSpaceRepository(om.config, om.ccGateway)
+			err = spaceRepo.ListSpacesFromOrg(orgID, func(space models.Space) bool {
 
-				spaceRepo := spaces.NewCloudControllerSpaceRepository(om.config, om.ccGateway)
-				err = spaceRepo.ListSpacesFromOrg(orgID, func(space models.Space) bool {
-
-					om.log.DebugMessage("Deleting user '%s' from space '%s'", uid, space.GUID)
-					err = om.ccGateway.DeleteResource(om.apiEndpoint,
-						fmt.Sprintf("/v2/users/%s/spaces/%s", uid, space.GUID))
-					if err != nil {
-						om.log.DebugMessage("WARNING! removing user '%s' from space '%s': %s", uid, space.GUID, err.Error())
-					}
-					return true
-				})
-				if err == nil {
-
-					err = om.ccGateway.DeleteResource(om.apiEndpoint,
-						fmt.Sprintf("/v2/organizations/%s/%s/%s", orgID, role, uid))
-
-					if err != nil {
-						om.log.DebugMessage("WARNING: removing user '%s' having role '%s' from org '%s' failed: %s",
-							uid, role, orgID, err.Error())
-					}
+				om.log.DebugMessage("Deleting user '%s' from space '%s'", userID, space.GUID)
+				err = om.ccGateway.DeleteResource(om.apiEndpoint,
+					fmt.Sprintf("/v2/users/%s/spaces/%s", userID, space.GUID))
+				if err != nil {
+					om.log.DebugMessage("WARNING! removing user '%s' from space '%s': %s", userID, space.GUID, err.Error())
 				}
-				err = nil
-			} else {
-				return
+				return true
+			})
+			if err == nil {
+
+				err = om.ccGateway.DeleteResource(om.apiEndpoint,
+					fmt.Sprintf("/v2/organizations/%s/%s/%s", orgID, role, userID))
+
+				if err != nil {
+					om.log.DebugMessage("WARNING: removing user '%s' having role '%s' from org '%s' failed: %s",
+						userID, role, orgID, err.Error())
+				}
 			}
+			err = nil
 		}
 	}
 	return
 }
 
 // ListUsers -
-func (om *OrgManager) ListUsers(orgID string, role OrgRole) (userIDs []string, err error) {
+func (om *OrgManager) ListUsers(orgID string, role OrgRole) (userIDs []interface{}, err error) {
 
 	userList := &CCUserList{}
 	err = om.ccGateway.GetResource(

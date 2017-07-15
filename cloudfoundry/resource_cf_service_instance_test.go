@@ -20,19 +20,14 @@ data "cf_space" "space" {
     name = "pcfdev-space"
 	org = "${data.cf_org.org.id}"
 }
-
 data "cf_service" "mysql" {
     name = "p-mysql"
-}
-data "cf_service_plan" "mysql" {
-    name = "1gb"
-    service = "${data.cf_service.mysql.id}"
 }
 
 resource "cf_service_instance" "mysql" {
 	name = "mysql"
     space = "${data.cf_space.space.id}"
-    servicePlan = "${data.cf_service_plan.mysql.id}"
+    servicePlan = "${data.cf_service.mysql.service_plans["1gb"]}"
 	tags = [ "tag-1" , "tag-2" ]
 }
 `
@@ -46,19 +41,14 @@ data "cf_space" "space" {
     name = "pcfdev-space"
 	org = "${data.cf_org.org.id}"
 }
-
 data "cf_service" "mysql" {
     name = "p-mysql"
-}
-data "cf_service_plan" "mysql" {
-    name = "1gb"
-    service = "${data.cf_service.mysql.id}"
 }
 
 resource "cf_service_instance" "mysql" {
 	name = "mysql-updated"
     space = "${data.cf_space.space.id}"
-    servicePlan = "${data.cf_service_plan.mysql.id}"
+    servicePlan = "${data.cf_service.mysql.service_plans["512mb"]}"
 	tags = [ "tag-2", "tag-3", "tag-4" ]
 }
 `

@@ -63,7 +63,7 @@ resource "cf_users" "admin-service-user" {
     family_name_attribute = "familyName"
   }
 
-  orgs = [ "${cf_org.org1.id}" ]
+  org_pattern = ".*"
 }
 ```
 
@@ -78,6 +78,11 @@ The following arguments are supported:
 * `password` - (Optional) A common password to create for each imported user.
 * `origin` - (Optional) The user authentcation origin. By default this will be `UAA`. 
 
+* `personal_org` - (Optional) Create a personal org for each user with the same name as the username.
+  - `quota` - (Required) The ID of the quota to apply to the personal org
+
+### LDAP User Import
+
 * `ldap` - (Optional) An LDAP query to either validate users against or retrieve the list of users for bulk insertion.
   - `url` - (Required) The LDAP endpoint
   - `bind_dn` - (Required) The bind user name
@@ -88,10 +93,12 @@ The following arguments are supported:
   - `given_name_attribute` - If LDAP user then extract the user's given name from this LDAP attribute.
   - `family_name_attribute` - If LDAP user then extract the user's family name from this LDAP attribute.
 
-* `personal_org` - (Optional) Create a personal org for the user with the same name as the username.
-  - `quota` - (Required) The ID of the quota to apply to the personal org
+### Org Association
 
-* `orgs` - (Optional) List of [orgs](org.html) this users will be a associated with as '`members`'.
+Only one of the following arguments should be provided.
+
+* `orgs` - (Optional) List of [orgs](org.html) these users will be a associated with.
+* `org_pattern` - (Optional) A regex pattern for retrieving all the orgs the users should be associated with.
 
 ## Attributes Reference
 

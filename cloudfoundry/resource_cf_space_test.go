@@ -7,9 +7,9 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/errors"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const spaceResource = `
@@ -27,47 +27,17 @@ resource "cf_asg" "svc" {
 resource "cf_user" "tl" {
     name = "teamlead@acme.com"
 }
-resource "cf_user_org_role" "tl" {
-    user = "${cf_user.tl.id}"
-	role {
-		org = "${cf_org.org1.id}"
-	}
-}
 resource "cf_user" "dev1" {
     name = "developer1@acme.com"
-}
-resource "cf_user_org_role" "dev1" {
-    user = "${cf_user.dev1.id}"
-	role {
-		org = "${cf_org.org1.id}"
-	}
 }
 resource "cf_user" "dev2" {
     name = "developer2@acme.com"
 }
-resource "cf_user_org_role" "dev2" {
-    user = "${cf_user.dev2.id}"
-	role {
-		org = "${cf_org.org1.id}"
-	}
-}
 resource "cf_user" "dev3" {
     name = "developer3@acme.com"
 }
-resource "cf_user_org_role" "dev3" {
-    user = "${cf_user.dev3.id}"
-	role {
-		org = "${cf_org.org1.id}"
-	}
-}
 resource "cf_user" "adr" {
     name = "auditor@acme.com"
-}
-resource "cf_user_org_role" "adr" {
-    user = "${cf_user.adr.id}"
-	role {
-		org = "${cf_org.org1.id}"
-	}
 }
 resource "cf_org" "org1" {
 	name = "organization-one"
@@ -105,11 +75,70 @@ resource "cf_space" "space1" {
 `
 
 const spaceResourceUpdate = `
+
+data "cf_quota" "default" {
+    name = "default"
+}
+resource "cf_asg" "svc" {
+	name = "app-services"
+    rule {
+        protocol = "all"
+        destination = "192.168.100.0/24"
+    }
+}
+resource "cf_user" "tl" {
+    name = "teamlead@acme.com"
+}
+resource "cf_user" "dev1" {
+    name = "developer1@acme.com"
+}
+resource "cf_user" "dev2" {
+    name = "developer2@acme.com"
+}
+resource "cf_user" "dev3" {
+    name = "developer3@acme.com"
+}
+resource "cf_user" "adr" {
+    name = "auditor@acme.com"
+}
+resource "cf_org" "org1" {
+	name = "organization-one"
+}
+resource "cf_quota" "dev" {
+	name = "50g"
+	org = "${cf_org.org1.id}"
+    allow_paid_service_plans = true
+    instance_memory = 1024
+    total_memory = 51200
+    total_app_instances = 100
+    total_routes = 100
+    total_services = 150
+}
+
+resource "cf_space" "space1" {
+	name = "space-one-updated"
+	org = "${cf_org.org1.id}"
+	quota = "${cf_quota.dev.id}"
+	asgs = [ "${cf_asg.svc.id}" ]
+    managers = [ 
+        "${cf_user.tl.id}" 
+    ]
+    developers = [ 
+        "${cf_user.tl.id}",
+        "${cf_user.dev1.id}",
+    ]
+    auditors = [ 
+        "${cf_user.adr.id}",
+		"${cf_user.dev2.id}" 
+    ]
+	allow_ssh = true
+}
 `
 
 func TestAccSpace_normal(t *testing.T) {
 
 	ref := "cf_space.space1"
+	refUserRemoved := "cf_user.dev3"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -121,7 +150,7 @@ func TestAccSpace_normal(t *testing.T) {
 				resource.TestStep{
 					Config: spaceResource,
 					Check: resource.ComposeTestCheckFunc(
-						testAccCheckSpaceExists(ref),
+						testAccCheckSpaceExists(ref, nil),
 						resource.TestCheckResourceAttr(
 							ref, "name", "space-one"),
 						resource.TestCheckResourceAttr(
@@ -134,11 +163,28 @@ func TestAccSpace_normal(t *testing.T) {
 							ref, "auditors.#", "2"),
 					),
 				},
+
+				resource.TestStep{
+					Config: spaceResourceUpdate,
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckSpaceExists(ref, &refUserRemoved),
+						resource.TestCheckResourceAttr(
+							ref, "name", "space-one-updated"),
+						resource.TestCheckResourceAttr(
+							ref, "asgs.#", "1"),
+						resource.TestCheckResourceAttr(
+							ref, "managers.#", "1"),
+						resource.TestCheckResourceAttr(
+							ref, "developers.#", "2"),
+						resource.TestCheckResourceAttr(
+							ref, "auditors.#", "2"),
+					),
+				},
 			},
 		})
 }
 
-func testAccCheckSpaceExists(resource string) resource.TestCheckFunc {
+func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) (err error) {
 
@@ -236,6 +282,8 @@ func testAccCheckSpaceExists(resource string) resource.TestCheckFunc {
 		if err := assertSetEquals(attributes, "auditors", auditors); err != nil {
 			return err
 		}
+
+		err = testUserRemovedFromOrg(refUserRemoved, space.OrgGUID, session.OrgManager(), s)
 
 		return
 	}

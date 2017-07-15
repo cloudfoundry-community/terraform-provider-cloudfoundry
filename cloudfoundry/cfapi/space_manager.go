@@ -76,12 +76,30 @@ func newSpaceManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Lo
 }
 
 // FindSpaceInOrg -
-func (sm *SpaceManager) FindSpaceInOrg(name string, org string) (space CCSpace, err error) {
-	spaceModel, err := sm.repo.FindByNameInOrg(name, org)
+func (sm *SpaceManager) FindSpaceInOrg(name string, orgID string) (space CCSpace, err error) {
+	spaceModel, err := sm.repo.FindByNameInOrg(name, orgID)
 	space.ID = spaceModel.GUID
 	space.Name = spaceModel.Name
-	space.OrgGUID = org
+	space.OrgGUID = orgID
 	space.QuotaGUID = spaceModel.SpaceQuotaGUID
+	return
+}
+
+// FindSpacesInOrg  -
+func (sm *SpaceManager) FindSpacesInOrg(orgID string) (spaces []CCSpace, err error) {
+
+	err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint,
+		fmt.Sprintf("/v2/organizations/%s/spaces", orgID),
+		CCSpaceResource{}, func(resource interface{}) bool {
+
+			spaceResource := resource.(CCSpaceResource)
+			space := spaceResource.Entity
+			space.ID = spaceResource.Metadata.GUID
+
+			spaces = append(spaces, space)
+			return true
+		})
+
 	return
 }
 
@@ -165,24 +183,20 @@ func (sm *SpaceManager) UpdateSpace(space CCSpace, asgs []interface{}) (err erro
 	return
 }
 
-// AddUsers -
-func (sm *SpaceManager) AddUsers(spaceID string, userIDs []string, role SpaceRole) (err error) {
+// AddUser -
+func (sm *SpaceManager) AddUser(spaceID string, userID string, role SpaceRole) (err error) {
 
-	for _, uid := range userIDs {
-		err = sm.ccGateway.UpdateResource(sm.apiEndpoint,
-			fmt.Sprintf("/v2/spaces/%s/%s/%s", spaceID, role, uid),
-			strings.NewReader(""))
-	}
+	err = sm.ccGateway.UpdateResource(sm.apiEndpoint,
+		fmt.Sprintf("/v2/spaces/%s/%s/%s", spaceID, role, userID),
+		strings.NewReader(""))
 	return
 }
 
-// RemoveUsers -
-func (sm *SpaceManager) RemoveUsers(spaceID string, userIDs []string, role SpaceRole) (err error) {
+// RemoveUser -
+func (sm *SpaceManager) RemoveUser(spaceID string, userID string, role SpaceRole) (err error) {
 
-	for _, uid := range userIDs {
-		err = sm.ccGateway.DeleteResource(sm.apiEndpoint,
-			fmt.Sprintf("/v2/spaces/%s/%s/%s", spaceID, role, uid))
-	}
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint,
+		fmt.Sprintf("/v2/spaces/%s/%s/%s", spaceID, role, userID))
 	return
 }
 
