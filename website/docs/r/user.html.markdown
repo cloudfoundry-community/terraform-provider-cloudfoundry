@@ -25,8 +25,6 @@ resource "cf_user" "admin-service-user" {
     family_name = "Doe"
 
     groups = [ "cloud_controller.admin", "scim.read", "scim.write" ]
-
-    orgs = [ "${cf_org.org1.id}", "${cf_org.org2.id}" ]
 }
 ```
 
