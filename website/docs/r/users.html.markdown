@@ -6,13 +6,13 @@ description: |-
   Provides a Cloud Foundry bulk user import mport resource.
 ---
 
+> TO BE IMPLEMENTED
+
 # cf\_users
 
 Provides a Cloud Foundry resource for bulk importing users.
 
 ## Example Usage
-
-> TO BE IMPLEMENTED
 
 The following example imports users in bulk and validates each using the given LDAP query. Any user that does not validate against the LDAP query will be added as a UAA user.
 

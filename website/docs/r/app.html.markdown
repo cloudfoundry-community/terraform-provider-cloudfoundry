@@ -78,6 +78,9 @@ Modifying this argument will cause the application to be restaged.
 * `route` - (Optional) Configures how the application or service will be accessed. This can be also used to define a blue-green app deployment strategy. When doing a blue-green deployment the actual name of the application will be timestamped to differentiate between the current live application and the more recent staged application.
 
   - `default_route` - (Optional, String) The GUID of the default route where the application will be available once deployed.
+
+  > TO BE IMPLEMENTED
+
   - `stage_route` - (Optional, String) The GUID of the route where the staged application will be available.
   - `live_route` - (Optional, String) The GUID of the route where the live application will be available.
   - `validation_script` - (Optional, String) The validation script to execute against the stage application before mapping the live route to the staged application.
