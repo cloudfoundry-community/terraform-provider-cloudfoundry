@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
-const spaceDataResource = `
+const spaceDataResource1 = `
 
 resource "cf_org" "org1" {
 	name = "organization-one"
@@ -25,9 +25,18 @@ data "cf_space" "myspace" {
 }
 `
 
+const spaceDataResource2 = `
+
+data "cf_space" "default" {
+    name = "pcfdev-space"
+	org_name = "pcfdev-org"
+}
+`
+
 func TestAccDataSourceSpace_normal(t *testing.T) {
 
-	ref := "data.cf_space.myspace"
+	ref1 := "data.cf_space.myspace"
+	ref2 := "data.cf_space.default"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -36,11 +45,28 @@ func TestAccDataSourceSpace_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: spaceDataResource,
+					Config: spaceDataResource1,
 					Check: resource.ComposeTestCheckFunc(
-						checkDataSourceSpaceExists(ref),
+						checkDataSourceSpaceExists(ref1),
 						resource.TestCheckResourceAttr(
-							ref, "name", "space-one"),
+							ref1, "name", "space-one"),
+						resource.TestCheckResourceAttr(
+							ref1, "org_name", "organization-one"),
+						resource.TestCheckResourceAttrSet(
+							ref1, "org"),
+					),
+				},
+
+				resource.TestStep{
+					Config: spaceDataResource2,
+					Check: resource.ComposeTestCheckFunc(
+						checkDataSourceSpaceExists(ref2),
+						resource.TestCheckResourceAttr(
+							ref2, "name", "pcfdev-space"),
+						resource.TestCheckResourceAttr(
+							ref2, "org_name", "pcfdev-org"),
+						resource.TestCheckResourceAttr(
+							ref2, "org", defaultPcfDevOrgID()),
 					),
 				},
 			},

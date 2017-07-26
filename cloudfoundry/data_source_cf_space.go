@@ -3,8 +3,8 @@ package cloudfoundry
 import (
 	"fmt"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func dataSourceSpace() *schema.Resource {
@@ -19,9 +19,21 @@ func dataSourceSpace() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"org_name": &schema.Schema{
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				ConflictsWith: []string{"org"},
+			},
 			"org": &schema.Schema{
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				ConflictsWith: []string{"org_name"},
+			},
+			"quota": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true, // made required because it is not possible to look up a space with an org
+				Computed: true,
 			},
 		},
 	}
@@ -34,24 +46,38 @@ func dataSourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 		return fmt.Errorf("client is nil")
 	}
 
+	om := session.OrgManager()
 	sm := session.SpaceManager()
 
 	var (
-		name  string
-		org   string
+		v  interface{}
+		ok bool
+
+		name string
+
+		org   cfapi.CCOrg
 		space cfapi.CCSpace
 	)
 
 	name = d.Get("name").(string)
-	org = d.Get("org").(string)
-	space, err = sm.FindSpaceInOrg(name, org)
+
+	if v, ok = d.GetOk("org"); ok {
+		if org, err = om.ReadOrg(v.(string)); err != nil {
+			return
+		}
+	} else if v, ok = d.GetOk("org_name"); ok {
+		if org, err = om.FindOrg(v.(string)); err != nil {
+			return
+		}
+	}
+	space, err = sm.FindSpaceInOrg(name, org.ID)
 	if err != nil {
 		return
 	}
 
 	d.SetId(space.ID)
-	d.Set("name", space.Name)
-	d.Set("org", space.OrgGUID)
+	d.Set("org_name", org.Name)
+	d.Set("org", org.ID)
 	d.Set("quota", space.QuotaGUID)
 
 	return
