@@ -25,15 +25,18 @@ data "cf_space" "s" {
 
 The following arguments are supported:
 
-* `name` - (Required) The name of the space to look up
-* `org` - (Required) GUID of the organization 
+* `name` - (Required) The name of the space to look up.
+
+One of the following arguments must be provided.
+
+* `org` - (Optional) GUID of the organization the space belongs to.
+* `org_name` - (Optional) Name of the organization the space belongs to.
 
 ## Attributes Reference
 
 The following attributes are exported:
 
 * `id` - The GUID of the space
-* `name` - The name of the space 
-* `org` - The GUID of the org it belongs to
+* `org` - The GUID of the org the space belongs to
+* `org_name` - The name of the org the space belongs to
 * `quota`- The GUID of the space's quota
-
