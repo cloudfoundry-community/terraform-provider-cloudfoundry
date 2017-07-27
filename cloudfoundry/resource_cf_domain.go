@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func resourceDomain() *schema.Resource {

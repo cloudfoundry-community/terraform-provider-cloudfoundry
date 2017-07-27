@@ -3,8 +3,8 @@ package cloudfoundry
 import (
 	"fmt"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func dataSourceRouterGroup() *schema.Resource {
