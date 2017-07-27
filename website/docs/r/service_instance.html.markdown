@@ -22,7 +22,7 @@ data "cf_service" "redis" {
 resource "cf_service_instance" "redis1" {
   name = "pricing-grid"
   space = "${cf_space.dev.id}"
-  servicePlan = "${data.cf_service.service_plans.redis.shared-vm}"
+  servicePlan = "${data.cf_service.redis.service_plans["shared-vm"]}"
 }
 ```
 
