@@ -3,20 +3,17 @@ sudo: false
 language: go
 go:
 - 1.8.x
-
 go_import_path: github.com/terraform-providers/terraform-provider-cloudfoundry
-
 install:
-# This script is used by the Travis build to install a cookie for
-# go.googlesource.com so rate limits are higher when using `go get` to fetch
-# packages that live there.
-# See: https://github.com/golang/go/issues/12933
 - bash scripts/gogetcookie.sh
 - go get github.com/kardianos/govendor
 - pip install --upgrade --user awscli
-
-script:
-
+script: 
+- env
 branches:
   only:
   - master
+env:
+  global:
+  - secure: WR1bR08lKJd4opleSFcbumwnc917JVvCxBfPRzyxIyoRz9Q+5KG4QRm0mmxjfdpXlmhON1Pd1TG28k3nI/rdh5Q1uED/xRVXKmW9V8AFB8NaBquwbOQVsU4YPp1JR5KKsH1HRfslWb0OHF6VfPhGGpMaXo6U8hJpissZgYkEfol4kHj4VApvBsMmmKlvhDl063asUKvdfJd+7AmmKinUOxvsBrCZOIkYMKCWJiFoh3ciYMb4t2quKAD0G0A1HE/Io8NWerXK/Utg/zcaLCtrp98BCnDp60sooD7u2h/DJaCsa/jKrrvRm+bbSn5y6oLcSPqLWNCyP8NKdXBBGGl/9H3pldF2VMu6XZWFkhtDXfWkEU2gat6iYgZZdxo002hjGq1k6pKIW181/G97fjVI4EJeslMQ56fy/tkolKmnqkUA4gm+sxOSUxsSDPWNcTyWe16Fs35NVtS32lh65wWXloGDuLttN1EoWbrhObgNxMYLk/evKwG/wSitvnailBx9twUBEFx9yV2G75xWkmf/cB9iQtHH7mYBrDgrgaMe0V0ZjY5RUdCUop95sHlLAzAx7VrWqL+vn2wi5/ICl5AhtY68CCeaMXA0yGWOKVf82mPokXCzGXiA0p+mLaPUVB+uzCE7R0I57v6OVlC/+5dAXqf61sMeySQVKWC3J2bIlDk=
+  - secure: pm4sABDNOYMJTfJGnddXdUZaFrqHNa8FP94N1xbJq08BNkRHoIK4aIGTR0xjHPHgXdzTg083YrsdhcCpKT2HvoyAi4Lm1XphftQDWA+Gjm9u6QNmDmcQNQ7xxPUuxjGigVj+ucYS0KKQUKA1h21KHFOdArGFLH6VhTcds7d4fUwOtGMcJjD7/oOQXtH27tQgmp9g1mzQRqZXpEs8mj2neDANpcF1zr3pr9Iv0b7ISNFnO7HKHh6aI4IwJxZguieWELS87XKGDwxHqAJbvFqyIG1PoaKf+5wnrBZuqc5uk/JyXyzgh2R+XRiEc2YuW2a+QJI8Ky7xcPG4GdOqZ7TPZSRSDO/kzLbpAfOQ9O6WjvsYSYF3NxrEA3miHngCiGr5mpRRaWhdhv/PztF2mKkoWNdOhTSPah2t0Kfob3gV/P5vkUcDHBoEOQ/KVLYxQuYEs++TrFbU1f24fByC7kBGGeSOVcD4La3liweUPYk/o4Spw/on/zd35YbZJ65YVZkQ6fEzCeiFbBptq8JhXrelSUzgha12j5/fYLG0z2OFWVOa2tqEnOqMi9FJsMTkVFxp8V8GKLTV4IrvfiZywMW+IEbCG/2foAyYY62hqNo4XM/hx/Oiabr5GVdVjmsb7grBWif7yYlCGeiSRrid6s1Um4xDOVo9yQ3MjIMSQPyGCFw=
