@@ -5,11 +5,14 @@ go:
 - 1.8.x
 go_import_path: github.com/terraform-providers/terraform-provider-cloudfoundry
 install:
+- sudo apt-get install jq
+- pip install --upgrade --user awscli
+- wget https://releases.hashicorp.com/vagrant/1.9.7/vagrant_1.9.7_x86_64.deb
+- sudo dpkg -i vagrant_1.9.7_x86_64.deb
 - bash scripts/gogetcookie.sh
 - go get github.com/kardianos/govendor
-- pip install --upgrade --user awscli
 script:
-- aws ec2 describe-instances
+- vagrant --help
 branches:
   only:
   - master
