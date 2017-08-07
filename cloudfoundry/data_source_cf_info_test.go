@@ -25,6 +25,8 @@ func TestAccDataSourceInfo_normal(t *testing.T) {
 					Config: infoDataResource,
 					Check: resource.ComposeTestCheckFunc(
 						resource.TestCheckResourceAttr(
+							ref, "api_endpoint", "https://api.local.pcfdev.io"),
+						resource.TestCheckResourceAttr(
 							ref, "auth_endpoint", "https://login.local.pcfdev.io"),
 						resource.TestCheckResourceAttr(
 							ref, "uaa_endpoint", "https://uaa.local.pcfdev.io"),

@@ -49,6 +49,11 @@ type Session struct {
 
 // CCInfo -
 type CCInfo struct {
+	APIEndpoint       string
+	User              string
+	Password          string
+	SkipSslValidation bool
+
 	APIVersion               string `json:"api_version"`
 	AuthorizationEndpoint    string `json:"authorization_endpoint"`
 	TokenEndpoint            string `json:"token_endpoint"`
@@ -128,6 +133,10 @@ func (s *Session) initCliConnection(
 	if err != nil {
 		return
 	}
+	s.ccInfo.APIEndpoint = endpoint
+	s.ccInfo.User = user
+	s.ccInfo.Password = password
+	s.ccInfo.SkipSslValidation = skipSslValidation
 
 	s.config.SetAPIEndpoint(endpoint)
 	s.config.SetAPIVersion(s.ccInfo.APIVersion)
