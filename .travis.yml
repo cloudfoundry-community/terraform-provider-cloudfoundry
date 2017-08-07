@@ -4,6 +4,8 @@ language: go
 go:
 - 1.8.x
 
+go_import_path: github.com/terraform-providers/terraform-provider-cloudfoundry
+
 install:
 # This script is used by the Travis build to install a cookie for
 # go.googlesource.com so rate limits are higher when using `go get` to fetch
@@ -13,6 +15,7 @@ install:
 - go get github.com/kardianos/govendor
 
 script:
+
 branches:
   only:
   - master
