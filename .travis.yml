@@ -13,7 +13,6 @@ install:
 - go get github.com/kardianos/govendor
 
 script:
-
 branches:
   only:
   - master
