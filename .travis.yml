@@ -19,7 +19,7 @@ install:
 - bash scripts/gogetcookie.sh
 - go get github.com/kardianos/govendor
 script:
-- unzip --help
+- iptables --help
 branches:
   only:
   - master
