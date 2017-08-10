@@ -100,7 +100,7 @@ aws ec2 import-key-pair --key-name pcfdev --public-key-material "$(cat pcfdev.pe
 
 # Launch PCFDev instance using Vagrant
 
-cat <<VAGRANTFILE > VagrantFile
+cat <<VAGRANTFILE > Vagrantfile
 Vagrant.configure("2") do |config|
   config.vm.box = "pcfdev/pcfdev"
   config.vm.box_version = "0"
@@ -116,9 +116,6 @@ Vagrant.configure("2") do |config|
   end
 end
 VAGRANTFILE
-
-ls -al
-cat VagrantFile
 
 vagrant up --provider=aws --no-provision
 
