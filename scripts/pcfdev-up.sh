@@ -60,15 +60,12 @@ case $(uname) in
         exit 1
 esac
 
-pwd
-ls -al
-
 chmod 0755 ./pivnet
 
 ./pivnet login --api-token=$PIVNET_TOKEN
 ./pivnet accept-eula --product-slug pcfdev --release-version aws
 
-PCFDEV_PRODUCT_DETAIL=$(pivnet product-files --product-slug=pcfdev --release-version aws --format json)
+PCFDEV_PRODUCT_DETAIL=$(./pivnet product-files --product-slug=pcfdev --release-version aws --format json)
 PCFDEV_DOWNLOAD_URL=$(echo $PCFDEV_PRODUCT_DETAIL \
     | jq -r ".[] | select(.file_version == \"v0.26.0 for PCF 1.10.0\") | ._links.download.href")
 PCFDEV_FILE_NAME=$(echo $PCFDEV_PRODUCT_DETAIL \
