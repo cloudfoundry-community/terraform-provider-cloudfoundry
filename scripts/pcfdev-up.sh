@@ -117,6 +117,9 @@ Vagrant.configure("2") do |config|
 end
 VAGRANTFILE
 
+ls -al
+cat VagrantFile
+
 vagrant up --provider=aws --no-provision
 
 PCFDEV_INSTANCE_DETAIL=$(pcfdev_instance_detail)
