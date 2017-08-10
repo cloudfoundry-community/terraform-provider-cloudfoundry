@@ -5,11 +5,13 @@ example.tf
 terraform.tfplan
 terraform.tfstate
 bin/
+release/
 modules-dev/
 website/.vagrant
 website/.bundle
 website/build
 website/node_modules
+.test_env/
 .vagrant/
 *.backup
 ./*.tfstate
