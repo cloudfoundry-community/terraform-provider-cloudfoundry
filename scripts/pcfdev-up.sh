@@ -60,6 +60,9 @@ case $(uname) in
         exit 1
 esac
 
+pwd
+ls -al
+
 chmod 0755 ./pivnet
 
 ./pivnet login --api-token=$PIVNET_TOKEN
