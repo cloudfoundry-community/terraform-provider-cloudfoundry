@@ -2,9 +2,6 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"code.cloudfoundry.org/cli/cf/errors"
@@ -16,13 +13,9 @@ import (
 
 const domainResourceShared = `
 
-data "cf_domain" "apps" {
-    sub_domain = "local"
-}
-
 resource "cf_domain" "shared" {
     sub_domain = "dev"
-	domain = "${data.cf_domain.apps.domain}"
+	domain = "%s"
 }
 `
 
@@ -32,13 +25,9 @@ data "cf_router_group" "tcp" {
     name = "default-tcp"
 }
 
-data "cf_domain" "apps" {
-    sub_domain = "local"
-}
-
 resource "cf_domain" "shared-tcp" {
-    sub_domain = "tcp"
-	domain = "${data.cf_domain.apps.domain}"
+    sub_domain = "tcp-test"
+	domain = "%s"
 	router_group = "${data.cf_router_group.tcp.id}"
 }
 `
@@ -54,7 +43,7 @@ resource "cf_domain" "private" {
 func TestAccSharedDomain_normal(t *testing.T) {
 
 	ref := "cf_domain.shared"
-	domainname := "dev.pcfdev.io"
+	domainname := "dev." + defaultDomain()
 
 	resource.Test(t,
 		resource.TestCase{
@@ -64,15 +53,15 @@ func TestAccSharedDomain_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: domainResourceShared,
+					Config: fmt.Sprintf(domainResourceShared, defaultDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						checkShareDomainExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "dev.pcfdev.io"),
+							ref, "name", domainname),
 						resource.TestCheckResourceAttr(
 							ref, "sub_domain", "dev"),
 						resource.TestCheckResourceAttr(
-							ref, "domain", "pcfdev.io"),
+							ref, "domain", defaultDomain()),
 					),
 				},
 			},
@@ -81,7 +70,7 @@ func TestAccSharedDomain_normal(t *testing.T) {
 func TestAccSharedTCPDomain_normal(t *testing.T) {
 
 	ref := "cf_domain.shared-tcp"
-	domainname := "tcp.pcfdev.io"
+	domainname := "tcp-test." + defaultDomain()
 
 	resource.Test(t,
 		resource.TestCase{
@@ -91,15 +80,15 @@ func TestAccSharedTCPDomain_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: domainResourceSharedTCP,
+					Config: fmt.Sprintf(domainResourceSharedTCP, defaultDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						checkShareDomainExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "tcp.pcfdev.io"),
+							ref, "name", domainname),
 						resource.TestCheckResourceAttr(
-							ref, "sub_domain", "tcp"),
+							ref, "sub_domain", "tcp-test"),
 						resource.TestCheckResourceAttr(
-							ref, "domain", "pcfdev.io"),
+							ref, "domain", defaultDomain()),
 						resource.TestCheckResourceAttr(
 							ref, "router_type", "tcp"),
 					),
@@ -109,13 +98,6 @@ func TestAccSharedTCPDomain_normal(t *testing.T) {
 }
 
 func TestAccPrivateDomain_normal(t *testing.T) {
-
-	_, filename, _, _ := runtime.Caller(0)
-	ut := os.Getenv("UNIT_TEST")
-	if !testAccEnvironmentSet() || (len(ut) > 0 && ut != filepath.Base(filename)) {
-		fmt.Printf("Skipping tests in '%s'.\n", filepath.Base(filename))
-		return
-	}
 
 	ref := "cf_domain.private"
 	domainname := "pcfdev-org.io"

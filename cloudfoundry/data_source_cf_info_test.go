@@ -25,15 +25,15 @@ func TestAccDataSourceInfo_normal(t *testing.T) {
 					Config: infoDataResource,
 					Check: resource.ComposeTestCheckFunc(
 						resource.TestCheckResourceAttr(
-							ref, "api_endpoint", "https://api.local.pcfdev.io"),
+							ref, "api_endpoint", apiURL()),
 						resource.TestCheckResourceAttr(
-							ref, "auth_endpoint", "https://login.local.pcfdev.io"),
+							ref, "auth_endpoint", "https://login."+defaultDomain()),
 						resource.TestCheckResourceAttr(
-							ref, "uaa_endpoint", "https://uaa.local.pcfdev.io"),
+							ref, "uaa_endpoint", "https://uaa."+defaultDomain()),
 						resource.TestCheckResourceAttr(
-							ref, "logging_endpoint", "wss://loggregator.local.pcfdev.io:443"),
+							ref, "logging_endpoint", "wss://loggregator."+defaultDomain()+":443"),
 						resource.TestCheckResourceAttr(
-							ref, "doppler_endpoint", "wss://doppler.local.pcfdev.io:443"),
+							ref, "doppler_endpoint", "wss://doppler."+defaultDomain()+":443"),
 					),
 				},
 			},

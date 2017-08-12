@@ -15,7 +15,7 @@ import (
 const appResourceSpringMusic = `
 
 data "cf_domain" "local" {
-    name = "local.pcfdev.io"
+    name = "%s"
 }
 data "cf_org" "org" {
     name = "pcfdev-org"
@@ -50,6 +50,7 @@ resource "cf_app" "spring-music" {
 	name = "spring-music"
 	space = "${data.cf_space.space.id}"
 	memory = "512"
+	timeout = 1800
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
@@ -73,7 +74,7 @@ resource "cf_app" "spring-music" {
 const appResourceSpringMusicUpdate = `
 
 data "cf_domain" "local" {
-    name = "local.pcfdev.io"
+    name = "%s"
 }
 data "cf_org" "org" {
     name = "pcfdev-org"
@@ -114,6 +115,7 @@ resource "cf_app" "spring-music" {
 	space = "${data.cf_space.space.id}"
 	instances ="2"
 	memory = "768"
+	timeout = 1800
 	disk_quota = "1024"
 
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
@@ -142,7 +144,7 @@ resource "cf_app" "spring-music" {
 const appResourceWithMultiplePorts = `
 
 data "cf_domain" "local" {
-    name = "local.pcfdev.io"
+    name = "%s"
 }
 data "cf_org" "org" {
     name = "pcfdev-org"
@@ -155,6 +157,7 @@ data "cf_space" "space" {
 resource "cf_app" "test-app" {
 	name = "test-app"
 	space = "${data.cf_space.space.id}"
+	timeout = 1800
 	ports = [ 8888, 9999 ]
 	buildpack = "binary_buildpack"
 	command = "chmod 0755 test-app && ./test-app --ports=8888,9999"
@@ -201,11 +204,11 @@ func TestAccApp_app1(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: appResourceSpringMusic,
+					Config: fmt.Sprintf(appResourceSpringMusic, defaultDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("http://spring-music.local.pcfdev.io", 200, nil); err != nil {
+							if err = assertHTTPResponse("http://spring-music."+defaultDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -242,11 +245,11 @@ func TestAccApp_app1(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: appResourceSpringMusicUpdate,
+					Config: fmt.Sprintf(appResourceSpringMusicUpdate, defaultDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("http://spring-music.local.pcfdev.io", 200, nil); err != nil {
+							if err = assertHTTPResponse("http://spring-music."+defaultDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -296,18 +299,18 @@ func TestAccApp_app2(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: appResourceWithMultiplePorts,
+					Config: fmt.Sprintf(appResourceWithMultiplePorts, defaultDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
 							var responses []string
 
 							responses = []string{"8888"}
-							if err = assertHTTPResponse("http://test-app-8888.local.pcfdev.io/port", 200, &responses); err != nil {
+							if err = assertHTTPResponse("http://test-app-8888."+defaultDomain()+"/port", 200, &responses); err != nil {
 								return err
 							}
 							responses = []string{"9999"}
-							if err = assertHTTPResponse("http://test-app-9999.local.pcfdev.io/port", 200, &responses); err != nil {
+							if err = assertHTTPResponse("http://test-app-9999."+defaultDomain()+"/port", 200, &responses); err != nil {
 								return err
 							}
 							return

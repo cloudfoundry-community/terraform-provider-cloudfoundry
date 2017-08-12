@@ -25,19 +25,24 @@ resource "cf_asg" "svc" {
     }
 }
 resource "cf_user" "tl" {
-    name = "teamlead@acme.com"
+	name = "teamlead@acme.com"
+	password = "password"
 }
 resource "cf_user" "dev1" {
     name = "developer1@acme.com"
+	password = "password"
 }
 resource "cf_user" "dev2" {
     name = "developer2@acme.com"
+	password = "password"
 }
 resource "cf_user" "dev3" {
     name = "developer3@acme.com"
+	password = "password"
 }
 resource "cf_user" "adr" {
     name = "auditor@acme.com"
+	password = "password"
 }
 resource "cf_org" "org1" {
 	name = "organization-one"
@@ -88,18 +93,23 @@ resource "cf_asg" "svc" {
 }
 resource "cf_user" "tl" {
     name = "teamlead@acme.com"
+	password = "password"
 }
 resource "cf_user" "dev1" {
     name = "developer1@acme.com"
+	password = "password"
 }
 resource "cf_user" "dev2" {
     name = "developer2@acme.com"
+	password = "password"
 }
 resource "cf_user" "dev3" {
     name = "developer3@acme.com"
+	password = "password"
 }
 resource "cf_user" "adr" {
     name = "auditor@acme.com"
+	password = "password"
 }
 resource "cf_org" "org1" {
 	name = "organization-one"

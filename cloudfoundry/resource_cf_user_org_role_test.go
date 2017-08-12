@@ -12,7 +12,8 @@ import (
 const userOrgRoleAssoc = `
 
 resource "cf_user" "u" {
-    name = "user@acme.com"
+	name = "user@acme.com"
+	password = "password"
 }
 resource "cf_org" "o1" {
     name = "org1"
@@ -81,6 +82,7 @@ const userOrgRoleAssocUpdate = `
 
 resource "cf_user" "u" {
     name = "user@acme.com"
+	password = "password"
 }
 resource "cf_org" "o1" {
     name = "org1"
@@ -149,6 +151,7 @@ const userOrgRoleAssocDeleted = `
 
 resource "cf_user" "u" {
     name = "user@acme.com"
+	password = "password"
 }
 resource "cf_org" "o1" {
     name = "org1"

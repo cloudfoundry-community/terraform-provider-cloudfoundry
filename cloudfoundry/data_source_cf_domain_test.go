@@ -8,14 +8,14 @@ import (
 
 const domainDataResource = `
 
-data "cf_domain" "apps" {
-    sub_domain = "local"
+data "cf_domain" "tcp" {
+    sub_domain = "tcp"
 }
 `
 
 func TestAccDataSourceDomain_normal(t *testing.T) {
 
-	ref := "data.cf_domain.apps"
+	ref := "data.cf_domain.tcp"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -27,11 +27,11 @@ func TestAccDataSourceDomain_normal(t *testing.T) {
 					Config: domainDataResource,
 					Check: resource.ComposeTestCheckFunc(
 						resource.TestCheckResourceAttr(
-							ref, "name", "local.pcfdev.io"),
+							ref, "name", "tcp."+defaultDomain()),
 						resource.TestCheckResourceAttr(
-							ref, "sub_domain", "local"),
+							ref, "sub_domain", "tcp"),
 						resource.TestCheckResourceAttr(
-							ref, "domain", "pcfdev.io"),
+							ref, "domain", defaultDomain()),
 					),
 				},
 			},

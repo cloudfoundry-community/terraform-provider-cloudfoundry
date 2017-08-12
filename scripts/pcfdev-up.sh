@@ -27,7 +27,7 @@ if [[ -n $PCFDEV_INSTANCE_DETAIL ]]; then
     INSTANCE_STATE=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .State.Name)
 
     i=0
-    while [[ $i -lt 120 && $INSTANCE_STATE != terminated ]]; do
+    while [[ $i -lt 120 && -n $INSTANCE_STATE && $INSTANCE_STATE != terminated ]]; do
 
         echo "Waiting for PCFDev instance to terminate..."
         sleep 5
@@ -86,6 +86,7 @@ VPC_ID=$(aws ec2 describe-vpcs \
     aws ec2 delete-security-group --group-name pcfdev >/dev/null
 
 aws ec2 create-security-group --group-name pcfdev --description "PCFDev secure ingress" --vpc-id $VPC_ID >/dev/null
+aws ec2 authorize-security-group-ingress --group-name pcfdev --protocol tcp --port 80 --cidr $INGRESS_ALLOWED_IP/32
 aws ec2 authorize-security-group-ingress --group-name pcfdev --protocol tcp --port 443 --cidr $INGRESS_ALLOWED_IP/32
 aws ec2 authorize-security-group-ingress --group-name pcfdev --protocol tcp --port 22 --cidr $INGRESS_ALLOWED_IP/32
 

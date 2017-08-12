@@ -107,6 +107,15 @@ func testSession() *cfapi.Session {
 	return tstSession
 }
 
+func apiURL() string {
+	return os.Getenv("CF_API_URL")
+}
+
+func defaultDomain() string {
+	apiURL := apiURL()
+	return apiURL[strings.Index(apiURL, ".")+1:]
+}
+
 func defaultPcfDevOrgID() string {
 
 	if len(pcfDevOrgID) == 0 {
