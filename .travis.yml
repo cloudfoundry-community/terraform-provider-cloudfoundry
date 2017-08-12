@@ -13,10 +13,12 @@ install:
 - bash scripts/gogetcookie.sh
 - go get github.com/kardianos/govendor
 before_script:
-- travis_wait scripts/pcfdev-up.sh
+- travis_wait 120 scripts/pcfdev-up.sh
 script:
 - travis_wait 120 make release
-after_script:
+after_success:
+- scripts/pcfdev-destroy.sh
+after_failure:
 - scripts/pcfdev-destroy.sh
 branches:
   only:
