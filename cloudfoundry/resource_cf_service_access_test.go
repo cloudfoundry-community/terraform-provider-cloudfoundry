@@ -13,7 +13,7 @@ const saResource = `
 
 resource "cf_service_broker" "redis" {
 	name = "test-redis"
-	url = "http://redis-broker.local.pcfdev.io"
+	url = "http://redis-broker.%s"
 	username = "admin"
 	password = "admin"
 }
@@ -39,7 +39,7 @@ func TestAccServiceAccess_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(saResource, defaultPcfDevOrgID()),
+					Config: fmt.Sprintf(saResource, defaultDomain(), defaultPcfDevOrgID()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceAccessExists(ref,
 							func(guid string) {

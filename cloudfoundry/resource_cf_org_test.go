@@ -28,18 +28,23 @@ resource "cf_quota" "runaway" {
 }
 resource "cf_user" "u1" {
     name = "test-user1@acme.com"
+	password = "password"
 }
 resource "cf_user" "u2" {
     name = "test-user2@acme.com"
+	password = "password"
 }
 resource "cf_user" "u3" {
     name = "test-user3@acme.com"
+	password = "password"
 }
 resource "cf_user" "u4" {
     name = "test-user4@acme.com"
+	password = "password"
 }
 resource "cf_user" "u5" {
     name = "test-user5@acme.com"
+	password = "password"
 }
 
 resource "cf_org" "org1" {
@@ -70,18 +75,23 @@ resource "cf_quota" "runaway" {
 }
 resource "cf_user" "u1" {
     name = "test-user1@acme.com"
+	password = "password"
 }
 resource "cf_user" "u2" {
     name = "test-user2@acme.com"
+	password = "password"
 }
 resource "cf_user" "u3" {
     name = "test-user3@acme.com"
+	password = "password"
 }
 resource "cf_user" "u4" {
     name = "test-user4@acme.com"
+	password = "password"
 }
 resource "cf_user" "u5" {
     name = "test-user5@acme.com"
+	password = "password"
 }
 
 resource "cf_org" "org1" {
@@ -100,7 +110,7 @@ func TestAccOrg_normal(t *testing.T) {
 	refOrg := "cf_org.org1"
 	refQuotaRunway := "cf_quota.runaway"
 	refQuotaDefault := "data.cf_quota.default"
-	refUserRemoved := "cf_user.user4"
+	refUserRemoved := "cf_user.u4"
 
 	resource.Test(t,
 		resource.TestCase{

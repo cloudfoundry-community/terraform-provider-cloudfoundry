@@ -14,7 +14,7 @@ import (
 const routeResource = `
 
 data "cf_domain" "local" {
-    name = "local.pcfdev.io"
+    name = "%s"
 }
 data "cf_org" "org" {
     name = "pcfdev-org"
@@ -28,6 +28,7 @@ resource "cf_app" "test-app-8080" {
 	name = "test-app"
 	space = "${data.cf_space.space.id}"
 	command = "test-app --ports=8080"
+	timeout = 1800
 
 	git {
 		url = "https://github.com/mevansam/test-app.git"
@@ -47,7 +48,7 @@ resource "cf_route" "test-app-route" {
 const routeResourceUpdate = `
 
 data "cf_domain" "local" {
-    name = "local.pcfdev.io"
+    name = "%s"
 }
 data "cf_org" "org" {
     name = "pcfdev-org"
@@ -61,6 +62,7 @@ resource "cf_app" "test-app-8080" {
 	name = "test-app-8080"
 	space = "${data.cf_space.space.id}"
 	command = "test-app --ports=8080"
+	timeout = 1800
 
 	git {
 		url = "https://github.com/mevansam/test-app.git"
@@ -71,6 +73,7 @@ resource "cf_app" "test-app-8888" {
 	space = "${data.cf_space.space.id}"
 	ports = [ 8888 ]
 	command = "test-app --ports=8888"
+	timeout = 1800
 
 	git {
 		url = "https://github.com/mevansam/test-app.git"
@@ -81,6 +84,7 @@ resource "cf_app" "test-app-9999" {
 	space = "${data.cf_space.space.id}"
 	ports = [ 9999 ]
 	command = "test-app --ports=9999"
+	timeout = 1800
 
 	git {
 		url = "https://github.com/mevansam/test-app.git"
@@ -113,16 +117,16 @@ func TestAccRoute_normal(t *testing.T) {
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckRouteDestroyed([]string{"test-app-single", "test-app-multi"}, "local.pcfdev.io"),
+			CheckDestroy: testAccCheckRouteDestroyed([]string{"test-app-single", "test-app-multi"}, defaultDomain()),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: routeResource,
+					Config: fmt.Sprintf(routeResource, defaultDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
 							responses := []string{"8080"}
-							if err = assertHTTPResponse("http://test-app-single.local.pcfdev.io/port", 200, &responses); err != nil {
+							if err = assertHTTPResponse("http://test-app-single."+defaultDomain()+"/port", 200, &responses); err != nil {
 								return err
 							}
 							return
@@ -135,13 +139,13 @@ func TestAccRoute_normal(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: routeResourceUpdate,
+					Config: fmt.Sprintf(routeResourceUpdate, defaultDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
 							responses := []string{"8080", "8888", "9999"}
 							for i := 1; i <= 9; i++ {
-								if err = assertHTTPResponse("http://test-app-multi.local.pcfdev.io/port", 200, &responses); err != nil {
+								if err = assertHTTPResponse("http://test-app-multi."+defaultDomain()+"/port", 200, &responses); err != nil {
 									return err
 								}
 							}

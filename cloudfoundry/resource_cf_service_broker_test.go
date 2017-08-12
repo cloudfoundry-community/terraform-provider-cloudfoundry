@@ -15,7 +15,7 @@ const sbResource = `
 
 resource "cf_service_broker" "redis" {
 	name = "test-redis"
-	url = "http://redis-broker.local.pcfdev.io"
+	url = "http://redis-broker.%s"
 	username = "admin"
 	password = "admin"
 }
@@ -25,7 +25,7 @@ const sbResourceUpdate = `
 
 resource "cf_service_broker" "redis" {
 	name = "test-redis-renamed"
-	url = "http://redis-broker.local.pcfdev.io"
+	url = "http://redis-broker.%s"
 	username = "admin"
 	password = "admin"
 }
@@ -45,13 +45,13 @@ func TestAccServiceBroker_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: sbResource,
+					Config: fmt.Sprintf(sbResource, defaultDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceBrokerExists(ref),
 						resource.TestCheckResourceAttr(
 							ref, "name", "test-redis"),
 						resource.TestCheckResourceAttr(
-							ref, "url", "http://redis-broker.local.pcfdev.io"),
+							ref, "url", "http://redis-broker."+defaultDomain()),
 						resource.TestCheckResourceAttr(
 							ref, "username", "admin"),
 						resource.TestCheckResourceAttrSet(
@@ -60,7 +60,7 @@ func TestAccServiceBroker_normal(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: sbResourceUpdate,
+					Config: fmt.Sprintf(sbResourceUpdate, defaultDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceBrokerExists(ref),
 						resource.TestCheckResourceAttr(
