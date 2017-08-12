@@ -13,7 +13,7 @@ function pcfdev_instance_detail() {
 # Deploy PCFDev instance if not already deployed
 
 mkdir -p .test_env
-pushd .test_env
+pushd .test_env >/dev/null
 
 PCFDEV_INSTANCE_DETAIL=$(pcfdev_instance_detail)
 if [[ -n $PCFDEV_INSTANCE_DETAIL ]]; then
@@ -138,6 +138,6 @@ vagrant provision
 duration=$SECONDS
 echo "Time to provision PCDDev via Vagrant: $(($duration / 60)) minutes and $(($duration % 60)) seconds."
 
-popd
+popd >/dev/null
 
 set +e
