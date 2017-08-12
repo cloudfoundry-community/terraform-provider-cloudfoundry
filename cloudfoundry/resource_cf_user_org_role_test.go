@@ -179,7 +179,9 @@ resource "cf_org" "o8" {
 }
 `
 
-func TestAccUserOrgRoleAssoc_normal(t *testing.T) {
+// Conflicts with org role assignment in cf_org resource so this resource has
+// been disabled and may be removed completely in the future
+func xxTestAccUserOrgRoleAssoc_normal(t *testing.T) {
 
 	ref := "cf_user_org_role.u"
 	username := "user@acme.com"
