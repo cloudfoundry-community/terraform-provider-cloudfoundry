@@ -118,6 +118,8 @@ Vagrant.configure("2") do |config|
 end
 VAGRANTFILE
 
+set -x
+
 vagrant up --provider=aws --no-provision
 
 PCFDEV_INSTANCE_DETAIL=$(pcfdev_instance_detail)
@@ -140,4 +142,5 @@ echo "Time to provision PCDDev via Vagrant: $(($duration / 60)) minutes and $(($
 
 popd
 
+set +x
 set +e
