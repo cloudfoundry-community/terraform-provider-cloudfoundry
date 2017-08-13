@@ -2,6 +2,13 @@
 
 set -e
 
+TAG="$(git tag -l --points-at HEAD)"
+if [[ -z "$TAG" ]] ; then
+    echo "Git commit does not have a release tag so acceptance tests will not run."
+    touch no_acc
+    exit 0
+fi
+
 INGRESS_ALLOWED_IP=$(curl -s http://whatismyip.akamai.com/)
 
 function pcfdev_instance_detail() {
