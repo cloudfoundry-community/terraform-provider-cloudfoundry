@@ -61,9 +61,8 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"cf_config": resourceConfig(),
-			"cf_user":   resourceUser(),
-			// "cf_user_org_role":         resourceUserOrgRole(),
+			"cf_config":                resourceConfig(),
+			"cf_user":                  resourceUser(),
 			"cf_domain":                resourceDomain(),
 			"cf_quota":                 resourceQuota(),
 			"cf_asg":                   resourceAsg(),
