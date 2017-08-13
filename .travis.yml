@@ -29,7 +29,6 @@ deploy:
   - bin/terraform-provider-cloudfoundry_darwin_amd64
   on:
     tags: true
-    repo: mevansam/terraform-provider-cloudfoundry
 env:
   global:
   - AWS_DEFAULT_REGION=us-east-1
