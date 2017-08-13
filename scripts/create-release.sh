@@ -23,7 +23,7 @@ git checkout master
 git pull
 git merge $MERGE_BRANCH
 git tag -a $TAG -m "Cloud Foundry Terraform provider release $TAG - created by $(git config user.name)"
-git push --follow-tags
+git push origin --tags
 
 git checkout $MERGE_BRANCH
 
