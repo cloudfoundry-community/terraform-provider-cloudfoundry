@@ -37,6 +37,13 @@ Using the provider
 
 Download the release binary and copy it to the `$HOME/terraform.d/plugins/<os>_<arch>/` folder. For example `/home/youruser/terraform.d/plugins/linux_amd64` for a Linux environment or `/Users/youruser/terraform.d/plugins/darwin_amd64` for a MacOS environment.
 
+Provider Use Cases
+------------------
+
+### Terraform module to deploy Spring Cloud Data Flow
+
+https://github.com/mevansam/spring-cloud-data-flow-terraform
+
 Developing the Provider
 -----------------------
 
