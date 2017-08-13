@@ -16,9 +16,6 @@ before_script:
 - travis_wait scripts/pcfdev-access.sh
 script:
 - travis_wait 120 make release
-branches:
-  only:
-  - master
 deploy:
   provider: releases
   api_key:
@@ -29,6 +26,8 @@ deploy:
   - bin/terraform-provider-cloudfoundry_darwin_amd64
   on:
     tags: true
+    all_branches: true
+    repo: mevansam/terraform-provider-cloudfoundry
 env:
   global:
   - AWS_DEFAULT_REGION=us-east-1
