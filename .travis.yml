@@ -15,8 +15,12 @@ install:
 before_script:
 - travis_wait scripts/pcfdev-access.sh
 script:
-- "[[ -e no_acc ]] || travis_wait 120 make release"
-- "[[ -e no_acc ]] && make build"
+- |
+  if [[ -e no_acc ]]; then 
+    make build 
+  else 
+    travis_wait 120 make release
+  fi
 deploy:
   provider: releases
   api_key:
