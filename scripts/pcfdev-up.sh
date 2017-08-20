@@ -118,22 +118,26 @@ Vagrant.configure("2") do |config|
 end
 VAGRANTFILE
 
-vagrant up --provider=aws --no-provision
+if [[ $1 == "private" ]]; then
+    vagrant up --provider=aws
+else
+    vagrant up --provider=aws --no-provision
 
-PCFDEV_INSTANCE_DETAIL=$(pcfdev_instance_detail)
-if [[ -z $PCFDEV_INSTANCE_DETAIL ]]; then
-    echo "ERROR! Unable to discover PCFDev instance which was just launched."
-    exit 1
+    PCFDEV_INSTANCE_DETAIL=$(pcfdev_instance_detail)
+    if [[ -z $PCFDEV_INSTANCE_DETAIL ]]; then
+        echo "ERROR! Unable to discover PCFDev instance which was just launched."
+        exit 1
+    fi
+
+    INSTANCE_ID=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .InstanceId)
+    INSTANCE_PUBLIC_IP=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .PublicIpAddress)
+
+    echo "PCFDev instance's ID is: $INSTANCE_ID"
+    echo "Provisioning PCFDev on $INSTANCE_PUBLIC_IP.xip.io domain for access from $INGRESS_ALLOWED_IP..."
+
+    export PCFDEV_DOMAIN=$INSTANCE_PUBLIC_IP.xip.io
+    vagrant provision
 fi
-
-INSTANCE_ID=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .InstanceId)
-INSTANCE_PUBLIC_IP=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .PublicIpAddress)
-
-echo "PCFDev instance's ID is: $INSTANCE_ID"
-echo "Provisioning PCFDev on $INSTANCE_PUBLIC_IP.xip.io domain for access from $INGRESS_ALLOWED_IP..."
-
-export PCFDEV_DOMAIN=$INSTANCE_PUBLIC_IP.xip.io
-vagrant provision
 
 duration=$SECONDS
 echo "Time to provision PCDDev via Vagrant: $(($duration / 60)) minutes and $(($duration % 60)) seconds."

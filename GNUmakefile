@@ -3,7 +3,7 @@ GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
 default: build
 
-release: testacc
+release:
 	rm -fr bin
 	mkdir -p bin
 	GOARCH=amd64 GOOS=windows go build -o bin/terraform-provider-cloudfoundry_windows_amd64.exe
@@ -19,12 +19,6 @@ test: fmtcheck
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
 testacc: fmtcheck
-	CF_USER=admin \
-	CF_PASSWORD=admin \
-	CF_SKIP_SSL_VALIDATION=true \
-	CF_UAA_CLIENT_ID=admin \
-	CF_API_URL=https://api.$$(scripts/pcfdev-public-ip.sh).xip.io \
-	CF_UAA_CLIENT_SECRET=admin-client-secret \
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 
 vet:

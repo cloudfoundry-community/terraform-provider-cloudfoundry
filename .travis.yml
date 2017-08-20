@@ -13,14 +13,9 @@ install:
 - bash scripts/gogetcookie.sh
 - go get github.com/kardianos/govendor
 before_script:
-- travis_wait scripts/pcfdev-access.sh
+- scripts/pcfdev-access.sh
 script:
-- |
-  if [[ -e no_acc ]]; then 
-    make build 
-  else 
-    travis_wait 120 make release
-  fi
+- travis_wait 120 scripts/build.sh
 deploy:
   provider: releases
   api_key:
