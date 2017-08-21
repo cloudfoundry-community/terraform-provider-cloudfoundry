@@ -144,4 +144,12 @@ echo "Time to provision PCDDev via Vagrant: $(($duration / 60)) minutes and $(($
 
 popd >/dev/null
 
+# Update travis with pcfdev ssh keys
+
+travis encrypt-file .test_env/pcfdev.pem .test_env/pcfdev.pem.enc --add --force
+travis encrypt-file .test_env/pcfdev.pem.pub .test_env/pcfdev.pem.pub.enc --add --force
+
+git commit -m "updated pcfdev ssh keys" .test_env/pcfdev.pem.enc .test_env/pcfdev.pem.pub.enc
+git push
+
 set +e
