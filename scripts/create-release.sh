@@ -13,13 +13,8 @@ function pcfdev_instance_detail() {
         | jq '.Reservations[] | .Instances[] | select(.State.Name != "terminated") | select(.Tags[] | .Value == "pcfdev")'
 }
 
-set -e
-
 PCFDEV_INSTANCE_DETAIL=$(pcfdev_instance_detail)
-if [[ -z $PCFDEV_INSTANCE_DETAIL ]]; then
-    echo "ERROR! Unable to discover PCFDev instance."
-    exit 1
-fi
+[[ -n $PCFDEV_INSTANCE_DETAIL ]] || scripts/pcfdev-up.sh private
 
 set -e
 
