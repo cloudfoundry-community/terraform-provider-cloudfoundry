@@ -1,7 +1,6 @@
 #!/bin/bash
 
-TAG="$(git tag -l --points-at HEAD)"
-if [[ -z "$TAG" ]] ; then
+if [[ -z "$TRAVIS_TAG" ]] ; then
     echo "Git commit does not have a release tag so acceptance tests will not run."
     
     make build

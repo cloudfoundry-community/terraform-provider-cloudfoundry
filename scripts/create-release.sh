@@ -22,8 +22,6 @@ echo "Creating release $TAG by merging changes from branch $MERGE_BRANCH"
 git checkout master
 git pull
 git merge $MERGE_BRANCH
-git push origin master
-
 git tag -a $TAG -m "Cloud Foundry Terraform provider release $TAG - created by $(git config user.name)"
 git push origin master --tags
 
