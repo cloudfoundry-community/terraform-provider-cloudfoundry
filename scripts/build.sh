@@ -8,6 +8,9 @@ if [[ -z "$TAG" ]] ; then
     exit 0
 fi
 
+echi $TAG
+exit 0
+
 scripts/pcfdev-up.sh
 trap scripts/pcfdev-destroy.sh EXIT
 
