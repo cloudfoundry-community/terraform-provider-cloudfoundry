@@ -13,11 +13,13 @@ install:
 - pip install --upgrade --user awscli
 - wget https://releases.hashicorp.com/vagrant/1.9.7/vagrant_1.9.7_x86_64.deb
 - sudo dpkg -i vagrant_1.9.7_x86_64.deb
+- rm -f vagrant_1.9.7_x86_64.deb
 - vagrant plugin install vagrant-aws
 - bash scripts/gogetcookie.sh
 - go get github.com/kardianos/govendor
 script:
 - travis_wait 120 scripts/build.sh
+- ls -al bin
 deploy:
   provider: releases
   api_key:

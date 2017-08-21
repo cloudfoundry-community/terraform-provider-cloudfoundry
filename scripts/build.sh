@@ -25,39 +25,39 @@ scripts/pcfdev-access.sh
 PUBLIC_IP=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .PublicIpAddress)
 PRIVATE_IP=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .PrivateIpAddress)
 
-ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem ubuntu@$PUBLIC_IP <<EOF
-#!/bin/bash
+# ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem ubuntu@$PUBLIC_IP <<EOF
+# #!/bin/bash
 
-rm -fr /tmp/gopath
-mkdir -p /tmp/gopath/src/github.com/terraform-providers/terraform-provider-cloudfoundry
-EOF
+# rm -fr /tmp/gopath
+# mkdir -p /tmp/gopath/src/github.com/terraform-providers/terraform-provider-cloudfoundry
+# EOF
 
-scp -q -r -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem \
-    ./* ubuntu@$PUBLIC_IP:/tmp/gopath/src/github.com/terraform-providers/terraform-provider-cloudfoundry
+# scp -q -r -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem \
+#     ./* ubuntu@$PUBLIC_IP:/tmp/gopath/src/github.com/terraform-providers/terraform-provider-cloudfoundry
 
-ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem ubuntu@$PUBLIC_IP <<EOF
-#!/bin/bash
+# ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem ubuntu@$PUBLIC_IP <<EOF
+# #!/bin/bash
 
-go version | grep go1.8 >/dev/null 2>&1
-[[ \$? -eq 0 ]] || \
-    sudo rm -fr /usr/local/go/ && curl https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz | sudo tar xz -C /usr/local
+# go version | grep go1.8 >/dev/null 2>&1
+# [[ \$? -eq 0 ]] || \
+#     sudo rm -fr /usr/local/go/ && curl https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz | sudo tar xz -C /usr/local
 
-set -ex
+# set -ex
 
-export GOROOT=/usr/local/go
-export GOPATH=/tmp/gopath
-cd /tmp/gopath/src/github.com/terraform-providers/terraform-provider-cloudfoundry
+# export GOROOT=/usr/local/go
+# export GOPATH=/tmp/gopath
+# cd /tmp/gopath/src/github.com/terraform-providers/terraform-provider-cloudfoundry
 
-export CF_USER=admin
-export CF_PASSWORD=admin
-export CF_SKIP_SSL_VALIDATION=true
-export CF_UAA_CLIENT_ID=admin
-export CF_API_URL=https://api.$PRIVATE_IP.xip.io
-export CF_UAA_CLIENT_SECRET=admin-client-secret
+# export CF_USER=admin
+# export CF_PASSWORD=admin
+# export CF_SKIP_SSL_VALIDATION=true
+# export CF_UAA_CLIENT_ID=admin
+# export CF_API_URL=https://api.$PRIVATE_IP.xip.io
+# export CF_UAA_CLIENT_SECRET=admin-client-secret
 
-make testacc
+# make testacc
 
-EOF
+# EOF
 
 make release
 
