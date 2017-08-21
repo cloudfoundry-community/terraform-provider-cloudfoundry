@@ -50,10 +50,10 @@ echo "Creating new PCFDev instance..."
 
 case $(uname) in
     Linux)
-        wget -O pivnet https://github.com/pivotal-cf/pivnet-cli/releases/download/v0.0.49/pivnet-linux-amd64-0.0.49
+        wget -q -O pivnet https://github.com/pivotal-cf/pivnet-cli/releases/download/v0.0.49/pivnet-linux-amd64-0.0.49
         ;;
     Darwin)
-        wget -O pivnet https://github.com/pivotal-cf/pivnet-cli/releases/download/v0.0.49/pivnet-darwin-amd64-0.0.49
+        wget -q -O pivnet https://github.com/pivotal-cf/pivnet-cli/releases/download/v0.0.49/pivnet-darwin-amd64-0.0.49
         ;;
     *)
         echo "ERROR: Unable download 'pivnet' CLI to download PCFDev."

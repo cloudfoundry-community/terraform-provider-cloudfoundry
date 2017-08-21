@@ -34,7 +34,7 @@ rm -fr /tmp/gopath
 mkdir -p /tmp/gopath/src/github.com/terraform-providers/terraform-provider-cloudfoundry
 EOF
 
-scp -r -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem \
+scp -q -r -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem \
     ./* ubuntu@$PUBLIC_IP:/tmp/gopath/src/github.com/terraform-providers/terraform-provider-cloudfoundry
 
 ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem ubuntu@$PUBLIC_IP <<EOF
@@ -42,7 +42,7 @@ ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcf
 
 go version | grep go1.8 >/dev/null 2>&1
 [[ \$? -eq 0 ]] || \
-    sudo rm -fr /usr/local/go/ && curl https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz | sudo tar xzv -C /usr/local
+    sudo rm -fr /usr/local/go/ && curl https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz | sudo tar xz -C /usr/local
 
 set -ex
 
