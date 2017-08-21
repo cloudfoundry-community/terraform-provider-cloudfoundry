@@ -7,9 +7,6 @@ if [[ -z "$TRAVIS_TAG" ]] ; then
     exit 0
 fi
 
-scripts/pcfdev-up.sh
-trap scripts/pcfdev-destroy.sh EXIT
-
 function pcfdev_instance_detail() {
     aws ec2 describe-instances \
         | jq '.Reservations[] | .Instances[] | select(.State.Name != "terminated") | select(.Tags[] | .Value == "pcfdev")'
