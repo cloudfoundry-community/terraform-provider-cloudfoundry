@@ -7,6 +7,7 @@ go_import_path: github.com/terraform-providers/terraform-provider-cloudfoundry
 before_install:
 - openssl aes-256-cbc -K $encrypted_d032c4bea5a6_key -iv $encrypted_d032c4bea5a6_iv
   -in .test_env/pcfdev.pem.enc -out .test_env/pcfdev.pem -d
+- chmod 0600 .test_env/pcfdev.pem
 install:
 - sudo apt-get install jq
 - pip install --upgrade --user awscli
