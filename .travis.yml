@@ -34,6 +34,4 @@ env:
   - secure: dDD3nWdhMacHzELv60GWRI5a0Kp79T2IYgGfzwUgW1LJKjOuVHPVboueq6fHvivoKM5NR6ItKktBF9P//Illpa3W/CrRPuKLlWuhQO23q8h2mfPDpieBBXP1Cvq95JOXd7STaqh3VVgx4u3HuJO1J0dorqxV7WzuIa5SUMUSO2Al1ZfiKp55VfnNFSd3FeTYjf3en5HDJH2fjdJaIySylebXQIZ2+cLf+GopIBgOYkIp6sxx/ZZadxa0hEtQdS7eP6ndQ2thEUYLphYgbCby54pqQUu4AUqfvrZ5fBhesSCoPeG2IYzBGGBi7/KsBmivpzv1j1KBFSZ1vBink3bVcNaEMUKoDbedeWJR4Ruo1VKVm9CWtVPSEkb7I/JE2MF8gsvXWgW8uCXuT1ozvKnbNsu1FiD3mvHs4hADI9jkm0Gxmj+gig9p+jL1fiLAXiN5jdRxBRyQcWupTke0TdVTxAigtsHPZAlyV2ly06g3E18bamLSeEsQVMiJkD1pMzjGE/RNBl7aMeKqA+zD0fXYUOXxLqNoRIkKXJljeBZv9Ghrrav+JKAU+sOJv4ZERtSQvO7R3i47/b/Ft9zcT/sdlS9MnjEY+onP+H/pW40J5VpPPMxOcNwGyaobPn1drOpGa3fBXzrDmqepSgtiQB95stDg+kmZJ24O9AQnVDH0hx8=
 before_install:
 - openssl aes-256-cbc -K $encrypted_d032c4bea5a6_key -iv $encrypted_d032c4bea5a6_iv
-  -in .test_env/pcfdev.pem.pub.enc -out .test_env/pcfdev.pem.pub -d
-- openssl aes-256-cbc -K $encrypted_d032c4bea5a6_key -iv $encrypted_d032c4bea5a6_iv
   -in .test_env/pcfdev.pem.enc -out .test_env/pcfdev.pem -d
