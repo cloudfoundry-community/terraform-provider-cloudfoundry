@@ -20,6 +20,8 @@ if [[ -z $PCFDEV_INSTANCE_DETAIL ]]; then
     exit 1
 fi
 
+scripts/pcfdev-access.sh
+
 PUBLIC_IP=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .PublicIpAddress)
 PRIVATE_IP=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .PrivateIpAddress)
 
