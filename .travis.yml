@@ -16,7 +16,6 @@ install:
 - bash scripts/gogetcookie.sh
 - go get github.com/kardianos/govendor
 script:
-- cat .test_env/pcfdev.pem
 - travis_wait 120 scripts/build.sh
 deploy:
   provider: releases
