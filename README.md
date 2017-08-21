@@ -1,9 +1,6 @@
 Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/mevansam/terraform-provider-cloudfoundry.svg?branch=master)](https://travis-ci.org/mevansam/terraform-provider-cloudfoundry)
 ================================
 
-<img src="https://www.cloudfoundry.org/wp-content/uploads/2017/01/CFF_Logo_rgb.png" width="600px">
-<img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" width="600px">
-
 Overview
 --------
 
@@ -36,13 +33,6 @@ Using the provider
 ------------------
 
 Download the release binary and copy it to the `$HOME/terraform.d/plugins/<os>_<arch>/` folder. For example `/home/youruser/terraform.d/plugins/linux_amd64` for a Linux environment or `/Users/youruser/terraform.d/plugins/darwin_amd64` for a MacOS environment.
-
-Provider Use Cases
-------------------
-
-### Terraform module to deploy Spring Cloud Data Flow
-
-https://github.com/mevansam/spring-cloud-data-flow-terraform
 
 Developing the Provider
 -----------------------
