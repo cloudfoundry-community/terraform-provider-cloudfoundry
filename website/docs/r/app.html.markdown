@@ -63,7 +63,12 @@ One of the following arguments must be declared to locate application source or 
   - `token` - (Optional, String) Github API token to use to access Github
   - `version` - (Optional, String) The version or tag of the release.
   - `filename` - (Required, String) The name of the published file. The values `zipball` or `tarball` will download the published
-  
+
+* `add_content` - (Optional, Array) adds the given content from a local path to the application directory. You can use this attribute to inject files into the pushed application source.
+
+  - `source` - (Required, String) The source path to copy content from. This can be a directory.
+  - `destination` - (Required, String) The destination path to copy content to. This is relative to the application source root.
+
 ### Service bindings
 
 Modifying this argument will cause the application to be restaged.
