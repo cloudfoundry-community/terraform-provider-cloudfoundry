@@ -465,9 +465,13 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	var app cfapi.CCApp
 	if app, err = am.ReadApp(id); err != nil {
-		return
+		if strings.Contains(err.Error(), "status code: 404") {
+			d.MarkNewResource()
+			err = nil
+		}
+	} else {
+		setAppArguments(app, d)
 	}
-	setAppArguments(app, d)
 	return
 }
 
@@ -649,13 +653,19 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 				mappingID := v.(string)
 				if len(mappingID) > 0 {
 					if err = rm.DeleteRouteMapping(v.(string)); err != nil {
-						return
+						if !strings.Contains(err.Error(), "status code: 404") {
+							return
+						}
+						err = nil
 					}
 				}
 			}
 		}
 	}
 	err = am.DeleteApp(d.Id(), false)
+	if strings.Contains(err.Error(), "status code: 404") {
+		err = nil
+	}
 	return
 }
 
