@@ -182,6 +182,15 @@ func (dm *DomainManager) DeletePrivateDomain(guid string) (err error) {
 	return
 }
 
+// FindDomain -
+func (dm *DomainManager) FindDomain(guid string) (domain CCDomain, err error) {
+
+	if domain, err = dm.GetSharedDomain(guid); err != nil {
+		domain, err = dm.GetPrivateDomain(guid)
+	}
+	return
+}
+
 // FindSharedByName -
 func (dm *DomainManager) FindSharedByName(name string) (models.DomainFields, error) {
 	return dm.repo.FindSharedByName(name)

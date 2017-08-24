@@ -44,6 +44,10 @@ func resourceRoute() *schema.Resource {
 				ForceNew:      true,
 				ConflictsWith: []string{"port"},
 			},
+			"endpoint": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			"target": &schema.Schema{
 				Type:     schema.TypeSet,
 				Set:      routeTargetHash,
@@ -121,7 +125,9 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}()
 
-	setRouteArguments(route, d)
+	if err = setRouteArguments(session, route, d); err != nil {
+		return
+	}
 
 	if v, ok := d.GetOk("target"); ok {
 		var t interface{}
@@ -150,18 +156,8 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) (err error) {
 	if route, err = rm.ReadRoute(id); err != nil {
 		return
 	}
-
-	d.Set("domain", route.DomainGUID)
-	d.Set("space", route.SpaceGUID)
-
-	if route.Hostname != nil {
-		d.Set("hostname", route.Hostname)
-	}
-	if route.Port != nil {
-		d.Set("port", route.Port)
-	}
-	if route.Path != nil {
-		d.Set("path", route.Path)
+	if err = setRouteArguments(session, route, d); err != nil {
+		return
 	}
 
 	if _, ok := d.GetOk("target"); ok {
@@ -197,7 +193,9 @@ func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		if route, err = rm.UpdateRoute(route); err != nil {
 			return err
 		}
-		setRouteArguments(route, d)
+		if err = setRouteArguments(session, route, d); err != nil {
+			return
+		}
 	}
 
 	if d.HasChange("target") {
@@ -236,7 +234,7 @@ func resourceRouteDelete(d *schema.ResourceData, meta interface{}) (err error) {
 	return
 }
 
-func setRouteArguments(route cfapi.CCRoute, d *schema.ResourceData) {
+func setRouteArguments(session *cfapi.Session, route cfapi.CCRoute, d *schema.ResourceData) (err error) {
 
 	d.Set("domain", route.DomainGUID)
 	d.Set("space", route.SpaceGUID)
@@ -249,6 +247,18 @@ func setRouteArguments(route cfapi.CCRoute, d *schema.ResourceData) {
 	if route.Path != nil {
 		d.Set("path", route.Path)
 	}
+
+	domain, err := session.DomainManager().FindDomain(route.DomainGUID)
+	if err != nil {
+		return
+	}
+	if route.Path == nil || len(*route.Path) == 0 {
+		d.Set("endpoint", fmt.Sprintf("%s.%s", *route.Hostname, domain.Name))
+	} else {
+		d.Set("endpoint", fmt.Sprintf("%s.%s/%s", *route.Hostname, domain.Name, *route.Path))
+	}
+
+	return
 }
 
 func addTargets(id string, add []map[string]interface{},

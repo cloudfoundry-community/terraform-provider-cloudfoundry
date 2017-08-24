@@ -50,3 +50,4 @@ The following maps the route to an application.
 The following attributes are exported along with any defaults for the inputs attributes.
 
 * `id` - The GUID of the route
+* `endpoint` - The complete endpoint with path if set for the route
