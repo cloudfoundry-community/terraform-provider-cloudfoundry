@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 
 	"code.cloudfoundry.org/cli/cf/actors"
@@ -203,9 +204,33 @@ func (am *AppManager) DeleteApp(appID string, deleteServiceBindings bool) (err e
 }
 
 // UploadApp -
-func (am *AppManager) UploadApp(app CCApp, path string) (err error) {
+func (am *AppManager) UploadApp(app CCApp, path string, addContent []map[string]interface{}) (err error) {
 
 	err = am.pushActor.ProcessPath(path, func(appDir string) error {
+
+		for _, c := range addContent {
+
+			s := c["source"].(string)
+			d := filepath.Join(appDir, c["destination"].(string))
+
+			var (
+				err error
+				sfi os.FileInfo
+			)
+
+			if sfi, err = os.Stat(s); err != nil {
+				return err
+			}
+			if sfi.IsDir() {
+				err = copyDir(s, d)
+			} else {
+				err = copyFile(s, d)
+			}
+			if err != nil {
+				return err
+			}
+		}
+
 		localFiles, err := am.appFiles.AppFilesInDir(appDir)
 		if err != nil {
 			return fmt.Errorf("error processing app files in '%s': %s", path, err.Error())

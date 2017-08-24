@@ -162,6 +162,22 @@ func resourceApp() *schema.Resource {
 					},
 				},
 			},
+			"add_content": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"source": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"destination": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 			"service_binding": &schema.Schema{
 				Type:     schema.TypeList,
 				Optional: true,
@@ -282,6 +298,8 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 		appPath string
 
+		addContent []map[string]interface{}
+
 		defaultRoute, stageRoute, liveRoute string
 		isBlueGreen                         bool
 
@@ -328,6 +346,9 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	if v, ok = d.GetOk("enable_ssh"); ok {
 		vv := v.(bool)
 		app.EnableSSH = &vv
+	}
+	if v, ok = d.GetOk("add_content"); ok {
+		addContent = getListOfStructs(v)
 	}
 	if v, ok = d.GetOk("health_check_http_endpoint"); ok {
 		vv := v.(string)
@@ -395,7 +416,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 	upload := make(chan error)
 	go func() {
-		err = am.UploadApp(app, appPath)
+		err = am.UploadApp(app, appPath, addContent)
 		upload <- err
 	}()
 
@@ -589,13 +610,24 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
-	if d.HasChange("url") || d.HasChange("git") || d.HasChange("github_release") {
+	if d.HasChange("url") || d.HasChange("git") || d.HasChange("github_release") || d.HasChange("add_content") {
 
-		var appPath string
+		var (
+			v  interface{}
+			ok bool
+
+			appPath string
+
+			addContent []map[string]interface{}
+		)
+
 		if appPath, err = prepareApp(app, d, session.Log); err != nil {
 			return
 		}
-		if err = am.UploadApp(app, appPath); err != nil {
+		if v, ok = d.GetOk("add_content"); ok {
+			addContent = getListOfStructs(v)
+		}
+		if err = am.UploadApp(app, appPath, addContent); err != nil {
 			return err
 		}
 		restage = true
@@ -662,11 +694,19 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 			}
 		}
 	}
-	err = am.DeleteApp(d.Id(), false)
-	if strings.Contains(err.Error(), "status code: 404") {
-		err = nil
+	am.DeleteApp(d.Id(), false)
+	if err = am.DeleteApp(d.Id(), false); err != nil {
+		if strings.Contains(err.Error(), "status code: 404") {
+			session.Log.DebugMessage(
+				"Application with ID '%s' does not exist. App resource will be deleted from state",
+				d.Id())
+		} else {
+			session.Log.DebugMessage(
+				"App resource will be deleted from state although deleing app with ID '%s' returned an error: %s",
+				d.Id(), err.Error())
+		}
 	}
-	return
+	return nil
 }
 
 func setAppArguments(app cfapi.CCApp, d *schema.ResourceData) {
