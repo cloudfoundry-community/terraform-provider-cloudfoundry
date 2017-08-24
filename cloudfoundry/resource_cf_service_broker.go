@@ -31,8 +31,9 @@ func resourceServiceBroker() *schema.Resource {
 				Optional: true,
 			},
 			"password": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:      schema.TypeString,
+				Optional:  true,
+				Sensitive: true,
 			},
 			"space": &schema.Schema{
 				Type:     schema.TypeString,

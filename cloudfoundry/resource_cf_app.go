@@ -244,9 +244,10 @@ func resourceApp() *schema.Resource {
 				},
 			},
 			"environment": &schema.Schema{
-				Type:     schema.TypeMap,
-				Optional: true,
-				Computed: true,
+				Type:      schema.TypeMap,
+				Optional:  true,
+				Computed:  true,
+				Sensitive: true,
 			},
 			"health_check_http_endpoint": &schema.Schema{
 				Type:     schema.TypeString,
@@ -702,7 +703,7 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 				d.Id())
 		} else {
 			session.Log.DebugMessage(
-				"App resource will be deleted from state although deleing app with ID '%s' returned an error: %s",
+				"App resource will be deleted from state although deleting app with ID '%s' returned an error: %s",
 				d.Id(), err.Error())
 		}
 	}

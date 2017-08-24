@@ -23,8 +23,9 @@ func resourceUser() *schema.Resource {
 				Required: true,
 			},
 			"password": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:      schema.TypeString,
+				Optional:  true,
+				Sensitive: true,
 			},
 			"origin": &schema.Schema{
 				Type:     schema.TypeString,
