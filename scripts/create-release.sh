@@ -14,7 +14,10 @@ function pcfdev_instance_detail() {
 }
 
 PCFDEV_INSTANCE_DETAIL=$(pcfdev_instance_detail)
-[[ -n $PCFDEV_INSTANCE_DETAIL ]] || scripts/pcfdev-up.sh private
+if [[ -z $PCFDEV_INSTANCE_DETAIL ]]; then
+    echo -e "\nUnable to locate a running AWS PCFDev instance for acceptance tests. Please run \"scripts/pcfdev-up.sh private\" followed by \"$0 $@\".\n"
+    exit 1
+fi
 
 set -e
 
