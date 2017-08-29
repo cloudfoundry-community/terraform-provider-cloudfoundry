@@ -4,7 +4,7 @@ if [[ -z "$TRAVIS_TAG" ]] ; then
     echo "Git commit does not have a release tag so acceptance tests will not run."
     
     make build
-    exit 0
+    exit $?
 fi
 
 function pcfdev_instance_detail() {
@@ -59,6 +59,7 @@ make testacc
 
 EOF
 
-make release
-
 set +e
+
+make release
+exit $?
