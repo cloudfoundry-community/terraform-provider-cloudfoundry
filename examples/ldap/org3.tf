@@ -14,6 +14,8 @@ data "cf_user" "org3-manager" {
   count = "${length(data.ldap_query.org3-managers.results)}"
   name  = "${data.ldap_query.org3-managers.results[count.index]}"
 
+  # Ensure all PCF users have been created before
+  # referencing them for addition to org / space
   depends_on = ["cf_user.pcf-users"]
 }
 
@@ -29,6 +31,8 @@ data "cf_user" "org3-developer" {
   count = "${length(data.ldap_query.org3-developers.results)}"
   name  = "${data.ldap_query.org3-developers.results[count.index]}"
 
+  # Ensure all PCF users have been created before
+  # referencing them for addition to org / space
   depends_on = ["cf_user.pcf-users"]
 }
 
