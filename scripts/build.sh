@@ -29,11 +29,11 @@ ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcf
 #!/bin/bash
 
 rm -fr /tmp/gopath
-mkdir -p /tmp/gopath/src/github.com/terraform-providers/terraform-provider-cloudfoundry
+mkdir -p /tmp/gopath/src/github.com/terraform-providers/terraform-provider-cf
 EOF
 
 scp -q -r -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem \
-    ./* ubuntu@$PUBLIC_IP:/tmp/gopath/src/github.com/terraform-providers/terraform-provider-cloudfoundry
+    ./* ubuntu@$PUBLIC_IP:/tmp/gopath/src/github.com/terraform-providers/terraform-provider-cf
 
 ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem ubuntu@$PUBLIC_IP <<EOF
 #!/bin/bash
@@ -46,7 +46,7 @@ set -ex
 
 export GOROOT=/usr/local/go
 export GOPATH=/tmp/gopath
-cd /tmp/gopath/src/github.com/terraform-providers/terraform-provider-cloudfoundry
+cd /tmp/gopath/src/github.com/terraform-providers/terraform-provider-cf
 
 export CF_USER=admin
 export CF_PASSWORD=admin

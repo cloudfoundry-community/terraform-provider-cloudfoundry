@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/repo"
+	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
 
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"

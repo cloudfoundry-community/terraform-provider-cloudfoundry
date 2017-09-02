@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/repo"
+	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
 )
 
 func TestGithubReleaseRepo(t *testing.T) {

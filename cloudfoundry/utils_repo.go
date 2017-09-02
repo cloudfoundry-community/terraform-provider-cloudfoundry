@@ -5,7 +5,7 @@ import (
 	"os/user"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/repo"
+	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
 )
 
 var repoManager *repo.RepoManager

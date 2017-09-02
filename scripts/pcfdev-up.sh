@@ -139,6 +139,13 @@ else
     vagrant provision
 fi
 
+# Script to determine if all services are up. 
+#
+# TODO: add this to a start of a stopped AWS 
+# instance instead of recreating it each time.
+#
+# sudo /var/vcap/bosh/bin/monit summary | awk '$1 == "Process" && $3 != "running" { print $3 }' | wc -l
+
 duration=$SECONDS
 echo "Time to provision PCDDev via Vagrant: $(($duration / 60)) minutes and $(($duration % 60)) seconds."
 

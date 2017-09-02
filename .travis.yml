@@ -3,7 +3,7 @@ sudo: required
 language: go
 go:
 - 1.8.x
-go_import_path: github.com/terraform-providers/terraform-provider-cloudfoundry
+go_import_path: github.com/terraform-providers/terraform-provider-cf
 before_install:
 - openssl aes-256-cbc -K $encrypted_d032c4bea5a6_key -iv $encrypted_d032c4bea5a6_iv
   -in .test_env/pcfdev.pem.enc -out .test_env/pcfdev.pem -d
@@ -24,14 +24,14 @@ deploy:
   api_key:
     secure: FV+O96XUOzliHe1V5ycA6WG1UhZe2UOMWtwlct5X+iHezw/EETyAhVzi/s5Zzs3Nj409k48tF3glRFa8LlgI1NRWMOCRU0Uu/RPySBUJvun74sX1siCMTZdYKUSC0RwlgDCOHrB0LGpeuP0XDB/PTUzYweEnxlBS2rk8X1gEgOgw7GIUzGtQBNROQ6xTfUcFUovDWLmOEHegfCb5ZjpYPi2BOIHg9xju/VvmJTflFSMP210QE+SBWpA+P4lHiwXXkaDqQRnDMHVFYFA8ul2jucrTNhMuKPM/rsKyGF2+HMUWu0g3zzGJI8W3Zp8RoVa+eS4DywbtiLvthG/mNh9o8a0HINgyTQfoO7dZega2WNDO4eT+VsgQohn60gTWIk3JJhyAWPPy8nUuY3MWTOgLQicQjInUqvcpV+8BvpBjFjFVkJ+TrL8eJSWbvyGuoqC1dINRJNjZ6343IXIcw4lMMt8fJbwJ8OJCd2av1JMcw8JZPTXjy76H/ENiPwTVegifxZ4h8VeVyG88IHDMZsseqY33cFeYF3T2qkHzbkl2oWD8IgXuCsR4HEw7kffjEp5cS/qdDNGC5IeBfDObrMfcYGu9kX5QlSirBrD/ld0dcQ8t4Y3FhJN+xt5IWp6anqUaCpYwNVA6rGQ9ItozrVFkuGy5t735O/sv6rB05IgBbqQ=
   file:
-  - bin/terraform-provider-cloudfoundry_windows_amd64.exe
-  - bin/terraform-provider-cloudfoundry_linux_amd64
-  - bin/terraform-provider-cloudfoundry_darwin_amd64
+  - bin/terraform-provider-cf_windows_amd64.exe
+  - bin/terraform-provider-cf_linux_amd64
+  - bin/terraform-provider-cf_darwin_amd64
   skip_cleanup: true
   on:
     tags: true
     all_branches: true
-    repo: mevansam/terraform-provider-cloudfoundry
+    repo: mevansam/terraform-provider-cf
 env:
   global:
   - AWS_DEFAULT_REGION=us-east-1

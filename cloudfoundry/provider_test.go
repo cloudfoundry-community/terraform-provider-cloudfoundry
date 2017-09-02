@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 var testAccProviders map[string]terraform.ResourceProvider
