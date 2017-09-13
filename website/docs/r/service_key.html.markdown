@@ -1,7 +1,7 @@
 ---
 layout: "cf"
 page_title: "Cloud Foundry: cf_service_instance"
-sidebar_current: "docs-cf-resource-service-instance"
+sidebar_current: "docs-cf-resource-service-key"
 description: |-
   Provides a Cloud Foundry Service Instance.
 ---
