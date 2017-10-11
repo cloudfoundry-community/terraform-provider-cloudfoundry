@@ -143,6 +143,21 @@ type CCUserProvidedServiceUpdateRequest struct {
 	Credentials     map[string]interface{} `json:"credentials,omitempty"`
 }
 
+// CCServiceKey -
+type CCServiceKey struct {
+	ID string
+
+	Name        string                 `json:"name"`
+	ServiceGUID string                 `json:"service_instance_guid"`
+	Credentials map[string]interface{} `json:"credentials"`
+}
+
+// CCServiceKeyResource -
+type CCServiceKeyResource struct {
+	Metadata resources.Metadata `json:"metadata"`
+	Entity   CCServiceKey       `json:"entity"`
+}
+
 // NewServiceManager -
 func newServiceManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logger) (sm *ServiceManager, err error) {
 
@@ -475,7 +490,6 @@ func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serv
 				return false
 			}
 			return true
-
 		})
 
 	if apiErr != nil {
@@ -568,6 +582,84 @@ func (sm *ServiceManager) UpdateUserProvidedService(serviceInstanceID string, na
 func (sm *ServiceManager) DeleteUserProvidedService(serviceInstanceID string) (err error) {
 
 	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/user_provided_service_instances/%s", serviceInstanceID))
+	return
+}
+
+// CreateServiceKey -
+func (sm *ServiceManager) CreateServiceKey(name, serviceID string, params map[string]interface{}) (serviceKey CCServiceKey, err error) {
+
+	body, err := json.Marshal(map[string]interface{}{
+		"name":                  name,
+		"service_instance_guid": serviceID,
+		"parameters":            params,
+	})
+	if err != nil {
+		return
+	}
+
+	resource := CCServiceKeyResource{}
+	if err = sm.ccGateway.CreateResource(sm.apiEndpoint,
+		"/v2/service_keys", bytes.NewReader(body), &resource); err != nil {
+		return
+	}
+	serviceKey = resource.Entity
+	serviceKey.ID = resource.Metadata.GUID
+	return
+}
+
+// ReadServiceKey -
+func (sm *ServiceManager) ReadServiceKey(serviceKeyID string) (serviceKey CCServiceKey, err error) {
+
+	url := fmt.Sprintf("%s/v2/service_keys/%s", sm.apiEndpoint, serviceKeyID)
+
+	resource := CCServiceKeyResource{}
+	err = sm.ccGateway.GetResource(url, &resource)
+	if err != nil {
+		return
+	}
+
+	serviceKey = resource.Entity
+	serviceKey.ID = resource.Metadata.GUID
+	return
+}
+
+// DeleteServiceKey -
+func (sm *ServiceManager) DeleteServiceKey(serviceKeyID string) (err error) {
+
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_keys/%s", serviceKeyID))
+	return
+}
+
+// FindServiceKey -
+func (sm *ServiceManager) FindServiceKey(name string, serviceInstanceID string) (serviceKey CCServiceKey, err error) {
+
+	path := fmt.Sprintf("/v2/service_keys?q=%s", url.QueryEscape("name:"+name))
+
+	var found bool
+
+	apiErr := sm.ccGateway.ListPaginatedResources(
+		sm.apiEndpoint,
+		path,
+		CCServiceKeyResource{},
+		func(resource interface{}) bool {
+			if sk, ok := resource.(CCServiceKeyResource); ok {
+				if sk.Entity.ServiceGUID == serviceInstanceID {
+					serviceKey = sk.Entity
+					found = true
+					return false
+				}
+			}
+			return true
+		})
+
+	if apiErr != nil {
+		err = apiErr
+	} else {
+		if !found {
+			err = errors.NewModelNotFoundError("ServiceKey", name)
+		}
+	}
+
 	return
 }
 

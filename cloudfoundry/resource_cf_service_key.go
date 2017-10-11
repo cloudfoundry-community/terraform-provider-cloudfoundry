@@ -1,0 +1,100 @@
+package cloudfoundry
+
+import (
+	"fmt"
+
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+)
+
+func resourceServiceKey() *schema.Resource {
+
+	return &schema.Resource{
+
+		Create: resourceServiceKeyCreate,
+		Read:   resourceServiceKeyRead,
+		Delete: resourceServiceKeyDelete,
+
+		Schema: map[string]*schema.Schema{
+
+			"name": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"service_instance": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"params": &schema.Schema{
+				Type:     schema.TypeMap,
+				Optional: true,
+				ForceNew: true,
+			},
+			"credentials": &schema.Schema{
+				Type:     schema.TypeMap,
+				Computed: true,
+			},
+		},
+	}
+}
+
+func resourceServiceKeyCreate(d *schema.ResourceData, meta interface{}) (err error) {
+
+	session := meta.(*cfapi.Session)
+	if session == nil {
+		return fmt.Errorf("client is nil")
+	}
+
+	name := d.Get("name").(string)
+	serviceInstance := d.Get("service_instance").(string)
+	params := d.Get("params").(map[string]interface{})
+
+	sm := session.ServiceManager()
+	var serviceKey cfapi.CCServiceKey
+
+	if serviceKey, err = sm.CreateServiceKey(name, serviceInstance, params); err != nil {
+		return
+	}
+	session.Log.DebugMessage("Created Service Key: %# v", serviceKey)
+
+	d.Set("credentials", serviceKey.Credentials)
+	d.SetId(serviceKey.ID)
+	return
+}
+
+func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) (err error) {
+
+	session := meta.(*cfapi.Session)
+	if session == nil {
+		return fmt.Errorf("client is nil")
+	}
+	session.Log.DebugMessage("Reading Service Key with ID: %s", d.Id())
+
+	sm := session.ServiceManager()
+	var serviceKey cfapi.CCServiceKey
+
+	serviceKey, err = sm.ReadServiceKey(d.Id())
+	if err != nil {
+		return
+	}
+	d.Set("name", serviceKey.Name)
+	d.Set("service_instance", serviceKey.ServiceGUID)
+	d.Set("credentials", serviceKey.Credentials)
+
+	session.Log.DebugMessage("Read Service Instance : %# v", serviceKey)
+	return
+}
+
+func resourceServiceKeyDelete(d *schema.ResourceData, meta interface{}) (err error) {
+
+	session := meta.(*cfapi.Session)
+	if session == nil {
+		return fmt.Errorf("client is nil")
+	}
+	session.Log.DebugMessage("Reading Service Key with ID: %s", d.Id())
+
+	err = session.ServiceManager().DeleteServiceKey(d.Id())
+	return
+}
