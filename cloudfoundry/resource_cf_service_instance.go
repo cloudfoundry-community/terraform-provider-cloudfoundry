@@ -24,7 +24,7 @@ func resourceServiceInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"servicePlan": &schema.Schema{
+			"service_plan": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -32,7 +32,7 @@ func resourceServiceInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"jsonParameters": &schema.Schema{
+			"json_params": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "",
@@ -59,9 +59,9 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 		params map[string]interface{}
 	)
 	name := d.Get("name").(string)
-	servicePlan := d.Get("servicePlan").(string)
+	servicePlan := d.Get("service_plan").(string)
 	space := d.Get("space").(string)
-	jsonParameters := d.Get("jsonParameters").(string)
+	jsonParameters := d.Get("json_params").(string)
 
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
@@ -104,7 +104,7 @@ func resourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) (err 
 	}
 
 	d.Set("name", serviceInstance.Name)
-	d.Set("servicePlan", serviceInstance.ServicePlanGUID)
+	d.Set("service_plan", serviceInstance.ServicePlanGUID)
 	d.Set("space", serviceInstance.SpaceGUID)
 
 	if serviceInstance.Tags != nil {
@@ -140,8 +140,8 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 
 	id = d.Id()
 	name = d.Get("name").(string)
-	servicePlan := d.Get("servicePlan").(string)
-	jsonParameters := d.Get("jsonParameters").(string)
+	servicePlan := d.Get("service_plan").(string)
+	jsonParameters := d.Get("json_params").(string)
 
 	if len(jsonParameters) > 0 {
 		if err = json.Unmarshal([]byte(jsonParameters), &params); err != nil {

@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Service Instance.
 ---
 
-# cf\_service_instance
+# cf\_service\_instance
 
 Provides a Cloud Foundry resource for managing Cloud Foundry [Service Instances](https://docs.cloudfoundry.org/devguide/services/) within spaces.
 
@@ -22,7 +22,7 @@ data "cf_service" "redis" {
 resource "cf_service_instance" "redis1" {
   name = "pricing-grid"
   space = "${cf_space.dev.id}"
-  servicePlan = "${data.cf_service.redis.service_plans["shared-vm"]}"
+  service_plan = "${data.cf_service.redis.service_plans["shared-vm"]}"
 }
 ```
 
@@ -30,11 +30,11 @@ resource "cf_service_instance" "redis1" {
 
 The following arguments are supported:
 
-* `name` - (Required) The name of the Service Instance in Cloud Foundry
-* `servicePlan` - (Required) The ID of the [service plan](/docs/providers/cloudfoundry/d/service_plan.html)
-* `space` - (Required) The ID of the [space](/docs/providers/cloudfoundry/r/space.html) 
-* `jsonParameters` - (Optional) List of arbitrary parameters. Some services support providing additional configuration parameters within the provision request
-* `tags` - (Optional) List of instance tags. Some services provide a list of tags that Cloud Foundry delivers in [VCAP_SERVICES Env variables](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES)
+* `name` - (Required, String) The name of the Service Instance in Cloud Foundry
+* `service_plan` - (Required, String) The ID of the [service plan](/docs/providers/cloudfoundry/d/service_plan.html)
+* `space` - (Required, String) The ID of the [space](/docs/providers/cloudfoundry/r/space.html) 
+* `json_params` - (Optional, String) Json string of arbitrary parameters. Some services support providing additional configuration parameters within the provision request
+* `tags` - (Optional, List) List of instance tags. Some services provide a list of tags that Cloud Foundry delivers in [VCAP_SERVICES Env variables](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES)
 
 ## Attributes Reference
 
