@@ -4,7 +4,8 @@ Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/mevansam
 Overview
 --------
 
-This Terraform provider plugin allows you to configure a Cloud Foundry environment declaratively using [HCL](https://github.com/hashicorp/hcl).
+This Terraform provider plugin allows you to configure a Cloud Foundry environment declaratively using [HCL](https://github.com/hashicorp/hcl). Quick documentation for the Terraform Cloud Foundry resources is available 
+on the [wiki](https://github.com/mevansam/terraform-provider-cf/wiki).
 
 Requirements
 ------------
