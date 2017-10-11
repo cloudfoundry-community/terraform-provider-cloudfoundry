@@ -27,7 +27,7 @@ data "cf_service" "mysql" {
 resource "cf_service_instance" "mysql" {
 	name = "mysql"
     space = "${data.cf_space.space.id}"
-    servicePlan = "${data.cf_service.mysql.service_plans["512mb"]}"
+    service_plan = "${data.cf_service.mysql.service_plans["512mb"]}"
 }
 
 resource "cf_service_key" "mysql-key" {

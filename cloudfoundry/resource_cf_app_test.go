@@ -39,12 +39,12 @@ resource "cf_route" "spring-music" {
 resource "cf_service_instance" "db" {
 	name = "db"
     space = "${data.cf_space.space.id}"
-    servicePlan = "${data.cf_service.mysql.service_plans.512mb}"
+    service_plan = "${data.cf_service.mysql.service_plans.512mb}"
 }
 resource "cf_service_instance" "fs1" {
 	name = "fs1"
     space = "${data.cf_space.space.id}"
-    servicePlan = "${data.cf_service.volume.service_plans.free-local-disk}"
+    service_plan = "${data.cf_service.volume.service_plans.free-local-disk}"
 }
 resource "cf_app" "spring-music" {
 	name = "spring-music"
@@ -98,17 +98,17 @@ resource "cf_route" "spring-music" {
 resource "cf_service_instance" "db" {
 	name = "db"
     space = "${data.cf_space.space.id}"
-    servicePlan = "${data.cf_service.mysql.service_plans.512mb}"
+    service_plan = "${data.cf_service.mysql.service_plans.512mb}"
 }
 resource "cf_service_instance" "fs1" {
 	name = "fs1"
     space = "${data.cf_space.space.id}"
-    servicePlan = "${data.cf_service.volume.service_plans.free-local-disk}"
+    service_plan = "${data.cf_service.volume.service_plans.free-local-disk}"
 }
 resource "cf_service_instance" "fs2" {
 	name = "fs2"
     space = "${data.cf_space.space.id}"
-    servicePlan = "${data.cf_service.volume.service_plans.free-local-disk}"
+    service_plan = "${data.cf_service.volume.service_plans.free-local-disk}"
 }
 resource "cf_app" "spring-music" {
 	name = "spring-music-updated"
