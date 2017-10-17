@@ -30,7 +30,7 @@ The following arguments are supported:
 - `space` - (Required, String) The ID of the space to create the route in.
 - `hostname` - (Required, Optional) The application's host name. This is required for shared domains.
 
-The following argument applies only to TCP routes.
+The following arguments apply only to TCP routes.
 
 - `port` - (Optional, Int) The port to associate with the route for a TCP route. 
 - `random_port` - (Optional, Bool) Set to 'true' to create a random port.
