@@ -35,8 +35,13 @@ func resourceRoute() *schema.Resource {
 			"port": &schema.Schema{
 				Type:          schema.TypeInt,
 				Optional:      true,
+				ConflictsWith: []string{"path", "random_port"},
+			},
+			"random_port": &schema.Schema{
+				Type:          schema.TypeBool,
+				Optional:      true,
 				ForceNew:      true,
-				ConflictsWith: []string{"path"},
+				ConflictsWith: []string{"path", "port"},
 			},
 			"path": &schema.Schema{
 				Type:          schema.TypeString,
@@ -111,10 +116,15 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		route.Path = &vv
 	}
 
+	randomPort := false
+	if v, ok := d.GetOk("random_port"); ok {
+		randomPort = v.(bool)
+	}
+
 	rm := session.RouteManager()
 
 	// Create route
-	if route, err = rm.CreateRoute(route); err != nil {
+	if route, err = rm.CreateRoute(route, randomPort); err != nil {
 		return err
 	}
 	// Delete route if an error occurs

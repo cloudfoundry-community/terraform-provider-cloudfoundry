@@ -632,7 +632,6 @@ func (sm *ServiceManager) DeleteServiceKey(serviceKeyID string) (err error) {
 
 // FindServiceKey -
 func (sm *ServiceManager) FindServiceKey(name string, serviceInstanceID string) (serviceKey CCServiceKey, err error) {
-
 	path := fmt.Sprintf("/v2/service_keys?q=%s", url.QueryEscape("name:"+name))
 
 	var found bool

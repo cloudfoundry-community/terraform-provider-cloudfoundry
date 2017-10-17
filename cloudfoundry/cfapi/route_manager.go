@@ -127,16 +127,23 @@ func (rm *RouteManager) ReadRoute(routeID string) (route CCRoute, err error) {
 }
 
 // CreateRoute -
-func (rm *RouteManager) CreateRoute(r CCRoute) (route CCRoute, err error) {
+func (rm *RouteManager) CreateRoute(r CCRoute, randomPort bool) (route CCRoute, err error) {
 
 	body, err := json.Marshal(r)
 	if err != nil {
 		return
 	}
 
+	var path string
+	if randomPort {
+		path = "/v2/routes?generate_port=true"
+	} else {
+		path = "/v2/routes"
+	}
+
 	resource := CCRouteResource{}
 	if err = rm.ccGateway.CreateResource(rm.apiEndpoint,
-		"/v2/routes", bytes.NewReader(body), &resource); err != nil {
+		path, bytes.NewReader(body), &resource); err != nil {
 		return
 	}
 	route = resource.Entity

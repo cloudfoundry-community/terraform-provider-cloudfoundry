@@ -32,7 +32,8 @@ The following arguments are supported:
 
 The following argument applies only to TCP routes.
 
-- `port` - (Optional) The port to associate with the route for a TCP route. 
+- `port` - (Optional, Int) The port to associate with the route for a TCP route. 
+- `random_port` - (Optional, Bool) Set to 'true' to create a random port.
 
 The following argument applies only to HTTP routes.
 
@@ -43,7 +44,7 @@ The following maps the route to an application.
 - `target` - (Optional) A route mapping that will map this route to an application
   
   - `app` - (Required, String) The ID of the [application](/docs/providers/cf/r/app.html) to map this route to.
-  - `port` - (Optional, int) A port that the application will be listening on. If this argument is not provided then the route will be associated with the application's default port.
+  - `port` - (Optional, Int) A port that the application will be listening on. If this argument is not provided then the route will be associated with the application's default port.
 
 ## Attributes Reference
 
