@@ -35,6 +35,7 @@ func resourceRoute() *schema.Resource {
 			"port": &schema.Schema{
 				Type:          schema.TypeInt,
 				Optional:      true,
+				Computed:      true,
 				ConflictsWith: []string{"path", "random_port"},
 			},
 			"random_port": &schema.Schema{
@@ -262,7 +263,9 @@ func setRouteArguments(session *cfapi.Session, route cfapi.CCRoute, d *schema.Re
 	if err != nil {
 		return
 	}
-	if route.Path == nil || len(*route.Path) == 0 {
+	if route.Port != nil && *route.Port > 0 {
+		d.Set("endpoint", fmt.Sprintf("%s:%d", domain.Name, *route.Port))
+	} else if route.Path == nil || len(*route.Path) == 0 {
 		d.Set("endpoint", fmt.Sprintf("%s.%s", *route.Hostname, domain.Name))
 	} else {
 		d.Set("endpoint", fmt.Sprintf("%s.%s/%s", *route.Hostname, domain.Name, *route.Path))
