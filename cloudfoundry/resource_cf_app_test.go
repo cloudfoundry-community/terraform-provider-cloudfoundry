@@ -210,7 +210,7 @@ func TestAccApp_app1(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("http://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -251,7 +251,7 @@ func TestAccApp_app1(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("http://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -308,11 +308,11 @@ func TestAccApp_app2(t *testing.T) {
 							var responses []string
 
 							responses = []string{"8888"}
-							if err = assertHTTPResponse("http://test-app-8888."+defaultAppDomain()+"/port", 200, &responses); err != nil {
+							if err = assertHTTPResponse("https://test-app-8888."+defaultAppDomain()+"/port", 200, &responses); err != nil {
 								return err
 							}
 							responses = []string{"9999"}
-							if err = assertHTTPResponse("http://test-app-9999."+defaultAppDomain()+"/port", 200, &responses); err != nil {
+							if err = assertHTTPResponse("https://test-app-9999."+defaultAppDomain()+"/port", 200, &responses); err != nil {
 								return err
 							}
 							return

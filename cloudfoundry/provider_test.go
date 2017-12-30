@@ -2,6 +2,7 @@ package cloudfoundry
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -384,7 +385,13 @@ func assertMapEquals(key string, attributes map[string]string, actual map[string
 func assertHTTPResponse(url string, expectedStatusCode int, expectedResponses *[]string) (err error) {
 
 	var resp *http.Response
-	if resp, err = http.Get(url); err != nil {
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	if resp, err = client.Get(url); err != nil {
 		return
 	}
 	if expectedStatusCode != resp.StatusCode {
