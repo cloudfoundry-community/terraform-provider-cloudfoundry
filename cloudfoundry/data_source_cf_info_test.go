@@ -27,13 +27,13 @@ func TestAccDataSourceInfo_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "api_endpoint", apiURL()),
 						resource.TestCheckResourceAttr(
-							ref, "auth_endpoint", "https://login."+defaultDomain()),
+							ref, "auth_endpoint", "https://login."+defaultSysDomain()),
 						resource.TestCheckResourceAttr(
-							ref, "uaa_endpoint", "https://uaa."+defaultDomain()),
+							ref, "uaa_endpoint", "https://uaa."+defaultSysDomain()),
 						resource.TestCheckResourceAttr(
-							ref, "logging_endpoint", "wss://loggregator."+defaultDomain()+":443"),
+							ref, "logging_endpoint", "wss://loggregator."+defaultSysDomain()+":443"),
 						resource.TestCheckResourceAttr(
-							ref, "doppler_endpoint", "wss://doppler."+defaultDomain()+":443"),
+							ref, "doppler_endpoint", "wss://doppler."+defaultSysDomain()+":443"),
 					),
 				},
 			},

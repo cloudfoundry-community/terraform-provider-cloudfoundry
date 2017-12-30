@@ -43,7 +43,7 @@ resource "cf_domain" "private" {
 func TestAccSharedDomain_normal(t *testing.T) {
 
 	ref := "cf_domain.shared"
-	domainname := "dev." + defaultDomain()
+	domainname := "dev." + defaultAppDomain()
 
 	resource.Test(t,
 		resource.TestCase{
@@ -53,7 +53,7 @@ func TestAccSharedDomain_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(domainResourceShared, defaultDomain()),
+					Config: fmt.Sprintf(domainResourceShared, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						checkShareDomainExists(ref),
 						resource.TestCheckResourceAttr(
@@ -61,16 +61,17 @@ func TestAccSharedDomain_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "sub_domain", "dev"),
 						resource.TestCheckResourceAttr(
-							ref, "domain", defaultDomain()),
+							ref, "domain", defaultAppDomain()),
 					),
 				},
 			},
 		})
 }
+
 func TestAccSharedTCPDomain_normal(t *testing.T) {
 
 	ref := "cf_domain.shared-tcp"
-	domainname := "tcp-test." + defaultDomain()
+	domainname := "tcp-test." + defaultAppDomain()
 
 	resource.Test(t,
 		resource.TestCase{
@@ -80,7 +81,7 @@ func TestAccSharedTCPDomain_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(domainResourceSharedTCP, defaultDomain()),
+					Config: fmt.Sprintf(domainResourceSharedTCP, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						checkShareDomainExists(ref),
 						resource.TestCheckResourceAttr(
@@ -88,7 +89,7 @@ func TestAccSharedTCPDomain_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "sub_domain", "tcp-test"),
 						resource.TestCheckResourceAttr(
-							ref, "domain", defaultDomain()),
+							ref, "domain", defaultAppDomain()),
 						resource.TestCheckResourceAttr(
 							ref, "router_type", "tcp"),
 					),

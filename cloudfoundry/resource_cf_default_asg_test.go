@@ -40,7 +40,7 @@ resource "cf_default_asg" "running" {
 const defaultRunningSecurityGroupResourceUpdate = `
 
 data "cf_asg" "public" {
-    name = "public_networks"
+    name = "%s"
 }
 
 resource "cf_asg" "apps" {
@@ -89,6 +89,7 @@ resource "cf_default_asg" "staging" {
 
 func TestAccDefaultRunningAsg_normal(t *testing.T) {
 
+	defaultAsg := getDefaultSecurityGroup()
 	ref := "cf_default_asg.running"
 
 	resource.Test(t,
@@ -109,7 +110,7 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 					),
 				},
 				resource.TestStep{
-					Config: defaultRunningSecurityGroupResourceUpdate,
+					Config: fmt.Sprintf(defaultRunningSecurityGroupResourceUpdate, defaultAsg),
 					Check: resource.ComposeTestCheckFunc(
 						checkDefaultAsgsExists(ref),
 						resource.TestCheckResourceAttr(
@@ -192,25 +193,43 @@ func checkDefaultAsgsExists(resource string) resource.TestCheckFunc {
 func testAccCheckDefaultRunningAsgDestroy(s *terraform.State) error {
 
 	session := testAccProvider.Meta().(*cfapi.Session)
-	asgs, err := session.ASGManager().Running()
+	am := session.ASGManager()
+
+	asgs, err := am.Running()
 	if err != nil {
 		return err
 	}
 	if len(asgs) > 0 {
 		return fmt.Errorf("running asgs are not empty")
 	}
+
+	sg, err := am.Read(getDefaultSecurityGroup())
+	if err != nil {
+		return err
+	}
+	err = am.BindToRunning(sg.GUID)
+
 	return nil
 }
 
 func testAccCheckDefaultStagingAsgDestroy(s *terraform.State) error {
 
 	session := testAccProvider.Meta().(*cfapi.Session)
-	asgs, err := session.ASGManager().Staging()
+	am := session.ASGManager()
+
+	asgs, err := am.Staging()
 	if err != nil {
 		return err
 	}
 	if len(asgs) > 0 {
 		return fmt.Errorf("staging asgs are not empty")
 	}
+
+	sg, err := am.Read(getDefaultSecurityGroup())
+	if err != nil {
+		return err
+	}
+	err = am.BindToStaging(sg.GUID)
+
 	return nil
 }

@@ -117,16 +117,16 @@ func TestAccRoute_normal(t *testing.T) {
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckRouteDestroyed([]string{"test-app-single", "test-app-multi"}, defaultDomain()),
+			CheckDestroy: testAccCheckRouteDestroyed([]string{"test-app-single", "test-app-multi"}, defaultAppDomain()),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(routeResource, defaultDomain()),
+					Config: fmt.Sprintf(routeResource, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
 							responses := []string{"8080"}
-							if err = assertHTTPResponse("http://test-app-single."+defaultDomain()+"/port", 200, &responses); err != nil {
+							if err = assertHTTPResponse("http://test-app-single."+defaultAppDomain()+"/port", 200, &responses); err != nil {
 								return err
 							}
 							return
@@ -139,13 +139,13 @@ func TestAccRoute_normal(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(routeResourceUpdate, defaultDomain()),
+					Config: fmt.Sprintf(routeResourceUpdate, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
 							responses := []string{"8080", "8888", "9999"}
 							for i := 1; i <= 9; i++ {
-								if err = assertHTTPResponse("http://test-app-multi."+defaultDomain()+"/port", 200, &responses); err != nil {
+								if err = assertHTTPResponse("http://test-app-multi."+defaultAppDomain()+"/port", 200, &responses); err != nil {
 									return err
 								}
 							}

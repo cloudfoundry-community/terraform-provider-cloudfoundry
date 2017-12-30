@@ -2,9 +2,6 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
@@ -15,19 +12,13 @@ import (
 const asgDataResource = `
 
 data "cf_asg" "public" {
-    name = "public_networks"
+    name = "%s"
 }
 `
 
 func TestAccDataSourceAsg_normal(t *testing.T) {
 
-	_, filename, _, _ := runtime.Caller(0)
-	ut := os.Getenv("UNIT_TEST")
-	if !testAccEnvironmentSet() || (len(ut) > 0 && ut != filepath.Base(filename)) {
-		fmt.Printf("Skipping tests in '%s'.\n", filepath.Base(filename))
-		return
-	}
-
+	defaultAsg := getDefaultSecurityGroup()
 	ref := "data.cf_asg.public"
 
 	resource.Test(t,
@@ -37,11 +28,11 @@ func TestAccDataSourceAsg_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: asgDataResource,
+					Config: fmt.Sprintf(asgDataResource, defaultAsg),
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceAsgExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "public_networks"),
+							ref, "name", defaultAsg),
 					),
 				},
 			},
@@ -70,9 +61,7 @@ func checkDataSourceAsgExists(resource string) resource.TestCheckFunc {
 		if err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "name", asg.Name); err != nil {
-			return err
-		}
-		return nil
+		err = assertEquals(attributes, "name", asg.Name)
+		return err
 	}
 }

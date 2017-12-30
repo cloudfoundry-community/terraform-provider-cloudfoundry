@@ -17,7 +17,7 @@ data "cf_quota" "default" {
     name = "default"
 }
 resource "cf_quota" "runaway" {
-	name = "runaway"
+	name = "runaway_test"
     allow_paid_service_plans = true
     instance_memory = -1
     total_app_instances = -1
@@ -64,7 +64,7 @@ data "cf_quota" "default" {
     name = "default"
 }
 resource "cf_quota" "runaway" {
-	name = "runaway"
+	name = "runaway_test"
     allow_paid_service_plans = true
     instance_memory = -1
     total_app_instances = -1

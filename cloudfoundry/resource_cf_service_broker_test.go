@@ -15,9 +15,9 @@ const sbResource = `
 
 resource "cf_service_broker" "redis" {
 	name = "test-redis"
-	url = "http://redis-broker.%s"
-	username = "admin"
-	password = "admin"
+	url = "https://redis-broker.%s"
+	username = "%s"
+	password = "%s"
 }
 `
 
@@ -25,14 +25,15 @@ const sbResourceUpdate = `
 
 resource "cf_service_broker" "redis" {
 	name = "test-redis-renamed"
-	url = "http://redis-broker.%s"
-	username = "admin"
-	password = "admin"
+	url = "https://redis-broker.%s"
+	username = "%s"
+	password = "%s"
 }
 `
 
 func TestAccServiceBroker_normal(t *testing.T) {
 
+	user, password := getRedisBrokerCredentials()
 	deleteServiceBroker("p-redis")
 
 	ref := "cf_service_broker.redis"
@@ -45,13 +46,14 @@ func TestAccServiceBroker_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(sbResource, defaultDomain()),
+					Config: fmt.Sprintf(sbResource,
+						defaultSysDomain(), user, password),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceBrokerExists(ref),
 						resource.TestCheckResourceAttr(
 							ref, "name", "test-redis"),
 						resource.TestCheckResourceAttr(
-							ref, "url", "http://redis-broker."+defaultDomain()),
+							ref, "url", "https://redis-broker."+defaultSysDomain()),
 						resource.TestCheckResourceAttr(
 							ref, "username", "admin"),
 						resource.TestCheckResourceAttrSet(
@@ -60,7 +62,8 @@ func TestAccServiceBroker_normal(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(sbResourceUpdate, defaultDomain()),
+					Config: fmt.Sprintf(sbResourceUpdate,
+						defaultSysDomain(), user, password),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceBrokerExists(ref),
 						resource.TestCheckResourceAttr(

@@ -27,11 +27,11 @@ func TestAccDataSourceDomain_normal(t *testing.T) {
 					Config: domainDataResource,
 					Check: resource.ComposeTestCheckFunc(
 						resource.TestCheckResourceAttr(
-							ref, "name", "tcp."+defaultDomain()),
+							ref, "name", "tcp."+defaultAppDomain()),
 						resource.TestCheckResourceAttr(
 							ref, "sub_domain", "tcp"),
 						resource.TestCheckResourceAttr(
-							ref, "domain", defaultDomain()),
+							ref, "domain", defaultAppDomain()),
 					),
 				},
 			},

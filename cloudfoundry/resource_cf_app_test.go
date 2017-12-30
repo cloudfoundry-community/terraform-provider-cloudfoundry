@@ -27,8 +27,8 @@ data "cf_space" "space" {
 data "cf_service" "mysql" {
     name = "p-mysql"
 }
-data "cf_service" "volume" {
-    name = "local-volume"
+data "cf_service" "rmq" {
+    name = "p-rabbitmq"
 }
 
 resource "cf_route" "spring-music" {
@@ -44,13 +44,15 @@ resource "cf_service_instance" "db" {
 resource "cf_service_instance" "fs1" {
 	name = "fs1"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.volume.service_plans.free-local-disk}"
+    service_plan = "${data.cf_service.rmq.service_plans.standard}"
 }
 resource "cf_app" "spring-music" {
 	name = "spring-music"
 	space = "${data.cf_space.space.id}"
-	memory = "512"
+	memory = "768"
+	disk_quota = "512"
 	timeout = 1800
+	
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
@@ -86,8 +88,8 @@ data "cf_space" "space" {
 data "cf_service" "mysql" {
     name = "p-mysql"
 }
-data "cf_service" "volume" {
-    name = "local-volume"
+data "cf_service" "rmq" {
+    name = "p-rabbitmq"
 }
 
 resource "cf_route" "spring-music" {
@@ -103,20 +105,20 @@ resource "cf_service_instance" "db" {
 resource "cf_service_instance" "fs1" {
 	name = "fs1"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.volume.service_plans.free-local-disk}"
+    service_plan = "${data.cf_service.rmq.service_plans.standard}"
 }
 resource "cf_service_instance" "fs2" {
 	name = "fs2"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.volume.service_plans.free-local-disk}"
+    service_plan = "${data.cf_service.rmq.service_plans.standard}"
 }
 resource "cf_app" "spring-music" {
 	name = "spring-music-updated"
 	space = "${data.cf_space.space.id}"
 	instances ="2"
-	memory = "768"
-	timeout = 1800
+	memory = "1024"
 	disk_quota = "1024"
+	timeout = 1800
 
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
@@ -204,11 +206,11 @@ func TestAccApp_app1(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceSpringMusic, defaultDomain()),
+					Config: fmt.Sprintf(appResourceSpringMusic, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("http://spring-music."+defaultDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("http://spring-music."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -224,7 +226,7 @@ func TestAccApp_app1(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							refApp, "instances", "1"),
 						resource.TestCheckResourceAttr(
-							refApp, "memory", "512"),
+							refApp, "memory", "768"),
 						resource.TestCheckResourceAttr(
 							refApp, "disk_quota", "512"),
 						resource.TestCheckResourceAttrSet(
@@ -245,11 +247,11 @@ func TestAccApp_app1(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceSpringMusicUpdate, defaultDomain()),
+					Config: fmt.Sprintf(appResourceSpringMusicUpdate, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("http://spring-music."+defaultDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("http://spring-music."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -265,7 +267,7 @@ func TestAccApp_app1(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							refApp, "instances", "2"),
 						resource.TestCheckResourceAttr(
-							refApp, "memory", "768"),
+							refApp, "memory", "1024"),
 						resource.TestCheckResourceAttr(
 							refApp, "disk_quota", "1024"),
 						resource.TestCheckResourceAttrSet(
@@ -299,18 +301,18 @@ func TestAccApp_app2(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceWithMultiplePorts, defaultDomain()),
+					Config: fmt.Sprintf(appResourceWithMultiplePorts, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
 							var responses []string
 
 							responses = []string{"8888"}
-							if err = assertHTTPResponse("http://test-app-8888."+defaultDomain()+"/port", 200, &responses); err != nil {
+							if err = assertHTTPResponse("http://test-app-8888."+defaultAppDomain()+"/port", 200, &responses); err != nil {
 								return err
 							}
 							responses = []string{"9999"}
-							if err = assertHTTPResponse("http://test-app-9999."+defaultDomain()+"/port", 200, &responses); err != nil {
+							if err = assertHTTPResponse("http://test-app-9999."+defaultAppDomain()+"/port", 200, &responses); err != nil {
 								return err
 							}
 							return

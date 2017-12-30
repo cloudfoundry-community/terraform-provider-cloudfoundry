@@ -111,9 +111,17 @@ func apiURL() string {
 	return os.Getenv("CF_API_URL")
 }
 
-func defaultDomain() string {
+func defaultSysDomain() (domain string) {
 	apiURL := apiURL()
-	return apiURL[strings.Index(apiURL, ".")+1:]
+	domain = apiURL[strings.Index(apiURL, ".")+1:]
+	return
+}
+
+func defaultAppDomain() (domain string) {
+	if domain = os.Getenv("CF_TEST_APP_DOMAIN"); len(domain) == 0 {
+		domain = defaultSysDomain()
+	}
+	return
 }
 
 func defaultPcfDevOrgID() string {
@@ -158,6 +166,25 @@ func deleteServiceBroker(name string) {
 	if err == nil {
 		sm.ForceDeleteServiceBroker(serviceBrokerID)
 	}
+}
+
+func getDefaultSecurityGroup() (defaultAsg string) {
+
+	if defaultAsg = os.Getenv("CF_TEST_DEFAULT_ASG"); len(defaultAsg) == 0 {
+		defaultAsg = "public_networks"
+	}
+	return
+}
+
+func getRedisBrokerCredentials() (user string, password string) {
+
+	if user = os.Getenv("CF_TEST_REDIS_BROKER_USER"); len(user) == 0 {
+		user = "admin"
+	}
+	if password = os.Getenv("CF_TEST_REDIS_BROKER_PASSWORD"); len(password) == 0 {
+		password = "admin"
+	}
+	return
 }
 
 func assertContains(str string, list []string) bool {

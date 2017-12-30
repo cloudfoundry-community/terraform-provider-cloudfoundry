@@ -41,6 +41,31 @@ resource "cf_user" "admin-service-user" {
 }
 `
 
+const userResourceWithEmptyGroup = `
+
+resource "cf_user" "empty-group" {
+	name = "jdoe"
+	password = "password"
+	origin = "uaa"
+	given_name = "John"
+	family_name = "Doe"
+	email = "john.doe@acme.com"
+	groups = []
+}
+`
+const userResourceWithEmptyGroupUpdate = `
+
+resource "cf_user" "empty-group" {
+	name = "jdoe"
+	password = "password"
+	origin = "uaa"
+	given_name = "John2"
+	family_name = "Doe2"
+	email = "john.doe@acme.com"
+	groups = []
+}
+`
+
 func TestAccUser_LdapOrigin_normal(t *testing.T) {
 
 	ref := "cf_user.manager1"
@@ -129,6 +154,47 @@ func TestAccUser_WithGroups_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "groups."+strconv.Itoa(hashcode.String("doppler.firehose")),
 							"doppler.firehose"),
+					),
+				},
+			},
+		})
+}
+
+func TestAccUser_EmptyGroups_normal(t *testing.T) {
+
+	ref := "cf_user.empty-group"
+	username := "jdoe"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckUserDestroy(username),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: userResourceWithEmptyGroup,
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckUserExists(ref),
+						resource.TestCheckResourceAttr(
+							ref, "name", username),
+						resource.TestCheckResourceAttr(
+							ref, "origin", "uaa"),
+						resource.TestCheckResourceAttr(
+							ref, "email", "john.doe@acme.com"),
+					),
+				},
+
+				resource.TestStep{
+					Config: userResourceWithEmptyGroupUpdate,
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckUserExists(ref),
+						resource.TestCheckResourceAttr(
+							ref, "name", username),
+						resource.TestCheckResourceAttr(
+							ref, "origin", "uaa"),
+						resource.TestCheckResourceAttr(
+							ref, "email", "john.doe@acme.com"),
 					),
 				},
 			},

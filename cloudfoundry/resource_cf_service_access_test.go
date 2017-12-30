@@ -13,9 +13,9 @@ const saResource = `
 
 resource "cf_service_broker" "redis" {
 	name = "test-redis"
-	url = "http://redis-broker.%s"
-	username = "admin"
-	password = "admin"
+	url = "https://redis-broker.%s"
+	username = "%s"
+	password = "%s"
 }
 
 resource "cf_service_access" "redis-access" {
@@ -26,6 +26,7 @@ resource "cf_service_access" "redis-access" {
 
 func TestAccServiceAccess_normal(t *testing.T) {
 
+	user, password := getRedisBrokerCredentials()
 	deleteServiceBroker("p-redis")
 
 	var servicePlanAccessGUID string
@@ -39,7 +40,8 @@ func TestAccServiceAccess_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(saResource, defaultDomain(), defaultPcfDevOrgID()),
+					Config: fmt.Sprintf(saResource,
+						defaultSysDomain(), user, password, defaultPcfDevOrgID()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceAccessExists(ref,
 							func(guid string) {
