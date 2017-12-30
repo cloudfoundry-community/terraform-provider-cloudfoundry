@@ -17,6 +17,7 @@ set -e
 PCFDEV_INSTANCE_DETAIL=$(pcfdev_instance_detail)
 if [[ -n $PCFDEV_INSTANCE_DETAIL ]]; then
 
+    chmod 0600 .test_env/pcfdev.pem
     scripts/pcfdev-access.sh
 
     PUBLIC_IP=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .PublicIpAddress)

@@ -7,9 +7,6 @@ go_import_path: github.com/terraform-providers/terraform-provider-cf
 before_install:
 - openssl aes-256-cbc -K $encrypted_22350934ad09_key -iv $encrypted_22350934ad09_iv
   -in .test_env/tfacc_env.enc -out .test_env/tfacc_env -d
-- openssl aes-256-cbc -K $encrypted_22350934ad09_key -iv $encrypted_22350934ad09_iv
-  -in .test_env/pcfdev.pem.enc -out .test_env/pcfdev.pem -d
-- chmod 0600 .test_env/pcfdev.pem
 install:
 - sudo apt-get install jq
 - pip install --upgrade --user awscli
