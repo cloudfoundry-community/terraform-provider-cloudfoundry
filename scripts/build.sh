@@ -15,27 +15,24 @@ function pcfdev_instance_detail() {
 set -e
 
 PCFDEV_INSTANCE_DETAIL=$(pcfdev_instance_detail)
-if [[ -z $PCFDEV_INSTANCE_DETAIL ]]; then
-    echo "ERROR! Unable to discover PCFDev instance."
-    exit 1
-fi
+if [[ -n $PCFDEV_INSTANCE_DETAIL ]]; then
 
-scripts/pcfdev-access.sh
+    scripts/pcfdev-access.sh
 
-PUBLIC_IP=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .PublicIpAddress)
-PRIVATE_IP=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .PrivateIpAddress)
+    PUBLIC_IP=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .PublicIpAddress)
+    PRIVATE_IP=$(echo $PCFDEV_INSTANCE_DETAIL | jq -r .PrivateIpAddress)
 
-ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem ubuntu@$PUBLIC_IP <<EOF
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem ubuntu@$PUBLIC_IP <<EOF
 #!/bin/bash
 
 rm -fr /tmp/gopath
 mkdir -p /tmp/gopath/src/github.com/terraform-providers/terraform-provider-cf
 EOF
 
-scp -q -r -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem \
-    ./* ubuntu@$PUBLIC_IP:/tmp/gopath/src/github.com/terraform-providers/terraform-provider-cf
+    scp -q -r -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem \
+        ./* ubuntu@$PUBLIC_IP:/tmp/gopath/src/github.com/terraform-providers/terraform-provider-cf
 
-ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem ubuntu@$PUBLIC_IP <<EOF
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .test_env/pcfdev.pem ubuntu@$PUBLIC_IP <<EOF
 #!/bin/bash
 
 go version | grep go1.8 >/dev/null 2>&1
@@ -59,7 +56,11 @@ make testacc
 
 EOF
 
-set +e
+else
+    source .test_env/tfacc_env
+    make testacc
+fi
 
+set +e
 make release
 exit $?
