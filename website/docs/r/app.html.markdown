@@ -75,7 +75,7 @@ Modifying this argument will cause the application to be restaged.
 
 * `service_binding` - (Optional, Array) Service instances to bind to.
 
-  - `service` - (Required, String) The service instance GUID.
+  - `service_instance` - (Required, String) The service instance GUID.
   - `params` - (Optional, Map) A list of key/value parameters used by the service broker to create the binding.
 
 ### Routing and Blue-Green Deployment Strategy
