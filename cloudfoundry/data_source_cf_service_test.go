@@ -71,10 +71,8 @@ func checkDataSourceServiceExists(resource string) resource.TestCheckFunc {
 		if err != nil {
 			return err
 		}
-		if err := assertSame(id, service.GUID); err != nil {
-			return err
-		}
+		err = assertSame(id, service.GUID)
 
-		return nil
+		return err
 	}
 }
