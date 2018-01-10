@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"code.cloudfoundry.org/cli/cf/api"
 	"code.cloudfoundry.org/cli/cf/api/resources"
@@ -719,7 +720,7 @@ func (sm *ServiceManager) GetServicePlans(serviceID string) (servicePlans map[st
 		resources.ServicePlanResource{},
 		func(resource interface{}) bool {
 			if sp, ok := resource.(resources.ServicePlanResource); ok {
-				servicePlans[sp.Entity.Name] = sp.Metadata.GUID
+				servicePlans[strings.Replace(sp.Entity.Name, ".", "_", -1)] = sp.Metadata.GUID
 			}
 			return true
 		})
