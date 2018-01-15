@@ -16,6 +16,10 @@ func resourceSpace() *schema.Resource {
 		Update: resourceSpaceUpdate,
 		Delete: resourceSpaceDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: resourceSpaceImport,
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

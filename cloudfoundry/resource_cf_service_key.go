@@ -15,6 +15,10 @@ func resourceServiceKey() *schema.Resource {
 		Read:   resourceServiceKeyRead,
 		Delete: resourceServiceKeyDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: ImportStatePassthrough,
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

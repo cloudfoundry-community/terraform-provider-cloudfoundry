@@ -6,6 +6,8 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
+const importStateKey = "is_import_state"
+
 // getListOfStructs
 func getListOfStructs(v interface{}) []map[string]interface{} {
 	vvv := []map[string]interface{}{}
@@ -146,4 +148,30 @@ func getListChangedSchemaLists(old []interface{}, new []interface{}) (remove []m
 		}
 	}
 	return
+}
+
+// ImportStatePassthrough -
+func ImportStatePassthrough(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	MarkImportState(d)
+	return schema.ImportStatePassthrough(d, meta)
+}
+
+// MarkImportState -
+func MarkImportState(d *schema.ResourceData) {
+	connInfo := d.ConnInfo()
+	if connInfo == nil {
+		connInfo = make(map[string]string)
+	}
+	connInfo[importStateKey] = ""
+	d.SetConnInfo(connInfo)
+}
+
+// IsImportState -
+func IsImportState(d *schema.ResourceData) bool {
+	connInfo := d.ConnInfo()
+	if connInfo == nil {
+		return false
+	}
+	_, ok := connInfo[importStateKey]
+	return ok
 }

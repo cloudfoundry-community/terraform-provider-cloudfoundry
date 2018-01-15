@@ -18,6 +18,10 @@ func resourceServiceInstance() *schema.Resource {
 		Update: resourceServiceInstanceUpdate,
 		Delete: resourceServiceInstanceDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: ImportStatePassthrough,
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{
