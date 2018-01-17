@@ -25,13 +25,13 @@ resource "cf_asg" "messaging" {
         protocol = "tcp"
         destination = "192.168.1.100"
         ports = "5671-5672,61613-61614,1883,8883"
-		log = true
+		    log = true
     }
     rule {
         protocol = "tcp"
         destination = "192.168.1.101"
         ports = "5671-5672,61613-61614,1883,8883"
-		log = true
+		    log = true
     }
 }
 ```

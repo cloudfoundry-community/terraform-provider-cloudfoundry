@@ -183,6 +183,12 @@ func (sm *SpaceManager) UpdateSpace(space CCSpace, asgs []interface{}) (err erro
 	return
 }
 
+// DeleteSpace -
+func (sm *SpaceManager) DeleteSpace(id string) (err error) {
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/spaces/%s", id))
+	return
+}
+
 // AddUser -
 func (sm *SpaceManager) AddUser(spaceID string, userID string, role SpaceRole) (err error) {
 
@@ -212,6 +218,40 @@ func (sm *SpaceManager) ListUsers(spaceID string, role SpaceRole) (userIDs []int
 	return
 }
 
+// AddStagingASG -
+func (sm *SpaceManager) AddStagingASG(spaceID string, asgID string) (err error) {
+
+	err = sm.ccGateway.UpdateResource(sm.apiEndpoint,
+		fmt.Sprintf("/v2/spaces/%s/staging_security_groups/%s", spaceID, asgID),
+		strings.NewReader(""))
+	return
+}
+
+// RemoveStagingASG -
+func (sm *SpaceManager) RemoveStagingASG(spaceID string, asgID string) (err error) {
+
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint,
+		fmt.Sprintf("/v2/spaces/%s/staging_security_groups/%s", spaceID, asgID))
+	return
+}
+
+// ListStagingASGs -
+func (sm *SpaceManager) ListStagingASGs(spaceID string) (asgIDs []interface{}, err error) {
+
+	asgList := struct {
+		Resources []struct {
+			Metadata resources.Metadata `json:"metadata"`
+		} `json:"resources"`
+	}{}
+
+	err = sm.ccGateway.GetResource(
+		fmt.Sprintf("%s/v2/spaces/%s/staging_security_groups", sm.apiEndpoint, spaceID), &asgList)
+	for _, r := range asgList.Resources {
+		asgIDs = append(asgIDs, r.Metadata.GUID)
+	}
+	return
+}
+
 // ListASGs -
 func (sm *SpaceManager) ListASGs(spaceID string) (asgIDs []interface{}, err error) {
 
@@ -226,11 +266,5 @@ func (sm *SpaceManager) ListASGs(spaceID string) (asgIDs []interface{}, err erro
 	for _, r := range asgList.Resources {
 		asgIDs = append(asgIDs, r.Metadata.GUID)
 	}
-	return
-}
-
-// DeleteSpace -
-func (sm *SpaceManager) DeleteSpace(id string) (err error) {
-	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/spaces/%s", id))
 	return
 }

@@ -24,6 +24,27 @@ resource "cf_asg" "svc" {
         destination = "192.168.100.0/24"
     }
 }
+resource "cf_asg" "stg1" {
+	name = "app-services"
+    rule {
+        protocol = "all"
+        destination = "192.168.101.0/24"
+    }
+}
+resource "cf_asg" "stg2" {
+	name = "app-services"
+    rule {
+        protocol = "all"
+        destination = "192.168.102.0/24"
+    }
+}
+resource "cf_asg" "stg3" {
+	name = "app-services"
+    rule {
+        protocol = "all"
+        destination = "192.168.103.0/24"
+    }
+}
 resource "cf_user" "tl" {
 	name = "teamlead@acme.com"
 	password = "password"
@@ -63,6 +84,7 @@ resource "cf_space" "space1" {
 	org = "${cf_org.org1.id}"
 	quota = "${cf_quota.dev.id}"
 	asgs = [ "${cf_asg.svc.id}" ]
+	staging_asgs = [ "${cf_asg.stg1.id}", "${cf_asg.stg2.id}" ]
     managers = [ 
         "${cf_user.tl.id}" 
     ]
@@ -89,6 +111,27 @@ resource "cf_asg" "svc" {
     rule {
         protocol = "all"
         destination = "192.168.100.0/24"
+    }
+}
+resource "cf_asg" "stg1" {
+	name = "app-services"
+    rule {
+        protocol = "all"
+        destination = "192.168.101.0/24"
+    }
+}
+resource "cf_asg" "stg2" {
+	name = "app-services"
+    rule {
+        protocol = "all"
+        destination = "192.168.102.0/24"
+    }
+}
+resource "cf_asg" "stg3" {
+	name = "app-services"
+    rule {
+        protocol = "all"
+        destination = "192.168.103.0/24"
     }
 }
 resource "cf_user" "tl" {
@@ -130,6 +173,7 @@ resource "cf_space" "space1" {
 	org = "${cf_org.org1.id}"
 	quota = "${cf_quota.dev.id}"
 	asgs = [ "${cf_asg.svc.id}" ]
+	staging_asgs = [ "${cf_asg.stg2.id}", "${cf_asg.stg3.id}" ]
     managers = [ 
         "${cf_user.tl.id}" 
     ]
@@ -215,8 +259,8 @@ func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.T
 		var (
 			space cfapi.CCSpace
 
-			runningAsgs                    []string
-			spaceAsgs, asgs                []interface{}
+			runningAsgs, stagingAsgs       []string
+			spaceAsgs                      []interface{}
 			managers, developers, auditors []interface{}
 		)
 
@@ -247,6 +291,7 @@ func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.T
 		if spaceAsgs, err = sm.ListASGs(id); err != nil {
 			return
 		}
+		asgs := []interface{}{}
 		for _, a := range spaceAsgs {
 			if !isStringInList(runningAsgs, a.(string)) {
 				asgs = append(asgs, a)
@@ -257,6 +302,26 @@ func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.T
 			resource, asgs)
 
 		if err := assertSetEquals(attributes, "asgs", asgs); err != nil {
+			return err
+		}
+
+		if stagingAsgs, err = session.ASGManager().Staging(); err != nil {
+			return err
+		}
+		if spaceAsgs, err = sm.ListStagingASGs(id); err != nil {
+			return
+		}
+		asgs = []interface{}{}
+		for _, a := range spaceAsgs {
+			if !isStringInList(stagingAsgs, a.(string)) {
+				asgs = append(asgs, a)
+			}
+		}
+		session.Log.DebugMessage(
+			"retrieved staging asgs of space identified resource '%s': %# v",
+			resource, asgs)
+
+		if err := assertSetEquals(attributes, "staging_asgs", asgs); err != nil {
 			return err
 		}
 
