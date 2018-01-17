@@ -59,7 +59,7 @@ func resourceServiceKeyCreate(d *schema.ResourceData, meta interface{}) (err err
 	}
 	session.Log.DebugMessage("Created Service Key: %# v", serviceKey)
 
-	d.Set("credentials", serviceKey.Credentials)
+	d.Set("credentials", normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_"))
 	d.SetId(serviceKey.ID)
 	return
 }
@@ -81,7 +81,7 @@ func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) (err error
 	}
 	d.Set("name", serviceKey.Name)
 	d.Set("service_instance", serviceKey.ServiceGUID)
-	d.Set("credentials", serviceKey.Credentials)
+	d.Set("credentials", normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_"))
 
 	session.Log.DebugMessage("Read Service Instance : %# v", serviceKey)
 	return
