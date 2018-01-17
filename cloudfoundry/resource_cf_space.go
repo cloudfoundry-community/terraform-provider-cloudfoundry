@@ -41,6 +41,12 @@ func resourceSpace() *schema.Resource {
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      resourceStringHash,
 			},
+			"staging_asgs": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      resourceStringHash,
+			},
 			"managers": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -195,6 +201,19 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 		if err = sm.UpdateSpace(space, asgs); err != nil {
 			return err
+		}
+	}
+
+	old, new := d.GetChange("staging_asgs")
+	remove, add := getListChanges(old, new)
+	for _, asgID := range remove {
+		if err = sm.RemoveStagingASG(spaceID, asgID); err != nil {
+			return
+		}
+	}
+	for _, asgID := range add {
+		if err = sm.AddStagingASG(spaceID, asgID); err != nil {
+			return
 		}
 	}
 

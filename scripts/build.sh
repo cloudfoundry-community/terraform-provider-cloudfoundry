@@ -58,6 +58,9 @@ make testacc
 EOF
 
 else
+    openssl aes-256-cbc -K $encrypted_22350934ad09_key -iv $encrypted_22350934ad09_iv \
+        -in .test_env/tfacc_env.enc -out .test_env/tfacc_env -d
+        
     source .test_env/tfacc_env
     make testacc
 fi
