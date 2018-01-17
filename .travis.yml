@@ -2,7 +2,7 @@ dist: trusty
 sudo: required
 language: go
 go:
-- 1.8.x
+- 1.9.x
 go_import_path: github.com/terraform-providers/terraform-provider-cf
 install:
 - sudo apt-get update
