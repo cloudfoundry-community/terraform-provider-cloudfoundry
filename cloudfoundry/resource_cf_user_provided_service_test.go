@@ -80,8 +80,8 @@ resource "cf_user_provided_service" "mq" {
 		"username" = "new-user"
 		"password" = "new-pwd"
 	}
-	syslogDrainURL = "http://localhost/syslog"
-	routeServiceURL = "https://localhost/route"	
+	syslog_drain_url = "http://localhost/syslog"
+	route_service_url = "https://localhost/route"
 }
 `
 
@@ -109,9 +109,9 @@ func TestAccUserProvidedService_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "credentials.password", "pwd"),
 						resource.TestCheckNoResourceAttr(
-							ref, "syslogDrainURL"),
+							ref, "syslog_drain_url"),
 						resource.TestCheckNoResourceAttr(
-							ref, "routeServiceURL"),
+							ref, "route_service_url"),
 					),
 				},
 
@@ -128,9 +128,9 @@ func TestAccUserProvidedService_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "credentials.password", "new-pwd"),
 						resource.TestCheckResourceAttr(
-							ref, "syslogDrainURL", "http://localhost/syslog"),
+							ref, "syslog_drain_url", "http://localhost/syslog"),
 						resource.TestCheckResourceAttr(
-							ref, "routeServiceURL", "https://localhost/route"),
+							ref, "route_service_url", "https://localhost/route"),
 					),
 				},
 			},
