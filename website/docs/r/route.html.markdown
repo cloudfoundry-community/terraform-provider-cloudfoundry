@@ -52,3 +52,11 @@ The following attributes are exported along with any defaults for the inputs att
 
 * `id` - The GUID of the route
 * `endpoint` - The complete endpoint with path if set for the route
+
+## Import
+
+The current Route can be imported using the `route`, e.g.
+
+```
+$ terraform import cf_route.default a-guid
+```

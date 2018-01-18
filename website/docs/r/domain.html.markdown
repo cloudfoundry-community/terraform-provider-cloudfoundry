@@ -53,3 +53,11 @@ The following argument applies only to private domains.
 The following attributes are exported:
 
 * `id` - The GUID of the domain.
+
+## Import
+
+The current Domain can be imported using the `domain`, e.g.
+
+```
+$ terraform import cf_domain.private a-guid
+```

@@ -27,3 +27,11 @@ The following arguments are supported:
 
 * `app_instance` - (Required) The ID of the applicaiton instance to bind the service instance to.
 * `services_instance` - (Required) The ID the service instance to bind to the application instance.
+
+## Import
+
+The current Service Binding can be imported using the `service_binding`, e.g.
+
+```
+$ terraform import cf_service_binding.org1-mysql-512mb a-guid
+```
