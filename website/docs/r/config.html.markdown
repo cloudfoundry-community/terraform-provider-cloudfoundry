@@ -53,3 +53,11 @@ The following arguments are supported:
   - `env_var_visibility` - (Optional) All users can view environment variables. Minimum CC API version: 2.58.
   - `space_scoped_private_broker_creation` - (Optional) Space Developers can create space-scoped private service brokers. Minimum CC API version: 2.58.
   - `space_developer_env_var_visibility` - (Optional) Space Developers can view their v2 environment variables. Org Managers and Space Managers can view their v3 environment variables. Minimum CC API version: 2.58.
+
+## Import
+
+The current Config can be imported using the `config`, e.g.
+
+```
+$ terraform import cf_config.config config
+```

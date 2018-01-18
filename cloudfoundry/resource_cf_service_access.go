@@ -16,6 +16,10 @@ func resourceServiceAccess() *schema.Resource {
 		Update: resourceServiceAccessUpdate,
 		Delete: resourceServiceAccessDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: ImportStatePassthrough,
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"plan": &schema.Schema{

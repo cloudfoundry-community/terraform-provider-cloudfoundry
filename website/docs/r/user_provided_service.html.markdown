@@ -41,3 +41,11 @@ The following arguments are supported:
 The following attributes are exported:
 
 * `id` - The GUID of the service instance
+
+## Import
+
+The current User Provided Service can be imported using the `user_provided_service`, e.g.
+
+```
+$ terraform import cf_user_provided_service.mq-server a-guid
+```

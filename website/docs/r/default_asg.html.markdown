@@ -29,3 +29,11 @@ The following arguments are supported:
 
 * `name` - (Required) This should be one of `running` or `staging`
 * `asgs` - (Required) A list of references to application security groups IDs.
+
+## Import
+
+The current Default Asg can be imported using the `default_asg`, e.g.
+
+```
+$ terraform import cf_default_asg.running <running/staging>
+```

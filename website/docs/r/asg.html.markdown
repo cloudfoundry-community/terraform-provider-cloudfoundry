@@ -55,3 +55,12 @@ The following arguments are supported:
 The following attributes are exported:
 
 * `id` - The GUID of the application security group
+
+## Import
+
+The current Asg can be imported using the `asg`, e.g.
+
+```
+$ terraform import cf_asg.messaging a-guid
+```
+

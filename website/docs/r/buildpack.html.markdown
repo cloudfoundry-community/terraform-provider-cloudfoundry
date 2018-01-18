@@ -61,3 +61,11 @@ One of the following arguments must be declared to locate buildpack source or ar
 The following attributes are exported:
 
 * `id` - The GUID of the organization
+
+## Import
+
+The current Buildpack can be imported using the `buildpack`, e.g.
+
+```
+$ terraform import cf_buildpack.tomee a-guid
+```

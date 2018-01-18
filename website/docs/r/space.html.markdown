@@ -55,3 +55,11 @@ The following arguments are supported:
 The following attributes are exported:
 
 * `id` - The GUID of the Space
+
+## Import
+
+The current Space can be imported using the `space`, e.g.
+
+```
+$ terraform import cf_space.s1 a-guid
+```

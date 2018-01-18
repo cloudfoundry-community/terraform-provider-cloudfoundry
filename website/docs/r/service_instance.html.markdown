@@ -41,3 +41,11 @@ The following arguments are supported:
 The following attributes are exported:
 
 * `id` - The GUID of the service instance
+
+## Import
+
+The current Service Instance can be imported using the `service_broker`, e.g.
+
+```
+$ terraform import cf_service.redis a-guid
+```

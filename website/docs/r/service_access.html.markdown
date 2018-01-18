@@ -27,3 +27,11 @@ The following arguments are supported:
 
 * `plan` - (Required) The ID of the service plan to grant access to
 * `org` - (Required) The ID of the Org which should have access to the plan
+
+## Import
+
+The current Service Access can be imported using the `service_access`, e.g.
+
+```
+$ terraform import cf_service_access.org1-mysql-512mb a-guid
+```

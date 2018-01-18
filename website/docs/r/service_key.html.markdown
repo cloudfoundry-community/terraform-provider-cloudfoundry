@@ -25,7 +25,7 @@ resource "cf_service_instance" "redis1" {
   service_plan = "${data.cf_service.redis.service_plans["shared-vm"]}"
 }
 
-resource "cf_service_instance" "redis1-key1" {
+resource "cf_service_key" "redis1-key1" {
   name = "pricing-grid-key1"
   service_instance = "${cf_service_instance.redis.id}
 }
@@ -45,3 +45,11 @@ The following attributes are exported:
 
 * `id` - The GUID of the service instance.
 * `credentials` - Credentials for this service key that can be used to bind to the associated service instance.
+
+## Import
+
+The current Service Key can be imported using the `service_broker`, e.g.
+
+```
+$ terraform import cf_service_key.redis1-key1 a-guid
+```
