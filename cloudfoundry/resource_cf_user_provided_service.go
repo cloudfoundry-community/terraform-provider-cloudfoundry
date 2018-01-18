@@ -120,12 +120,12 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) (
 	// should be changed when syslogDrainURL and routeServiceURL will be removed, this will be:
 	// d.Set("syslog_drain_url", ups.SyslogDrainURL)
 	// d.Set("route_service_url", ups.RouteServiceURL)
-	if _, ok := d.GetOkExists("syslogDrainURL"); ok {
+	if _, ok := d.GetOk("syslogDrainURL"); ok {
 		d.Set("syslogDrainURL", ups.SyslogDrainURL)
 	} else {
 		d.Set("syslog_drain_url", ups.SyslogDrainURL)
 	}
-	if _, ok := d.GetOkExists("routeServiceURL"); ok {
+	if _, ok := d.GetOk("routeServiceURL"); ok {
 		d.Set("routeServiceURL", ups.RouteServiceURL)
 	} else {
 		d.Set("route_service_url", ups.RouteServiceURL)
