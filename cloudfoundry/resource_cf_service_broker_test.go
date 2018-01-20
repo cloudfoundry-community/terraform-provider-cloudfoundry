@@ -6,6 +6,7 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/errors"
 
+	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
@@ -18,6 +19,12 @@ resource "cf_service_broker" "redis" {
 	url = "https://redis-broker.%s"
 	username = "%s"
 	password = "%s"
+  visibilities = [
+   {
+     service = "p-redis"
+     private = [ "shared-vm" ]
+   }
+  ]
 }
 `
 
@@ -28,6 +35,12 @@ resource "cf_service_broker" "redis" {
 	url = "https://redis-broker.%s"
 	username = "%s"
 	password = "%s"
+  visibilities = [
+   {
+     service = "p-redis"
+     public  = [ "shared-vm" ]
+   }
+  ]
 }
 `
 
@@ -56,6 +69,25 @@ func TestAccServiceBroker_normal(t *testing.T) {
 							ref, "url", "https://redis-broker."+defaultSysDomain()),
 						resource.TestCheckResourceAttr(
 							ref, "username", "admin"),
+						resource.TestCheckResourceAttr(
+							ref, "visibilities.#", "1"),
+						resource.TestCheckResourceAttr(
+							ref, fmt.Sprintf("visibilities.%d.service",
+								hashVisibilityObj("p-redis", nil, []string{"shared-vm"})),
+							"p-redis"),
+						resource.TestCheckResourceAttr(
+							ref, fmt.Sprintf("visibilities.%d.public.#",
+								hashVisibilityObj("p-redis", nil, []string{"shared-vm"})),
+							"0"),
+						resource.TestCheckResourceAttr(
+							ref, fmt.Sprintf("visibilities.%d.private.#",
+								hashVisibilityObj("p-redis", nil, []string{"shared-vm"})),
+							"1"),
+						resource.TestCheckResourceAttr(
+							ref, fmt.Sprintf("visibilities.%d.private.%d",
+								hashVisibilityObj("p-redis", nil, []string{"shared-vm"}),
+								hashcode.String("shared-vm")),
+							"shared-vm"),
 						resource.TestCheckResourceAttrSet(
 							ref, "service_plans.p-redis/shared-vm"),
 					),
@@ -68,6 +100,25 @@ func TestAccServiceBroker_normal(t *testing.T) {
 						testAccCheckServiceBrokerExists(ref),
 						resource.TestCheckResourceAttr(
 							ref, "name", "test-redis-renamed"),
+						resource.TestCheckResourceAttr(
+							ref, "visibilities.#", "1"),
+						resource.TestCheckResourceAttr(
+							ref, fmt.Sprintf("visibilities.%d.service",
+								hashVisibilityObj("p-redis", []string{"shared-vm"}, nil)),
+							"p-redis"),
+						resource.TestCheckResourceAttr(
+							ref, fmt.Sprintf("visibilities.%d.private.#",
+								hashVisibilityObj("p-redis", []string{"shared-vm"}, nil)),
+							"0"),
+						resource.TestCheckResourceAttr(
+							ref, fmt.Sprintf("visibilities.%d.public.#",
+								hashVisibilityObj("p-redis", []string{"shared-vm"}, nil)),
+							"1"),
+						resource.TestCheckResourceAttr(
+							ref, fmt.Sprintf("visibilities.%d.public.%d",
+								hashVisibilityObj("p-redis", []string{"shared-vm"}, nil),
+								hashcode.String("shared-vm")),
+							"shared-vm"),
 					),
 				},
 			},

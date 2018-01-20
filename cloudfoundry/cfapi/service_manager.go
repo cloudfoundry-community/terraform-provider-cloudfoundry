@@ -741,3 +741,20 @@ func (sm *ServiceManager) FindServicePlanID(serviceID string, plan string) (id s
 	}
 	return
 }
+
+func (sm *ServiceManager) UpdatePlanVisibility(planID string, state bool) (err error) {
+	path := fmt.Sprintf("/v2/service_plans/%s", planID)
+	request := map[string]bool{
+		"public": state,
+	}
+	jsonBytes, err := json.Marshal(request)
+	if err != nil {
+		return
+	}
+
+	ups := CCServicePlanResource{}
+	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &ups)
+
+	return
+
+}
