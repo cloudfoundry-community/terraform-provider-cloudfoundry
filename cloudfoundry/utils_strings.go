@@ -30,7 +30,6 @@ func resourceStringHash(v interface{}) int {
 	return hashcode.String(v.(string))
 }
 
-
 // json.Marshal any non-string values found in data
 func encodeMapJsonValues(data map[string]interface{}) (res map[string]interface{}) {
 	res = make(map[string]interface{})

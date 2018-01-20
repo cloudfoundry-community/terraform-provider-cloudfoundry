@@ -140,7 +140,7 @@ func TestAccUserProvidedService_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "credentials.json_obj", "{ \"with\" : { \"complex\" : \"new-value\" } }"),
 						resource.TestCheckResourceAttr(
-							ref, "credentials.json_arr", "[ { \"complex\" : \"value1\" } ]"),							
+							ref, "credentials.json_arr", "[ { \"complex\" : \"value1\" } ]"),
 						resource.TestCheckResourceAttr(
 							ref, "route_service_url", "https://localhost/route"),
 					),

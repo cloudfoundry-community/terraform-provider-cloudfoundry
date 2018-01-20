@@ -541,7 +541,6 @@ func (sm *ServiceManager) CreateUserProvidedService(name string, spaceID string,
 	return
 }
 
-
 // ExistsUserProvidedService -
 func (sm *ServiceManager) ExistsUserProvidedService(serviceInstanceID string) (found bool, err error) {
 	path := fmt.Sprintf("/v2/user_provided_service_instances")

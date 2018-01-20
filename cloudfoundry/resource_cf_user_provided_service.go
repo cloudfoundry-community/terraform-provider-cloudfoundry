@@ -49,8 +49,8 @@ func resourceUserProvidedService() *schema.Resource {
 				Deprecated: "Use route_service_url, Terraform complain about field name may only contain lowercase alphanumeric characters & underscores",
 			},
 			"credentials": &schema.Schema{
-				Type:     schema.TypeMap,
-				Optional: true,
+				Type:             schema.TypeMap,
+				Optional:         true,
 				DiffSuppressFunc: diffJsonStrings,
 			},
 		},
@@ -67,7 +67,6 @@ func resourceUserProvidedServiceExists(r *schema.ResourceData, meta interface{})
 	serviceID := r.Id()
 	return sm.ExistsUserProvidedService(serviceID)
 }
-
 
 func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
