@@ -757,5 +757,4 @@ func (sm *ServiceManager) UpdatePlanVisibility(planID string, state bool) (err e
 
 	return
 
-
 }

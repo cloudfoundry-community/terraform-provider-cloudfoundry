@@ -73,19 +73,19 @@ func TestAccServiceBroker_normal(t *testing.T) {
 							ref, "visibilities.#", "1"),
 						resource.TestCheckResourceAttr(
 							ref, fmt.Sprintf("visibilities.%d.service",
-								hashVisibilityObj("p-redis", nil, []string{ "shared-vm" })),
+								hashVisibilityObj("p-redis", nil, []string{"shared-vm"})),
 							"p-redis"),
 						resource.TestCheckResourceAttr(
 							ref, fmt.Sprintf("visibilities.%d.public.#",
-								hashVisibilityObj("p-redis", nil, []string{ "shared-vm" })),
+								hashVisibilityObj("p-redis", nil, []string{"shared-vm"})),
 							"0"),
 						resource.TestCheckResourceAttr(
 							ref, fmt.Sprintf("visibilities.%d.private.#",
-								hashVisibilityObj("p-redis", nil, []string{ "shared-vm" })),
+								hashVisibilityObj("p-redis", nil, []string{"shared-vm"})),
 							"1"),
 						resource.TestCheckResourceAttr(
 							ref, fmt.Sprintf("visibilities.%d.private.%d",
-								hashVisibilityObj("p-redis", nil, []string{ "shared-vm" }),
+								hashVisibilityObj("p-redis", nil, []string{"shared-vm"}),
 								hashcode.String("shared-vm")),
 							"shared-vm"),
 						resource.TestCheckResourceAttrSet(
@@ -104,19 +104,19 @@ func TestAccServiceBroker_normal(t *testing.T) {
 							ref, "visibilities.#", "1"),
 						resource.TestCheckResourceAttr(
 							ref, fmt.Sprintf("visibilities.%d.service",
-								hashVisibilityObj("p-redis", []string{ "shared-vm" }, nil)),
+								hashVisibilityObj("p-redis", []string{"shared-vm"}, nil)),
 							"p-redis"),
 						resource.TestCheckResourceAttr(
 							ref, fmt.Sprintf("visibilities.%d.private.#",
-								hashVisibilityObj("p-redis", []string{ "shared-vm" }, nil)),
+								hashVisibilityObj("p-redis", []string{"shared-vm"}, nil)),
 							"0"),
 						resource.TestCheckResourceAttr(
 							ref, fmt.Sprintf("visibilities.%d.public.#",
-								hashVisibilityObj("p-redis", []string{ "shared-vm" }, nil)),
+								hashVisibilityObj("p-redis", []string{"shared-vm"}, nil)),
 							"1"),
 						resource.TestCheckResourceAttr(
 							ref, fmt.Sprintf("visibilities.%d.public.%d",
-								hashVisibilityObj("p-redis", []string{ "shared-vm" }, nil),
+								hashVisibilityObj("p-redis", []string{"shared-vm"}, nil),
 								hashcode.String("shared-vm")),
 							"shared-vm"),
 					),

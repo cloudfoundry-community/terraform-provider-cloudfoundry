@@ -1,12 +1,12 @@
 package cloudfoundry
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 
+	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
-	"github.com/hashicorp/terraform/helper/hashcode"
 )
 
 func resourceServiceBroker() *schema.Resource {
@@ -49,7 +49,7 @@ func resourceServiceBroker() *schema.Resource {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Set:      hashVisibility,
-				Elem:     &schema.Resource{
+				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"service": &schema.Schema{
 							Type:     schema.TypeString,
@@ -58,13 +58,13 @@ func resourceServiceBroker() *schema.Resource {
 						"public": &schema.Schema{
 							Type:     schema.TypeSet,
 							Optional: true,
-							Elem:     &schema.Schema{ Type: schema.TypeString },
+							Elem:     &schema.Schema{Type: schema.TypeString},
 							Set:      resourceStringHash,
 						},
 						"private": &schema.Schema{
 							Type:     schema.TypeSet,
 							Optional: true,
-							Elem:     &schema.Schema{ Type: schema.TypeString },
+							Elem:     &schema.Schema{Type: schema.TypeString},
 							Set:      resourceStringHash,
 						},
 					},
@@ -209,14 +209,14 @@ func setServicePlans(d *schema.ResourceData, services []cfapi.CCService) {
 }
 
 func updateServicePlanVisibilities(
-	d        *schema.ResourceData,
-	sm       *cfapi.ServiceManager,
+	d *schema.ResourceData,
+	sm *cfapi.ServiceManager,
 	services []cfapi.CCService) (err error) {
 
 	for _, data := range d.Get("visibilities").(*schema.Set).List() {
-		dataService  := data.(map[string]interface{})
-		serviceName  := dataService["service"].(string)
-		publicPlans  := dataService["public"].(*schema.Set).List()
+		dataService := data.(map[string]interface{})
+		serviceName := dataService["service"].(string)
+		publicPlans := dataService["public"].(*schema.Set).List()
 		privatePlans := dataService["private"].(*schema.Set).List()
 
 		// ensure public plans
@@ -246,13 +246,13 @@ func updateServicePlanVisibilities(
 }
 
 func hashVisibilityObj(serviceName string, public, private []string) int {
-	bytes, _ := json.Marshal(struct{
-		Name    string `json:"name"`
+	bytes, _ := json.Marshal(struct {
+		Name    string   `json:"name"`
 		Public  []string `json:"public"`
 		Private []string `json:"private"`
 	}{
-		Name: serviceName,
-		Public: public,
+		Name:    serviceName,
+		Public:  public,
 		Private: private,
 	})
 	return hashcode.String(string(bytes))
@@ -260,8 +260,8 @@ func hashVisibilityObj(serviceName string, public, private []string) int {
 
 func hashVisibility(visibility interface{}) int {
 	v := visibility.(map[string]interface{})
-	name,    _ := v["service"].(string)
-	public,  _ := v["public"]
+	name, _ := v["service"].(string)
+	public, _ := v["public"]
 	private, _ := v["private"]
 	var pub, priv []string
 
@@ -279,9 +279,9 @@ func setServicePlanVisibilities(d *schema.ResourceData, services []cfapi.CCServi
 	var rvisibilities []interface{}
 
 	for _, data := range d.Get("visibilities").(*schema.Set).List() {
-		dataService  := data.(map[string]interface{})
-		serviceName  := dataService["service"].(string)
-		publicPlans  := dataService["public"].(*schema.Set).List()
+		dataService := data.(map[string]interface{})
+		serviceName := dataService["service"].(string)
+		publicPlans := dataService["public"].(*schema.Set).List()
 		privatePlans := dataService["private"].(*schema.Set).List()
 
 		rservice := make(map[string]interface{})
@@ -306,16 +306,15 @@ func setServicePlanVisibilities(d *schema.ResourceData, services []cfapi.CCServi
 		}
 
 		rservice["service"] = serviceName
-		rservice["public"]   = schema.NewSet(resourceStringHash, rpublic)
-		rservice["private"]  = schema.NewSet(resourceStringHash, rprivate)
+		rservice["public"] = schema.NewSet(resourceStringHash, rpublic)
+		rservice["private"] = schema.NewSet(resourceStringHash, rprivate)
 		rvisibilities = append(rvisibilities, rservice)
 	}
 
 	d.Set("visibilities", schema.NewSet(hashVisibility, rvisibilities))
 }
 
-
-func findServicePlan(serviceName, planName string, services []cfapi.CCService) (*cfapi.CCServicePlan) {
+func findServicePlan(serviceName, planName string, services []cfapi.CCService) *cfapi.CCServicePlan {
 	for _, s := range services {
 		if serviceName == s.Label {
 			for _, p := range s.ServicePlans {
