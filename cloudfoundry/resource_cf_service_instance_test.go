@@ -3,6 +3,7 @@ package cloudfoundry
 import (
 	"fmt"
 	"testing"
+	"regexp"
 
 	"code.cloudfoundry.org/cli/cf/errors"
 
@@ -14,10 +15,10 @@ import (
 const serviceInstanceResourceCreate = `
 
 data "cf_org" "org" {
-    name = "pcfdev-org"
+	name = "pcfdev-org"
 }
 data "cf_space" "space" {
-    name = "pcfdev-space"
+	name = "pcfdev-space"
 	org = "${data.cf_org.org.id}"
 }
 data "cf_service" "mysql" {
@@ -26,30 +27,77 @@ data "cf_service" "mysql" {
 
 resource "cf_service_instance" "mysql" {
 	name = "mysql"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans["1gb"]}"
+	space = "${data.cf_space.space.id}"
+	service_plan = "${data.cf_service.mysql.service_plans["1gb"]}"
 	tags = [ "tag-1" , "tag-2" ]
 }
 `
-
 const serviceInstanceResourceUpdate = `
 
 data "cf_org" "org" {
-    name = "pcfdev-org"
+	name = "pcfdev-org"
 }
 data "cf_space" "space" {
-    name = "pcfdev-space"
+	name = "pcfdev-space"
+	org = "${data.cf_org.org.id}"
+}
+data "cf_service" "mysql" {
+	name = "p-mysql"
+}
+
+resource "cf_service_instance" "mysql" {
+	name = "mysql-updated"
+	space = "${data.cf_space.space.id}"
+	service_plan = "${data.cf_service.mysql.service_plans["512mb"]}"
+	tags = [ "tag-2", "tag-3", "tag-4" ]
+}
+`
+const routeServiceInstanceResourceCreate = `
+data "cf_domain" "local" {
+    name = "%s"
+}
+data "cf_org" "org" {
+	name = "pcfdev-org"
+}
+data "cf_space" "space" {
+	name = "pcfdev-space"
 	org = "${data.cf_org.org.id}"
 }
 data "cf_service" "mysql" {
     name = "p-mysql"
 }
+resource "cf_route" "empty-route" {
+	domain = "${data.cf_domain.local.id}"
+	space = "${data.cf_space.space.id}"
+	hostname = "empty"
+}
+resource "cf_service_instance" "route-service" {
+	name = "route-service-mysql"
+	space = "${data.cf_space.space.id}"
+	service_plan = "${data.cf_service.mysql.service_plans["1gb"]}"
+  routes = [ "${cf_route.empty-route.id}" ]
+}
+`
 
-resource "cf_service_instance" "mysql" {
-	name = "mysql-updated"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans["512mb"]}"
-	tags = [ "tag-2", "tag-3", "tag-4" ]
+const routeServiceInstanceResourceUpdate = `
+data "cf_domain" "local" {
+    name = "%s"
+}
+data "cf_org" "org" {
+	name = "pcfdev-org"
+}
+data "cf_space" "space" {
+	name = "pcfdev-space"
+	org = "${data.cf_org.org.id}"
+}
+data "cf_service" "mysql" {
+	name = "p-mysql"
+}
+resource "cf_service_instance" "route-service" {
+	name = "route-service-mysql-updated"
+	space = "${data.cf_space.space.id}"
+	service_plan = "${data.cf_service.mysql.service_plans["1gb"]}"
+  routes = [  ]
 }
 `
 
@@ -93,6 +141,35 @@ func TestAccServiceInstance_normal(t *testing.T) {
 							ref, "tags.1", "tag-3"),
 						resource.TestCheckResourceAttr(
 							ref, "tags.2", "tag-4"),
+					),
+				},
+			},
+		})
+}
+
+
+func TestAccRouteServiceInstance_normal(t *testing.T) {
+
+	ref := "cf_service_instance.route-service"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"route-service-mysql", "route-service-mysql-updated"}, "data.cf_space.space"),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(routeServiceInstanceResourceCreate, defaultAppDomain()),
+					ExpectError: regexp.MustCompile(".*This service does not support route binding.*"),
+				},
+
+				resource.TestStep{
+					Config: fmt.Sprintf(routeServiceInstanceResourceUpdate, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckServiceInstanceExists(ref),
+						resource.TestCheckResourceAttr(
+							ref, "name", "route-service-mysql-updated"),
 					),
 				},
 			},

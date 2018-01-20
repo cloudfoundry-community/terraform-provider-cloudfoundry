@@ -12,7 +12,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [Service Instances]
 
 ## Example Usage
 
-The following is a Service Instance created within the referenced space and service plan. 
+The following is a Service Instance created within the referenced space and service plan.
 
 ```
 data "cf_service" "redis" {
@@ -32,9 +32,10 @@ The following arguments are supported:
 
 * `name` - (Required, String) The name of the Service Instance in Cloud Foundry
 * `service_plan` - (Required, String) The ID of the [service plan](/docs/providers/cloudfoundry/d/service_plan.html)
-* `space` - (Required, String) The ID of the [space](/docs/providers/cloudfoundry/r/space.html) 
+* `space` - (Required, String) The ID of the [space](/docs/providers/cloudfoundry/r/space.html)
 * `json_params` - (Optional, String) Json string of arbitrary parameters. Some services support providing additional configuration parameters within the provision request
 * `tags` - (Optional, List) List of instance tags. Some services provide a list of tags that Cloud Foundry delivers in [VCAP_SERVICES Env variables](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES)
+* `routes` - (Optional, List) List of route IDs. Add given routes to current [Route Service](https://docs.cloudfoundry.org/services/route-services.html)
 
 ## Attributes Reference
 

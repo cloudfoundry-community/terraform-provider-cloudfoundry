@@ -112,6 +112,17 @@ type CCServiceInstanceResource struct {
 	Entity   CCServiceInstance  `json:"entity"`
 }
 
+// CCServiceInstanceRoute -
+type CCServiceInstanceRoute struct {
+	Host            string   `json:"host"`
+}
+
+//  CCServiceInstanceRouteResource -
+type CCServiceInstanceRouteResource struct {
+	Metadata resources.Metadata `json:"metadata"`
+	Entity   CCServiceInstanceRoute  `json:"entity"`
+}
+
 // CCServiceInstanceUpdateRequest -
 type CCServiceInstanceUpdateRequest struct {
 	Name            string                 `json:"name"`
@@ -471,6 +482,46 @@ func (sm *ServiceManager) ReadServiceInstance(serviceInstanceID string) (service
 	serviceInstance = resource.Entity
 	return
 }
+
+// ReadServiceInstanceRoutes -
+func (sm *ServiceManager) ReadServiceInstanceRoutes(serviceInstanceID string) (routes []string, err error) {
+	path := fmt.Sprintf("/v2/service_instances/%s/routes", serviceInstanceID)
+
+	sm.ccGateway.ListPaginatedResources(sm.apiEndpoint, path, CCServiceInstanceRouteResource{}, func(route interface{}) bool {
+		r := route.(CCServiceInstanceRouteResource)
+		routes = append(routes, r.Metadata.GUID)
+		return true
+	})
+
+	return
+}
+
+
+// CreateServiceInstance -
+func (sm *ServiceManager) AddRouteServiceInstance(serviceID, routeID string, params interface{}) (err error) {
+	path := fmt.Sprintf("/v2/service_instances/%s/routes/%s", serviceID, routeID)
+
+	jsonBytes, err := json.Marshal(map[string]interface{}{
+		"parameters" : params,
+	})
+	if err != nil {
+		return
+	}
+
+	resource := CCServiceInstanceResource{}
+	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource)
+	return
+}
+
+
+
+// DeleteRouteServiceInstance -
+func (sm *ServiceManager) DeleteRouteServiceInstance(serviceID, routeID string) (err error) {
+	path := fmt.Sprintf("/v2/service_instances/%s/routes/%s", serviceID, routeID)
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, path)
+	return
+}
+
 
 // FindServiceInstance -
 func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serviceInstance CCServiceInstance, err error) {
