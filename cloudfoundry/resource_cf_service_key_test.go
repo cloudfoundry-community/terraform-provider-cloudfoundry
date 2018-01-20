@@ -37,6 +37,7 @@ resource "cf_service_key" "mysql-key" {
 	params {
 		"key1" = "aaaa"
 		"key2" = "bbbb"
+		"key3" = "{ \"skey1\" : \"cccc\"}"
 	}
 }
 `

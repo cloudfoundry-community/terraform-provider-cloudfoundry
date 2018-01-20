@@ -884,6 +884,7 @@ func addServiceBindings(id string, add []map[string]interface{},
 		params = nil
 		if v, ok := b["params"]; ok {
 			vv := v.(map[string]interface{})
+			vv = decodeMapJsonValues(vv)
 			params = &vv
 		}
 		if bindingID, bindingCredentials, err = am.CreateServiceBinding(id, serviceInstanceID, params); err != nil {

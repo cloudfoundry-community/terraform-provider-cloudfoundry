@@ -541,6 +541,24 @@ func (sm *ServiceManager) CreateUserProvidedService(name string, spaceID string,
 	return
 }
 
+
+// ExistsUserProvidedService -
+func (sm *ServiceManager) ExistsUserProvidedService(serviceInstanceID string) (found bool, err error) {
+	path := fmt.Sprintf("/v2/user_provided_service_instances")
+	found = false
+	err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint, path, CCUserProvidedServiceResource{}, func(r interface{}) bool {
+		if s, ok := r.(CCUserProvidedServiceResource); ok {
+			if s.Metadata.GUID == serviceInstanceID {
+				found = true
+				return false
+			}
+		}
+		return true
+	})
+
+	return
+}
+
 // ReadUserProvidedService -
 func (sm *ServiceManager) ReadUserProvidedService(serviceInstanceID string) (ups CCUserProvidedService, err error) {
 

@@ -77,6 +77,7 @@ Modifying this argument will cause the application to be restaged.
 
   - `service` - (Required, String) The service instance GUID.
   - `params` - (Optional, Map) A list of key/value parameters used by the service broker to create the binding.
+    JSON-encoded string value are parsed to create a structured object.
 
 ### Routing and Blue-Green Deployment Strategy
 

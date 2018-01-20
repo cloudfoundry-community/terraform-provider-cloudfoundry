@@ -43,6 +43,8 @@ resource "cf_user_provided_service" "mq" {
 		"url" = "mq://localhost:9000"
 		"username" = "user"
 		"password" = "pwd"
+    "json_obj" = "{ \"with\" : { \"complex\" : \"value\" } }"
+    "json_arr" = "[ { \"complex\" : \"value1\" }, { \"complex\" : \"value2\" } ]"
 	}	
 }
 `
@@ -79,6 +81,8 @@ resource "cf_user_provided_service" "mq" {
 		"url" = "mq://localhost:9000"
 		"username" = "new-user"
 		"password" = "new-pwd"
+			"json_obj" = "{ \"with\" : { \"complex\" : \"new-value\" } }"
+			"json_arr" = "[ { \"complex\" : \"value1\" } ]"
 	}
 	syslog_drain_url = "http://localhost/syslog"
 	route_service_url = "https://localhost/route"
@@ -108,6 +112,10 @@ func TestAccUserProvidedService_normal(t *testing.T) {
 							ref, "credentials.username", "user"),
 						resource.TestCheckResourceAttr(
 							ref, "credentials.password", "pwd"),
+						resource.TestCheckResourceAttr(
+							ref, "credentials.json_obj", "{ \"with\" : { \"complex\" : \"value\" } }"),
+						resource.TestCheckResourceAttr(
+							ref, "credentials.json_arr", "[ { \"complex\" : \"value1\" }, { \"complex\" : \"value2\" } ]"),
 						resource.TestCheckNoResourceAttr(
 							ref, "syslog_drain_url"),
 						resource.TestCheckNoResourceAttr(
@@ -129,6 +137,10 @@ func TestAccUserProvidedService_normal(t *testing.T) {
 							ref, "credentials.password", "new-pwd"),
 						resource.TestCheckResourceAttr(
 							ref, "syslog_drain_url", "http://localhost/syslog"),
+						resource.TestCheckResourceAttr(
+							ref, "credentials.json_obj", "{ \"with\" : { \"complex\" : \"new-value\" } }"),
+						resource.TestCheckResourceAttr(
+							ref, "credentials.json_arr", "[ { \"complex\" : \"value1\" } ]"),							
 						resource.TestCheckResourceAttr(
 							ref, "route_service_url", "https://localhost/route"),
 					),

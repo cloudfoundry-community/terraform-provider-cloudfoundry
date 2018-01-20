@@ -22,6 +22,7 @@ resource "cf_user_provided_service" "mq" {
     "url" = "mq://localhost:9000"
     "username" = "admin"
     "password" = "admin"    
+    "ssl_options" = "{ \"verify\" : \"peer\", \"fail_if_no_peer_cert\" : true }"
   }
 }
 ```
@@ -33,6 +34,7 @@ The following arguments are supported:
 * `name` - (Required) The name of the Service Instance in Cloud Foundry
 * `space` - (Required) The ID of the [space](/docs/providers/cloudfoundry/r/space.html) 
 * `credentials` - (Optional) Arbitrary credentials in the form of key-value pairs and delivered to applications via [VCAP_SERVICES Env variables](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES)
+  JSON-encoded string value are parsed to create a structured object.
 * `syslog_drain_url` - (Optional) URL to which logs for bound applications will be streamed
 * `route_service_url` - (Optional) URL to which requests for bound routes will be forwarded. Scheme for this URL must be https
 
