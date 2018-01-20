@@ -16,10 +16,17 @@ The following example creates an service_broker.
 
 ```
 resource "cf_service_broker" "mysql" {
-	name = "test-mysql"
-	url = "http://mysql-broker.local.pcfdev.io"
-	username = "admin"
-	password = "admin"
+  name = "test-mysql"
+  url = "http://mysql-broker.local.pcfdev.io"
+  username = "admin"
+  password = "admin"
+  visibilities = [
+   {
+     service = "p-mysql"
+     public  = [ "512mb" ]
+     private = [ "1gb" ]
+   }
+  ]
 }
 ```
 
@@ -32,6 +39,10 @@ The following arguments are supported:
 * `username` - (Optional) The user name to use to authenticate against the service broker API calls
 * `password` - (Optional) The password to authenticate with
 * `space` - (Optional) The ID of the space to scope this broker to
+* `visibilities` - (Optional, Set) Force public state for some plans of some available services
+  - `service` - (Required, String) The name of targeted service provided by the service broker
+  - `public` - (Optional, List) Plan names that must be set public
+  - `private` - (Optional, List) Plan names that must be set private
 
 ## Attributes Reference
 
