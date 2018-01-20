@@ -2,8 +2,8 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"testing"
 	"regexp"
+	"testing"
 
 	"code.cloudfoundry.org/cli/cf/errors"
 
@@ -147,7 +147,6 @@ func TestAccServiceInstance_normal(t *testing.T) {
 		})
 }
 
-
 func TestAccRouteServiceInstance_normal(t *testing.T) {
 
 	ref := "cf_service_instance.route-service"
@@ -160,7 +159,7 @@ func TestAccRouteServiceInstance_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(routeServiceInstanceResourceCreate, defaultAppDomain()),
+					Config:      fmt.Sprintf(routeServiceInstanceResourceCreate, defaultAppDomain()),
 					ExpectError: regexp.MustCompile(".*This service does not support route binding.*"),
 				},
 

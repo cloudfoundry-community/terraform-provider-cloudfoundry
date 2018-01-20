@@ -114,13 +114,13 @@ type CCServiceInstanceResource struct {
 
 // CCServiceInstanceRoute -
 type CCServiceInstanceRoute struct {
-	Host            string   `json:"host"`
+	Host string `json:"host"`
 }
 
 //  CCServiceInstanceRouteResource -
 type CCServiceInstanceRouteResource struct {
-	Metadata resources.Metadata `json:"metadata"`
-	Entity   CCServiceInstanceRoute  `json:"entity"`
+	Metadata resources.Metadata     `json:"metadata"`
+	Entity   CCServiceInstanceRoute `json:"entity"`
 }
 
 // CCServiceInstanceUpdateRequest -
@@ -496,13 +496,12 @@ func (sm *ServiceManager) ReadServiceInstanceRoutes(serviceInstanceID string) (r
 	return
 }
 
-
 // CreateServiceInstance -
 func (sm *ServiceManager) AddRouteServiceInstance(serviceID, routeID string, params interface{}) (err error) {
 	path := fmt.Sprintf("/v2/service_instances/%s/routes/%s", serviceID, routeID)
 
 	jsonBytes, err := json.Marshal(map[string]interface{}{
-		"parameters" : params,
+		"parameters": params,
 	})
 	if err != nil {
 		return
@@ -513,15 +512,12 @@ func (sm *ServiceManager) AddRouteServiceInstance(serviceID, routeID string, par
 	return
 }
 
-
-
 // DeleteRouteServiceInstance -
 func (sm *ServiceManager) DeleteRouteServiceInstance(serviceID, routeID string) (err error) {
 	path := fmt.Sprintf("/v2/service_instances/%s/routes/%s", serviceID, routeID)
 	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, path)
 	return
 }
-
 
 // FindServiceInstance -
 func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serviceInstance CCServiceInstance, err error) {
