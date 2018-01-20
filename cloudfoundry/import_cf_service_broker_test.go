@@ -7,6 +7,16 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 )
 
+const sbImportedResource = `
+
+resource "cf_service_broker" "redis" {
+	name = "test-redis"
+	url = "https://redis-broker.%s"
+	username = "%s"
+	password = "%s"
+}
+`
+
 func TestAccServiceBroker_importBasic(t *testing.T) {
 	resourceName := "cf_service_broker.redis"
 
@@ -21,7 +31,7 @@ func TestAccServiceBroker_importBasic(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(sbResource,
+					Config: fmt.Sprintf(sbImportedResource,
 						defaultSysDomain(), user, password),
 				},
 
