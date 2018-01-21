@@ -54,6 +54,7 @@ func resourceServiceKeyCreate(d *schema.ResourceData, meta interface{}) (err err
 	name := d.Get("name").(string)
 	serviceInstance := d.Get("service_instance").(string)
 	params := d.Get("params").(map[string]interface{})
+	params = decodeMapJsonValues(params)
 
 	sm := session.ServiceManager()
 	var serviceKey cfapi.CCServiceKey

@@ -15,7 +15,7 @@ func resourceUserProvidedService() *schema.Resource {
 		Read:   resourceUserProvidedServiceRead,
 		Update: resourceUserProvidedServiceUpdate,
 		Delete: resourceUserProvidedServiceDelete,
-
+		Exists: resourceUserProvidedServiceExists,
 		Importer: &schema.ResourceImporter{
 			State: ImportStatePassthrough,
 		},
@@ -49,11 +49,23 @@ func resourceUserProvidedService() *schema.Resource {
 				Deprecated: "Use route_service_url, Terraform complain about field name may only contain lowercase alphanumeric characters & underscores",
 			},
 			"credentials": &schema.Schema{
-				Type:     schema.TypeMap,
-				Optional: true,
+				Type:             schema.TypeMap,
+				Optional:         true,
+				DiffSuppressFunc: diffJsonStrings,
 			},
 		},
 	}
+}
+
+func resourceUserProvidedServiceExists(r *schema.ResourceData, meta interface{}) (found bool, err error) {
+	session := meta.(*cfapi.Session)
+	if session == nil {
+		return false, fmt.Errorf("client is nil")
+	}
+
+	sm := session.ServiceManager()
+	serviceID := r.Id()
+	return sm.ExistsUserProvidedService(serviceID)
 }
 
 func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -85,6 +97,7 @@ func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{})
 	for k, v := range d.Get("credentials").(map[string]interface{}) {
 		credentials[k] = v.(string)
 	}
+	credentials = decodeMapJsonValues(credentials)
 
 	sm := session.ServiceManager()
 
@@ -131,7 +144,7 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) (
 		d.Set("route_service_url", ups.RouteServiceURL)
 	}
 
-	d.Set("credentials", ups.Credentials)
+	d.Set("credentials", encodeMapJsonValues(ups.Credentials))
 
 	session.Log.DebugMessage("Read User Provided Service : %# v", ups)
 
@@ -169,6 +182,7 @@ func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{})
 	for k, v := range d.Get("credentials").(map[string]interface{}) {
 		credentials[k] = v.(string)
 	}
+	credentials = decodeMapJsonValues(credentials)
 
 	if _, err = sm.UpdateUserProvidedService(id, name, credentials, syslogDrainURL, routeServiceURL); err != nil {
 		return

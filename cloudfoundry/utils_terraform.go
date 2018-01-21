@@ -1,9 +1,10 @@
 package cloudfoundry
 
 import (
-	"reflect"
-
+	"encoding/json"
 	"github.com/hashicorp/terraform/helper/schema"
+	"reflect"
+	"strings"
 )
 
 const importStateKey = "is_import_state"
@@ -175,3 +176,33 @@ func IsImportState(d *schema.ResourceData) bool {
 	_, ok := connInfo[importStateKey]
 	return ok
 }
+
+// Unserialize and serialize values to compare normalized jsons
+func diffJsonStrings(k, old, new string, rd *schema.ResourceData) bool {
+	// Warning: DiffSuppressFunc is called on resource creation. When its value
+	// is computed (eg: value depends on other resource yet to be created), and value
+	// is a map/set/lists, function is called with <key>.% where both 'new' and 'old'
+	// are empty string.
+	//
+	// Squelching this diff leads to terraform panic message :
+	//    diffs didn't match during apply. This is a bug with Terraform and
+	//    should be reported.
+	//
+	if strings.HasSuffix(k, ".%") && old == "" && new == "" {
+		return false
+	}
+
+	var oldi, newi interface{}
+	olde := json.Unmarshal([]byte(old), &oldi)
+	newe := json.Unmarshal([]byte(new), &newi)
+	if olde == nil && newe == nil {
+		oldb, _ := json.Marshal(oldi)
+		newb, _ := json.Marshal(newi)
+		return string(oldb) == string(newb)
+	}
+	return old == new
+}
+
+// Local Variables:
+// ispell-local-dictionary: "american"
+// End:
