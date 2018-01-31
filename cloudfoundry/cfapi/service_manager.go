@@ -408,6 +408,30 @@ func (sm *ServiceManager) DeleteServicePlanAccess(servicePlanAccessGUID string) 
 	return
 }
 
+// UpdatePlanVisibility -
+func (sm *ServiceManager) UpdateServicePlanVisibility(planID string, state bool) (err error) {
+	path := fmt.Sprintf("/v2/service_plans/%s", planID)
+	request := map[string]bool{
+		"public": state,
+	}
+	jsonBytes, err := json.Marshal(request)
+	if err != nil {
+		return
+	}
+
+	ups := CCServicePlanResource{}
+	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &ups)
+	return
+}
+
+// ReadServicePlan -
+func (sm *ServiceManager) ReadServicePlan(planID string) (CCServicePlan, error) {
+	res := CCServicePlanResource{}
+	url := fmt.Sprintf("%s/v2/service_plans/%s", sm.apiEndpoint, planID)
+	err := sm.ccGateway.GetResource(url, &res)
+	return res.Entity, err
+}
+
 // CreateServiceInstance -
 func (sm *ServiceManager) CreateServiceInstance(name, servicePlanID, spaceID string,
 	params map[string]interface{}, tags []string) (id string, err error) {
