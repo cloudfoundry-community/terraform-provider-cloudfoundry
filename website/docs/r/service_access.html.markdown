@@ -8,15 +8,22 @@ description: |-
 
 # cf\_service\_access
 
-Provides a Cloud Foundry resource for managing [access](https://docs.cloudfoundry.org/services/access-control.html) to service plans published by Cloud Foundry [service brokers](https://docs.cloudfoundry.org/services/).
+Provides a Cloud Foundry resource for managing [access](https://docs.cloudfoundry.org/services/access-control.html)
+to service plans published by Cloud Foundry [service brokers](https://docs.cloudfoundry.org/services/).
 
 ## Example Usage
 
-The following example enables access to a specific plan of a given service broker within an Org.
+The first example enables access to a specific plan of a given service broker to all organizations.
+The second example gives access to a specific org.
 
 ```
 resource "cf_service_access" "org1-mysql-512mb" {
     plan = "${cf_service_broker.mysql.service_plans["p-mysql/512mb"]}"
+    public = true
+}
+
+resource "cf_service_access" "org1-mysql-512mb" {
+    plan = "${cf_service_broker.mysql.service_plans["p-mysql/1gb"]}"
     org = "${cf_org.org1.id}"
 }
 ```
@@ -26,11 +33,15 @@ resource "cf_service_access" "org1-mysql-512mb" {
 The following arguments are supported:
 
 * `plan` - (Required) The ID of the service plan to grant access to
-* `org` - (Required) The ID of the Org which should have access to the plan
+* `org` - (Optional) The ID of the Org which should have access to the plan. Conflicts with `public`.
+* `public` - (Optional) Boolean that controls the public state of the plan. Conflicts with `org`.
 
 ## Import
 
-The current Service Access can be imported using the `service_access`, e.g.
+The current Service Access can be imported using an `id`.
+
+If given `id` matches existing [`service_plan_visibilities`](https://apidocs.cloudfoundry.org/280/service_plan_visibilities/list_all_service_plan_visibilities.html),
+resource will be imported as a `service_access` targeting an organization. Otherwhise, it will be imported as `service_access` controling plan's public state. E.g.
 
 ```
 $ terraform import cf_service_access.org1-mysql-512mb a-guid
