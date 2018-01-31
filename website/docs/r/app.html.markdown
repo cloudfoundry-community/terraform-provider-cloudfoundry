@@ -108,3 +108,11 @@ The following attributes are exported along with any defaults for the inputs att
 
 * `id` - The GUID of the application
 
+## Import
+
+The current App can be imported using the `app`, e.g.
+
+```
+$ terraform import cf_app.spring-music a-guid
+```
+

@@ -16,6 +16,10 @@ func resourceQuota() *schema.Resource {
 		Update: resourceQuotaUpdate,
 		Delete: resourceQuotaDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: ImportStatePassthrough,
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

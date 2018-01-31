@@ -39,3 +39,11 @@ The following attributes are exported:
 
 * `id` - The GUID of the service broker
 * `service_plans` - Map of service plan GUIDs keyed by service "&lt;service name&gt;/&lt;plan name&gt;"
+
+## Import
+
+The current Service Broker can be imported using the `service_broker`, e.g.
+
+```
+$ terraform import cf_service_broker.mysql a-guid
+```

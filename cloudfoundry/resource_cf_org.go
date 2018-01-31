@@ -16,6 +16,10 @@ func resourceOrg() *schema.Resource {
 		Update: resourceOrgUpdate,
 		Delete: resourceOrgDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: ImportStatePassthrough,
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

@@ -16,6 +16,13 @@ func resourceEvg() *schema.Resource {
 		Update: resourceEvgUpdate,
 		Delete: resourceEvgDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: func(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+				d.Set("name", d.Id())
+				return ImportStatePassthrough(d, meta)
+			},
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

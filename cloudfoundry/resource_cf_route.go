@@ -18,6 +18,10 @@ func resourceRoute() *schema.Resource {
 		Update: resourceRouteUpdate,
 		Delete: resourceRouteDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: ImportStatePassthrough,
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"domain": &schema.Schema{
@@ -171,7 +175,7 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) (err error) {
 		return
 	}
 
-	if _, ok := d.GetOk("target"); ok {
+	if _, ok := d.GetOk("target"); ok || IsImportState(d) {
 		var mappings []map[string]interface{}
 		if mappings, err = rm.ReadRouteMappingsByRoute(id); err != nil {
 			return

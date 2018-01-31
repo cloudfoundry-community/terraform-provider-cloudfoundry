@@ -47,3 +47,10 @@ The following attributes are exported:
 * `id` - The GUID of the User
 * `email` - If not provided this attributed will be assigned the same value as the `name`, assuming that the username is the user's email address
 
+## Import
+
+The current User can be imported using the `user`, e.g.
+
+```
+$ terraform import cf_user.admin-service-user a-guid
+```

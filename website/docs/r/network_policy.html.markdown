@@ -49,3 +49,11 @@ The following arguments are supported:
 The following attributes are exported along with any defaults for the inputs attributes.
 
 * `id` - The GUID of the network_policy
+
+## Import
+
+The current Network policy can be imported using the `network_policy`, e.g.
+
+```
+$ terraform import cf_network_policy.my-policy a-guid
+```

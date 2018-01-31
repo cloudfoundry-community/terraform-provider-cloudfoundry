@@ -26,6 +26,7 @@ website/node_modules
 *.iml
 
 website/vendor
+/terraform-provider-cf
 
 # Test exclusions
 !command/test-fixtures/**/*.tfstate
