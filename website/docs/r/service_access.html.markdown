@@ -41,7 +41,7 @@ The following arguments are supported:
 The current Service Access can be imported using an `id`.
 
 If given `id` matches existing [`service_plan_visibilities`](https://apidocs.cloudfoundry.org/280/service_plan_visibilities/list_all_service_plan_visibilities.html),
-resource will be imported as a `service_access` targeting an organization. Otherwhise, it will be imported as `service_access` controling plan's public state. E.g.
+resource will be imported as a `service_access` targeting an organization. Otherwise, it will be imported as `service_access` controlling plan's public state. E.g.
 
 ```
 $ terraform import cf_service_access.org1-mysql-512mb a-guid
