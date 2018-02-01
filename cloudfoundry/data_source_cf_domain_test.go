@@ -1,9 +1,9 @@
 package cloudfoundry
 
 import (
-	"testing"
 	"fmt"
 	"github.com/hashicorp/terraform/helper/resource"
+	"testing"
 )
 
 const domainDataResource = `
