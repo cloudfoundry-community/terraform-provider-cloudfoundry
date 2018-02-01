@@ -15,6 +15,9 @@ func resourceDomain() *schema.Resource {
 		Create: resourceDomainCreate,
 		Read:   resourceDomainRead,
 		Delete: resourceDomainDelete,
+		Importer: &schema.ResourceImporter{
+			State: resourceDomainImport,
+		},
 
 		Importer: &schema.ResourceImporter{
 			State: ImportStatePassthrough,
@@ -187,4 +190,45 @@ func resourceDomainDelete(d *schema.ResourceData, meta interface{}) (err error) 
 		err = dm.DeleteSharedDomain(id)
 	}
 	return
+}
+
+func resourceDomainImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	session := meta.(*cfapi.Session)
+	var ccDomain cfapi.CCDomain
+
+	if session == nil {
+		return nil, fmt.Errorf("client is nil")
+	}
+	dm := session.DomainManager()
+
+	ccDomain, err := dm.GetSharedDomain(d.Id())
+	if err == nil {
+		domainParts := strings.Split(ccDomain.Name, ".")
+		subDomain := domainParts[0]
+		domain := strings.Join(domainParts[1:], ".")
+
+		d.Set("name", ccDomain.Name)
+		d.Set("sub_domain", subDomain)
+		d.Set("domain", domain)
+		d.Set("route_group", ccDomain.RouterGroupGUID)
+		d.Set("router_type", ccDomain.RouterType)
+
+		return nil, err
+	}
+
+	ccDomain, err = dm.GetPrivateDomain(d.Id())
+	if err == nil {
+		domainParts := strings.Split(ccDomain.Name, ".")
+		subDomain := domainParts[0]
+		domain := strings.Join(domainParts[1:], ".")
+
+		d.Set("name", ccDomain.Name)
+		d.Set("sub_domain", subDomain)
+		d.Set("domain", domain)
+		d.Set("org", ccDomain.OwningOrganizationGUID)
+
+		return nil, err
+	}
+
+	return []*schema.ResourceData{d}, nil
 }

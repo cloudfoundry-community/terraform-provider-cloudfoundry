@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -30,6 +31,9 @@ func resourceApp() *schema.Resource {
 		Read:   resourceAppRead,
 		Update: resourceAppUpdate,
 		Delete: resourceAppDelete,
+		Importer: &schema.ResourceImporter{
+			State: resourceAppImport,
+		},
 
 		Importer: &schema.ResourceImporter{
 			State: resourceAppImport,
@@ -924,4 +928,132 @@ func removeServiceBindings(delete []map[string]interface{},
 		}
 	}
 	return nil
+}
+
+func resourceAppImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	var err error
+	session := meta.(*cfapi.Session)
+
+	if session == nil {
+		return nil, fmt.Errorf("client is nil")
+	}
+
+	am := session.AppManager()
+	rm := session.RouteManager()
+
+	apps, err := am.ReadApp(d.Id())
+	if err != nil {
+		return nil, fmt.Errorf("Something went wrong importing application: wrong id '%s'?", d.Id())
+	}
+
+	apprm, err := rm.ReadRouteMappingsByApp(d.Id())
+	if err != nil {
+		return nil, fmt.Errorf("Something went wrong importing route mappings: wrong id '%s'?", d.Id())
+	}
+
+	appsb, err := am.ReadServiceBindingsByApp(d.Id())
+	if err != nil {
+		return nil, fmt.Errorf("Something went wrong importing service bindings: wrong id '%s'?", d.Id())
+	}
+
+	d.Set("name", apps.Name)
+	d.Set("space", apps.SpaceGUID)
+	d.Set("ports", apps.Ports)
+	d.Set("instances", apps.Instances)
+	d.Set("memory", apps.Memory)
+	d.Set("disk_quota", apps.DiskQuota)
+	d.Set("stack", apps.StackGUID)
+	d.Set("buildpack", apps.Buildpack)
+	d.Set("command", apps.Command)
+	d.Set("enable_ssh", apps.EnableSSH)
+	d.Set("environment", apps.Environment)
+	d.Set("health_check_http_endpoint", apps.HealthCheckHTTPEndpoint)
+	d.Set("health_check_type", apps.HealthCheckType)
+	d.Set("health_check_timeout", apps.HealthCheckTimeout)
+
+	if *apps.State == "STOPPED" {
+		d.Set("stopped", false)
+	} else {
+		d.Set("stopped", true)
+	}
+
+	// Currently no information for this, using default
+	d.Set("timeout", 700)
+
+	// Set Routes
+	var routeList []map[string]interface{}
+	var singleRouteEntry map[string]interface{}
+
+	for _, entry := range apprm {
+
+		singleRouteEntry = make(map[string]interface{})
+
+		singleRouteEntry["default_route"] = entry["route"]
+		singleRouteEntry["default_route_mapping_id"] = entry["mapping_id"]
+
+		// haven't been implemented yet in 0.9.7
+		// TODO : Implement if ready
+		singleRouteEntry["live_route"] = ""
+		singleRouteEntry["live_route_mapping_id"] = ""
+		singleRouteEntry["stage_route"] = ""
+		singleRouteEntry["stage_route_mapping_id"] = ""
+		singleRouteEntry["version"] = ""
+		singleRouteEntry["validation_script"] = ""
+
+		routeList = append(routeList, singleRouteEntry)
+	}
+	d.Set("route", routeList)
+
+	// Set Service Bindings
+	var servicebindingsList []map[string]interface{}
+	var singlebindingEntry map[string]interface{}
+
+	for _, entry := range appsb {
+
+		singlebindingEntry = make(map[string]interface{})
+
+		singlebindingEntry["credentials"], err = parseMap(entry["credentials"].(map[string]interface{}), "")
+		if err != nil {
+			return nil, err
+		}
+
+		singlebindingEntry["binding_id"] = entry["binding_id"]
+		singlebindingEntry["service_instance"] = entry["service_instance"]
+		singlebindingEntry["params"] = entry["params"]
+		servicebindingsList = append(servicebindingsList, singlebindingEntry)
+
+	}
+	d.Set("service_binding", servicebindingsList)
+
+	// url, add_content, git and github_release cannot be set due missing information
+	// TODO : Find a way to get these information
+	d.Set("url", "URL_CAN_NOT_BE_GATHERED")
+	d.Set("git_url", "GITURL_CAN_NOT_BE_GATHERED")
+	d.Set("git", "GIT_CAN_NOT_BE_GATHERED")
+	d.Set("github_release", "GITHUB_RELEASE_CAN_NOT_BE_GATHERED")
+
+	return []*schema.ResourceData{d}, nil
+
+}
+
+func parseMap(paramMap map[string]interface{}, format string) (tmpMap map[string]interface{}, err error) {
+	tmpMap = make(map[string]interface{})
+	v := reflect.ValueOf(paramMap)
+
+	if v.Kind() == reflect.Map {
+		for _, k := range v.MapKeys() {
+
+			if a, ok := v.MapIndex(k).Interface().(string); ok {
+				tmpMap[k.Interface().(string)] = a
+			} else if a, ok := v.MapIndex(k).Interface().(map[string]interface{}); ok {
+				// Nested Hashmaps are saved as strings for now,
+				// please refer to func addServiceBindings for reference behaviour
+				tmpMap[k.Interface().(string)] = fmt.Sprintf("%v", a)
+			} else {
+				return nil, fmt.Errorf("something went terrible wrong, parsing 'credentials' at '%s'. There must be another variable type", k.Interface().(string))
+			}
+		}
+	}
+
+	return tmpMap, nil
 }

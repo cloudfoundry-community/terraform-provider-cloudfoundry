@@ -15,6 +15,9 @@ func resourceSpace() *schema.Resource {
 		Read:   resourceSpaceRead,
 		Update: resourceSpaceUpdate,
 		Delete: resourceSpaceDelete,
+		Importer: &schema.ResourceImporter{
+			State: resourceSpaceImport,
+		},
 
 		Importer: &schema.ResourceImporter{
 			State: resourceSpaceImport,
@@ -295,4 +298,31 @@ func resourceSpaceDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 	err = session.SpaceManager().DeleteSpace(d.Id())
 	return
+}
+
+func resourceSpaceImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	session := meta.(*cfapi.Session)
+	if session == nil {
+		return nil, fmt.Errorf("client is nil")
+	}
+
+	id := d.Id()
+	sm := session.SpaceManager()
+	space, err := sm.ReadSpace(id)
+
+	orgm := session.OrgManager()
+
+	org, err := orgm.FindOrg(space.OrgGUID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	d.Set("id", space.ID)
+	d.Set("name", space.Name)
+	d.Set("org", space.OrgGUID)
+	d.Set("org_name", org.Name)
+	d.Set("quota", space.QuotaGUID)
+
+	return []*schema.ResourceData{d}, nil
 }
