@@ -1,9 +1,10 @@
 package cloudfoundry
 
 import (
+	"encoding/json"
 	"fmt"
-
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/structure"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
@@ -49,8 +50,15 @@ func resourceUserProvidedService() *schema.Resource {
 				Deprecated: "Use route_service_url, Terraform complain about field name may only contain lowercase alphanumeric characters & underscores",
 			},
 			"credentials": &schema.Schema{
-				Type:     schema.TypeMap,
-				Optional: true,
+				Type:          schema.TypeMap,
+				Optional:      true,
+				ConflictsWith: []string{"credentials_json"},
+			},
+			"credentials_json": &schema.Schema{
+				Type:             schema.TypeString,
+				Optional:         true,
+				ConflictsWith:    []string{"credentials"},
+				DiffSuppressFunc: structure.SuppressJsonDiff,
 			},
 		},
 	}
@@ -82,8 +90,14 @@ func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{})
 	}
 
 	credentials = make(map[string]interface{})
-	for k, v := range d.Get("credentials").(map[string]interface{}) {
-		credentials[k] = v.(string)
+	if credsJson, hasJson := d.GetOk("credentials_json"); hasJson {
+		if err = json.Unmarshal([]byte(credsJson.(string)), &credentials); err != nil {
+			return err
+		}
+	} else {
+		for k, v := range d.Get("credentials").(map[string]interface{}) {
+			credentials[k] = v.(string)
+		}
 	}
 
 	sm := session.ServiceManager()
@@ -131,7 +145,12 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) (
 		d.Set("route_service_url", ups.RouteServiceURL)
 	}
 
-	d.Set("credentials", ups.Credentials)
+	if _, hasJson := d.GetOk("credentials_json"); hasJson {
+		bytes, _ := json.Marshal(ups.Credentials)
+		d.Set("credentials_json", string(bytes))
+	} else {
+		d.Set("credentials", ups.Credentials)
+	}
 
 	session.Log.DebugMessage("Read User Provided Service : %# v", ups)
 
@@ -166,8 +185,14 @@ func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{})
 	}
 
 	credentials = make(map[string]interface{})
-	for k, v := range d.Get("credentials").(map[string]interface{}) {
-		credentials[k] = v.(string)
+	if credsJson, hasJson := d.GetOk("credentials_json"); hasJson {
+		if err = json.Unmarshal([]byte(credsJson.(string)), &credentials); err != nil {
+			return err
+		}
+	} else {
+		for k, v := range d.Get("credentials").(map[string]interface{}) {
+			credentials[k] = v.(string)
+		}
 	}
 
 	if _, err = sm.UpdateUserProvidedService(id, name, credentials, syslogDrainURL, routeServiceURL); err != nil {
