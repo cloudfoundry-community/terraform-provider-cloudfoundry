@@ -176,6 +176,36 @@ func (dm *DomainManager) GetPrivateDomain(guid string) (domain CCDomain, err err
 	return
 }
 
+// HasPrivateDomainAccess -
+func (dm *DomainManager) HasPrivateDomainAccess(org, domain string) (bool, error) {
+	domainList := CCDomainList{}
+	path := fmt.Sprintf("%s/v2/organizations/%s/private_domains", dm.apiEndpoint, org)
+	if err := dm.ccGateway.GetResource(path, &domainList); err != nil {
+		return false, err
+	}
+	for _, d := range domainList.Resources {
+		if d.Metadata.GUID == domain {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// CreatePrivateDomainAccess -
+func (dm *DomainManager) CreatePrivateDomainAccess(org, domain string) (err error) {
+	resource := CCOrgResource{}
+	path := fmt.Sprintf("/v2/organizations/%s/private_domains/%s", org, domain)
+	err = dm.ccGateway.UpdateResource(dm.apiEndpoint, path, nil, &resource)
+	return
+}
+
+// DeletePrivateDomainAccess -
+func (dm *DomainManager) DeletePrivateDomainAccess(org, domain string) (err error) {
+	path := fmt.Sprintf("/v2/organizations/%s/private_domains/%s", org, domain)
+	err = dm.ccGateway.DeleteResource(dm.apiEndpoint, path)
+	return
+}
+
 // DeletePrivateDomain -
 func (dm *DomainManager) DeletePrivateDomain(guid string) (err error) {
 	err = dm.ccGateway.DeleteResource(dm.apiEndpoint, fmt.Sprintf("/v2/private_domains/%s", guid))
