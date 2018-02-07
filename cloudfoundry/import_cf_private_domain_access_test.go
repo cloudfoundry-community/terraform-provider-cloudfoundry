@@ -1,9 +1,9 @@
 package cloudfoundry
 
 import (
-	"testing"
 	"fmt"
 	"github.com/hashicorp/terraform/helper/resource"
+	"testing"
 )
 
 func TestAccPrivateDomainAccess_importBasic(t *testing.T) {
@@ -19,16 +19,16 @@ func TestAccPrivateDomainAccess_importBasic(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
+			PreCheck:  func() { testAccPreCheck(t) },
+			Providers: testAccProviders,
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: fmt.Sprintf(privateDomainAccessResourceCreate, defaultAppDomain()),
 				},
 				resource.TestStep{
-					ResourceName:            resourceName,
-					ImportState:             true,
-					ImportStateVerify:       true,
+					ResourceName:      resourceName,
+					ImportState:       true,
+					ImportStateVerify: true,
 				},
 			},
 		})
