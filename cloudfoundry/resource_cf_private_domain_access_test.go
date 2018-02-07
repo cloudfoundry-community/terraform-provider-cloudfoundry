@@ -59,7 +59,6 @@ resource "cf_private_domain_access" "access-to-org" {
 }
 `
 
-
 const privateDomainAccessResourceDelete = `
 resource "cf_org" "org1" {
   name = "org1"
@@ -85,8 +84,8 @@ func TestAccPrivateDomainAccess_normal(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
+			PreCheck:  func() { testAccPreCheck(t) },
+			Providers: testAccProviders,
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: fmt.Sprintf(privateDomainAccessResourceCreate, defaultAppDomain()),
@@ -127,7 +126,7 @@ func checkPrivateDomainShare(resource, domain, org string, exists bool) resource
 			return fmt.Errorf("org '%s' not found in terraform state", org)
 		}
 
-		orgID    := ors.Primary.ID
+		orgID := ors.Primary.ID
 		domainID := drs.Primary.ID
 
 		dm := session.DomainManager()

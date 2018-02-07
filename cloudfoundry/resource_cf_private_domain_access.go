@@ -88,7 +88,7 @@ func resourcePrivateDomainAccessCreate(d *schema.ResourceData, meta interface{})
 	}
 
 	domain := d.Get("domain").(string)
-	org    := d.Get("org").(string)
+	org := d.Get("org").(string)
 
 	dm := session.DomainManager()
 	if err = dm.CreatePrivateDomainAccess(org, domain); err != nil {
