@@ -28,10 +28,6 @@ func resourcePrivateDomainAccess() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"linked": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
 		},
 	}
 }
