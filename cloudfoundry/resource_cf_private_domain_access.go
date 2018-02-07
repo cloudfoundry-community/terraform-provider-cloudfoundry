@@ -117,6 +117,8 @@ func resourcePrivateDomainAccessRead(d *schema.ResourceData, meta interface{}) (
 		return err
 	}
 
+	d.Set("org", org)
+	d.Set("domain", domain)
 	return
 }
 
