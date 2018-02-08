@@ -37,3 +37,11 @@ The following attributes are exported:
 
 * `id` - The GUID of the organization
 * `quota` - If a quota is not referenced as an argument then the default quota GUID will be exported 
+
+## Import
+
+The current Organization can be imported using the `org`, e.g.
+
+```
+$ terraform import cf_org.o1 a-guid
+```

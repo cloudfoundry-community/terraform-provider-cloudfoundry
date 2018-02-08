@@ -63,3 +63,11 @@ The following arguments are supported:
 The following attributes are exported:
 
 * `id` - The GUID of the quota
+
+## Import
+
+The current Quota can be imported using the `quota`, e.g.
+
+```
+$ terraform import cf_quota.10g a-guid
+```

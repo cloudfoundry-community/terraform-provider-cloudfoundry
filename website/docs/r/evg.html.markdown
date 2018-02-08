@@ -34,3 +34,11 @@ The following arguments are supported:
 
 * `name` - (Required) Either `running` or `staging` to indicate the type of environment variable group to update
 * `variables` - (Required) A map of name-value pairs of environment variables
+
+## Import
+
+The current Evg can be imported using the `evg`, e.g.
+
+```
+$ terraform import cf_evg.private <running/staging>
+```

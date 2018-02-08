@@ -16,6 +16,13 @@ func resourceConfig() *schema.Resource {
 		Update: resourceConfigUpdate,
 		Delete: resourceConfigDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: func(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+				d.SetId("config")
+				return ImportStatePassthrough(d, meta)
+			},
+		},
+
 		Schema: map[string]*schema.Schema{
 			"feature_flags": &schema.Schema{
 				Type:     schema.TypeList,

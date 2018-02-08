@@ -33,11 +33,19 @@ The following arguments are supported:
 * `name` - (Required) The name of the Service Instance in Cloud Foundry
 * `space` - (Required) The ID of the [space](/docs/providers/cloudfoundry/r/space.html) 
 * `credentials` - (Optional) Arbitrary credentials in the form of key-value pairs and delivered to applications via [VCAP_SERVICES Env variables](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES)
-* `syslogDrainURL` - (Optional) URL to which logs for bound applications will be streamed
-* `routeServiceURL` - (Optional) URL to which requests for bound routes will be forwarded. Scheme for this URL must be https
+* `syslog_drain_url` - (Optional) URL to which logs for bound applications will be streamed
+* `route_service_url` - (Optional) URL to which requests for bound routes will be forwarded. Scheme for this URL must be https
 
 ## Attributes Reference
 
 The following attributes are exported:
 
 * `id` - The GUID of the service instance
+
+## Import
+
+The current User Provided Service can be imported using the `user_provided_service`, e.g.
+
+```
+$ terraform import cf_user_provided_service.mq-server a-guid
+```

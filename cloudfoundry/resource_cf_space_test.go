@@ -25,21 +25,21 @@ resource "cf_asg" "svc" {
     }
 }
 resource "cf_asg" "stg1" {
-	name = "app-services"
+	name = "app-services1"
     rule {
         protocol = "all"
         destination = "192.168.101.0/24"
     }
 }
 resource "cf_asg" "stg2" {
-	name = "app-services"
+	name = "app-services2"
     rule {
         protocol = "all"
         destination = "192.168.102.0/24"
     }
 }
 resource "cf_asg" "stg3" {
-	name = "app-services"
+	name = "app-services3"
     rule {
         protocol = "all"
         destination = "192.168.103.0/24"
@@ -114,21 +114,21 @@ resource "cf_asg" "svc" {
     }
 }
 resource "cf_asg" "stg1" {
-	name = "app-services"
+	name = "app-services1"
     rule {
         protocol = "all"
         destination = "192.168.101.0/24"
     }
 }
 resource "cf_asg" "stg2" {
-	name = "app-services"
+	name = "app-services2"
     rule {
         protocol = "all"
         destination = "192.168.102.0/24"
     }
 }
 resource "cf_asg" "stg3" {
-	name = "app-services"
+	name = "app-services3"
     rule {
         protocol = "all"
         destination = "192.168.103.0/24"

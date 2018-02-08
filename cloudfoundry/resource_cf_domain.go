@@ -16,6 +16,10 @@ func resourceDomain() *schema.Resource {
 		Read:   resourceDomainRead,
 		Delete: resourceDomainDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: ImportStatePassthrough,
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

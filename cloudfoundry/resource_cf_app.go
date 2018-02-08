@@ -27,6 +27,10 @@ func resourceApp() *schema.Resource {
 		Update: resourceAppUpdate,
 		Delete: resourceAppDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: resourceAppImport,
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{
@@ -714,37 +718,37 @@ func setAppArguments(app cfapi.CCApp, d *schema.ResourceData) {
 
 	d.Set("name", app.Name)
 	d.Set("space", app.SpaceGUID)
-	if app.Instances != nil {
+	if app.Instances != nil || IsImportState(d) {
 		d.Set("instances", app.Instances)
 	}
-	if app.Memory != nil {
+	if app.Memory != nil || IsImportState(d) {
 		d.Set("memory", app.Memory)
 	}
-	if app.DiskQuota != nil {
+	if app.DiskQuota != nil || IsImportState(d) {
 		d.Set("disk_quota", app.DiskQuota)
 	}
-	if app.StackGUID != nil {
+	if app.StackGUID != nil || IsImportState(d) {
 		d.Set("stack", app.StackGUID)
 	}
-	if app.Buildpack != nil {
+	if app.Buildpack != nil || IsImportState(d) {
 		d.Set("buildpack", app.Buildpack)
 	}
-	if app.Command != nil {
+	if app.Command != nil || IsImportState(d) {
 		d.Set("command", app.Command)
 	}
-	if app.EnableSSH != nil {
+	if app.EnableSSH != nil || IsImportState(d) {
 		d.Set("enable_ssh", app.EnableSSH)
 	}
-	if app.HealthCheckHTTPEndpoint != nil {
+	if app.HealthCheckHTTPEndpoint != nil || IsImportState(d) {
 		d.Set("health_check_http_endpoint", app.HealthCheckHTTPEndpoint)
 	}
-	if app.HealthCheckType != nil {
+	if app.HealthCheckType != nil || IsImportState(d) {
 		d.Set("health_check_type", app.HealthCheckType)
 	}
-	if app.HealthCheckTimeout != nil {
+	if app.HealthCheckTimeout != nil || IsImportState(d) {
 		d.Set("health_check_timeout", app.HealthCheckTimeout)
 	}
-	if app.Environment != nil {
+	if app.Environment != nil || IsImportState(d) {
 		d.Set("environment", app.Environment)
 	}
 
