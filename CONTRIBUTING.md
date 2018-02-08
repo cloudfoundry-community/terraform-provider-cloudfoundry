@@ -3,7 +3,7 @@ The backlog is kept as github issues annotated with labels and milestones. You m
 
 Please send PR against the `dev` branches.
 
-You may reach core contributors in the [cloudfoundry slack, within the terraform channel](https://cloudfoundry.slack.com/messages/C7JRBR8CV/)
+You may reach core contributors in the [cloudfoundry slack, within the terraform channel](https://cloudfoundry.slack.com/messages/C7JRBR8CV/) (get an account from http://slack.cloudfoundry.org/)
 
 ## Creating a release 
 
