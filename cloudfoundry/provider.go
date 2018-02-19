@@ -64,6 +64,7 @@ func Provider() terraform.ResourceProvider {
 			"cf_config":                resourceConfig(),
 			"cf_user":                  resourceUser(),
 			"cf_domain":                resourceDomain(),
+			"cf_private_domain_access": resourcePrivateDomainAccess(),
 			"cf_quota":                 resourceQuota(),
 			"cf_asg":                   resourceAsg(),
 			"cf_default_asg":           resourceDefaultAsg(),
