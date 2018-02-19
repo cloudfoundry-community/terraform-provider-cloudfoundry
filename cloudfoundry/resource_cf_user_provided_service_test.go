@@ -12,76 +12,110 @@ import (
 )
 
 const userProvidedServiceResourceCreate = `
-
 resource "cf_org" "org1" {
 	name = "organization-one"
 }
+
 resource "cf_quota" "dev" {
 	name = "50g"
 	org = "${cf_org.org1.id}"
-    allow_paid_service_plans = true
-    instance_memory = 1024
-    total_memory = 51200
-    total_app_instances = 100
-    total_routes = 100
-    total_services = 150
-
+  allow_paid_service_plans = true
+  instance_memory = 1024
+  total_memory = 51200
+  total_app_instances = 100
+  total_routes = 100
+  total_services = 150
 }
 
 resource "cf_space" "space1" {
 	name = "space-one"
 	org = "${cf_org.org1.id}"
 	quota = "${cf_quota.dev.id}"
-	
 	allow_ssh = true
 }
 
 resource "cf_user_provided_service" "mq" {
 	name = "mq"
-    space = "${cf_space.space1.id}"
-    credentials = {
+  space = "${cf_space.space1.id}"
+  credentials = {
 		"url" = "mq://localhost:9000"
 		"username" = "user"
 		"password" = "pwd"
-	}	
+	}
+}
+`
+
+const userProvidedServiceComplexResourceCreate = `
+resource "cf_org" "org1" {
+	name = "organization-one"
+}
+
+resource "cf_space" "space1" {
+	name = "space-one"
+	org = "${cf_org.org1.id}"
+	allow_ssh = true
+}
+
+resource "cf_user_provided_service" "complex" {
+	name = "complex"
+  space = "${cf_space.space1.id}"
+  credentials_json = "{ \"cnx\": { \"host\": \"localhost\", \"ports\": [ 8080, 8081, 8082 ] } }"
 }
 `
 
 const userProvidedServiceResourceUpdate = `
-
 resource "cf_org" "org1" {
-	name = "organization-one"
+  name = "organization-one"
 }
-resource "cf_quota" "dev" {
-	name = "50g"
-	org = "${cf_org.org1.id}"
-    allow_paid_service_plans = true
-    instance_memory = 1024
-    total_memory = 51200
-    total_app_instances = 100
-    total_routes = 100
-    total_services = 150
 
+resource "cf_quota" "dev" {
+  name = "50g"
+  org = "${cf_org.org1.id}"
+  allow_paid_service_plans = true
+  instance_memory = 1024
+  total_memory = 51200
+  total_app_instances = 100
+  total_routes = 100
+  total_services = 150
 }
 
 resource "cf_space" "space1" {
-	name = "space-one"
-	org = "${cf_org.org1.id}"
-	quota = "${cf_quota.dev.id}"
-	
-	allow_ssh = true
+  name = "space-one"
+  org = "${cf_org.org1.id}"
+  quota = "${cf_quota.dev.id}"
+  allow_ssh = true
 }
 
 resource "cf_user_provided_service" "mq" {
-	name = "mq"
-    space = "${cf_space.space1.id}"
-    credentials = {
-		"url" = "mq://localhost:9000"
-		"username" = "new-user"
-		"password" = "new-pwd"
-	}
-	syslog_drain_url = "http://localhost/syslog"
-	route_service_url = "https://localhost/route"
+  name = "mq"
+  space = "${cf_space.space1.id}"
+  credentials = {
+    "url" = "mq://localhost:9000"
+    "username" = "new-user"
+    "password" = "new-pwd"
+  }
+  syslog_drain_url = "http://localhost/syslog"
+  route_service_url = "https://localhost/route"
+}
+`
+
+const userProvidedServiceComplexResourceUpdate = `
+resource "cf_org" "org1" {
+  name = "organization-one"
+}
+
+resource "cf_space" "space1" {
+  name = "space-one"
+  org = "${cf_org.org1.id}"
+  allow_ssh = true
+}
+
+resource "cf_user_provided_service" "complex" {
+	name = "complex"
+  space = "${cf_space.space1.id}"
+  credentials_json = "{ \"cnx\": { \"host\": \"127.0.0.1\", \"ports\": [ 8088 ] } }"
+  syslog_drain_url = "http://localhost/syslog"
+  route_service_url = "https://localhost/route"
 }
 `
 
@@ -100,18 +134,13 @@ func TestAccUserProvidedService_normal(t *testing.T) {
 					Config: userProvidedServiceResourceCreate,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserProvidedServiceExists(ref),
-						resource.TestCheckResourceAttr(
-							ref, "name", "mq"),
-						resource.TestCheckResourceAttr(
-							ref, "credentials.url", "mq://localhost:9000"),
-						resource.TestCheckResourceAttr(
-							ref, "credentials.username", "user"),
-						resource.TestCheckResourceAttr(
-							ref, "credentials.password", "pwd"),
-						resource.TestCheckNoResourceAttr(
-							ref, "syslog_drain_url"),
-						resource.TestCheckNoResourceAttr(
-							ref, "route_service_url"),
+						resource.TestCheckResourceAttr(ref, "name", "mq"),
+						resource.TestCheckResourceAttr(ref, "credentials.url", "mq://localhost:9000"),
+						resource.TestCheckResourceAttr(ref, "credentials.username", "user"),
+						resource.TestCheckResourceAttr(ref, "credentials.password", "pwd"),
+						resource.TestCheckNoResourceAttr(ref, "syslog_drain_url"),
+						resource.TestCheckNoResourceAttr(ref, "route_service_url"),
+						resource.TestCheckNoResourceAttr(ref, "credentials_json"),
 					),
 				},
 
@@ -119,18 +148,49 @@ func TestAccUserProvidedService_normal(t *testing.T) {
 					Config: userProvidedServiceResourceUpdate,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserProvidedServiceExists(ref),
-						resource.TestCheckResourceAttr(
-							ref, "name", "mq"),
-						resource.TestCheckResourceAttr(
-							ref, "credentials.url", "mq://localhost:9000"),
-						resource.TestCheckResourceAttr(
-							ref, "credentials.username", "new-user"),
-						resource.TestCheckResourceAttr(
-							ref, "credentials.password", "new-pwd"),
-						resource.TestCheckResourceAttr(
-							ref, "syslog_drain_url", "http://localhost/syslog"),
-						resource.TestCheckResourceAttr(
-							ref, "route_service_url", "https://localhost/route"),
+						resource.TestCheckResourceAttr(ref, "name", "mq"),
+						resource.TestCheckResourceAttr(ref, "credentials.url", "mq://localhost:9000"),
+						resource.TestCheckResourceAttr(ref, "credentials.username", "new-user"),
+						resource.TestCheckResourceAttr(ref, "credentials.password", "new-pwd"),
+						resource.TestCheckResourceAttr(ref, "syslog_drain_url", "http://localhost/syslog"),
+						resource.TestCheckResourceAttr(ref, "route_service_url", "https://localhost/route"),
+						resource.TestCheckNoResourceAttr(ref, "credentials_json"),
+					),
+				},
+			},
+		})
+}
+
+func TestAccUserProvidedService_complex(t *testing.T) {
+	ref := "cf_user_provided_service.complex"
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckUserProvidedServiceDestroyed("complex", "cf_space.space1"),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: userProvidedServiceComplexResourceCreate,
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckUserProvidedServiceExists(ref),
+						resource.TestCheckResourceAttr(ref, "name", "complex"),
+						resource.TestCheckResourceAttr(ref, "credentials_json", `{ "cnx": { "host": "localhost", "ports": [ 8080, 8081, 8082 ] } }`),
+						resource.TestCheckNoResourceAttr(ref, "syslog_drain_url"),
+						resource.TestCheckNoResourceAttr(ref, "route_service_url"),
+						resource.TestCheckNoResourceAttr(ref, "credentials"),
+					),
+				},
+
+				resource.TestStep{
+					Config: userProvidedServiceComplexResourceUpdate,
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckUserProvidedServiceExists(ref),
+						resource.TestCheckResourceAttr(ref, "name", "complex"),
+						resource.TestCheckResourceAttr(ref, "credentials_json", `{ "cnx": { "host": "127.0.0.1", "ports": [ 8088 ] } }`),
+						resource.TestCheckResourceAttr(ref, "syslog_drain_url", "http://localhost/syslog"),
+						resource.TestCheckResourceAttr(ref, "route_service_url", "https://localhost/route"),
+						resource.TestCheckNoResourceAttr(ref, "credentials"),
 					),
 				},
 			},

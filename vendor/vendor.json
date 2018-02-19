@@ -1101,6 +1101,12 @@
 			"revisionTime": "2018-01-09T23:13:33Z"
 		},
 		{
+			"checksumSHA1": "Fzbv+N7hFXOtrR6E7ZcHT3jEE9s=",
+			"path": "github.com/hashicorp/terraform/helper/structure",
+			"revision": "0e69f1542dcbd39c6e5b3327916fc7b70dcdc70b",
+			"revisionTime": "2018-01-11T18:50:06Z"
+		},
+		{
 			"checksumSHA1": "yFWmdS6yEJZpRJzUqd/mULqCYGk=",
 			"path": "github.com/hashicorp/terraform/moduledeps",
 			"revision": "a6008b8a48a749c7c167453b9cf55ffd572b9a5d",
