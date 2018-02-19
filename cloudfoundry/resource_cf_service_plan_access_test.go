@@ -17,7 +17,7 @@ resource "cf_service_broker" "redis" {
 	password = "%s"
 }
 
-resource "cf_service_access" "redis-access" {
+resource "cf_service_plan_access" "redis-access" {
 	plan = "${cf_service_broker.redis.service_plans["p-redis/shared-vm"]}"
 	org = "%s"
 }
@@ -31,7 +31,7 @@ resource "cf_service_broker" "redis" {
 	password = "%s"
 }
 
-resource "cf_service_access" "redis-access" {
+resource "cf_service_plan_access" "redis-access" {
 	plan = "${cf_service_broker.redis.service_plans["p-redis/shared-vm"]}"
 	public = true
 }
@@ -45,7 +45,7 @@ resource "cf_service_broker" "redis" {
 	password = "%s"
 }
 
-resource "cf_service_access" "redis-access" {
+resource "cf_service_plan_access" "redis-access" {
 	plan = "${cf_service_broker.redis.service_plans["p-redis/shared-vm"]}"
 	public = false
 }
@@ -59,31 +59,31 @@ resource "cf_service_broker" "redis" {
 	password = "%s"
 }
 
-resource "cf_service_access" "redis-access" {
+resource "cf_service_plan_access" "redis-access" {
 	plan = "${cf_service_broker.redis.service_plans["p-redis/shared-vm"]}"
 	org = "%s"
 	public = true
 }
 `
 
-func TestAccServiceAccess_normal(t *testing.T) {
+func TestAccServicePlanAccess_normal(t *testing.T) {
 	user, password := getRedisBrokerCredentials()
 	deleteServiceBroker("p-redis")
 
 	var servicePlanAccessGUID string
-	ref := "cf_service_access.redis-access"
+	ref := "cf_service_plan_access.redis-access"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceAccessDestroyed(servicePlanAccessGUID),
+			CheckDestroy: testAccCheckServicePlanAccessDestroyed(servicePlanAccessGUID),
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: fmt.Sprintf(saResource,
 						defaultSysDomain(), user, password, defaultPcfDevOrgID()),
 					Check: resource.ComposeTestCheckFunc(
-						testAccCheckServiceAccessExists(ref,
+						testAccCheckServicePlanAccessExists(ref,
 							func(guid string) {
 								servicePlanAccessGUID = guid
 							}),
@@ -111,7 +111,7 @@ func TestAccServiceAccess_normal(t *testing.T) {
 		})
 }
 
-func TestAccServiceAccess_error(t *testing.T) {
+func TestAccServicePlanAccess_error(t *testing.T) {
 	user, password := getRedisBrokerCredentials()
 	deleteServiceBroker("p-redis")
 
@@ -121,7 +121,7 @@ func TestAccServiceAccess_error(t *testing.T) {
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceAccessDestroyed(servicePlanAccessGUID),
+			CheckDestroy: testAccCheckServicePlanAccessDestroyed(servicePlanAccessGUID),
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config:      fmt.Sprintf(saResourceError, defaultSysDomain(), user, password, defaultPcfDevOrgID()),
@@ -131,7 +131,7 @@ func TestAccServiceAccess_error(t *testing.T) {
 		})
 }
 
-func testAccCheckServiceAccessExists(resource string,
+func testAccCheckServicePlanAccessExists(resource string,
 	setServicePlanAccessGUID func(string)) resource.TestCheckFunc {
 
 	return func(s *terraform.State) (err error) {
@@ -190,7 +190,7 @@ func testAccCheckServicePlan(resource string) resource.TestCheckFunc {
 	}
 }
 
-func testAccCheckServiceAccessDestroyed(servicePlanAccessGUID string) resource.TestCheckFunc {
+func testAccCheckServicePlanAccessDestroyed(servicePlanAccessGUID string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 

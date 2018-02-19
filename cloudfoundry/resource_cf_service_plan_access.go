@@ -6,13 +6,13 @@ import (
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
-func resourceServiceAccess() *schema.Resource {
+func resourceServicePlanAccess() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceServiceAccessCreate,
-		Read:   resourceServiceAccessRead,
-		Delete: resourceServiceAccessDelete,
+		Create: resourceServicePlanAccessCreate,
+		Read:   resourceServicePlanAccessRead,
+		Delete: resourceServicePlanAccessDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceServiceAccessImport,
+			State: resourceServicePlanAccessImport,
 		},
 		Schema: map[string]*schema.Schema{
 			"plan": &schema.Schema{
@@ -36,7 +36,7 @@ func resourceServiceAccess() *schema.Resource {
 	}
 }
 
-func resourceServiceAccessCreate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceServicePlanAccessCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	session := meta.(*cfapi.Session)
 	if session == nil {
@@ -69,7 +69,7 @@ func resourceServiceAccessCreate(d *schema.ResourceData, meta interface{}) (err 
 	return nil
 }
 
-func resourceServiceAccessRead(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceServicePlanAccessRead(d *schema.ResourceData, meta interface{}) (err error) {
 	session := meta.(*cfapi.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
@@ -100,7 +100,7 @@ func resourceServiceAccessRead(d *schema.ResourceData, meta interface{}) (err er
 	return nil
 }
 
-func resourceServiceAccessDelete(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceServicePlanAccessDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 	session := meta.(*cfapi.Session)
 	if session == nil {

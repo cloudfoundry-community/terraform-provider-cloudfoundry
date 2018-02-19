@@ -71,7 +71,7 @@ func Provider() terraform.ResourceProvider {
 			"cf_org":                   resourceOrg(),
 			"cf_space":                 resourceSpace(),
 			"cf_service_broker":        resourceServiceBroker(),
-			"cf_service_access":        resourceServiceAccess(),
+			"cf_service_plan_access":   resourceServicePlanAccess(),
 			"cf_service_instance":      resourceServiceInstance(),
 			"cf_service_key":           resourceServiceKey(),
 			"cf_user_provided_service": resourceUserProvidedService(),

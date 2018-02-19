@@ -6,7 +6,7 @@ import (
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
-func resourceServiceAccessImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceServicePlanAccessImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	session := meta.(*cfapi.Session)
 	if session == nil {
 		return []*schema.ResourceData{}, fmt.Errorf("client is nil")
