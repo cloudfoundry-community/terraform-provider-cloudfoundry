@@ -18,6 +18,10 @@ import (
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
 )
 
+const (
+	DefaultAppTimeout = 60
+)
+
 func resourceApp() *schema.Resource {
 
 	return &schema.Resource{
@@ -87,7 +91,7 @@ func resourceApp() *schema.Resource {
 			"timeout": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
-				Default:  60,
+				Default:  DefaultAppTimeout,
 			},
 			"stopped": &schema.Schema{
 				Type:     schema.TypeBool,
