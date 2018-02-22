@@ -9,5 +9,5 @@ You may reach core contributors in the [cloudfoundry slack, within the terraform
 
 * Open up an issue "cutting release 0.9.9" to gather contributors concensus on when to cut the release
 * On your clone, checkout the `dev` branch, and execute `scripts/create-release.sh 0.9.9`
-* travis build kicks off for this tag, and tries to publish the artifacts github, check it on [https://travis-ci.org/mevansam/terraform-provider-cf/branches](travis the branch list)
+* travis build kicks off for this tag, and tries to publish the artifacts github, check it on [travis the branch list](https://travis-ci.org/mevansam/terraform-provider-cf/branches)
 * edit the release notes in the [github release page](https://github.com/mevansam/terraform-provider-cf/releases)
