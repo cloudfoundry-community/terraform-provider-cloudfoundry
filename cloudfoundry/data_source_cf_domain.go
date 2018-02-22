@@ -61,7 +61,7 @@ func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) (err error) 
 	if privateDomains, err = dm.GetPrivateDomains(); err != nil {
 		return
 	}
-	domains = append(sharedDomains, privateDomains[:0]...)
+	domains = append(sharedDomains, privateDomains...)
 
 	if v, ok := d.GetOk("sub_domain"); ok {
 		prefix = v.(string) + "."

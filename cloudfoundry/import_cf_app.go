@@ -30,6 +30,7 @@ func resourceAppImport(d *schema.ResourceData, meta interface{}) ([]*schema.Reso
 		return []*schema.ResourceData{}, err
 	}
 	d.Set("url", fmt.Sprintf(DL_IMPORT_PATH, session.Info().APIEndpoint, d.Id()))
-
+	d.Set("route", make([]interface{}, 0))
+	d.Set("timeout", DefaultAppTimeout)
 	return ImportStatePassthrough(d, meta)
 }
