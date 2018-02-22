@@ -1,9 +1,9 @@
 
-The backlog is kept as github issues annotated with labels and milestones. You might find the [huboard.com](https://huboard.com/mevansam/terraform-provider-cf/) UI convenient.
+The backlog is kept as github issues annotated with labels and milestones, and progress is tracked in the [backlog project](https://github.com/mevansam/terraform-provider-cf/projects/1).
 
 Please send PR against the `dev` branches.
 
-You may reach core contributors in the [cloudfoundry slack, within the terraform channel](https://cloudfoundry.slack.com/messages/C7JRBR8CV/) (get an account from http://slack.cloudfoundry.org/)
+You may reach core contributors in the [cloudfoundry slack, within the terraform channel](https://cloudfoundry.slack.com/messages/C7JRBR8CV/) (get an account from http://slack.cloudfoundry.org/). Please prefer slack channel for support requests, and github issues for qualified bugs and enhancements requests.
 
 ## Creating a release 
 
