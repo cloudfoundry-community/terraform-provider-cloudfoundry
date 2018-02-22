@@ -273,6 +273,10 @@ func resourceApp() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"disable_blue_green_deployment": &schema.Schema{
+				Type:     schema.TypeBool,
+				Required: true,
+			},
 		},
 	}
 }
@@ -310,7 +314,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		addContent []map[string]interface{}
 
 		defaultRoute, stageRoute, liveRoute string
-		isBlueGreen                         bool
+		disableBlueGreen                    bool
 
 		serviceBindings    []map[string]interface{}
 		hasServiceBindings bool
@@ -319,8 +323,12 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		hasRouteConfig bool
 	)
 
+	_ = stageRoute
+	_ = liveRoute
+
 	app.Name = d.Get("name").(string)
 	app.SpaceGUID = d.Get("space").(string)
+
 	if v, ok = d.GetOk("ports"); ok {
 		p := []int{}
 		for _, vv := range v.(*schema.Set).List() {
@@ -376,6 +384,11 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		app.Environment = &vv
 	}
 
+	if v, ok = d.GetOk("disable_blue_green_deployment"); ok {
+		vv := v.(bool)
+		disableBlueGreen = vv
+	}
+
 	// Download application binary / source asynchronously
 	prepare := make(chan error)
 	go func() {
@@ -386,24 +399,17 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
 
 		routeConfig = v.([]interface{})[0].(map[string]interface{})
-		isBlueGreen = false
 
-		if defaultRoute, err = validateRoute(routeConfig, "default_route", rm); err != nil {
+		if defaultRoute, err = validateRoute(routeConfig, "default_route", rm, disableBlueGreen); err != nil {
 			return
 		}
-		if stageRoute, err = validateRoute(routeConfig, "stage_route", rm); err != nil {
+		if stageRoute, err = validateRoute(routeConfig, "stage_route", rm, disableBlueGreen); err != nil {
 			return
 		}
-		if liveRoute, err = validateRoute(routeConfig, "live_route", rm); err != nil {
+		if liveRoute, err = validateRoute(routeConfig, "live_route", rm, disableBlueGreen); err != nil {
 			return
 		}
 
-		if len(stageRoute) > 0 && len(liveRoute) > 0 {
-			isBlueGreen = true
-		} else if len(stageRoute) > 0 || len(liveRoute) > 0 {
-			err = fmt.Errorf("both 'stage_route' and 'live_route' need to be provided to deploy the app using blue-green routing")
-			return
-		}
 	}
 
 	// Create application
@@ -457,10 +463,6 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		if err = am.StartApp(app.ID, timeout); err != nil {
 			return
 		}
-
-		// Execute blue-green validation
-		if isBlueGreen {
-		}
 	}
 
 	if app, err = am.ReadApp(app.ID); err != nil {
@@ -507,6 +509,9 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
+	var disableBlueGreen bool
+	disableBlueGreen = false
+
 	session := meta.(*cfapi.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
@@ -515,33 +520,213 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	am := session.AppManager()
 	rm := session.RouteManager()
 
+	if v, ok := d.GetOk("disable_blue_green_deployment"); ok {
+		vv := v.(bool)
+		disableBlueGreen = vv
+	}
+
 	app := cfapi.CCApp{
 		ID: d.Id(),
 	}
+
 	update := false
 	restage := false
-	restart := false
+	restageUploadedApp := false
 
+	// Some attributes force app to stop (restart/restage)  e.g. "command"
+	// Some attributes just update the app without stopping it e.g. "disk_quota"
 	app.Name = *getChangedValueString("name", &update, d)
-	app.SpaceGUID = *getChangedValueString("space", &update, d)
-	app.Ports = getChangedValueIntList("ports", &update, d)
+	app.SpaceGUID = *getChangedValueString("space", &restage, d)
+	app.Ports = getChangedValueIntList("ports", &restage, d)
 	app.Instances = getChangedValueInt("instances", &update, d)
-	app.Memory = getChangedValueInt("memory", &update, d)
+	app.Memory = getChangedValueInt("memory", &restage, d)
 	app.DiskQuota = getChangedValueInt("disk_quota", &update, d)
-	app.Command = getChangedValueString("command", &update, d)
-	app.EnableSSH = getChangedValueBool("enable_ssh", &update, d)
-	app.HealthCheckHTTPEndpoint = getChangedValueString("health_check_http_endpoint", &update, d)
-	app.HealthCheckType = getChangedValueString("health_check_type", &update, d)
+	app.Command = getChangedValueString("command", &restage, d)
+	app.EnableSSH = getChangedValueBool("enable_ssh", &restage, d)
+	app.HealthCheckHTTPEndpoint = getChangedValueString("health_check_http_endpoint", &restage, d)
+	app.HealthCheckType = getChangedValueString("health_check_type", &restage, d)
 	app.HealthCheckTimeout = getChangedValueInt("health_check_timeout", &update, d)
 
 	app.Buildpack = getChangedValueString("buildpack", &restage, d)
 	app.Environment = getChangedValueMap("environment", &restage, d)
 
-	if update || restart || restage {
+	if d.HasChange("service_binding") || d.HasChange("stopped") || d.HasChange("route") || d.HasChange("url") || d.HasChange("git") || d.HasChange("github_release") || d.HasChange("add_content") {
+		restage = true
+	}
+
+	// Update app if no restaging/restarts are necessary or bg is disabled
+	if (update || restage) && ((!disableBlueGreen && !restage) || disableBlueGreen) {
 		if app, err = am.UpdateApp(app); err != nil {
 			return
 		}
 		setAppArguments(app, d)
+	}
+
+	// if app restages/restarts and bg is enabled, use bg for deployment, otherwise there will be downtime
+	if !disableBlueGreen && restage {
+		var numInstanceNewApp int
+		var numInstanceOriginApp int
+		var timeoutduration time.Duration
+		var tmpd schema.ResourceData
+		var originAppName string
+
+		if v, ok := d.GetOk("instances"); ok {
+			vv := v.(int)
+			numInstanceNewApp = vv
+		}
+
+		if v, ok := d.GetOk("timeout"); ok {
+			vv := v.(int)
+			timeoutduration = time.Second * time.Duration(vv)
+		}
+
+		if v, ok := d.GetOk("name"); ok {
+			vv := v.(string)
+			originAppName = vv
+		}
+
+		// Rename origin app
+		originApp := cfapi.CCApp{ID: d.Id()}
+		originApp.Name = venerable(originAppName)
+
+		// Update origin app name
+		originApp, err = am.UpdateApp(originApp)
+		if err != nil {
+			return err
+		}
+		am.WaitForAppToStage(originApp, timeoutduration)
+		am.WaitForAppToStart(originApp, timeoutduration)
+
+		numInstanceOriginApp = *originApp.Instances
+
+		// Create new CCApp to update instance numbers only and to forbid restage/stops
+		originInstanceApp := cfapi.CCApp{ID: originApp.ID}
+		originInstanceApp.Instances = new(int)
+
+		// Create new App and start new app with one instance
+		tmpd = *d
+		tmpd.Set("instances", 1)
+		err = resourceAppCreate(&tmpd, meta)
+		if err != nil {
+			return err
+		}
+
+		// Create new CCApp to update instance numbers only and to forbid restage/stops
+		newApp := cfapi.CCApp{}
+		newApp, err = am.FindApp(tmpd.Get("name").(string)) // Find app, due resourceAppCreate doesn't return the guid
+		am.WaitForAppToStage(newApp, timeoutduration)
+		am.WaitForAppToStart(newApp, timeoutduration)
+		d.SetId(newApp.ID)
+
+		newAppInstances := cfapi.CCApp{ID: newApp.ID}
+		newAppInstances.Instances = new(int)
+
+		if numInstanceNewApp == numInstanceOriginApp { // Instance numbers aren't changed
+
+			if numInstanceOriginApp == 1 && numInstanceNewApp == 1 { // Single Instance case
+				err = am.DeleteApp(originApp.ID, true)
+				if err != nil {
+					return err
+				}
+			} else {
+				k := numInstanceOriginApp + 1
+
+				for index := 1; index < k; index++ {
+
+					// Delete origin App
+					if numInstanceOriginApp == index {
+						err = am.DeleteApp(originApp.ID, true)
+						if err != nil {
+							return err
+						}
+					} else {
+						// Scale origin app down
+						*originInstanceApp.Instances = numInstanceOriginApp - index
+						_, err = am.UpdateApp(originInstanceApp)
+						if err != nil {
+							return err
+						}
+						am.WaitForAppToStage(originInstanceApp, timeoutduration)
+						am.WaitForAppToStart(originInstanceApp, timeoutduration)
+					}
+					// Scale new app up
+					*newAppInstances.Instances = index
+					_, err = am.UpdateApp(newAppInstances)
+					if err != nil {
+						return err
+					}
+					am.WaitForAppToStage(newAppInstances, timeoutduration)
+					am.WaitForAppToStart(newAppInstances, timeoutduration)
+				}
+			}
+		} else if numInstanceOriginApp > numInstanceNewApp {
+			k := numInstanceOriginApp + 1
+
+			for index := 1; index < k; index++ {
+
+				// Delete origin App
+				if numInstanceOriginApp == index {
+					err = am.DeleteApp(originApp.ID, true)
+					if err != nil {
+						return err
+					}
+				} else {
+					// Scale origin app down
+					*originInstanceApp.Instances = numInstanceOriginApp - index
+					_, err = am.UpdateApp(originInstanceApp)
+					if err != nil {
+						return err
+					}
+					am.WaitForAppToStage(originInstanceApp, timeoutduration)
+					am.WaitForAppToStart(originInstanceApp, timeoutduration)
+				}
+
+				if index <= numInstanceNewApp {
+					*newAppInstances.Instances = index
+					_, err = am.UpdateApp(newAppInstances)
+					if err != nil {
+						return err
+					}
+					am.WaitForAppToStage(newAppInstances, timeoutduration)
+					am.WaitForAppToStart(newAppInstances, timeoutduration)
+				}
+			}
+
+		} else if numInstanceOriginApp < numInstanceNewApp {
+			k := numInstanceNewApp + 1
+
+			for index := 1; index < k; index++ {
+
+				// Delete origin App
+				if numInstanceOriginApp == index {
+					err = am.DeleteApp(originApp.ID, true)
+					if err != nil {
+						return err
+					}
+				} else if index < numInstanceOriginApp {
+					// Scale origin app down
+					*originInstanceApp.Instances = numInstanceOriginApp - index
+					_, err = am.UpdateApp(originInstanceApp)
+					if err != nil {
+						return err
+					}
+					am.WaitForAppToStage(originInstanceApp, timeoutduration)
+					am.WaitForAppToStart(originInstanceApp, timeoutduration)
+				}
+
+				*newAppInstances.Instances = index
+				_, err = am.UpdateApp(newAppInstances)
+				if err != nil {
+					return err
+				}
+				am.WaitForAppToStage(newAppInstances, timeoutduration)
+				am.WaitForAppToStart(newAppInstances, timeoutduration)
+			}
+		}
+
+		d.Set("instances", numInstanceNewApp)
+
+		return
 	}
 
 	if d.HasChange("service_binding") {
@@ -607,7 +792,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			"stage_route",
 			"live_route",
 		} {
-			if _, err = validateRoute(newRouteConfig, r, rm); err != nil {
+			if _, err = validateRoute(newRouteConfig, r, rm, false); err != nil {
 				return
 			}
 			if mappingID, err = updateMapping(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
@@ -639,16 +824,28 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		if err = am.UploadApp(app, appPath, addContent); err != nil {
 			return err
 		}
-		restage = true
+		restageUploadedApp = true
 	}
 
 	timeout := time.Second * time.Duration(d.Get("timeout").(int))
 
-	if restage {
+	// If new app was uploaded stop, start and restage, otherwise app won't start
+	if restageUploadedApp {
+		if err = am.StopApp(app.ID, timeout); err != nil {
+			return
+		}
+		if err = am.StartApp(app.ID, timeout); err != nil {
+			return
+		}
+		if err = am.RestageApp(app.ID, timeout); err != nil {
+			return
+		}
+	} else if restage {
 		if err = am.RestageApp(app.ID, timeout); err != nil {
 			return
 		}
 	}
+
 	if d.HasChange("stopped") {
 
 		if d.Get("stopped").(bool) {
@@ -663,6 +860,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	} else if restage {
 		err = am.WaitForAppToStart(app, timeout)
 	}
+
 	return
 }
 
@@ -824,11 +1022,16 @@ func prepareApp(app cfapi.CCApp, d *schema.ResourceData, log *cfapi.Logger) (pat
 	return
 }
 
-func validateRoute(routeConfig map[string]interface{}, route string, rm *cfapi.RouteManager) (routeID string, err error) {
+func validateRoute(routeConfig map[string]interface{}, route string, rm *cfapi.RouteManager, disableBlueGreen bool) (routeID string, err error) {
 
 	if v, ok := routeConfig[route]; ok {
 
 		routeID = v.(string)
+
+		// Routes must bind to multiple apps in blue green deployment
+		if !disableBlueGreen {
+			return
+		}
 
 		var mappings []map[string]interface{}
 		if mappings, err = rm.ReadRouteMappingsByRoute(routeID); err == nil && len(mappings) > 0 {
@@ -924,4 +1127,7 @@ func removeServiceBindings(delete []map[string]interface{},
 		}
 	}
 	return nil
+}
+func venerable(name string) string {
+	return name + "-venerable"
 }
