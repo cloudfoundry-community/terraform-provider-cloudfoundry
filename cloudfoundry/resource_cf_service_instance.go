@@ -36,6 +36,12 @@ func resourceServiceInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"routes": &schema.Schema{
+				Type:     schema.TypeSet,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      resourceStringHash,
+				Optional: true,
+			},
 			"json_params": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
@@ -82,6 +88,12 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 	if id, err = sm.CreateServiceInstance(name, servicePlan, space, params, tags); err != nil {
 		return
 	}
+
+	if err = serviceInstanceRouteCreate(d, sm, id, params); err != nil {
+		sm.DeleteServiceInstance(id)
+		return
+	}
+
 	session.Log.DebugMessage("New Service Instance : %# v", id)
 
 	// TODO deal with asynchronous responses
@@ -119,6 +131,10 @@ func resourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) (err 
 		d.Set("tags", tags)
 	} else {
 		d.Set("tags", nil)
+	}
+
+	if err = serviceInstanceRouteRead(d, sm); err != nil {
+		return
 	}
 
 	session.Log.DebugMessage("Read Service Instance : %# v", serviceInstance)
@@ -164,6 +180,10 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 		return
 	}
 
+	if err = serviceInstanceRouteUpdate(d, sm, params); err != nil {
+		return
+	}
+
 	return
 }
 
@@ -176,13 +196,91 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	session.Log.DebugMessage("begin resourceServiceInstanceDelete")
 
 	sm := session.ServiceManager()
+	if err = serviceInstanceRouteDelete(d, sm); err != nil {
+		return
+	}
 
-	err = sm.DeleteServiceInstance(d.Id())
-	if err != nil {
+	if err = sm.DeleteServiceInstance(d.Id()); err != nil {
 		return
 	}
 
 	session.Log.DebugMessage("Deleted Service Instance : %s", d.Id())
+	return
+}
+
+func serviceInstanceRouteCreate(
+	d *schema.ResourceData,
+	sm *cfapi.ServiceManager,
+	serviceInstanceID string,
+	params map[string]interface{}) (err error) {
+
+	for _, r := range d.Get("routes").(*schema.Set).List() {
+		routeGUID := r.(string)
+		if err = sm.AddRouteServiceInstance(serviceInstanceID, routeGUID, params); err != nil {
+			return
+		}
+	}
+	return
+}
+
+func serviceInstanceRouteRead(d *schema.ResourceData, sm *cfapi.ServiceManager) (err error) {
+	var routes []string
+	var iroutes []interface{}
+
+	if routes, err = sm.ReadServiceInstanceRoutes(d.Id()); err != nil {
+		return
+	}
+
+	for _, r := range routes {
+		iroutes = append(iroutes, r)
+	}
+	d.Set("routes", schema.NewSet(resourceStringHash, iroutes))
+
+	return
+}
+
+func serviceInstanceRouteUpdate(
+	d *schema.ResourceData,
+	sm *cfapi.ServiceManager,
+	params map[string]interface{}) (err error) {
+
+	var cur_routes schema.Set
+	var routes []string
+	routes, err = sm.ReadServiceInstanceRoutes(d.Id())
+	if err != nil {
+		return
+	}
+	for _, v := range routes {
+		cur_routes.Add(v)
+	}
+	rm, add := getListChanges(&cur_routes, d.Get("routes"))
+
+	for _, r := range rm {
+		if err = sm.DeleteRouteServiceInstance(d.Id(), r); err != nil {
+			return
+		}
+	}
+	for _, r := range add {
+		if err = sm.AddRouteServiceInstance(d.Id(), r, params); err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func serviceInstanceRouteDelete(d *schema.ResourceData, sm *cfapi.ServiceManager) (err error) {
+	var routes []string
+
+	if routes, err = sm.ReadServiceInstanceRoutes(d.Id()); err != nil {
+		return
+	}
+
+	for _, r := range routes {
+		if err = sm.DeleteRouteServiceInstance(d.Id(), r); err != nil {
+			return
+		}
+	}
 
 	return
 }
