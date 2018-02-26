@@ -977,7 +977,7 @@
         }
       }
     },
-    "cf_service_access": {
+    "cf_service_plan_access": {
       "org": {
         "Type": "TypeString",
         "Required": true,
