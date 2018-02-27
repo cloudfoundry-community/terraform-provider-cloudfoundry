@@ -55,6 +55,11 @@ func resourceServiceInstance() *schema.Resource {
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
+			"recursive_delete": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 		},
 	}
 }
@@ -224,8 +229,9 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	session.Log.DebugMessage("begin resourceServiceInstanceDelete")
 
 	sm := session.ServiceManager()
+	recursiveDelete := d.Get("recursive_delete").(bool)
 
-	if err = sm.DeleteServiceInstance(id); err != nil {
+	if err = sm.DeleteServiceInstance(id, recursiveDelete); err != nil {
 		return err
 	}
 	stateConf := &resource.StateChangeConf{
