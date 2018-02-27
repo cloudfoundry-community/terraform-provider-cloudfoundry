@@ -3,6 +3,7 @@ package cloudfoundry
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/structure"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
@@ -59,6 +60,11 @@ func resourceUserProvidedService() *schema.Resource {
 				Optional:         true,
 				ConflictsWith:    []string{"credentials"},
 				DiffSuppressFunc: structure.SuppressJsonDiff,
+			},
+			"recursive_delete": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
 			},
 		},
 	}
@@ -214,8 +220,9 @@ func resourceUserProvidedServiceDelete(d *schema.ResourceData, meta interface{})
 	session.Log.DebugMessage("begin resourceServiceInstanceDelete")
 
 	sm := session.ServiceManager()
+	recursiveDelete := d.Get("recursive_delete").(bool)
 
-	err = sm.DeleteServiceInstance(d.Id())
+	err = sm.DeleteServiceInstance(d.Id(), recursiveDelete)
 	if err != nil {
 		return
 	}
