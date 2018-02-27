@@ -19,10 +19,6 @@ func resourceServiceBroker() *schema.Resource {
 			State: resourceServiceBrokerImport,
 		},
 
-		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
-		},
-
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

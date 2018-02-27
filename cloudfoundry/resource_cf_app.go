@@ -35,10 +35,6 @@ func resourceApp() *schema.Resource {
 			State: resourceAppImport,
 		},
 
-		Importer: &schema.ResourceImporter{
-			State: resourceAppImport,
-		},
-
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

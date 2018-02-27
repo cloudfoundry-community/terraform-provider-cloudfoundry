@@ -21,10 +21,6 @@ func resourceRoute() *schema.Resource {
 			State: resourceRouteImport,
 		},
 
-		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
-		},
-
 		Schema: map[string]*schema.Schema{
 
 			"domain": &schema.Schema{

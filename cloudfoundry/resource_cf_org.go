@@ -19,10 +19,6 @@ func resourceOrg() *schema.Resource {
 			State: resourceOrgImport,
 		},
 
-		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
-		},
-
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

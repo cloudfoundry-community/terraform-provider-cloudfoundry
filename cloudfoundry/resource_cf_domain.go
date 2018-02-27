@@ -19,10 +19,6 @@ func resourceDomain() *schema.Resource {
 			State: resourceDomainImport,
 		},
 
-		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
-		},
-
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

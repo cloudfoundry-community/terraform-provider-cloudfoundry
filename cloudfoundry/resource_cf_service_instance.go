@@ -21,10 +21,6 @@ func resourceServiceInstance() *schema.Resource {
 			State: resourceServiceInstanceImport,
 		},
 
-		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
-		},
-
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{
