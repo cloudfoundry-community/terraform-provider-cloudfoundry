@@ -1,0 +1,5 @@
+---
+basic_auth_service_broker:
+  route_service_url: "https://basic-auth-app.local.pcfdev.io"
+  broker_username: "admin"
+  broker_password: "letmein"

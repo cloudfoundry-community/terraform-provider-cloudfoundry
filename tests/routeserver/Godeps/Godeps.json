@@ -1,0 +1,11 @@
+{
+	"ImportPath": "github.com/benlaplanche/cf-basic-auth-route-service/routeserver",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v62",
+	"Deps": [
+		{
+			"ImportPath": "github.com/pivotal-golang/lager",
+			"Rev": "7639e31ce6622c55c15aa64144b85d5f4873d127"
+		}
+	]
+}

@@ -78,6 +78,7 @@ func Provider() terraform.ResourceProvider {
 			"cf_user_provided_service": resourceUserProvidedService(),
 			"cf_buildpack":             resourceBuildpack(),
 			"cf_route":                 resourceRoute(),
+			"cf_route_binding":         resourceRouteBinding(),
 			"cf_app":                   resourceApp(),
 		},
 

@@ -159,6 +159,17 @@ type CCServiceKeyResource struct {
 	Entity   CCServiceKey       `json:"entity"`
 }
 
+// CCServiceInstanceRoute -
+type CCServiceInstanceRoute struct {
+	Host string `json:"host"`
+}
+
+//  CCServiceInstanceRouteResource -
+type CCServiceInstanceRouteResource struct {
+	Metadata resources.Metadata     `json:"metadata"`
+	Entity   CCServiceInstanceRoute `json:"entity"`
+}
+
 // NewServiceManager -
 func newServiceManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logger) (sm *ServiceManager, err error) {
 
@@ -763,5 +774,55 @@ func (sm *ServiceManager) FindServicePlanID(serviceID string, plan string) (id s
 	} else {
 		id = servicePlanID.(string)
 	}
+	return
+}
+
+// ReadServiceInstanceRoutes -
+func (sm *ServiceManager) ReadRouteBindings(serviceInstanceID string) (routeIDs []string, err error) {
+	path := fmt.Sprintf("/v2/service_instances/%s/routes", serviceInstanceID)
+
+	sm.ccGateway.ListPaginatedResources(sm.apiEndpoint, path, CCServiceInstanceRouteResource{}, func(route interface{}) bool {
+		r := route.(CCServiceInstanceRouteResource)
+		routeIDs = append(routeIDs, r.Metadata.GUID)
+		return true
+	})
+
+	return
+}
+
+// HasRouteBinding -
+func (sm *ServiceManager) HasRouteBinding(serviceInstanceID, routeID string) (bool, error) {
+	routes, err := sm.ReadRouteBindings(serviceInstanceID)
+	if err != nil {
+		return false, err
+	}
+	for _, route := range routes {
+		if route == routeID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// CreateRouteServiceInstance -
+func (sm *ServiceManager) CreateRouteBinding(serviceID, routeID string, params interface{}) (err error) {
+	path := fmt.Sprintf("/v2/service_instances/%s/routes/%s", serviceID, routeID)
+
+	jsonBytes, err := json.Marshal(map[string]interface{}{
+		"parameters": params,
+	})
+	if err != nil {
+		return
+	}
+
+	resource := CCServiceInstanceResource{}
+	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource)
+	return
+}
+
+// DeleteRouteServiceInstance -
+func (sm *ServiceManager) DeleteRouteBinding(serviceID, routeID string) (err error) {
+	path := fmt.Sprintf("/v2/service_instances/%s/routes/%s", serviceID, routeID)
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, path)
 	return
 }
