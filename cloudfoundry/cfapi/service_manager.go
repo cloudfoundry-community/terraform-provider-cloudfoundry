@@ -2,16 +2,17 @@ package cfapi
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/url"
+	"strings"
+
 	"code.cloudfoundry.org/cli/cf/api"
 	"code.cloudfoundry.org/cli/cf/api/resources"
 	"code.cloudfoundry.org/cli/cf/configuration/coreconfig"
 	"code.cloudfoundry.org/cli/cf/errors"
 	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/cf/net"
-	"encoding/json"
-	"fmt"
-	"net/url"
-	"strings"
 )
 
 // ServiceManager -
@@ -544,11 +545,15 @@ func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serv
 }
 
 // DeleteServiceInstance -
-func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string) (err error) {
+func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string, recursive bool) (err error) {
 
-	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?accepts_incomplete=true", serviceInstanceID))
-	return err
+	if !recursive {
+		err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?accepts_incomplete=true", serviceInstanceID))
+		return
+	}
 
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?recursive=true&accepts_incomplete=true", serviceInstanceID))
+	return
 }
 
 // CreateUserProvidedService -
