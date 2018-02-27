@@ -534,9 +534,14 @@ func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serv
 }
 
 // DeleteServiceInstance -
-func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string) (err error) {
+func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string, recursive bool) (err error) {
 
-	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s", serviceInstanceID))
+	if !recursive {
+		err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s", serviceInstanceID))
+		return
+	}
+
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?recursive=true", serviceInstanceID))
 	return
 }
 
