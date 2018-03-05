@@ -1,5 +1,0 @@
----
-basic_auth_service_broker:
-  route_service_url: "https://my-route-service.com"
-  broker_username: "admin"
-  broker_password: "letmein"

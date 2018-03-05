@@ -1,6 +1,0 @@
----
-applications:
-- name: basic-auth-broker
-  memory: 512M
-  env:
-    BROKER_CONFIG_PATH: config.yml

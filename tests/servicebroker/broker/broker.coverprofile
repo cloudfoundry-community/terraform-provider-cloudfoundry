@@ -1,8 +1,0 @@
-mode: atomic
-github.com/benlaplanche/cf-basic-auth-route-service/servicebroker/broker/broker.go:12.72,42.2 1 27
-github.com/benlaplanche/cf-basic-auth-route-service/servicebroker/broker/broker.go:44.167,46.2 1 1
-github.com/benlaplanche/cf-basic-auth-route-service/servicebroker/broker/broker.go:48.156,50.2 1 1
-github.com/benlaplanche/cf-basic-auth-route-service/servicebroker/broker/broker.go:52.141,57.2 1 2
-github.com/benlaplanche/cf-basic-auth-route-service/servicebroker/broker/broker.go:59.124,61.2 1 1
-github.com/benlaplanche/cf-basic-auth-route-service/servicebroker/broker/broker.go:63.107,65.2 1 1
-github.com/benlaplanche/cf-basic-auth-route-service/servicebroker/broker/broker.go:67.146,69.2 1 1

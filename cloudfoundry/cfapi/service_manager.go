@@ -211,17 +211,17 @@ func (sm *ServiceManager) ReadServiceInfo(serviceBrokerID string) (services []CC
 
 				}); err != nil {
 
-				sm.log.DebugMessage("WARNING! Unable to retrieve service plans for service '%s': %s", service.ID, err.Error())
-				err = nil
-			}
+					sm.log.DebugMessage("WARNING! Unable to retrieve service plans for service '%s': %s", service.ID, err.Error())
+					err = nil
+				}
 
 			services = append(services, service)
 			return true
 
 		}); err != nil {
 
-		return
-	}
+			return
+		}
 	return
 }
 
@@ -319,16 +319,16 @@ func (sm *ServiceManager) ForceDeleteServiceBroker(serviceBrokerID string) (err 
 					if err = sm.ccGateway.DeleteResource(sm.apiEndpoint,
 						fmt.Sprintf("/v2/service_instances/%s?purge=true", sir.Metadata.GUID)); err != nil {
 
-						sm.log.DebugMessage("WARNING! Unable to delete service instance '%s': %s", sir.Metadata.GUID, err.Error())
-						err = nil
-					}
+							sm.log.DebugMessage("WARNING! Unable to delete service instance '%s': %s", sir.Metadata.GUID, err.Error())
+							err = nil
+						}
 					return true
 
 				}); err != nil {
 
-				sm.log.DebugMessage("WARNING! Unable to retrieve service instances for service '%s': %s", sp.ID, err.Error())
-				err = nil
-			}
+					sm.log.DebugMessage("WARNING! Unable to retrieve service instances for service '%s': %s", sp.ID, err.Error())
+					err = nil
+				}
 		}
 	}
 
@@ -636,8 +636,8 @@ func (sm *ServiceManager) CreateServiceKey(name, serviceID string, params map[st
 	resource := CCServiceKeyResource{}
 	if err = sm.ccGateway.CreateResource(sm.apiEndpoint,
 		"/v2/service_keys", bytes.NewReader(body), &resource); err != nil {
-		return
-	}
+			return
+		}
 	serviceKey = resource.Entity
 	serviceKey.ID = resource.Metadata.GUID
 	return
@@ -777,8 +777,8 @@ func (sm *ServiceManager) FindServicePlanID(serviceID string, plan string) (id s
 	return
 }
 
-// ReadServiceInstanceRoutes -
-func (sm *ServiceManager) ReadRouteBindings(serviceInstanceID string) (routeIDs []string, err error) {
+// ReadRouteServiceBindings -
+func (sm *ServiceManager) ReadRouteServiceBindings(serviceInstanceID string) (routeIDs []string, err error) {
 	path := fmt.Sprintf("/v2/service_instances/%s/routes", serviceInstanceID)
 
 	sm.ccGateway.ListPaginatedResources(sm.apiEndpoint, path, CCServiceInstanceRouteResource{}, func(route interface{}) bool {
@@ -790,9 +790,9 @@ func (sm *ServiceManager) ReadRouteBindings(serviceInstanceID string) (routeIDs 
 	return
 }
 
-// HasRouteBinding -
-func (sm *ServiceManager) HasRouteBinding(serviceInstanceID, routeID string) (bool, error) {
-	routes, err := sm.ReadRouteBindings(serviceInstanceID)
+// HasRouteServiceBinding -
+func (sm *ServiceManager) HasRouteServiceBinding(serviceInstanceID, routeID string) (bool, error) {
+	routes, err := sm.ReadRouteServiceBindings(serviceInstanceID)
 	if err != nil {
 		return false, err
 	}
@@ -804,8 +804,8 @@ func (sm *ServiceManager) HasRouteBinding(serviceInstanceID, routeID string) (bo
 	return false, nil
 }
 
-// CreateRouteServiceInstance -
-func (sm *ServiceManager) CreateRouteBinding(serviceID, routeID string, params interface{}) (err error) {
+// CreateRouteServiceBinding -
+func (sm *ServiceManager) CreateRouteServiceBinding(serviceID, routeID string, params interface{}) (err error) {
 	path := fmt.Sprintf("/v2/service_instances/%s/routes/%s", serviceID, routeID)
 
 	jsonBytes, err := json.Marshal(map[string]interface{}{
@@ -820,8 +820,8 @@ func (sm *ServiceManager) CreateRouteBinding(serviceID, routeID string, params i
 	return
 }
 
-// DeleteRouteServiceInstance -
-func (sm *ServiceManager) DeleteRouteBinding(serviceID, routeID string) (err error) {
+// DeleteRouteServiceBinding -
+func (sm *ServiceManager) DeleteRouteServiceBinding(serviceID, routeID string) (err error) {
 	path := fmt.Sprintf("/v2/service_instances/%s/routes/%s", serviceID, routeID)
 	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, path)
 	return
