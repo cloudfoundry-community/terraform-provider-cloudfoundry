@@ -195,12 +195,6 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 		return
 	}
 
-	// Check whetever service_instance is deleted and is in state 'succeeded'
-	timeout := time.Second * time.Duration(d.Get("timeout").(int))
-	if err = sm.WaitServiceInstanceToDelete(d.Id(), timeout); err != nil {
-		return
-	}
-
 	session.Log.DebugMessage("Deleted Service Instance : %s", d.Id())
 
 	return
