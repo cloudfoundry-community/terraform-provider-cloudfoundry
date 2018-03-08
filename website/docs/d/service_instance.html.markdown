@@ -27,6 +27,7 @@ The following arguments are supported:
 
 * `name` - (Required, String) The name of the service instance to look up.
 * `space` - (Optional, String) The space within which the service instance has been created.
+* `timeout` - (Optional, Integer) The timeout in seconds, which shall be waited until service instance is created. Default: 60 seconds
 
 ## Attributes Reference
 
