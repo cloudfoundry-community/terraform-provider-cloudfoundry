@@ -2,6 +2,7 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"time"
 
 	"encoding/json"
 
@@ -17,9 +18,8 @@ func resourceServiceInstance() *schema.Resource {
 		Read:   resourceServiceInstanceRead,
 		Update: resourceServiceInstanceUpdate,
 		Delete: resourceServiceInstanceDelete,
-
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: resourceServiceInstanceImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -45,6 +45,16 @@ func resourceServiceInstance() *schema.Resource {
 				Type:     schema.TypeList,
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+			"timeout": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  DefaultAppTimeout,
+			},
+			"recursive_delete": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
 			},
 		},
 	}
@@ -82,6 +92,13 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 	if id, err = sm.CreateServiceInstance(name, servicePlan, space, params, tags); err != nil {
 		return
 	}
+
+	// Check whetever service_instance exists and is in state 'succeeded'
+	timeout := time.Second * time.Duration(d.Get("timeout").(int))
+	if err = sm.WaitServiceInstanceToStart(id, timeout); err != nil {
+		return
+	}
+
 	session.Log.DebugMessage("New Service Instance : %# v", id)
 
 	// TODO deal with asynchronous responses
@@ -176,8 +193,9 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	session.Log.DebugMessage("begin resourceServiceInstanceDelete")
 
 	sm := session.ServiceManager()
+	recursiveDelete := d.Get("recursive_delete").(bool)
 
-	err = sm.DeleteServiceInstance(d.Id())
+	err = sm.DeleteServiceInstance(d.Id(), recursiveDelete)
 	if err != nil {
 		return
 	}
@@ -185,4 +203,30 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	session.Log.DebugMessage("Deleted Service Instance : %s", d.Id())
 
 	return
+}
+
+func resourceServiceInstanceImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	session := meta.(*cfapi.Session)
+
+	if session == nil {
+		return nil, fmt.Errorf("client is nil")
+	}
+
+	sm := session.ServiceManager()
+
+	serviceinstance, err := sm.ReadServiceInstance(d.Id())
+
+	if err != nil {
+		return nil, err
+	}
+
+	d.Set("name", serviceinstance.Name)
+	d.Set("service_plan", serviceinstance.ServicePlanGUID)
+	d.Set("space", serviceinstance.SpaceGUID)
+	d.Set("tags", serviceinstance.Tags)
+
+	// json_param can't be retrieved from CF, please inject manually if necessary
+	d.Set("json_param", "")
+
+	return []*schema.ResourceData{d}, nil
 }

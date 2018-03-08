@@ -15,9 +15,8 @@ func resourceServiceBroker() *schema.Resource {
 		Read:   resourceServiceBrokerRead,
 		Update: resourceServiceBrokerUpdate,
 		Delete: resourceServiceBrokerDelete,
-
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: resourceServiceBrokerImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -173,4 +172,35 @@ func readServiceDetail(id string, sm *cfapi.ServiceManager, d *schema.ResourceDa
 	d.Set("service_plans", servicePlans)
 
 	return
+}
+
+func resourceServiceBrokerImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	session := meta.(*cfapi.Session)
+
+	if session == nil {
+		return nil, fmt.Errorf("client is nil")
+	}
+
+	sm := session.ServiceManager()
+
+	servicebroker, err := sm.ReadServiceBroker(d.Id())
+	if err != nil {
+		return nil, err
+	}
+
+	d.Set("username", servicebroker.AuthUserName)
+	// Not being send to CF,  please inject manually if possible
+	d.Set("password", servicebroker.AuthPassword)
+	d.Set("url", servicebroker.BrokerURL)
+	d.Set("name", servicebroker.Name)
+	d.Set("space", servicebroker.SpaceGUID)
+
+	err = readServiceDetail(d.Id(), sm, d)
+	if err != nil {
+		return nil, err
+	}
+
+	d.Set("id", d.Id())
+
+	return []*schema.ResourceData{d}, nil
 }

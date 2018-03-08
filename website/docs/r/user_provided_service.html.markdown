@@ -54,6 +54,7 @@ The following arguments are supported:
 * `credentials_json` - (Optional) Same as `credentials` but in the form of a stringified JSON object. Conflicts with `credentials`.
 * `syslog_drain_url` - (Optional) URL to which logs for bound applications will be streamed
 * `route_service_url` - (Optional) URL to which requests for bound routes will be forwarded. Scheme for this URL must be https
+* `recursive_delete` - (Optional, Bool) Default: `false`. If set `true`, Cloud Foundry will delete service bindings, service keys, and routes associated with the service instance too.
 
 ## Attributes Reference
 

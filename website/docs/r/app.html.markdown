@@ -39,6 +39,9 @@ a) Blank means autodetection; b) A Git Url pointing to a buildpack; c) Name of a
 * `timeout` - (Optional, Number) Defines the number of seconds that Cloud Foundry waits for starting your application.
 * `stopped` - (Optional, Boolean) The application will be created and remain in an stopped state. Default is to stage and start the application.
 
+### Deployment
+* `disable_blue_green_deployment` - (Required, Boolean) The application won't be deployed using [Blue/Green-Deployment-Technique](https://docs.cloudfoundry.org/devguide/deploy-apps/blue-green.html). 
+
 ### Application Source / Binary
 
 One of the following arguments must be declared to locate application source or archive to be pushed.

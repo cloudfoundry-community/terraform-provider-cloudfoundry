@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/cli/cf/api"
 	"code.cloudfoundry.org/cli/cf/api/resources"
@@ -13,6 +14,7 @@ import (
 	"code.cloudfoundry.org/cli/cf/errors"
 	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/cf/net"
+	"code.cloudfoundry.org/cli/cf/terminal"
 )
 
 // ServiceManager -
@@ -100,10 +102,11 @@ type CCServiceBrokerResource struct {
 
 // CCServiceInstance -
 type CCServiceInstance struct {
-	Name            string   `json:"name"`
-	SpaceGUID       string   `json:"space_guid"`
-	ServicePlanGUID string   `json:"service_plan_guid"`
-	Tags            []string `json:"tags,omitempty"`
+	Name            string                 `json:"name"`
+	SpaceGUID       string                 `json:"space_guid"`
+	ServicePlanGUID string                 `json:"service_plan_guid"`
+	Tags            []string               `json:"tags,omitempty"`
+	LastOperation   map[string]interface{} `json:"last_operation"`
 }
 
 // CCServiceInstanceResource -
@@ -472,6 +475,50 @@ func (sm *ServiceManager) ReadServiceInstance(serviceInstanceID string) (service
 	return
 }
 
+// WaitServiceInstanceToStart -
+func (sm *ServiceManager) WaitServiceInstanceToStart(serviceInstanceID string, timeout time.Duration) (err error) {
+	sm.log.UI.Say("Waiting for service instance %s to finish starting ..", terminal.EntityNameColor(serviceInstanceID))
+
+	c := make(chan error)
+	go func() {
+
+		var err error
+		var serviceInstance CCServiceInstance
+
+		for {
+			if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
+				c <- err
+				return
+			}
+
+			if serviceInstance.LastOperation["type"] == "create" {
+				state := serviceInstance.LastOperation["state"]
+
+				switch state {
+				case "succeeded":
+					c <- nil
+					return
+				case "failed":
+					c <- fmt.Errorf("service instance %s crashed", serviceInstanceID)
+					return
+				}
+			}
+			time.Sleep(appStatePingSleep)
+		}
+	}()
+
+	select {
+	case err = <-c:
+		if err != nil {
+			return
+		}
+		sm.log.UI.Say("%s finished starting ...", terminal.EntityNameColor(serviceInstanceID))
+	case <-time.After(timeout):
+		err = fmt.Errorf("Service instance %s failed to start after %d seconds", serviceInstanceID, timeout/time.Second)
+	}
+	return
+}
+
 // FindServiceInstance -
 func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serviceInstance CCServiceInstance, err error) {
 
@@ -510,9 +557,14 @@ func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serv
 }
 
 // DeleteServiceInstance -
-func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string) (err error) {
+func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string, recursive bool) (err error) {
 
-	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s", serviceInstanceID))
+	if !recursive {
+		err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s", serviceInstanceID))
+		return
+	}
+
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?recursive=true", serviceInstanceID))
 	return
 }
 
