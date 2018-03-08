@@ -17,9 +17,8 @@ func resourceServiceInstance() *schema.Resource {
 		Read:   resourceServiceInstanceRead,
 		Update: resourceServiceInstanceUpdate,
 		Delete: resourceServiceInstanceDelete,
-
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: resourceServiceInstanceImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -185,4 +184,30 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	session.Log.DebugMessage("Deleted Service Instance : %s", d.Id())
 
 	return
+}
+
+func resourceServiceInstanceImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	session := meta.(*cfapi.Session)
+
+	if session == nil {
+		return nil, fmt.Errorf("client is nil")
+	}
+
+	sm := session.ServiceManager()
+
+	serviceinstance, err := sm.ReadServiceInstance(d.Id())
+
+	if err != nil {
+		return nil, err
+	}
+
+	d.Set("name", serviceinstance.Name)
+	d.Set("service_plan", serviceinstance.ServicePlanGUID)
+	d.Set("space", serviceinstance.SpaceGUID)
+	d.Set("tags", serviceinstance.Tags)
+
+	// json_param can't be retrieved from CF, please inject manually if necessary
+	d.Set("json_param", "")
+
+	return []*schema.ResourceData{d}, nil
 }

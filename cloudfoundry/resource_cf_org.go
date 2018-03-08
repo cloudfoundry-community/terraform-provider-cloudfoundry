@@ -15,9 +15,8 @@ func resourceOrg() *schema.Resource {
 		Read:   resourceOrgRead,
 		Update: resourceOrgUpdate,
 		Delete: resourceOrgDelete,
-
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: resourceOrgImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -195,4 +194,23 @@ func resourceOrgDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 	err = om.DeleteOrg(d.Id())
 	return
+}
+
+func resourceOrgImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	session := meta.(*cfapi.Session)
+	if session == nil {
+		return nil, fmt.Errorf("client is nil")
+	}
+
+	orgm := session.OrgManager()
+	org, err := orgm.FindOrg(d.Id())
+
+	if err != nil {
+		return nil, err
+	}
+
+	d.Set("id", org.ID)
+	d.Set("name", org.Name)
+
+	return []*schema.ResourceData{d}, nil
 }

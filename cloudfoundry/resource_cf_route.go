@@ -17,9 +17,8 @@ func resourceRoute() *schema.Resource {
 		Read:   resourceRouteRead,
 		Update: resourceRouteUpdate,
 		Delete: resourceRouteDelete,
-
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: resourceRouteImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -324,4 +323,41 @@ func removeTargets(delete []map[string]interface{},
 		}
 	}
 	return nil
+}
+
+func resourceRouteImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	session := meta.(*cfapi.Session)
+
+	if session == nil {
+		return nil, fmt.Errorf("client is nil")
+	}
+
+	rm := session.RouteManager()
+
+	route, err := rm.ReadRoute(d.Id())
+
+	if err != nil {
+		return nil, err
+	}
+
+	d.Set("domain", route.DomainGUID)
+	d.Set("space", route.SpaceGUID)
+	d.Set("path", route.Path)
+	d.Set("hostname", route.Hostname)
+	d.Set("id", route.ID)
+
+	domain, err := session.DomainManager().FindDomain(route.DomainGUID)
+	if err != nil {
+		return nil, err
+	}
+
+	if route.Port != nil && *route.Port > 0 {
+		d.Set("endpoint", fmt.Sprintf("%s:%d", domain.Name, *route.Port))
+	} else if route.Path == nil || len(*route.Path) == 0 {
+		d.Set("endpoint", fmt.Sprintf("%s.%s", *route.Hostname, domain.Name))
+	} else {
+		d.Set("endpoint", fmt.Sprintf("%s.%s/%s", *route.Hostname, domain.Name, *route.Path))
+	}
+
+	return []*schema.ResourceData{d}, nil
 }
