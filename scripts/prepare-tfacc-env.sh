@@ -32,6 +32,8 @@ cf_test_redis_broker_user=$($om_cli credentials -p p-redis -c .cf-redis-broker.b
 cf_test_redis_broker_password=$($om_cli credentials -p p-redis -c .cf-redis-broker.broker_http_auth_credentials -f password)
 
 cat <<EOF > $root_dir/.tfacc_env
+#!/bin/bash
+
 export CF_API_URL=https://api.$cf_sys_domain
 export CF_USER=$cf_user
 export CF_PASSWORD=$cf_password
