@@ -890,6 +890,7 @@ func addServiceBindings(id string, add []map[string]interface{},
 			vv := v.(map[string]interface{})
 			params = &vv
 		}
+
 		if bindingID, bindingCredentials, err = am.CreateServiceBinding(id, serviceInstanceID, params); err != nil {
 			return
 		}
