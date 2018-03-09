@@ -25,6 +25,9 @@ website/node_modules
 *.test
 *.iml
 .env.json
+.envrc
+.tfacc_env
+
 
 website/vendor
 /terraform-provider-cf
