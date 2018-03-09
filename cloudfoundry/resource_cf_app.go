@@ -555,7 +555,6 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 	update := false
 	restage := false
-	restart := false
 
 	app.Name = *getChangedValueString("name", &update, d)
 	app.SpaceGUID = *getChangedValueString("space", &update, d)
