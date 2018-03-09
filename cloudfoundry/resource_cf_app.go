@@ -100,13 +100,23 @@ func resourceApp() *schema.Resource {
 			"url": &schema.Schema{
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"git", "github_release"},
+				ConflictsWith: []string{"git", "github_release", "docker_image", "docker_credentials"},
+			},
+			"docker_image": &schema.Schema{
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"git", "github_release", "url"},
+			},
+			"docker_credentials": &schema.Schema{
+				Type:          schema.TypeMap,
+				Optional:      true,
+				ConflictsWith: []string{"git", "github_release", "url"},
 			},
 			"git": &schema.Schema{
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"url", "github_release"},
+				ConflictsWith: []string{"url", "github_release", "docker_image", "docker_credentials"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"url": &schema.Schema{
@@ -143,7 +153,7 @@ func resourceApp() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"url", "git"},
+				ConflictsWith: []string{"url", "git", "docker_image", "docker_credentials"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"owner": &schema.Schema{
@@ -374,14 +384,25 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		vv := v.(map[string]interface{})
 		app.Environment = &vv
 	}
+	if v, ok = d.GetOk("docker_image"); ok {
+		vv := v.(string)
+		app.DockerImage = &vv
+	}
+	if v, ok = d.GetOk("docker_credentials"); ok {
+		vv := v.(map[string]interface{})
+		app.DockerCredentials = &vv
+	}
 
-	// Download application binary / source asynchronously
 	prepare := make(chan error)
-	go func() {
-		appPath, err = prepareApp(app, d, session.Log)
-		prepare <- err
-	}()
+	// Skip if Docker repo is given
+	if _, ok := d.GetOk("docker_image"); !ok {
 
+		// Download application binary / source asynchronously
+		go func() {
+			appPath, err = prepareApp(app, d, session.Log)
+			prepare <- err
+		}()
+	}
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
 
 		routeConfig = v.([]interface{})[0].(map[string]interface{})
@@ -418,16 +439,21 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		return nil
 	}()
 
-	// Upload application binary / source
-	// asynchronously once download has completed
-	if err = <-prepare; err != nil {
-		return err
-	}
 	upload := make(chan error)
-	go func() {
-		err = am.UploadApp(app, appPath, addContent)
-		upload <- err
-	}()
+	// Skip if Docker repo is given
+	if _, ok := d.GetOk("docker_image"); !ok {
+
+		// Upload application binary / source
+		// asynchronously once download has completed
+		if err = <-prepare; err != nil {
+			return
+		}
+
+		go func() {
+			err = am.UploadApp(app, appPath, addContent)
+			upload <- err
+		}()
+	}
 
 	// Bind services
 	if v, hasServiceBindings = d.GetOk("service_binding"); hasServiceBindings {
@@ -445,15 +471,24 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		routeConfig["default_route_mapping_id"] = mappingID
 	}
 
+	if _, ok := d.GetOk("docker_image"); !ok {
+		// Start application if not stopped
+		// state once upload has completed
+		if err = <-upload; err != nil {
+			return
+		}
+	}
+
 	timeout := time.Second * time.Duration(d.Get("timeout").(int))
 	stopped := d.Get("stopped").(bool)
 
-	// Start application if not stopped
-	// state once upload has completed
-	if err = <-upload; err != nil {
-		return err
-	}
-	if !stopped {
+	if _, ok := d.GetOk("docker_image"); ok {
+		if !stopped {
+			if err = am.StartDockerApp(app.ID, timeout); err != nil {
+				return
+			}
+		}
+	} else if !stopped {
 		if err = am.StartApp(app.ID, timeout); err != nil {
 			return err
 		}
@@ -537,7 +572,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	app.Buildpack = getChangedValueString("buildpack", &restage, d)
 	app.Environment = getChangedValueMap("environment", &restage, d)
 
-	if update || restart || restage {
+	if d.HasChange("service_binding") || d.HasChange("stopped") || d.HasChange("route") || d.HasChange("url") || d.HasChange("docker_image") || d.HasChange("git") || d.HasChange("github_release") || d.HasChange("add_content") {
 		if app, err = am.UpdateApp(app); err != nil {
 			return err
 		}

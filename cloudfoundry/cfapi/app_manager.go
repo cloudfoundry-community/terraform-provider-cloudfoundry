@@ -70,6 +70,8 @@ type CCApp struct {
 	HealthCheckType         *string                 `json:"health_check_type,omitempty"`
 	HealthCheckTimeout      *int                    `json:"health_check_timeout,omitempty"`
 	Environment             *map[string]interface{} `json:"environment_json,omitempty"`
+	DockerImage             *string                 `json:"docker_image,omitempty"`
+	DockerCredentials       *map[string]interface{} `json:"docker_credentials,omitempty"`
 }
 
 // CCAppResource -
@@ -301,6 +303,30 @@ func (am *AppManager) StartApp(appID string, timeout time.Duration) (err error) 
 		}
 	}
 	return nil
+}
+
+// StartDockerApp -
+func (am *AppManager) StartDockerApp(appID string, timeout time.Duration) (err error) {
+
+	var app CCApp
+
+	if app, err = am.ReadApp(appID); err != nil {
+		return
+	}
+
+	if app.State != nil && *app.State == AppStopped {
+
+		app.State = &AppStarted
+		// Not allowed to update in Docker Container Lifecycle
+		app.StackGUID = nil
+
+		if app, err = am.UpdateApp(app); err != nil {
+			return
+		}
+
+		err = am.WaitForAppToStart(app, timeout)
+	}
+	return
 }
 
 // WaitForAppToStart -

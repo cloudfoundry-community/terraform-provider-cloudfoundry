@@ -46,7 +46,12 @@ One of the following arguments must be declared to locate application source or 
 
 * `url` - (Optional, String) The URL for the application binary. A local path may be referenced via "`file://...`".
 
-* `git` - (Optional, String) The git repository where to pull the application source from.
+* `docker_image` - (Optional, String) The URL to the docker image with tag e.g registry.example.com:5000/user/repository/tag or docker image name from the public repo e.g. redis:4.0 
+* `docker_credentials` - (Optional) Defines login credentials for private docker repositories 
+  - `username` - (Required, String) Username for the private docker repo 
+  - `password` - (Required, String) Password for the private docker repo 
+ 
+* `git` - (Optional, String) The git location to pull the application source directly from source control.
 
   - `url` - (Required, String) The git URL for the application repository.
   - `branch` - (Optional, String) The branch of from which the repository contents should be retrieved.
