@@ -312,6 +312,7 @@ func (am *AppManager) StartApp(appID string, timeout time.Duration) (err error) 
 func (am *AppManager) StartDockerApp(appID string, timeout time.Duration) (err error) {
 
 	var app CCApp
+	var startApp CCApp
 
 	if app, err = am.ReadApp(appID); err != nil {
 		return
@@ -319,15 +320,14 @@ func (am *AppManager) StartDockerApp(appID string, timeout time.Duration) (err e
 
 	if app.State != nil && *app.State == AppStopped {
 
-		app.State = &AppStarted
-		// Not allowed to update in Docker Container Lifecycle
-		app.StackGUID = nil
+		startApp.ID = app.ID
+		startApp.State = &AppStarted
 
-		if app, err = am.UpdateApp(app); err != nil {
+		if app, err = am.UpdateApp(startApp); err != nil {
 			return
 		}
 
-		err = am.WaitForAppToStart(app, timeout)
+		err = am.WaitForAppToStart(startApp, timeout)
 	}
 	return
 }
