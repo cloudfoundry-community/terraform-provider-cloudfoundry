@@ -72,6 +72,7 @@ type CCApp struct {
 	Environment             *map[string]interface{} `json:"environment_json,omitempty"`
 	DockerImage             *string                 `json:"docker_image,omitempty"`
 	DockerCredentials       *map[string]interface{} `json:"docker_credentials,omitempty"`
+	Diego                   *bool                   `json:"diego,omitempty"`
 }
 
 // CCAppResource -
