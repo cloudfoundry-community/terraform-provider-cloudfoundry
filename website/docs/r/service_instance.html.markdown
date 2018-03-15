@@ -33,9 +33,12 @@ The following arguments are supported:
 * `name` - (Required, String) The name of the Service Instance in Cloud Foundry
 * `service_plan` - (Required, String) The ID of the [service plan](/docs/providers/cloudfoundry/d/service_plan.html)
 * `space` - (Required, String) The ID of the [space](/docs/providers/cloudfoundry/r/space.html) 
-* `json_params` - (Optional, String) Json string of arbitrary parameters. Some services support providing additional configuration parameters within the provision request. By default, no params are provided.
-* `tags` - (Optional, List) List of instance tags. Some services provide a list of tags that Cloud Foundry delivers in [VCAP_SERVICES Env variables](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES). By default, no tags are assigned.
-
+* `json_params` - (Optional, String) Json string of arbitrary parameters. Some services support providing additional configuration parameters within the provision request
+* `tags` - (Optional, List) List of instance tags. Some services provide a list of tags that Cloud Foundry delivers in [VCAP_SERVICES Env variables](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES)
+* `recursive_delete` - (Optional, Bool) Default: `false`. If set `true`, Cloud Foundry will delete service bindings, service keys, and routes associated with the service instance too.
+* `timeout` - (Optional, Integer) The timeout in seconds, which shall be waited until service instance is created. Default: 60 seconds
+* `async` - (Optional, Bool) 	Set to `true` if the client allows asynchronous provisioning. Please refer to [this](https://github.com/openservicebrokerapi/servicebroker/blob/v2.12/spec.md#synchronous-and-asynchronous-operations) for more information. Default: false 
+ 
 ## Attributes Reference
 
 The following attributes are exported:
