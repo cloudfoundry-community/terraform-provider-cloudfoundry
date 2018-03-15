@@ -51,12 +51,7 @@ func resourceServiceInstance() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  DefaultAppTimeout,
-			},
-			"recursive_delete": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
+			}
 			"async": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -219,16 +214,15 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	session.Log.DebugMessage("begin resourceServiceInstanceDelete")
 
 	sm := session.ServiceManager()
-	recursiveDelete := d.Get("recursive_delete").(bool)
 	async := d.Get("async").(bool)
 
 	if !async {
-		err = sm.DeleteServiceInstance(d.Id(), recursiveDelete)
+		err = sm.DeleteServiceInstance(d.Id())
 		if err != nil {
 			return
 		}
 	} else {
-		err = sm.DeleteServiceInstanceAsync(d.Id(), recursiveDelete)
+		err = sm.DeleteServiceInstanceAsync(d.Id())
 		if err != nil {
 			return
 		}

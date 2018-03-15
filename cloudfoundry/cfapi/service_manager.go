@@ -639,27 +639,19 @@ func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serv
 }
 
 // DeleteServiceInstance -
-func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string, recursive bool) (err error) {
+func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string) (err error) {
 
-	if !recursive {
-		err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s", serviceInstanceID))
-		return
-	}
-
-	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?recursive=true", serviceInstanceID))
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s", serviceInstanceID))
 	return
+
 }
 
 // DeleteServiceInstanceAsync -
-func (sm *ServiceManager) DeleteServiceInstanceAsync(serviceInstanceID string, recursive bool) (err error) {
+func (sm *ServiceManager) DeleteServiceInstanceAsync(serviceInstanceID string) (err error) {
 
-	if !recursive {
-		err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?accepts_incomplete=true", serviceInstanceID))
-		return
-	}
-
-	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?recursive=true&accepts_incomplete=true", serviceInstanceID))
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?accepts_incomplete=true", serviceInstanceID))
 	return
+
 }
 
 // CreateUserProvidedService -
