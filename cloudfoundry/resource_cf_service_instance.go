@@ -51,7 +51,7 @@ func resourceServiceInstance() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  DefaultAppTimeout,
-			}
+			},
 			"async": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
