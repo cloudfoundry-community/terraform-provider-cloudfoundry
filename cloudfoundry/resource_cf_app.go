@@ -492,6 +492,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	id := d.Id()
 	am := session.AppManager()
+	rm := session.RouteManager()
 
 	var app cfapi.CCApp
 	if app, err = am.ReadApp(id); err != nil {
@@ -502,6 +503,37 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 	} else {
 		setAppArguments(app, d)
 	}
+
+	var routeMappings []map[string]interface{}
+	if routeMappings, err = rm.ReadRouteMappingsByApp(app.ID); err != nil {
+		return
+	}
+	var stateRouteList = d.Get("route").([]interface{})
+	var stateRouteMappings map[string]interface{}
+	if len(stateRouteList) == 1 {
+		stateRouteMappings = stateRouteList[0].(map[string]interface{})
+	} else {
+		stateRouteMappings = make(map[string]interface{})
+	}
+	currentRouteMappings := make(map[string]interface{})
+	for _, r := range []string{
+		"default_route",
+		"stage_route",
+		"live_route",
+	} {
+		currentRouteMappings[r] = ""
+		currentRouteMappings[r+"_mapping_id"] = ""
+		for _, mapping := range routeMappings {
+			var mappingID, route = mapping["mapping_id"], mapping["route"]
+			if route == stateRouteMappings[r] {
+				currentRouteMappings[r+"_mapping_id"] = mappingID
+				currentRouteMappings[r] = route
+				break
+			}
+		}
+	}
+	d.Set("route", [...]interface{}{currentRouteMappings})
+
 	return
 }
 
@@ -858,7 +890,11 @@ func updateMapping(old map[string]interface{}, new map[string]interface{},
 		if len(oldRouteID) > 0 {
 			if v, ok := old[route+"_mapping_id"]; ok {
 				if err = rm.DeleteRouteMapping(v.(string)); err != nil {
-					return
+					if strings.Contains(err.Error(), "status code: 404") {
+						err = nil
+					} else {
+						return
+					}
 				}
 			}
 		}
