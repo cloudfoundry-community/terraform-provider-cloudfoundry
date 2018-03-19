@@ -439,31 +439,6 @@ func (sm *ServiceManager) ReadServicePlan(planID string) (CCServicePlan, error) 
 func (sm *ServiceManager) CreateServiceInstance(name, servicePlanID, spaceID string,
 	params map[string]interface{}, tags []string) (id string, err error) {
 
-	path := "/v2/service_instances"
-	request := models.ServiceInstanceCreateRequest{
-		Name:      name,
-		PlanGUID:  servicePlanID,
-		SpaceGUID: spaceID,
-		Params:    params,
-		Tags:      tags,
-	}
-
-	jsonBytes, err := json.Marshal(request)
-	if err != nil {
-		return
-	}
-
-	resource := CCServiceInstanceResource{}
-	err = sm.ccGateway.CreateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource)
-
-	id = resource.Metadata.GUID
-	return
-}
-
-// CreateServiceInstanceAsync -
-func (sm *ServiceManager) CreateServiceInstanceAsync(name, servicePlanID, spaceID string,
-	params map[string]interface{}, tags []string) (id string, err error) {
-
 	path := "/v2/service_instances?accepts_incomplete=true"
 	request := models.ServiceInstanceCreateRequest{
 		Name:      name,
@@ -485,35 +460,11 @@ func (sm *ServiceManager) CreateServiceInstanceAsync(name, servicePlanID, spaceI
 	return
 }
 
-// UpdateServiceInstanceAsync -
-func (sm *ServiceManager) UpdateServiceInstanceAsync(serviceInstanceID, name, servicePlanID string,
-	params map[string]interface{}, tags []string) (serviceInstance CCServiceInstance, err error) {
-
-	path := fmt.Sprintf("/v2/service_instances/%s?accepts_incomplete=true", serviceInstanceID)
-	request := CCServiceInstanceUpdateRequest{
-		Name:            name,
-		ServicePlanGUID: servicePlanID,
-		Params:          params,
-		Tags:            tags,
-	}
-
-	jsonBytes, err := json.Marshal(request)
-	if err != nil {
-		return
-	}
-
-	resource := CCServiceInstanceResource{}
-	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource)
-
-	serviceInstance = resource.Entity
-	return
-}
-
 // UpdateServiceInstance -
 func (sm *ServiceManager) UpdateServiceInstance(serviceInstanceID, name, servicePlanID string,
 	params map[string]interface{}, tags []string) (serviceInstance CCServiceInstance, err error) {
 
-	path := fmt.Sprintf("/v2/service_instances/%s", serviceInstanceID)
+	path := fmt.Sprintf("/v2/service_instances/%s?accepts_incomplete=true", serviceInstanceID)
 	request := CCServiceInstanceUpdateRequest{
 		Name:            name,
 		ServicePlanGUID: servicePlanID,
@@ -549,7 +500,7 @@ func (sm *ServiceManager) ReadServiceInstance(serviceInstanceID string) (service
 }
 
 // WaitServiceInstanceToStart -
-func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceInstanceID string, timeout time.Duration) (err error) {
+func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceInstanceID string) (err error) {
 	sm.log.UI.Say("Waiting for service instance %s to finish starting ..", terminal.EntityNameColor(serviceInstanceID))
 
 	c := make(chan error)
@@ -586,8 +537,6 @@ func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceIns
 			return
 		}
 		sm.log.UI.Say("%s finished starting ...", terminal.EntityNameColor(serviceInstanceID))
-	case <-time.After(timeout):
-		err = fmt.Errorf("Service instance %s failed to start after %d seconds", serviceInstanceID, timeout/time.Second)
 	}
 	return
 }
@@ -631,14 +580,6 @@ func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serv
 
 // DeleteServiceInstance -
 func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string) (err error) {
-
-	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s", serviceInstanceID))
-	return
-
-}
-
-// DeleteServiceInstanceAsync -
-func (sm *ServiceManager) DeleteServiceInstanceAsync(serviceInstanceID string) (err error) {
 
 	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?accepts_incomplete=true", serviceInstanceID))
 	return

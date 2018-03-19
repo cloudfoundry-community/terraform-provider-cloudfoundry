@@ -23,6 +23,12 @@ func resourceServiceInstance() *schema.Resource {
 			State: ImportStatePassthrough,
 		},
 
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(15 * time.Minute),
+			Update: schema.DefaultTimeout(15 * time.Minute),
+			Delete: schema.DefaultTimeout(15 * time.Minute),
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{
@@ -47,16 +53,6 @@ func resourceServiceInstance() *schema.Resource {
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
-			"timeout": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  DefaultAppTimeout,
-			},
-			"async": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
 		},
 	}
 }
@@ -77,7 +73,6 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 	servicePlan := d.Get("service_plan").(string)
 	space := d.Get("space").(string)
 	jsonParameters := d.Get("json_params").(string)
-	async := d.Get("async").(bool)
 
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
@@ -91,19 +86,12 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 
 	sm := session.ServiceManager()
 
-	if !async {
-		if id, err = sm.CreateServiceInstance(name, servicePlan, space, params, tags); err != nil {
-			return
-		}
-	} else {
-		if id, err = sm.CreateServiceInstanceAsync(name, servicePlan, space, params, tags); err != nil {
-			return
-		}
+	if id, err = sm.CreateServiceInstance(name, servicePlan, space, params, tags); err != nil {
+		return
 	}
 
 	// Check whetever service_instance exists and is in state 'succeeded'
-	timeout := time.Second * time.Duration(d.Get("timeout").(int))
-	if err = sm.WaitServiceInstanceTo("create", id, timeout); err != nil {
+	if err = sm.WaitServiceInstanceTo("create", id); err != nil {
 		return
 	}
 
@@ -171,7 +159,6 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 	name = d.Get("name").(string)
 	servicePlan := d.Get("service_plan").(string)
 	jsonParameters := d.Get("json_params").(string)
-	async := d.Get("async").(bool)
 
 	if len(jsonParameters) > 0 {
 		if err = json.Unmarshal([]byte(jsonParameters), &params); err != nil {
@@ -183,22 +170,16 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 		tags = append(tags, v.(string))
 	}
 
-	if !async {
-		if _, err = sm.UpdateServiceInstance(id, name, servicePlan, params, tags); err != nil {
-			return
-		}
-	} else {
-		if _, err = sm.UpdateServiceInstanceAsync(id, name, servicePlan, params, tags); err != nil {
-			return
-		}
+	if _, err = sm.UpdateServiceInstance(id, name, servicePlan, params, tags); err != nil {
+		return
 	}
+
 	if err != nil {
 		return
 	}
 
 	// Check whetever service_instance exists and is in state 'succeeded'
-	timeout := time.Second * time.Duration(d.Get("timeout").(int))
-	if err = sm.WaitServiceInstanceTo("update", id, timeout); err != nil {
+	if err = sm.WaitServiceInstanceTo("update", id); err != nil {
 		return
 	}
 
@@ -214,18 +195,9 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	session.Log.DebugMessage("begin resourceServiceInstanceDelete")
 
 	sm := session.ServiceManager()
-	async := d.Get("async").(bool)
 
-	if !async {
-		err = sm.DeleteServiceInstance(d.Id())
-		if err != nil {
-			return
-		}
-	} else {
-		err = sm.DeleteServiceInstanceAsync(d.Id())
-		if err != nil {
-			return
-		}
+	if err = sm.DeleteServiceInstance(d.Id()); err != nil {
+		return
 	}
 
 	session.Log.DebugMessage("Deleted Service Instance : %s", d.Id())
