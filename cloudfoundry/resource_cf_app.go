@@ -607,6 +607,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			"stage_route",
 			"live_route",
 		} {
+			if oldRouteConfig[r] == newRouteConfig[r] {
+				continue
+			}
 			if _, err = validateRoute(newRouteConfig, r, rm); err != nil {
 				return
 			}
