@@ -375,12 +375,11 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		app.Environment = &vv
 	}
 
-	// Download application binary / source asynchronously
-	prepare := make(chan error)
-	go func() {
-		appPath, err = prepareApp(app, d, session.Log)
-		prepare <- err
-	}()
+	// Download application binary
+	appPath, err = prepareApp(app, d, session.Log)
+	if err != nil {
+		return
+	}
 
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
 
@@ -418,11 +417,6 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		return nil
 	}()
 
-	// Upload application binary / source
-	// asynchronously once download has completed
-	if err = <-prepare; err != nil {
-		return err
-	}
 	upload := make(chan error)
 	go func() {
 		err = am.UploadApp(app, appPath, addContent)
