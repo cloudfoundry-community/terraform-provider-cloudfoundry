@@ -63,18 +63,27 @@ data "cf_space" "space" {
 	org = "${data.cf_org.org.id}"
 }
 data "cf_service" "test-service" {
-    name = "test-service"
+	name = "test-service"
+	
+	depends_on = ["cf_service_broker.test-service-broker"]
 }
 
 resource "cf_app" "test-service-broker" {
     name = "test-service-broker"
-    url = "file://service_broker/"
+	url = "file://service_broker/"
+	space = "${data.cf_space.space.id}"
+}
+
+resource "cf_service_broker" "test-service-broker {
+	name = "test-service-broker"
+	url = "http://test-service-broker.local.pcfdev.io"
+	depends_on = ["cf_app.test-service-broker"]
 }
 
 resource "cf_service_instance" "test-service-instance" {
 	name = "test-service-instance"
     space = "${data.cf_space.space.id}"
-	service_plan = "${data.cf_service.test-service.service_plans["test-async-only-plan"]}"
+	service_plan = "${cf_service_broker.service_plans["test-service/test-async-only-plan"]}"
 	depends_on = ["cf_app.test-service-broker"]
 }
 `

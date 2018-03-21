@@ -27,7 +27,7 @@
             "requires": [
             ],
             "max_db_per_node": 5,
-            "bindable": false,
+            "bindable": true,
             "metadata": {
               "provider": {
                 "name": "The name"
