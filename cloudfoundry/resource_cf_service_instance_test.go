@@ -62,37 +62,111 @@ data "cf_space" "space" {
     name = "pcfdev-space"
 	org = "${data.cf_org.org.id}"
 }
-data "cf_service" "test-service" {
-	name = "test-service"
+data "cf_service" "fake-service" {
+	name = "fake-service"
 	
-	depends_on = ["cf_service_broker.test-service-broker"]
+	depends_on = ["cf_service_broker.fake-service-broker"]
 }
 
-resource "cf_app" "test-service-broker" {
-    name = "test-service-broker"
+data "cf_domain" "fake-service-broker-domain"{
+	sub_domain = "local"   
+}
+
+resource "cf_route" "fake-service-broker-route"{
+	domain = "${data.cf_domain.fake-service-broker-domain.id}"
+    space = "${data.cf_space.space.id}"
+	hostname = "fake-service-broker"
+	depends_on = ["data.cf_domain.fake-service-broker-domain"]
+}
+
+resource "cf_app" "fake-service-broker" {
+    name = "fake-service-broker"
 	url = "file://service_broker/"
 	space = "${data.cf_space.space.id}"
+	timeout = 700
+
+	route {
+		default_route = "${cf_route.fake-service-broker-route.id}"
+	}
+	depends_on = ["cf_route.fake-service-broker-route"]
 }
 
-resource "cf_service_broker" "test-service-broker {
-	name = "test-service-broker"
-	url = "http://test-service-broker.local.pcfdev.io"
-	depends_on = ["cf_app.test-service-broker"]
+resource "cf_service_broker" "fake-service-broker" {
+	name = "fake-service-broker"
+	url = "http://fake-service-broker.local.pcfdev.io"
+	username = "admin"
+	password = "admin"
+	space = "${data.cf_space.space.id}"
+	depends_on = ["cf_app.fake-service-broker"]
 }
 
-resource "cf_service_instance" "test-service-instance" {
-	name = "test-service-instance"
+resource "cf_service_instance" "fake-service" {
+	name = "fake-service"
     space = "${data.cf_space.space.id}"
-	service_plan = "${cf_service_broker.service_plans["test-service/test-async-only-plan"]}"
-	depends_on = ["cf_app.test-service-broker"]
+	service_plan = "${cf_service_broker.fake-service-broker.service_plans["fake-service/fake-async-plan"]}"
+	depends_on = ["cf_app.fake-service-broker"]
 }
 `
+
+func TestAccServiceInstance_normal(t *testing.T) {
+
+	ref := "cf_service_instance.mysql"
+	refAsync := "cf_service_instance.fake-service"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"mysql", "mysql-updated", "test-service-instance"}, "data.cf_space.space"),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: serviceInstanceResourceAsyncCreate,
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckServiceInstanceExists(refAsync),
+						resource.TestCheckResourceAttr(refAsync, "name", "test-service-instance"),
+					),
+				},
+				resource.TestStep{
+					Config: serviceInstanceResourceCreate,
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckServiceInstanceExists(ref),
+						resource.TestCheckResourceAttr(
+							ref, "name", "mysql"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.#", "2"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.0", "tag-1"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.1", "tag-2"),
+					),
+				},
+
+				resource.TestStep{
+					Config: serviceInstanceResourceUpdate,
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckServiceInstanceExists(ref),
+						resource.TestCheckResourceAttr(
+							ref, "name", "mysql-updated"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.#", "3"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.0", "tag-2"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.1", "tag-3"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.2", "tag-4"),
+					),
+				},
+			},
+		})
+}
 
 // TODO - Add Service Broker with async. service plans
 func TestAccServiceInstance_normal(t *testing.T) {
 
 	ref := "cf_service_instance.mysql"
-	refAsync := "cf_service_instance.test-service-instance"
+	refAsync := "cf_service_instance.fake-service"
 
 	resource.Test(t,
 		resource.TestCase{

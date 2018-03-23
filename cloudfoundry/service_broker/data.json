@@ -17,14 +17,12 @@
       "body": {
         "services": [
           {
-            "name": "test-service",
+            "name": "fake-service",
             "id": "f479b64b-7c25-42e6-8d8f-e6d22c456c9b",
-            "description": "Testing asynchronous provisioning",
+            "description": "fake service",
             "tags": [
-              "test",
-              "async provisioning"
-            ],
-            "requires": [
+              "no-sql",
+              "relational"
             ],
             "max_db_per_node": 5,
             "bindable": true,
@@ -37,19 +35,52 @@
                 "blurb": "fake broker that is fake",
                 "longDescription": "A long time ago, in a galaxy far far away..."
               },
-              "displayName": "The Fake Broker",
-              "shareable": true
+              "displayName": "The Fake Broker"
             },
             "dashboard_client": {
-              "id": "",
-              "secret": "",
-              "redirect_uri": ""
+              "id": "sso-test",
+              "secret": "sso-secret",
+              "redirect_uri": "http://localhost:5551"
             },
             "plan_updateable": true,
             "plans": [
               {
-                "name": "test-async-only-plan",
-                "id": "fake-async-only-plan-guid",
+                "name": "fake-plan",
+                "id": "fake-plan-guid",
+                "description": "Shared fake Server, 5tb persistent disk, 40 max concurrent connections",
+                "max_storage_tb": 5,
+                "metadata": {
+                  "cost": 0,
+                  "bullets": [
+                    {
+                      "content": "Shared fake server"
+                    },
+                    {
+                      "content": "5 TB storage"
+                    },
+                    {
+                      "content": "40 concurrent connections"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "fake-async-plan",
+                "id": "fake-async-plan-guid",
+                "description": "Shared fake Server, 5tb persistent disk, 40 max concurrent connections. 100 async",
+                "max_storage_tb": 5,
+                "metadata": {
+                  "cost": 0,
+                  "bullets": [
+                    {
+                      "content": "40 concurrent connections"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "fake-async-plan-2",
+                "id": "fake-async-plan-2-guid",
                 "description": "Shared fake Server, 5tb persistent disk, 40 max concurrent connections. 100 async",
                 "max_storage_tb": 5,
                 "metadata": {
@@ -67,11 +98,23 @@
       }
     },
     "provision": {
-      "fake-async-only-plan-guid": {
-        "async_only": true,
-        "sleep_seconds": 60,
+      "fake-async-plan-guid": {
+        "sleep_seconds": 0,
         "status": 202,
-        "body": {}
+        "body": {
+          "last_operation": {
+            "state": "in progress"
+          }
+        }
+      },
+      "fake-async-plan-2-guid": {
+        "sleep_seconds": 0,
+        "status": 202,
+        "body": {
+          "last_operation": {
+            "state": "in progress"
+          }
+        }
       },
       "default": {
         "sleep_seconds": 0,
@@ -82,40 +125,72 @@
     "fetch": {
       "default": {
         "in_progress": {
-          "sleep_seconds": 60,
+          "sleep_seconds": 0,
           "status": 200,
           "body": {
-            "state": "in progress"
+            "last_operation": {
+              "state": "in progress"
+            }
           }
         },
         "finished": {
-          "sleep_seconds": 60,
+          "sleep_seconds": 0,
           "status": 200,
           "body": {
-            "state": "succeeded"
+            "last_operation": {
+              "state": "succeeded"
+            }
           }
         }
       }
     },
     "update": {
-      "fake-async-only-plan-guid": {
-        "async_only": true,
-        "sleep_seconds": 60,
+      "fake-async-plan-guid": {
+        "sleep_seconds": 0,
         "status": 202,
-        "body": {}
+        "body": {
+          "last_operation": {
+            "state": "in progress"
+          }
+        }
+      },
+      "fake-async-plan-2-guid": {
+        "sleep_seconds": 0,
+        "status": 202,
+        "body": {
+          "last_operation": {
+            "state": "in progress"
+          }
+        }
       },
       "default": {
         "sleep_seconds": 0,
         "status": 200,
-        "body": {}
+        "body": {
+          "last_operation": {
+            "state": "succeeded"
+          }
+        }
       }
     },
     "deprovision": {
-      "fake-async-only-plan-guid": {
-        "async_only": true,
-        "sleep_seconds": 60,
+      "fake-async-plan-guid": {
+        "sleep_seconds": 0,
         "status": 202,
-        "body": {}
+        "body": {
+          "last_operation": {
+            "state": "in progress"
+          }
+        }
+      },
+      "fake-async-plan-2-guid": {
+        "sleep_seconds": 0,
+        "status": 202,
+        "body": {
+          "last_operation": {
+            "state": "in progress"
+          }
+        }
       },
       "default": {
         "sleep_seconds": 0,
@@ -128,7 +203,6 @@
         "sleep_seconds": 0,
         "status": 201,
         "body": {
-          "route_service_url": "https://logging-route-service.bosh-lite.com",
           "credentials": {
             "uri": "fake-service://fake-user:fake-password@fake-host:3306/fake-dbname",
             "username": "fake-user",
@@ -148,7 +222,5 @@
       }
     }
   },
-  "service_instances": {},
-  "service_bindings": {},
   "max_fetch_service_instance_requests": 1
 }
