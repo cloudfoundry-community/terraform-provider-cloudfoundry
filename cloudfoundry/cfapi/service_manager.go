@@ -473,7 +473,7 @@ func (sm *ServiceManager) ReadServiceInstance(serviceInstanceID string) (service
 }
 
 // FindServiceInstance -
-func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serviceInstance CCServiceInstance, err error) {
+func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (guid string, serviceInstance CCServiceInstance, err error) {
 
 	path := fmt.Sprintf("/v2/spaces/%s/service_instances?return_user_provided_service_instances=true&q=%s&inline-relations-depth=1",
 		spaceID, url.QueryEscape("name:"+name))
@@ -487,6 +487,7 @@ func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serv
 		func(resource interface{}) bool {
 			if sp, ok := resource.(CCServiceInstanceResource); ok {
 				serviceInstance = sp.Entity // there should 1 or 0 instances in the space with that name
+				guid = sp.Metadata.GUID
 				found = true
 				return false
 			}

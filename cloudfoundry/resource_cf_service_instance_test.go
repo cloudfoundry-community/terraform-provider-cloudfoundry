@@ -147,7 +147,7 @@ func testAccCheckServiceInstanceDestroyed(names []string, spaceResource string) 
 
 			session.Log.DebugMessage("checking ServiceInstance is Destroyed %s", n)
 
-			if _, err := session.ServiceManager().FindServiceInstance(n, rs.Primary.ID); err != nil {
+			if _, _, err := session.ServiceManager().FindServiceInstance(n, rs.Primary.ID); err != nil {
 				switch err.(type) {
 				case *errors.ModelNotFoundError:
 					return nil
