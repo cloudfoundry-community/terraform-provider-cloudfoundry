@@ -197,7 +197,5 @@ func resourceUserDelete(d *schema.ResourceData, meta interface{}) error {
 
 	id := d.Id()
 	um := session.UserManager()
-	um.Delete(id)
-
-	return nil
+	return um.Delete(id)
 }
