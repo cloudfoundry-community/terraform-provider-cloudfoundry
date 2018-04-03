@@ -3,18 +3,6 @@
 	"ignore": "test",
 	"package": [
 		{
-			"path": "appengine",
-			"revision": ""
-		},
-		{
-			"path": "appengine_internal",
-			"revision": ""
-		},
-		{
-			"path": "appengine_internal/base",
-			"revision": ""
-		},
-		{
 			"checksumSHA1": "/r8pftVJrTfr6L1z2Hr8zTT4UWk=",
 			"path": "code.cloudfoundry.org/cli/cf",
 			"revision": "3379b668c1061a67f3762366e4cda6388559f927",
@@ -1059,12 +1047,6 @@
 			"revisionTime": "2018-01-09T23:13:33Z"
 		},
 		{
-			"checksumSHA1": "Vbo55GDzPgG/L/+W2pcvDhxrPZc=",
-			"path": "github.com/hashicorp/terraform/helper/experiment",
-			"revision": "a6008b8a48a749c7c167453b9cf55ffd572b9a5d",
-			"revisionTime": "2018-01-09T23:13:33Z"
-		},
-		{
 			"checksumSHA1": "KNvbU1r5jv0CBeQLnEtDoL3dRtc=",
 			"path": "github.com/hashicorp/terraform/helper/hashcode",
 			"revision": "a6008b8a48a749c7c167453b9cf55ffd572b9a5d",
@@ -1091,12 +1073,6 @@
 		{
 			"checksumSHA1": "qDtYSEdKmZQZ1tS/rsW9aH6+lHg=",
 			"path": "github.com/hashicorp/terraform/helper/schema",
-			"revision": "a6008b8a48a749c7c167453b9cf55ffd572b9a5d",
-			"revisionTime": "2018-01-09T23:13:33Z"
-		},
-		{
-			"checksumSHA1": "1yCGh/Wl4H4ODBBRmIRFcV025b0=",
-			"path": "github.com/hashicorp/terraform/helper/shadow",
 			"revision": "a6008b8a48a749c7c167453b9cf55ffd572b9a5d",
 			"revisionTime": "2018-01-09T23:13:33Z"
 		},

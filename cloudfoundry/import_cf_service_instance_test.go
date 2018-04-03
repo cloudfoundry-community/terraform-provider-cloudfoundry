@@ -53,7 +53,7 @@ func testAccCheckServiceInstanceDestroyedImportState(names []string, serviceInst
 			if _, err := session.ServiceManager().FindServiceInstance(n, spaceId); err != nil {
 				switch err.(type) {
 				case *errors.ModelNotFoundError:
-					return nil
+					continue
 
 				default:
 					break
