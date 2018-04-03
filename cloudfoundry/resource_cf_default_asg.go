@@ -54,33 +54,29 @@ func resourceDefaultAsgCreate(d *schema.ResourceData, meta interface{}) (err err
 	am := session.ASGManager()
 	switch name {
 	case "running":
-		err = am.UnbindAllFromRunning()
-		if err != nil {
-			return
+		if err = am.UnbindAllFromRunning(); err != nil {
+			return err
 		}
 		for _, g := range asgs {
-			err = am.BindToRunning(g.(string))
-			if err != nil {
-				return
+			if err = am.BindToRunning(g.(string)); err != nil {
+				return err
 			}
 		}
 	case "staging":
-		err = am.UnbindAllFromStaging()
-		if err != nil {
-			return
+		if err = am.UnbindAllFromStaging(); err != nil {
+			return err
 		}
 		for _, g := range asgs {
-			err = am.BindToStaging(g.(string))
-			if err != nil {
-				return
+			if err = am.BindToStaging(g.(string)); err != nil {
+				return err
 			}
 		}
 	default:
-		err = fmt.Errorf("default security group name must be one of 'running' or 'staging'")
+		return fmt.Errorf("default security group name must be one of 'running' or 'staging'")
 	}
 	d.SetId(name)
 
-	return
+	return nil
 }
 
 func resourceDefaultAsgRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -96,11 +92,11 @@ func resourceDefaultAsgRead(d *schema.ResourceData, meta interface{}) (err error
 	switch d.Get("name").(string) {
 	case "running":
 		if asgs, err = am.Running(); err != nil {
-			return
+			return err
 		}
 	case "staging":
 		if asgs, err = am.Staging(); err != nil {
-			return
+			return err
 		}
 	}
 
@@ -109,7 +105,7 @@ func resourceDefaultAsgRead(d *schema.ResourceData, meta interface{}) (err error
 		tfAsgs = append(tfAsgs, s)
 	}
 	d.Set("asgs", schema.NewSet(resourceStringHash, tfAsgs))
-	return
+	return nil
 }
 
 func resourceDefaultAsgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -127,45 +123,45 @@ func resourceDefaultAsgUpdate(d *schema.ResourceData, meta interface{}) (err err
 	switch d.Get("name").(string) {
 	case "running":
 		if asgs, err = am.Running(); err != nil {
-			return
+			return err
 		}
 		for _, s := range tfAsgs {
 			asg := s.(string)
 			if !isStringInList(asgs, asg) {
 				if err = am.BindToRunning(asg); err != nil {
-					return
+					return err
 				}
 			}
 		}
 		for _, s := range asgs {
 			if !isStringInInterfaceList(tfAsgs, s) {
 				if err = am.UnbindFromRunning(s); err != nil {
-					return
+					return err
 				}
 			}
 		}
 	case "staging":
 		if asgs, err = am.Staging(); err != nil {
-			return
+			return err
 		}
 		for _, s := range tfAsgs {
 			asg := s.(string)
 			if !isStringInList(asgs, asg) {
 				err = am.BindToStaging(asg)
 				if err != nil {
-					return
+					return err
 				}
 			}
 		}
 		for _, s := range asgs {
 			if !isStringInInterfaceList(tfAsgs, s) {
 				if err = am.UnbindFromStaging(s); err != nil {
-					return
+					return err
 				}
 			}
 		}
 	}
-	return
+	return nil
 }
 
 func resourceDefaultAsgDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -180,13 +176,13 @@ func resourceDefaultAsgDelete(d *schema.ResourceData, meta interface{}) (err err
 	case "running":
 		err = am.UnbindAllFromRunning()
 		if err != nil {
-			return
+			return err
 		}
 	case "staging":
 		err = am.UnbindAllFromStaging()
 		if err != nil {
-			return
+			return err
 		}
 	}
-	return
+	return nil
 }

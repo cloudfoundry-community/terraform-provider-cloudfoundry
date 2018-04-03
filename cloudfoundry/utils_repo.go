@@ -77,7 +77,7 @@ func getRepositoryFromConfig(d *schema.ResourceData) (repository repo.Repository
 		}
 
 		if repository, err = repoManager.GetGitRepository(repoURL, user, password, privateKey); err != nil {
-			return
+			return repository, err
 		}
 
 	} else if v, ok := d.Get("github_release").([]interface{}); ok && len(v) > 0 {
@@ -99,9 +99,11 @@ func getRepositoryFromConfig(d *schema.ResourceData) (repository repo.Repository
 		}
 
 		if repository, err = repoManager.GetGithubRelease(ghOwner, ghRepo, archiveName, token); err != nil {
-			return
+			return repository, err
 		}
 	}
-	err = repository.SetVersion(version, versionType)
-	return
+	if err = repository.SetVersion(version, versionType); err != nil {
+		return repository, err
+	}
+	return repository, nil
 }

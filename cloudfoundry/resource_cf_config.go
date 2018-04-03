@@ -120,7 +120,7 @@ func validateFeatureFlagValue(v interface{}, k string) (ws []string, errs []erro
 	if value != "enabled" && value != "disabled" {
 		errs = append(errs, fmt.Errorf("%q must be one of 'enabled' or 'disabled'", k))
 	}
-	return
+	return ws, errs
 }
 
 func resourceConfigCreate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -162,7 +162,7 @@ func resourceConfigRead(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	d.Set("feature_flags", []interface{}{flags})
-	return
+	return err
 }
 
 func resourceConfigUpdate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -177,7 +177,7 @@ func resourceConfigUpdate(d *schema.ResourceData, meta interface{}) (err error) 
 			return
 		}
 	}
-	return
+	return err
 }
 
 func resourceConfigDelete(d *schema.ResourceData, meta interface{}) (err error) {

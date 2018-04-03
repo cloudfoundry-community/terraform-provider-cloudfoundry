@@ -52,7 +52,7 @@ resource "cf_app" "spring-music" {
 	memory = "768"
 	disk_quota = "512"
 	timeout = 1800
-	
+
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
@@ -498,7 +498,7 @@ func validateRouteMapping(routeName string, attributes map[string]string, routeM
 			return fmt.Errorf("route mapping with id '%s' does not map to route '%s'", mappingID, routeID)
 		}
 	}
-	return
+	return err
 }
 
 func testAccCheckAppDestroyed(apps []string) resource.TestCheckFunc {

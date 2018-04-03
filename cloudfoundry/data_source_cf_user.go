@@ -47,5 +47,5 @@ func dataSourceUserRead(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	d.SetId(user.GUID)
-	return
+	return err
 }

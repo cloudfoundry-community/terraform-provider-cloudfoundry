@@ -75,7 +75,7 @@ func validateAsgProtocol(v interface{}, k string) (ws []string, errs []error) {
 	if value != "tcp" && value != "icmp" && value != "udp" && value != "all" {
 		errs = append(errs, fmt.Errorf("%q must be one of 'tcp', 'icmp', 'udp' or 'all'", k))
 	}
-	return
+	return ws, errs
 }
 
 func resourceAsgCreate(d *schema.ResourceData, meta interface{}) error {
@@ -202,5 +202,5 @@ func readASGRulesFromConfig(d *schema.ResourceData) (rules []cfapi.CCASGRule, er
 
 		rules = append(rules, asgRule)
 	}
-	return
+	return rules, err
 }

@@ -99,7 +99,7 @@ func resourcePrivateDomainAccessRead(d *schema.ResourceData, meta interface{}) (
 
 	d.Set("org", org)
 	d.Set("domain", domain)
-	return
+	return nil
 }
 
 func resourcePrivateDomainAccessDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -115,8 +115,7 @@ func resourcePrivateDomainAccessDelete(d *schema.ResourceData, meta interface{})
 	var org, domain string
 	org, domain, _ = parseID(id)
 
-	err = dm.DeletePrivateDomainAccess(org, domain)
-	return
+	return dm.DeletePrivateDomainAccess(org, domain)
 }
 
 // Local Variables:

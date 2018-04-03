@@ -13,5 +13,5 @@ func validateDefaultRunningStagingName(v interface{}, k string) (ws []string, er
 	if value != "running" && value != "staging" {
 		errs = append(errs, fmt.Errorf("%q must be one of staging or running", k))
 	}
-	return
+	return ws, errs
 }

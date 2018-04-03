@@ -19,7 +19,7 @@ resource "cf_asg" "apps" {
         destination = "192.168.100.0/24"
         protocol = "all"
     }
-} 
+}
 
 resource "cf_asg" "services" {
 
@@ -29,7 +29,7 @@ resource "cf_asg" "services" {
         destination = "192.168.101.0/24"
         protocol = "all"
     }
-} 
+}
 
 resource "cf_default_asg" "running" {
 	name = "running"
@@ -56,7 +56,7 @@ resource "cf_asg" "apps" {
 resource "cf_asg" "services" {
 
 	name = "pcf-services"
-	
+
     rule {
         destination = "192.168.101.0/24"
         protocol = "all"
