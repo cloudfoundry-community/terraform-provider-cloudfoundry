@@ -2,7 +2,6 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
@@ -30,21 +29,6 @@ func resourcePrivateDomainAccess() *schema.Resource {
 			},
 		},
 	}
-}
-
-func computeID(org, domain string) string {
-	return fmt.Sprintf("%s/%s", org, domain)
-}
-
-func parseID(ID string) (org string, domain string, err error) {
-	parts := strings.Split(ID, "/")
-	if len(parts) != 2 {
-		err = fmt.Errorf("unable to parse ID '%s', expected format is '<org-guid>/<domain-guid>'", ID)
-	} else {
-		org = parts[0]
-		domain = parts[1]
-	}
-	return
 }
 
 // PrivateDomainAccessImport -
