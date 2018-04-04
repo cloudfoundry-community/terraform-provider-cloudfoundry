@@ -6,6 +6,7 @@ echo "==> Checking for naked returns..."
 if ! which nakedret > /dev/null; then
     echo "==> Installing nakedret..."
     go get -u github.com/alexkohler/nakedret
+    echo "==> Installed nakedret."
 fi
 
 function run {
