@@ -1,41 +1,11 @@
 package cloudfoundry
 
 import (
-	"os"
-	"os/user"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
 )
 
-var repoManager *repo.Manager
-
-// initRepoManager -
-func initRepoManager() error {
-
-	var (
-		usr     *user.User
-		rootDir string
-
-		err error
-	)
-
-	if usr, err = user.Current(); err != nil {
-		return err
-	}
-	if len(usr.HomeDir) == 0 {
-		rootDir = os.TempDir()
-	} else {
-		rootDir = usr.HomeDir
-	}
-
-	workspace := rootDir + "/.terraform.d/provider/cf/repo"
-	if err = os.MkdirAll(workspace, os.ModePerm); err != nil {
-		return err
-	}
-	repoManager = repo.NewManager(workspace)
-	return nil
-}
+var repoManager *repo.RepoManager = repo.NewRepoManager()
 
 // getRepositoryFromConfig -
 func getRepositoryFromConfig(d *schema.ResourceData) (repository repo.Repository, err error) {

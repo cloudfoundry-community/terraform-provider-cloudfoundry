@@ -3,9 +3,7 @@ package repo
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/google/go-github/github"
@@ -13,6 +11,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
+	"io/ioutil"
 )
 
 // VersionType -
@@ -29,80 +28,67 @@ type Repository interface {
 	SetVersion(version string, versionType VersionType) (err error)
 }
 
-// Manager -
-type Manager struct {
-	workspace string
-
+// RepoManager -
+type RepoManager struct {
 	gitMutex *sync.Mutex
 }
 
-// NewManager -
-func NewManager(workspace string) *Manager {
-	return &Manager{
-		workspace: workspace,
-		gitMutex:  &sync.Mutex{},
+// NewRepoManager -
+func NewRepoManager() *RepoManager {
+	return &RepoManager{
+		gitMutex: &sync.Mutex{},
 	}
 }
 
 // GetGitRepository -
-func (rm *Manager) GetGitRepository(repoURL string, user, password, privateKey *string) (repo Repository, err error) {
+func (rm *RepoManager) GetGitRepository(repoURL string, user, password, privateKey *string) (repo Repository, err error) {
 
 	rm.gitMutex.Lock()
 	defer rm.gitMutex.Unlock()
 
 	var r *git.Repository
 
-	urlPath, err := url.Parse(repoURL)
+	p, err := ioutil.TempDir("", "terraform-provider-cf")
 	if err != nil {
 		return nil, err
 	}
 
-	baseName := filepath.Base(urlPath.Path)
-	extName := filepath.Ext(urlPath.Path)
-	p := fmt.Sprintf("%s/%s", rm.workspace, baseName[:len(baseName)-len(extName)])
+	if user != nil {
 
-	if _, err = os.Stat(p); os.IsNotExist(err) {
-		err = nil
+		var auth transport.AuthMethod
 
-		if user != nil {
+		if password != nil {
 
-			var auth transport.AuthMethod
-
-			if password != nil {
-
-				if privateKey != nil {
-					auth, err = ssh.NewPublicKeys(*user, []byte(*privateKey), *password)
-				} else {
-					auth = &ssh.Password{
-						User: *user,
-						Pass: *password,
-					}
-				}
-			} else if privateKey != nil {
-				auth, err = ssh.NewPublicKeys(*user, []byte(*privateKey), "")
+			if privateKey != nil {
+				auth, err = ssh.NewPublicKeys(*user, []byte(*privateKey), *password)
 			} else {
-				err = fmt.Errorf("authentication password or key was not provided for user '%s'", *user)
+				auth = &ssh.Password{
+					User: *user,
+					Pass: *password,
+				}
 			}
-			if err != nil {
-				return nil, err
-			}
-			r, err = git.PlainClone(p, false,
-				&git.CloneOptions{
-					URL:               repoURL,
-					Auth:              auth,
-					ReferenceName:     plumbing.Master,
-					RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-				})
+		} else if privateKey != nil {
+			auth, err = ssh.NewPublicKeys(*user, []byte(*privateKey), "")
 		} else {
-			r, err = git.PlainClone(p, false,
-				&git.CloneOptions{
-					URL:               repoURL,
-					ReferenceName:     plumbing.Master,
-					RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-				})
+			err = fmt.Errorf("authentication password or key was not provided for user '%s'\n", *user)
 		}
+		if err != nil {
+			return
+		}
+		r, err = git.PlainClone(p, false,
+			&git.CloneOptions{
+				URL:               repoURL,
+				Auth:              auth,
+				ReferenceName:     plumbing.Master,
+				RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+			})
 	} else {
-		r, err = git.PlainOpen(p)
+		r, err = git.PlainClone(p, false,
+			&git.CloneOptions{
+				URL:               repoURL,
+				ReferenceName:     plumbing.Master,
+				RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+			})
 	}
 	if err != nil {
 		_ = os.RemoveAll(p)
@@ -117,7 +103,7 @@ func (rm *Manager) GetGitRepository(repoURL string, user, password, privateKey *
 }
 
 // GetGithubRelease -
-func (rm *Manager) GetGithubRelease(ghOwner, ghRepoName, archiveName string, user *string, password *string) (repo Repository, err error) {
+func (rm *RepoManager) GetGithubRelease(ghOwner, ghRepoName, archiveName string, user *string, password *string) (repo Repository, err error) {
 	var ghClient *github.Client
 	ctx := context.Background()
 
@@ -135,8 +121,8 @@ func (rm *Manager) GetGithubRelease(ghOwner, ghRepoName, archiveName string, use
 		return nil, err
 	}
 
-	path := rm.workspace + "/github_releases/" + ghOwner + "/" + ghRepoName
-	if err = os.MkdirAll(path, os.ModePerm); err != nil {
+	path, err := ioutil.TempDir("", "terraform-provider-cf")
+	if err != nil {
 		return nil, err
 	}
 
