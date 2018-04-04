@@ -12,6 +12,9 @@ Provides an [application security group](https://docs.cloudfoundry.org/adminguid
 resource for Cloud Foundry. This resource defines egress rules that can be applied to containers that 
 stage and run applications.
 
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
+
+
 ## Example Usage
 
 Basic usage
