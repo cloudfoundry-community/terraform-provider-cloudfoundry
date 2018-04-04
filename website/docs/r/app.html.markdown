@@ -82,7 +82,7 @@ One of the following arguments must be declared to locate application source or 
 ### Routing
 
 * `route` - (Optional) Configures how the application will be accessed externally to cloudfoundry. 
-  - `default_route` - (Optional, String) The GUID of the default route where the application will be available once deployed.
+  - `default_route` - (Optional, String) The ID of the route where the application will be reachable from once deployed.
 
 ### Environment Variables
 
