@@ -42,13 +42,13 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the application security group.
 * `rule` - (Required) A list of egress rules with the following arguments.
-  - `protocol` - (Required) One of `icmp`, `tcp`, `udp`, or `all`.
-  - `destination` - (Required) The IP address or CIDR block that can receive traffic.
-  - `ports` - (Required) A single port, comma-separated ports or range of ports that can receive traffic.
-  - `type` - (Optional) Allowed ICMP [type](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml#icmp-parameters-types).
-  - `code` - (Optional) Allowed ICMP [code](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml#icmp-parameters-codes).
-  - `log` - (Optional) Set to `true` to enable logging. For more information on how to configure system logs to be sent to a syslog drain, review the [ASG logging](http://docs.cloudfoundry.org/concepts/asg.html#logging) documentation.
-  - `description` - (Optional) Description of the rule.
+  - `protocol` - (Required, String) One of `icmp`, `tcp`, `udp`, or `all`.
+  - `destination` - (Required, String) The IP address or CIDR block that can receive traffic.
+  - `ports` - (Required, String) A single port, comma-separated ports or range of ports that can receive traffic.
+  - `type` - (Optional, Integer) Allowed ICMP [type](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml#icmp-parameters-types). A value of -1 allows all types. Default is -1.
+  - `code` - (Optional, Integer) Allowed ICMP [code](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml#icmp-parameters-codes). . A value of -1 allows all codes. Default is -1.
+  - `log` - (Optional, Boolean) Set to `true` to enable logging. For more information on how to configure system logs to be sent to a syslog drain, review the [ASG logging](http://docs.cloudfoundry.org/concepts/asg.html#logging) documentation.
+  - `description` - (Optional, String) Description of the rule.
 
 ## Attributes Reference
 
@@ -58,7 +58,7 @@ The following attributes are exported:
 
 ## Import
 
-The current Asg can be imported using the `asg`, e.g.
+The current Asg can be imported using the `asg` guid, e.g.
 
 ```
 $ terraform import cf_asg.messaging a-guid
