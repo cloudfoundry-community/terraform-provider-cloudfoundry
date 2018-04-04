@@ -49,7 +49,7 @@ The following argument applies only to shared domains.
 
 The following argument applies only to private domains.
 
-* `org` - (Optional, String) The GUID of the Org that owns this domain. If provided then this will be a private domain.
+* `org` - (Optional, String) The ID of the Org that owns this domain. If specified, this resource will provision a private domain. By default, the provisioned domain is a public (shared) domain.
 
 ## Attributes Reference
 
