@@ -1,9 +1,10 @@
 package cloudfoundry
 
 import (
-	"reflect"
-
+	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
+	"reflect"
+	"strings"
 )
 
 const importStateKey = "is_import_state"
@@ -174,4 +175,19 @@ func IsImportState(d *schema.ResourceData) bool {
 	}
 	_, ok := connInfo[importStateKey]
 	return ok
+}
+
+func computeID(first, second string) string {
+	return fmt.Sprintf("%s/%s", first, second)
+}
+
+func parseID(id string) (first string, second string, err error) {
+	parts := strings.Split(id, "/")
+	if len(parts) != 2 {
+		err = fmt.Errorf("unable to parse ID '%s', expected format is '<guid>/<guid>'", id)
+	} else {
+		first = parts[0]
+		second = parts[1]
+	}
+	return
 }

@@ -12,6 +12,9 @@ err_files=$(errcheck -ignoretests \
                      -ignore 'github.com/hashicorp/terraform/helper/schema:Set' \
                      -ignore 'bytes:.*' \
                      -ignore 'io:Close|Write' \
+                     -ignore 'archive/zip:Close|Write' \
+                     -ignore 'os:Close|Write|Remove|RemoveAll' \
+                     -ignore 'compress/gzip:Close|Write' \
                      $(go list ./...| grep -v /vendor/))
 
 if [[ -n ${err_files} ]]; then

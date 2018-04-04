@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -123,6 +125,11 @@ func defaultAppDomain() (domain string) {
 		domain = defaultSysDomain()
 	}
 	return
+}
+
+func defaultBaseDir() string {
+	_, file, _, _ := runtime.Caller(1)
+	return filepath.Dir(filepath.Dir(file))
 }
 
 func defaultPcfDevOrgID() string {
