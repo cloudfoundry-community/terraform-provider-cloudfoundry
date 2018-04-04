@@ -10,6 +10,8 @@ description: |-
 
 Provides a resource for modifying the running or staging [environment variable groups](https://docs.pivotal.io/pivotalcf/1-8/devguide/deploy-apps/environment-variable.html#evgroups) in Cloud Foundry.
 
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
+
 ## Example Usage
 
 The example below shows how to add environment variables to the running environment variable group.
@@ -37,7 +39,7 @@ The following arguments are supported:
 
 ## Import
 
-The current Evg can be imported using the `evg`, e.g.
+The current Evg can be imported using the `evg` name (either `running` or `staging` constant) e.g.
 
 ```
 $ terraform import cf_evg.private <running/staging>
