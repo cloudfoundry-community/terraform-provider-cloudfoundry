@@ -116,15 +116,14 @@ func apiURL() string {
 
 func defaultSysDomain() (domain string) {
 	apiURL := apiURL()
-	domain = apiURL[strings.Index(apiURL, ".")+1:]
-	return
+	return apiURL[strings.Index(apiURL, ".")+1:]
 }
 
 func defaultAppDomain() (domain string) {
 	if domain = os.Getenv("CF_TEST_APP_DOMAIN"); len(domain) == 0 {
 		domain = defaultSysDomain()
 	}
-	return
+	return domain
 }
 
 func defaultBaseDir() string {

@@ -181,7 +181,7 @@ func resourceConfigUpdate(d *schema.ResourceData, meta interface{}) (err error) 
 }
 
 func resourceConfigDelete(d *schema.ResourceData, meta interface{}) (err error) {
-	return
+	return nil
 }
 
 func getFeatureFlags(v interface{}) map[string]bool {

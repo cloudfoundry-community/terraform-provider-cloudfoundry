@@ -10,15 +10,15 @@ release:
 	GOARCH=amd64 GOOS=linux go build -o bin/terraform-provider-cf_linux_amd64
 	GOARCH=amd64 GOOS=darwin go build -o bin/terraform-provider-cf_darwin_amd64
 
-build: fmtcheck
+build: check
 	go install
 
-test: fmtcheck
+test: check
 	go test -i $(TEST) || exit 1
 	echo $(TEST) | \
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
-testacc: fmtcheck
+testacc: check
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 180m
 
 vet:
@@ -40,10 +40,9 @@ errcheck:
 	@sh -c "'$(CURDIR)/scripts/errcheck.sh'"
 
 nakedcheck:
-	@nakedret cloudfoundry
+	@sh -c "'$(CURDIR)/scripts/nakedret.sh'"
 
-style: fmtcheck errcheck nakedcheck
-
+check: fmtcheck nakedcheck
 
 vendor-status:
 	@govendor status
