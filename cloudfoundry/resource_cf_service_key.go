@@ -65,7 +65,7 @@ func resourceServiceKeyCreate(d *schema.ResourceData, meta interface{}) (err err
 
 	d.Set("credentials", normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_"))
 	d.SetId(serviceKey.ID)
-	return err
+	return nil
 }
 
 func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -79,8 +79,7 @@ func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) (err error
 	sm := session.ServiceManager()
 	var serviceKey cfapi.CCServiceKey
 
-	serviceKey, err = sm.ReadServiceKey(d.Id())
-	if err != nil {
+	if serviceKey, err = sm.ReadServiceKey(d.Id()); err != nil {
 		return err
 	}
 	d.Set("name", serviceKey.Name)
@@ -88,7 +87,7 @@ func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) (err error
 	d.Set("credentials", normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_"))
 
 	session.Log.DebugMessage("Read Service Instance : %# v", serviceKey)
-	return err
+	return nil
 }
 
 func resourceServiceKeyDelete(d *schema.ResourceData, meta interface{}) (err error) {

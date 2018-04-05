@@ -82,8 +82,8 @@ resource "cf_asg" "apps" {
 }
 
 resource "cf_default_asg" "staging" {
-	name = "staging"
-    asgs = [ "${cf_asg.apps.id}" ]
+  name = "staging"
+  asgs = [ "${cf_asg.apps.id}" ]
 }
 `
 

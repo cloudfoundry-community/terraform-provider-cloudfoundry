@@ -3,10 +3,10 @@ package cloudfoundry
 import "fmt"
 
 // AppStatusStaging - CF status for running apps
-const AppStatusStaging = "running"
+const AppStatusStaging = "staging"
 
 // AppStatusRunning - CF status for staging apps
-const AppStatusRunning = "staging"
+const AppStatusRunning = "running"
 
 // NewResourceMeta -
 type NewResourceMeta struct {
