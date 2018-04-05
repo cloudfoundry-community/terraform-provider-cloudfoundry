@@ -12,7 +12,7 @@ install:
 - gometalinter.v2 --install
 
 script:
-- travis_wait 180 scripts/build.sh
+- travis_wait 360 scripts/build.sh
 
 deploy:
   provider: releases

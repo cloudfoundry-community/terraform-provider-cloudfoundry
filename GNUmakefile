@@ -25,7 +25,7 @@ fmt:
 	gofmt -w $(GOFMT_FILES)
 
 check:
-	@gometalinter.v2 --config .gometalinter.json
+	@gometalinter.v2 --config .gometalinter.json --deadline 120s
 
 vendor-status:
 	@govendor status
