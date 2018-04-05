@@ -3,15 +3,16 @@ package cloudfoundry
 import (
 	"bytes"
 	"fmt"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
-	git "gopkg.in/src-d/go-git.v4"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"testing"
 	"text/template"
+
+	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/terraform"
+	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	git "gopkg.in/src-d/go-git.v4"
 )
 
 const routeBindingResourceCommon = `
