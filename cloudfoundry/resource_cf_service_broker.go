@@ -87,11 +87,11 @@ func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) (err er
 	sm := session.ServiceManager()
 	if serviceBroker, err = sm.ReadServiceBroker(d.Id()); err != nil {
 		d.SetId("")
-		return
+		return err
 	}
 	if err = readServiceDetail(d.Id(), sm, d); err != nil {
 		d.SetId("")
-		return
+		return err
 	}
 
 	d.Set("name", serviceBroker.Name)
@@ -99,7 +99,7 @@ func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) (err er
 	d.Set("username", serviceBroker.AuthUserName)
 	d.Set("space", serviceBroker.SpaceGUID)
 
-	return
+	return err
 }
 
 func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -122,7 +122,7 @@ func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) (err 
 	}
 	session.Log.DebugMessage("Service detail for service broker: %s:\n%# v\n", name, d.Get("service_plans"))
 
-	return
+	return err
 }
 
 func resourceServiceBrokerDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -134,7 +134,7 @@ func resourceServiceBrokerDelete(d *schema.ResourceData, meta interface{}) (err 
 
 	sm := session.ServiceManager()
 	err = sm.DeleteServiceBroker(d.Id())
-	return
+	return err
 }
 
 func getSchemaAttributes(d *schema.ResourceData) (id, name, url, username, password, space string) {
@@ -151,7 +151,7 @@ func getSchemaAttributes(d *schema.ResourceData) (id, name, url, username, passw
 	if v, ok := d.GetOk("space"); ok {
 		space = v.(string)
 	}
-	return
+	return id, name, url, username, password, space
 }
 
 func readServiceDetail(id string, sm *cfapi.ServiceManager, d *schema.ResourceData) (err error) {
@@ -161,7 +161,7 @@ func readServiceDetail(id string, sm *cfapi.ServiceManager, d *schema.ResourceDa
 	)
 
 	if services, err = sm.ReadServiceInfo(id); err != nil {
-		return
+		return err
 	}
 
 	servicePlans := make(map[string]interface{})
@@ -172,5 +172,5 @@ func readServiceDetail(id string, sm *cfapi.ServiceManager, d *schema.ResourceDa
 	}
 	d.Set("service_plans", servicePlans)
 
-	return
+	return err
 }

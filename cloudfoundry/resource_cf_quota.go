@@ -73,7 +73,6 @@ func resourceQuota() *schema.Resource {
 }
 
 func resourceQuotaCreate(d *schema.ResourceData, meta interface{}) (err error) {
-
 	session := meta.(*cfapi.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
@@ -82,10 +81,10 @@ func resourceQuotaCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	var id string
 	if id, err = qm.CreateQuota(readQuotaResource(d)); err != nil {
-		return
+		return err
 	}
 	d.SetId(id)
-	return
+	return nil
 }
 
 func resourceQuotaRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -98,7 +97,7 @@ func resourceQuotaRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	var quota cfapi.CCQuota
 	if quota, err = qm.ReadQuota(d.Id()); err != nil {
-		return
+		return err
 	}
 	d.Set("name", quota.Name)
 	d.Set("org", quota.OrgGUID)
@@ -113,7 +112,7 @@ func resourceQuotaRead(d *schema.ResourceData, meta interface{}) (err error) {
 		d.Set("total_route_ports", quota.TotalReserveredPorts)
 		d.Set("total_private_domains", quota.TotalPrivateDomains)
 	}
-	return
+	return nil
 }
 
 func resourceQuotaUpdate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -126,19 +125,16 @@ func resourceQuotaUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	quota := readQuotaResource(d)
 	quota.ID = d.Id()
-	err = qm.UpdateQuota(quota)
-	return
+	return qm.UpdateQuota(quota)
 }
 
 func resourceQuotaDelete(d *schema.ResourceData, meta interface{}) (err error) {
-
 	session := meta.(*cfapi.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
 	qm := session.QuotaManager()
-	err = qm.DeleteQuota(d.Id(), d.Get("org").(string))
-	return
+	return qm.DeleteQuota(d.Id(), d.Get("org").(string))
 }
 
 func readQuotaResource(d *schema.ResourceData) cfapi.CCQuota {

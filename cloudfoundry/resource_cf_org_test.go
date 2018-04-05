@@ -224,8 +224,11 @@ func testAccCheckOrgDestroyed(orgname string) resource.TestCheckFunc {
 	}
 }
 
-func testUserRemovedFromOrg(refUserRemoved *string, orgID string,
-	om *cfapi.OrgManager, s *terraform.State) (err error) {
+func testUserRemovedFromOrg(
+	refUserRemoved *string,
+	orgID string,
+	om *cfapi.OrgManager,
+	s *terraform.State) (err error) {
 
 	if refUserRemoved != nil {
 
@@ -254,5 +257,5 @@ func testUserRemovedFromOrg(refUserRemoved *string, orgID string,
 			return
 		}
 	}
-	return
+	return err
 }

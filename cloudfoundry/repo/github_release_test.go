@@ -94,7 +94,7 @@ func readArchiveZip(path string, t *testing.T) (content string) {
 	} else {
 		err = fmt.Errorf("expected only 1 file in the test release archive zip '%s'", path)
 	}
-	return
+	return content
 }
 
 func validateSourceZip(path string, t *testing.T) {

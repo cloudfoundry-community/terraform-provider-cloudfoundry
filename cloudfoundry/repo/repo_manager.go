@@ -56,7 +56,7 @@ func (rm *RepoManager) GetGitRepository(repoURL string, user, password, privateK
 
 	urlPath, err := url.Parse(repoURL)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	baseName := filepath.Base(urlPath.Path)
@@ -83,10 +83,10 @@ func (rm *RepoManager) GetGitRepository(repoURL string, user, password, privateK
 			} else if privateKey != nil {
 				auth, err = ssh.NewPublicKeys(*user, []byte(*privateKey), "")
 			} else {
-				err = fmt.Errorf("authentication password or key was not provided for user '%s'\n", *user)
+				err = fmt.Errorf("authentication password or key was not provided for user '%s'", *user)
 			}
 			if err != nil {
-				return
+				return nil, err
 			}
 			r, err = git.PlainClone(p, false,
 				&git.CloneOptions{
@@ -107,17 +107,15 @@ func (rm *RepoManager) GetGitRepository(repoURL string, user, password, privateK
 		r, err = git.PlainOpen(p)
 	}
 	if err != nil {
-		os.RemoveAll(p)
-		return
+		_ = os.RemoveAll(p)
+		return nil, err
 	}
 
-	err = nil
-	repo = &GitRepository{
+	return &GitRepository{
 		repoPath: p,
 		gitRepo:  r,
 		mutex:    rm.gitMutex,
-	}
-	return
+	}, nil
 }
 
 // GetGithubRelease -
@@ -137,22 +135,19 @@ func (rm *RepoManager) GetGithubRelease(ghOwner, ghRepoName, archiveName string,
 	}
 
 	if _, _, err = ghClient.Repositories.Get(ctx, ghOwner, ghRepoName); err != nil {
-		return
+		return nil, err
 	}
 
 	path := rm.workspace + "/github_releases/" + ghOwner + "/" + ghRepoName
 	if err = os.MkdirAll(path, os.ModePerm); err != nil {
-		return
+		return nil, err
 	}
 
-	repo = &GithubRelease{
-		client: ghClient,
-
+	return &GithubRelease{
+		client:      ghClient,
 		archivePath: path + "/" + archiveName,
 		owner:       ghOwner,
 		repoName:    ghRepoName,
-
 		archiveName: archiveName,
-	}
-	return
+	}, nil
 }

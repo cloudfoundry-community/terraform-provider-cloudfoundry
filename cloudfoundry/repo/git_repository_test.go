@@ -124,7 +124,7 @@ func getGitRepo(workspace string, t *testing.T) (gitRepo repo.Repository) {
 	if _, err := os.Stat(path + "/README.md"); os.IsNotExist(err) {
 		t.Fatalf("file '%s/README.md' does not exist", path)
 	}
-	return
+	return gitRepo
 }
 
 func getGitWorkspaceDirectory() (dir string) {
@@ -136,7 +136,7 @@ func getGitWorkspaceDirectory() (dir string) {
 		dir += "/.test_git"
 		if err = os.RemoveAll(dir); err == nil {
 			if err = os.Mkdir(dir, os.ModePerm); err == nil {
-				return
+				return dir
 			}
 		}
 	}
