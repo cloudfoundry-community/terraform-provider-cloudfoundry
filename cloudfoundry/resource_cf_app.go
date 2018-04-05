@@ -410,11 +410,12 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		return err
 	}
 	// Delete application if an error occurs
-	defer func() {
+	defer func() error {
 		e := &err
 		if *e != nil {
-			am.DeleteApp(app.ID, true)
+			return am.DeleteApp(app.ID, true)
 		}
+		return nil
 	}()
 
 	// Upload application binary / source
@@ -702,7 +703,7 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 			}
 		}
 	}
-	am.DeleteApp(d.Id(), false)
+	err = am.DeleteApp(d.Id(), false)
 	if err = am.DeleteApp(d.Id(), false); err != nil {
 		if strings.Contains(err.Error(), "status code: 404") {
 			session.Log.DebugMessage(

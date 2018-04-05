@@ -133,11 +133,12 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		return err
 	}
 	// Delete route if an error occurs
-	defer func() {
+	defer func() error {
 		e := &err
 		if *e != nil {
-			rm.DeleteRoute(route.ID)
+			return rm.DeleteRoute(route.ID)
 		}
+		return nil
 	}()
 
 	if err = setRouteArguments(session, route, d); err != nil {

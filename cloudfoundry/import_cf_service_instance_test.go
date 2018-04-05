@@ -52,7 +52,7 @@ func testAccCheckServiceInstanceDestroyedImportState(names []string, serviceInst
 			if err != nil {
 				switch err.(type) {
 				case *errors.ModelNotFoundError:
-					return nil
+					continue
 				default:
 					continue
 				}

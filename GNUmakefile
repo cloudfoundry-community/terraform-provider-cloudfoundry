@@ -25,15 +25,7 @@ fmt:
 	gofmt -w $(GOFMT_FILES)
 
 check:
-	@gometalinter.v2 \
-  -D gocyclo \
-  -D errcheck \
-  -D gas \
-  -E nakedret \
-  -E goimports \
-  -E gofmt \
-  --linter 'gofmt:gofmt -l:^(?P<path>.*?\.go)$$' \
-  cloudfoundry cloudfoundry/repo cloudfoundry/cfapi
+	@gometalinter.v2 --config .gometalinter.json
 
 vendor-status:
 	@govendor status
