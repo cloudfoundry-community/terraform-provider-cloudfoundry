@@ -2,6 +2,12 @@ package cloudfoundry
 
 import "fmt"
 
+// AppStatusStaging - CF status for running apps
+const AppStatusStaging = "running"
+
+// AppStatusRunning - CF status for staging apps
+const AppStatusRunning = "staging"
+
 // NewResourceMeta -
 type NewResourceMeta struct {
 	meta interface{}
@@ -10,7 +16,7 @@ type NewResourceMeta struct {
 // validateDefaultRunningStagingName -
 func validateDefaultRunningStagingName(v interface{}, k string) (ws []string, errs []error) {
 	value := v.(string)
-	if value != "running" && value != "staging" {
+	if value != AppStatusRunning && value != AppStatusStaging {
 		errs = append(errs, fmt.Errorf("%q must be one of staging or running", k))
 	}
 	return ws, errs

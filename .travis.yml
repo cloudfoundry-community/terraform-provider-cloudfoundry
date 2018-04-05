@@ -4,11 +4,16 @@ language: go
 go:
 - 1.9.x
 go_import_path: github.com/terraform-providers/terraform-provider-cf
+
 install:
 - bash scripts/gogetcookie.sh
 - go get github.com/kardianos/govendor
+- go get gopkg.in/alecthomas/gometalinter.v2
+- gometalinter.v2 --install
+
 script:
 - travis_wait 180 scripts/build.sh
+
 deploy:
   provider: releases
   api_key:

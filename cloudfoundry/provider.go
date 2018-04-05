@@ -20,7 +20,7 @@ func Provider() terraform.ResourceProvider {
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CF_USER", ""),
 			},
-			"password": &schema.Schema{
+			  "password": &schema.Schema{
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CF_PASSWORD", ""),

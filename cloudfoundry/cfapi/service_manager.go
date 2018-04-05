@@ -164,7 +164,7 @@ type CCServiceInstanceRoute struct {
 	Host string `json:"host"`
 }
 
-//  CCServiceInstanceRouteResource -
+// CCServiceInstanceRouteResource -
 type CCServiceInstanceRouteResource struct {
 	Metadata resources.Metadata     `json:"metadata"`
 	Entity   CCServiceInstanceRoute `json:"entity"`
@@ -418,7 +418,7 @@ func (sm *ServiceManager) DeleteServicePlanAccess(servicePlanAccessGUID string) 
 	return err
 }
 
-// UpdatePlanVisibility -
+// UpdateServicePlanVisibility -
 func (sm *ServiceManager) UpdateServicePlanVisibility(planID string, state bool) (err error) {
 	path := fmt.Sprintf("/v2/service_plans/%s", planID)
 	request := map[string]bool{

@@ -100,6 +100,9 @@ func (am *ASGManager) UpdateASG(id string, name string, rules []CCASGRule) (err 
 		"name":  name,
 		"rules": rules,
 	})
+	if err != nil {
+		return err
+	}
 
 	path := fmt.Sprintf("%s/v2/security_groups/%s", am.apiEndpoint, id)
 	request, err := am.ccGateway.NewRequest("PUT", path, am.config.AccessToken(), bytes.NewReader(body))

@@ -20,15 +20,11 @@ import (
 
 // Session - wraps the CF CLI session objects
 type Session struct {
-	Log *Logger
-
-	ccInfo CCInfo
-
-	config     coreconfig.Repository
-	refresher  coreconfig.APIConfigRefresher
-	ccGateway  net.Gateway
-	uaaGateway net.Gateway
-
+	Log              *Logger
+	ccInfo           CCInfo
+	config           coreconfig.Repository
+	ccGateway        net.Gateway
+	uaaGateway       net.Gateway
 	authManager      *AuthManager
 	stackManager     *StackManager
 	userManager      *UserManager
@@ -65,13 +61,6 @@ type CCInfo struct {
 	RoutingAPIEndpoint       string `json:"routing_endpoint"`
 }
 
-// apiErrResponse -
-type apiErrResponse struct {
-	Code        int    `json:"code,omitempty"`
-	ErrorCode   string `json:"error_code,omitempty"`
-	Description string `json:"description,omitempty"`
-}
-
 // uaaErrorResponse -
 type uaaErrorResponse struct {
 	Code        string `json:"error"`
@@ -103,6 +92,9 @@ func NewSession(
 
 	if len(uaaClientID) > 0 {
 		s.userManager.clientToken, err = s.authManager.getClientToken(uaaClientID, uaaClientSecret)
+		if err != nil {
+			return nil, err
+		}
 		if err = s.userManager.loadGroups(); err != nil {
 			return nil, err
 		}
@@ -333,10 +325,6 @@ func (s *Session) SetFeatureFlags(featureFlags map[string]bool) (err error) {
 
 // noopPersistor - No Op Persistor for CF CLI session
 type noopPersistor struct {
-}
-
-func newNoopPersistor() configuration.Persistor {
-	return &noopPersistor{}
 }
 
 func (p *noopPersistor) Delete() {

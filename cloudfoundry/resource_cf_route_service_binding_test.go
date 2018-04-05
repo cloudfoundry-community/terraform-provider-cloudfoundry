@@ -160,7 +160,7 @@ func TestAccRouteServiceBinding_normal(t *testing.T) {
 		"BaseDir":  defaultBaseDir(),
 		"CloneDir": dir,
 	})
-	appUrl := fmt.Sprintf("http://php-app.%s", defaultAppDomain())
+	appURL := fmt.Sprintf("http://php-app.%s", defaultAppDomain())
 
 	resource.Test(t,
 		resource.TestCase{
@@ -172,7 +172,7 @@ func TestAccRouteServiceBinding_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						checkRouteServiceBindingResource(ref, "cf_service_instance.basic-auth", "cf_route.php-app"),
 						checkRouteServiceBinding("cf_service_instance.basic-auth", "cf_route.php-app", true),
-						checkAppResponse(appUrl, 401),
+						checkAppResponse(appURL, 401),
 					),
 				},
 				resource.TestStep{
@@ -181,7 +181,7 @@ func TestAccRouteServiceBinding_normal(t *testing.T) {
 						checkRouteServiceBindingResource(ref, "cf_service_instance.basic-auth", "cf_route.php-app-other"),
 						checkRouteServiceBinding("cf_service_instance.basic-auth", "cf_route.php-app", false),
 						checkRouteServiceBinding("cf_service_instance.basic-auth", "cf_route.php-app-other", true),
-						checkAppResponse(appUrl, 200),
+						checkAppResponse(appURL, 200),
 					),
 				},
 				resource.TestStep{
@@ -189,7 +189,7 @@ func TestAccRouteServiceBinding_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						checkRouteServiceBinding("cf_service_instance.basic-auth", "cf_route.php-app", false),
 						checkRouteServiceBinding("cf_service_instance.basic-auth", "cf_route.php-app-other", false),
-						checkAppResponse(appUrl, 200),
+						checkAppResponse(appURL, 200),
 					),
 				},
 			},

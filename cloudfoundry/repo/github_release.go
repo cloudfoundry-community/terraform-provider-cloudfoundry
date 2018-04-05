@@ -166,7 +166,6 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 		for {
 			tarHeader, err = tarIn.Next()
 			if err == io.EOF {
-				err = nil
 				break
 			} else if err != nil {
 				return err

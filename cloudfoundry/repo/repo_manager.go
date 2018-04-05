@@ -31,23 +31,23 @@ type Repository interface {
 	SetVersion(version string, versionType VersionType) (err error)
 }
 
-// RepoManager -
-type RepoManager struct {
+// Manager -
+type Manager struct {
 	workspace string
 
 	gitMutex *sync.Mutex
 }
 
-// NewRepoManager -
-func NewRepoManager(workspace string) *RepoManager {
-	return &RepoManager{
+// NewManager -
+func NewManager(workspace string) *Manager {
+	return &Manager{
 		workspace: workspace,
 		gitMutex:  &sync.Mutex{},
 	}
 }
 
 // GetGitRepository -
-func (rm *RepoManager) GetGitRepository(repoURL string, user, password, privateKey *string) (repo Repository, err error) {
+func (rm *Manager) GetGitRepository(repoURL string, user, password, privateKey *string) (repo Repository, err error) {
 
 	rm.gitMutex.Lock()
 	defer rm.gitMutex.Unlock()
@@ -119,7 +119,7 @@ func (rm *RepoManager) GetGitRepository(repoURL string, user, password, privateK
 }
 
 // GetGithubRelease -
-func (rm *RepoManager) GetGithubRelease(ghOwner, ghRepoName, archiveName string, token *string) (repo Repository, err error) {
+func (rm *Manager) GetGithubRelease(ghOwner, ghRepoName, archiveName string, token *string) (repo Repository, err error) {
 
 	var ghClient *github.Client
 	ctx := context.Background()

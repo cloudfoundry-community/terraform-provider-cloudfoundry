@@ -242,6 +242,9 @@ func resourceRouteDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if targets, ok := d.GetOk("target"); ok {
 		err = removeTargets(getListOfStructs(targets.(*schema.Set).List()), rm, session.Log)
+		if err != nil {
+			return err
+		}
 	}
 	if err = rm.DeleteRoute(d.Id()); err != nil {
 		return err

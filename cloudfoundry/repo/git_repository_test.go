@@ -109,7 +109,7 @@ func testTaggedContent(workspace string, t *testing.T) {
 
 func getGitRepo(workspace string, t *testing.T) (gitRepo repo.Repository) {
 
-	repoManager := repo.NewRepoManager(workspace)
+	repoManager := repo.NewManager(workspace)
 	gitRepo, err := repoManager.GetGitRepository("https://github.com/mevansam/test-app.git", nil, nil, nil)
 	checkError(t, err)
 
