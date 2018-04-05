@@ -28,6 +28,7 @@ check:
 	@gometalinter.v2 \
   -D gocyclo \
   -D errcheck \
+  -D gas \
   -E nakedret \
   -E goimports \
   -E gofmt \

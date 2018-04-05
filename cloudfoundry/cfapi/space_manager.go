@@ -186,11 +186,8 @@ func (sm *SpaceManager) UpdateSpace(space CCSpace, asgs []interface{}) (err erro
 	}
 
 	resource := &CCSpaceResource{}
-	if _, err = sm.ccGateway.PerformRequestForJSONResponse(request, resource); err != nil {
-		return err
-	}
-
-	return nil
+	_, err = sm.ccGateway.PerformRequestForJSONResponse(request, resource)
+	return err
 }
 
 // DeleteSpace -

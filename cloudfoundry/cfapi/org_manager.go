@@ -142,10 +142,8 @@ func (om *OrgManager) UpdateOrg(org CCOrg) (err error) {
 	}
 
 	resource := &CCOrgResource{}
-	if _, err = om.ccGateway.PerformRequestForJSONResponse(request, resource); err != nil {
-		return err
-	}
-	return nil
+	_, err = om.ccGateway.PerformRequestForJSONResponse(request, resource)
+	return err
 }
 
 // AddUser -

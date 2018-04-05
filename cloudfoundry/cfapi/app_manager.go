@@ -510,9 +510,9 @@ func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string
 
 	resource := make(map[string]interface{})
 
-	if err = am.ccGateway.ListPaginatedResources(am.apiEndpoint,
-		fmt.Sprintf("/v2/service_bindings?q=%s:%s", key, id),
-		resource, func(resource interface{}) bool {
+	path := fmt.Sprintf("/v2/service_bindings?q=%s:%s", key, id)
+	err = am.ccGateway.ListPaginatedResources(am.apiEndpoint, path, resource,
+		func(resource interface{}) bool {
 
 			routeResource := resource.(map[string]interface{})
 			mapping := make(map[string]interface{})
@@ -535,11 +535,8 @@ func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string
 
 			mappings = append(mappings, mapping)
 			return true
-
-		}); err != nil {
-		return mappings, err
-	}
-	return mappings, nil
+		})
+	return mappings, err
 }
 
 // DeleteServiceBinding -

@@ -157,10 +157,7 @@ func resourceAsgUpdate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 	err = am.UpdateASG(d.Id(), d.Get("name").(string), rules)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func resourceAsgDelete(d *schema.ResourceData, meta interface{}) error {

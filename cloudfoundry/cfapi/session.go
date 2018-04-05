@@ -223,11 +223,7 @@ func (s *Session) initCliConnection(
 	}
 
 	s.appManager, err = newAppManager(s.config, s.ccGateway, s.domainManager.repo, s.routeManager.repo, s.Log)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // Info -

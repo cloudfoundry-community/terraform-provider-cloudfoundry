@@ -46,12 +46,9 @@ func copyFile(src, dst string) (err error) {
 	if err != nil {
 		return err
 	}
-	err = os.Chmod(dst, si.Mode())
-	if err != nil {
-		return err
-	}
 
-	return nil
+	err = os.Chmod(dst, si.Mode())
+	return err
 }
 
 // CopyDir recursively copies a directory tree, attempting to preserve permissions.

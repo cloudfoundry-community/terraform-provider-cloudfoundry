@@ -327,11 +327,7 @@ func (um *UserManager) ChangePassword(
 
 	response := make(map[string]interface{})
 	_, err = um.uaaGateway.PerformRequestForJSONResponse(request, response)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // UpdateRoles -

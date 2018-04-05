@@ -111,11 +111,8 @@ func (am *ASGManager) UpdateASG(id string, name string, rules []CCASGRule) (err 
 	}
 
 	resource := &CCASGResource{}
-	if _, err = am.ccGateway.PerformRequestForJSONResponse(request, resource); err != nil {
-		return err
-	}
-
-	return nil
+	_, err = am.ccGateway.PerformRequestForJSONResponse(request, resource)
+	return err
 }
 
 // GetASG -
