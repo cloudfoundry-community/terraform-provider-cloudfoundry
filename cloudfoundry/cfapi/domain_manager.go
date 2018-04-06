@@ -254,7 +254,7 @@ func (dm *DomainManager) FindRouterGroupByName(name string) (routerGroup models.
 	}
 
 	if routerGroup.Name != name {
-		return models.RouterGroup{}, fmt.Errorf("Router group with name '%s' was not found.", name)
+		return models.RouterGroup{}, fmt.Errorf("Router group with name '%s' was not found", name)
 	}
 	return routerGroup, nil
 }

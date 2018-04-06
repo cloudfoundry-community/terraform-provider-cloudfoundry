@@ -193,14 +193,14 @@ func getRedisBrokerCredentials() (user string, password string) {
 	return user, password
 }
 
-func assertContains(str string, list []string) bool {
-	for _, s := range list {
-		if str == s {
-			return true
-		}
-	}
-	return false
-}
+// func assertContains(str string, list []string) bool {
+// 	for _, s := range list {
+// 		if str == s {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 func assertSame(actual interface{}, expected interface{}) error {
 	if actual != expected {
@@ -227,7 +227,7 @@ func assertEquals(attributes map[string]string,
 			expectedValueContent := reflect.Indirect(reflect.ValueOf(expected))
 			switch expectedValueContent.Kind() {
 			case reflect.String:
-				s = fmt.Sprintf("%s", expectedValueContent.String())
+				s = expectedValueContent.String()
 			case reflect.Int:
 				s = fmt.Sprintf("%d", expectedValueContent.Int())
 			case reflect.Bool:
@@ -365,8 +365,7 @@ func assertSetEquals(
 	return err
 }
 
-func assertMapEquals(key string, attributes map[string]string, actual map[string]interface{}) (err error) {
-
+func assertMapEquals(key string, attributes map[string]string, actual map[string]interface{}) error {
 	expected := make(map[string]interface{})
 	for k, v := range attributes {
 		keyParts := strings.Split(k, ".")
@@ -384,7 +383,7 @@ func assertMapEquals(key string, attributes map[string]string, actual map[string
 		}
 	}
 	if !reflect.DeepEqual(expected, actual) {
-		err = fmt.Errorf("map with key '%s' expected to be %#v but was %#v", key, expected, actual)
+		return fmt.Errorf("map with key '%s' expected to be %#v but was %#v", key, expected, actual)
 	}
 	return nil
 }

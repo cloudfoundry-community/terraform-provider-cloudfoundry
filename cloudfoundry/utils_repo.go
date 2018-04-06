@@ -8,7 +8,7 @@ import (
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
 )
 
-var repoManager *repo.RepoManager
+var repoManager *repo.Manager
 
 // initRepoManager -
 func initRepoManager() error {
@@ -33,7 +33,7 @@ func initRepoManager() error {
 	if err = os.MkdirAll(workspace, os.ModePerm); err != nil {
 		return err
 	}
-	repoManager = repo.NewRepoManager(workspace)
+	repoManager = repo.NewManager(workspace)
 	return nil
 }
 

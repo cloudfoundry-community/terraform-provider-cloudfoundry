@@ -137,9 +137,7 @@ func (bpm *BuildpackManager) UploadBuildpackBits(bp CCBuildpack, buildpackPath s
 		err     error
 	)
 
-	if strings.HasPrefix(buildpackPath, "file://") {
-		buildpackPath = buildpackPath[7:]
-	}
+	buildpackPath = strings.TrimPrefix(buildpackPath, "file://")
 	if zipFile, bp.Filename, err = bpm.bpBitsRepo.CreateBuildpackZipFile(buildpackPath); err != nil {
 		return bp, err
 	}

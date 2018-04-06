@@ -164,7 +164,7 @@ type CCServiceInstanceRoute struct {
 	Host string `json:"host"`
 }
 
-//  CCServiceInstanceRouteResource -
+// CCServiceInstanceRouteResource -
 type CCServiceInstanceRouteResource struct {
 	Metadata resources.Metadata     `json:"metadata"`
 	Entity   CCServiceInstanceRoute `json:"entity"`
@@ -184,40 +184,34 @@ func newServiceManager(config coreconfig.Reader, ccGateway net.Gateway, logger *
 
 // ReadServiceInfo -
 func (sm *ServiceManager) ReadServiceInfo(serviceBrokerID string) (services []CCService, err error) {
+	path := fmt.Sprintf("/v2/services?q=service_broker_guid:%s", serviceBrokerID)
+	err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint, path, CCServiceResource{}, func(resource interface{}) bool {
+		sr := resource.(CCServiceResource)
+		service := sr.Entity
+		service.ID = sr.Metadata.GUID
 
-	if err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint,
-		fmt.Sprintf("/v2/services?q=service_broker_guid:%s", serviceBrokerID),
-		CCServiceResource{}, func(resource interface{}) bool {
+		if err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint,
+			fmt.Sprintf("/v2/services/%s/service_plans", service.ID),
+			CCServicePlanResource{}, func(resource interface{}) bool {
 
-			sr := resource.(CCServiceResource)
-			service := sr.Entity
-			service.ID = sr.Metadata.GUID
+				spr := resource.(CCServicePlanResource)
+				servicePlan := spr.Entity
+				servicePlan.ID = spr.Metadata.GUID
 
-			if err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint,
-				fmt.Sprintf("/v2/services/%s/service_plans", service.ID),
-				CCServicePlanResource{}, func(resource interface{}) bool {
+				service.ServicePlans = append(service.ServicePlans, servicePlan)
+				return true
 
-					spr := resource.(CCServicePlanResource)
-					servicePlan := spr.Entity
-					servicePlan.ID = spr.Metadata.GUID
+			}); err != nil {
 
-					service.ServicePlans = append(service.ServicePlans, servicePlan)
-					return true
+			sm.log.DebugMessage("WARNING! Unable to retrieve service plans for service '%s': %s", service.ID, err.Error())
+			err = nil
+		}
 
-				}); err != nil {
+		services = append(services, service)
+		return true
 
-				sm.log.DebugMessage("WARNING! Unable to retrieve service plans for service '%s': %s", service.ID, err.Error())
-				err = nil
-			}
-
-			services = append(services, service)
-			return true
-
-		}); err != nil {
-		return services, err
-	}
-
-	return services, nil
+	})
+	return services, err
 }
 
 // CreateServiceBroker -
@@ -385,10 +379,7 @@ func (sm *ServiceManager) UpdateServicePlanAccess(
 
 	response := make(map[string]interface{})
 	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(body), &response)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // ReadServicePlanAccess -
@@ -418,7 +409,7 @@ func (sm *ServiceManager) DeleteServicePlanAccess(servicePlanAccessGUID string) 
 	return err
 }
 
-// UpdatePlanVisibility -
+// UpdateServicePlanVisibility -
 func (sm *ServiceManager) UpdateServicePlanVisibility(planID string, state bool) (err error) {
 	path := fmt.Sprintf("/v2/service_plans/%s", planID)
 	request := map[string]bool{
@@ -834,10 +825,8 @@ func (sm *ServiceManager) CreateRouteServiceBinding(serviceID, routeID string, p
 	}
 
 	resource := CCServiceInstanceResource{}
-	if err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource); err != nil {
-		return err
-	}
-	return nil
+	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource)
+	return err
 }
 
 // DeleteRouteServiceBinding -

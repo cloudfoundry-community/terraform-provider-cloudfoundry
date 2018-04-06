@@ -53,7 +53,7 @@ func resourceDefaultAsgCreate(d *schema.ResourceData, meta interface{}) (err err
 
 	am := session.ASGManager()
 	switch name {
-	case "running":
+	case AppStatusRunning:
 		if err = am.UnbindAllFromRunning(); err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ func resourceDefaultAsgCreate(d *schema.ResourceData, meta interface{}) (err err
 				return err
 			}
 		}
-	case "staging":
+	case AppStatusStaging:
 		if err = am.UnbindAllFromStaging(); err != nil {
 			return err
 		}
@@ -90,11 +90,11 @@ func resourceDefaultAsgRead(d *schema.ResourceData, meta interface{}) (err error
 
 	am := session.ASGManager()
 	switch d.Get("name").(string) {
-	case "running":
+	case AppStatusRunning:
 		if asgs, err = am.Running(); err != nil {
 			return err
 		}
-	case "staging":
+	case AppStatusStaging:
 		if asgs, err = am.Staging(); err != nil {
 			return err
 		}
@@ -121,7 +121,7 @@ func resourceDefaultAsgUpdate(d *schema.ResourceData, meta interface{}) (err err
 
 	am := session.ASGManager()
 	switch d.Get("name").(string) {
-	case "running":
+	case AppStatusRunning:
 		if asgs, err = am.Running(); err != nil {
 			return err
 		}
@@ -140,7 +140,7 @@ func resourceDefaultAsgUpdate(d *schema.ResourceData, meta interface{}) (err err
 				}
 			}
 		}
-	case "staging":
+	case AppStatusStaging:
 		if asgs, err = am.Staging(); err != nil {
 			return err
 		}
@@ -173,12 +173,12 @@ func resourceDefaultAsgDelete(d *schema.ResourceData, meta interface{}) (err err
 
 	am := session.ASGManager()
 	switch d.Get("name").(string) {
-	case "running":
+	case AppStatusRunning:
 		err = am.UnbindAllFromRunning()
 		if err != nil {
 			return err
 		}
-	case "staging":
+	case AppStatusStaging:
 		err = am.UnbindAllFromStaging()
 		if err != nil {
 			return err

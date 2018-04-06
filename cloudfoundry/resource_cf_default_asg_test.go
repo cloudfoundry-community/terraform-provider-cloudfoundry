@@ -82,8 +82,8 @@ resource "cf_asg" "apps" {
 }
 
 resource "cf_default_asg" "staging" {
-	name = "staging"
-    asgs = [ "${cf_asg.apps.id}" ]
+  name = "staging"
+  asgs = [ "${cf_asg.apps.id}" ]
 }
 `
 
@@ -207,7 +207,9 @@ func testAccCheckDefaultRunningAsgDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
-	err = am.BindToRunning(sg.GUID)
+	if err = am.BindToRunning(sg.GUID); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -229,7 +231,8 @@ func testAccCheckDefaultStagingAsgDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
-	err = am.BindToStaging(sg.GUID)
-
+	if err = am.BindToStaging(sg.GUID); err != nil {
+		return err
+	}
 	return nil
 }

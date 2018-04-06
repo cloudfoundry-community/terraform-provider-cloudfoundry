@@ -311,11 +311,11 @@ func (am *AppManager) WaitForAppToStart(app CCApp, timeout time.Duration) (err e
 	c := make(chan error, 1)
 	go func() {
 
-		var err error
+		var ferr error
 
 		for {
-			if app, err = am.ReadApp(app.ID); err != nil {
-				c <- err
+			if app, ferr = am.ReadApp(app.ID); err != nil {
+				c <- ferr
 				return
 			}
 			if app.State != nil {
@@ -326,8 +326,8 @@ func (am *AppManager) WaitForAppToStart(app CCApp, timeout time.Duration) (err e
 				if *app.State == AppStarted {
 
 					response := make(map[string]interface{})
-					if err = am.ccGateway.GetResource(fmt.Sprintf("%s/v2/apps/%s/stats", am.apiEndpoint, app.ID), &response); err != nil {
-						c <- err
+					if ferr = am.ccGateway.GetResource(fmt.Sprintf("%s/v2/apps/%s/stats", am.apiEndpoint, app.ID), &response); err != nil {
+						c <- ferr
 						return
 					}
 					if i, ok := response["0"]; ok {
@@ -387,11 +387,11 @@ func (am *AppManager) WaitForAppToStage(app CCApp, timeout time.Duration) (err e
 	c := make(chan error)
 	go func() {
 
-		var err error
+		var ferr error
 
 		for {
-			if app, err = am.ReadApp(app.ID); err != nil {
-				c <- err
+			if app, ferr = am.ReadApp(app.ID); err != nil {
+				c <- ferr
 				return
 			}
 			if app.PackageState != nil {
@@ -437,12 +437,12 @@ func (am *AppManager) StopApp(appID string, timeout time.Duration) (err error) {
 		c := make(chan error)
 		go func() {
 
-			var err error
+			var ferr error
 
 			for {
 				time.Sleep(appStatePingSleep)
-				if app, err = am.ReadApp(app.ID); err != nil {
-					c <- err
+				if app, ferr = am.ReadApp(app.ID); err != nil {
+					c <- ferr
 					break
 				}
 				if app.State != nil && *app.State == "STOPPED" {
@@ -510,9 +510,9 @@ func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string
 
 	resource := make(map[string]interface{})
 
-	if err = am.ccGateway.ListPaginatedResources(am.apiEndpoint,
-		fmt.Sprintf("/v2/service_bindings?q=%s:%s", key, id),
-		resource, func(resource interface{}) bool {
+	path := fmt.Sprintf("/v2/service_bindings?q=%s:%s", key, id)
+	err = am.ccGateway.ListPaginatedResources(am.apiEndpoint, path, resource,
+		func(resource interface{}) bool {
 
 			routeResource := resource.(map[string]interface{})
 			mapping := make(map[string]interface{})
@@ -535,11 +535,8 @@ func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string
 
 			mappings = append(mappings, mapping)
 			return true
-
-		}); err != nil {
-		return mappings, err
-	}
-	return mappings, nil
+		})
+	return mappings, err
 }
 
 // DeleteServiceBinding -

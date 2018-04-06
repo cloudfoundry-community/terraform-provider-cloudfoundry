@@ -53,14 +53,16 @@ func resourceServiceBroker() *schema.Resource {
 
 func resourceServiceBrokerCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
+	var id string
 	session := meta.(*cfapi.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
 
-	id, name, url, username, password, space := getSchemaAttributes(d)
+	_, name, url, username, password, space := getSchemaAttributes(d)
 
 	sm := session.ServiceManager()
+
 	if id, err = sm.CreateServiceBroker(name, url, username, password, space); err != nil {
 		return err
 	}

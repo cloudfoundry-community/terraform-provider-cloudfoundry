@@ -210,7 +210,7 @@ func (rm *RouteManager) readRouteMappings(id, key string) (mappings []map[string
 
 	resource := make(map[string]interface{})
 	path := fmt.Sprintf("/v2/route_mappings?q=%s:%s", key, id)
-	if err = rm.ccGateway.ListPaginatedResources(rm.apiEndpoint, path, resource, func(resource interface{}) bool {
+	err = rm.ccGateway.ListPaginatedResources(rm.apiEndpoint, path, resource, func(resource interface{}) bool {
 		routeResource := resource.(map[string]interface{})
 		mapping := make(map[string]interface{})
 		mapping["mapping_id"] = routeResource["metadata"].(map[string]interface{})["guid"].(string)
@@ -228,10 +228,8 @@ func (rm *RouteManager) readRouteMappings(id, key string) (mappings []map[string
 		}
 		mappings = append(mappings, mapping)
 		return true
-	}); err != nil {
-		return mappings, err
-	}
-	return mappings, nil
+	})
+	return mappings, err
 }
 
 // DeleteRouteMapping -

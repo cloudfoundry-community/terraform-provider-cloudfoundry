@@ -12,15 +12,14 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/terminal"
 
-	"github.com/hashicorp/terraform/helper/hashcode"
+	// "github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
 )
 
-const (
-	DefaultAppTimeout = 60
-)
+// DefaultAppTimeout - Timeout (in seconds) when pushing apps to CF
+const DefaultAppTimeout = 60
 
 func resourceApp() *schema.Resource {
 
@@ -277,9 +276,9 @@ func resourceApp() *schema.Resource {
 	}
 }
 
-func serviceBindingHash(d interface{}) int {
-	return hashcode.String(d.(map[string]interface{})["service_instance"].(string))
-}
+// func serviceBindingHash(d interface{}) int {
+// 	return hashcode.String(d.(map[string]interface{})["service_instance"].(string))
+// }
 
 func validateAppHealthCheckType(v interface{}, k string) (ws []string, errs []error) {
 	value := v.(string)
@@ -310,7 +309,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		addContent []map[string]interface{}
 
 		defaultRoute, stageRoute, liveRoute string
-		isBlueGreen                         bool
+		//isBlueGreen                         bool
 
 		serviceBindings    []map[string]interface{}
 		hasServiceBindings bool
@@ -386,7 +385,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
 
 		routeConfig = v.([]interface{})[0].(map[string]interface{})
-		isBlueGreen = false
+		//isBlueGreen = false
 
 		if defaultRoute, err = validateRoute(routeConfig, "default_route", rm); err != nil {
 			return err
@@ -399,7 +398,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 
 		if len(stageRoute) > 0 && len(liveRoute) > 0 {
-			isBlueGreen = true
+			//isBlueGreen = true
 		} else if len(stageRoute) > 0 || len(liveRoute) > 0 {
 			err = fmt.Errorf("both 'stage_route' and 'live_route' need to be provided to deploy the app using blue-green routing")
 			return err
@@ -460,8 +459,8 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 
 		// Execute blue-green validation
-		if isBlueGreen {
-		}
+		// if isBlueGreen {
+		// }
 	}
 
 	if app, err = am.ReadApp(app.ID); err != nil {

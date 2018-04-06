@@ -2,9 +2,10 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform/helper/schema"
 	"reflect"
 	"strings"
+
+	"github.com/hashicorp/terraform/helper/schema"
 )
 
 const importStateKey = "is_import_state"

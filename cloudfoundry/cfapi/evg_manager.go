@@ -40,10 +40,8 @@ func newEVGManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logg
 func (dm *EVGManager) GetEVG(name string) (variables map[string]interface{}, err error) {
 	url := fmt.Sprintf("%s/v2/config/environment_variable_groups/%s", dm.apiEndpoint, name)
 	variables = make(map[string]interface{})
-	if err = dm.ccGateway.GetResource(url, &variables); err != nil {
-		return variables, err
-	}
-	return variables, nil
+	err = dm.ccGateway.GetResource(url, &variables)
+	return variables, err
 }
 
 // SetEVG -

@@ -175,6 +175,9 @@ func (sm *SpaceManager) UpdateSpace(space CCSpace, asgs []interface{}) (err erro
 	}
 
 	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
 
 	path := fmt.Sprintf("%s/v2/spaces/%s", sm.apiEndpoint, space.ID)
 	request, err := sm.ccGateway.NewRequest("PUT", path, sm.config.AccessToken(), bytes.NewReader(body))
@@ -183,11 +186,8 @@ func (sm *SpaceManager) UpdateSpace(space CCSpace, asgs []interface{}) (err erro
 	}
 
 	resource := &CCSpaceResource{}
-	if _, err = sm.ccGateway.PerformRequestForJSONResponse(request, resource); err != nil {
-		return err
-	}
-
-	return nil
+	_, err = sm.ccGateway.PerformRequestForJSONResponse(request, resource)
+	return err
 }
 
 // DeleteSpace -

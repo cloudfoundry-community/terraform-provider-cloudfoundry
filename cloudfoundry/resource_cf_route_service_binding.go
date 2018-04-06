@@ -99,7 +99,7 @@ func resourceRouteServiceBindingRead(d *schema.ResourceData, meta interface{}) (
 	if err != nil {
 		return err
 	}
-	if found == false {
+	if !found {
 		d.SetId("")
 		return fmt.Errorf("Route '%s' not found in service instance '%s'", routeID, serviceID)
 	}

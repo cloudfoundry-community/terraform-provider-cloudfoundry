@@ -157,11 +157,8 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 		tags = append(tags, v.(string))
 	}
 
-	if _, err = sm.UpdateServiceInstance(id, name, servicePlan, params, tags); err != nil {
-		return err
-	}
-
-	return nil
+	_, err = sm.UpdateServiceInstance(id, name, servicePlan, params, tags)
+	return err
 }
 
 func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (err error) {
