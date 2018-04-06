@@ -66,64 +66,65 @@ const OrgRoleAuditor = OrgRole("auditors")
 func NewOrgManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logger) (dm *OrgManager, err error) {
 
 	dm = &OrgManager{
-		log: logger,
-
-		config:    config,
-		ccGateway: ccGateway,
-
+		log:         logger,
+		config:      config,
+		ccGateway:   ccGateway,
 		apiEndpoint: config.APIEndpoint(),
-
-		repo: organizations.NewCloudControllerOrganizationRepository(config, ccGateway),
+		repo:        organizations.NewCloudControllerOrganizationRepository(config, ccGateway),
 	}
 
 	if len(dm.apiEndpoint) == 0 {
-		err = errors.New("API endpoint missing from config file")
-		return
+		return nil, errors.New("API endpoint missing from config file")
 	}
 
-	return
+	return dm, nil
 }
 
 // FindOrg -
 func (om *OrgManager) FindOrg(name string) (org CCOrg, err error) {
 	orgModel, err := om.repo.FindByName(name)
+	if err != nil {
+		return CCOrg{}, err
+	}
+
 	org.ID = orgModel.GUID
 	org.Name = orgModel.Name
-	return
+	return org, nil
 }
 
 // ReadOrg -
 func (om *OrgManager) ReadOrg(orgID string) (org CCOrg, err error) {
 
 	resource := &CCOrgResource{}
-	err = om.ccGateway.GetResource(
-		fmt.Sprintf("%s/v2/organizations/%s", om.apiEndpoint, orgID), &resource)
+	path := fmt.Sprintf("%s/v2/organizations/%s", om.apiEndpoint, orgID)
+	if err = om.ccGateway.GetResource(path, &resource); err != nil {
+		return CCOrg{}, err
+	}
 
 	org = resource.Entity
 	org.ID = resource.Metadata.GUID
-	return
+	return org, nil
 }
 
 // CreateOrg -
 func (om *OrgManager) CreateOrg(name string, quotaID string) (org CCOrg, err error) {
-
 	payload := map[string]interface{}{"name": name}
 	if len(quotaID) > 0 {
 		payload["quota_definition_guid"] = quotaID
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return
+		return CCOrg{}, err
 	}
 
 	resource := CCOrgResource{}
-	if err = om.ccGateway.CreateResource(om.apiEndpoint,
-		"/v2/organizations", bytes.NewReader(body), &resource); err != nil {
-		return
+	err = om.ccGateway.CreateResource(om.apiEndpoint, "/v2/organizations", bytes.NewReader(body), &resource)
+	if err != nil {
+		return CCOrg{}, err
 	}
 	org = resource.Entity
 	org.ID = resource.Metadata.GUID
-	return
+	return org, nil
 }
 
 // UpdateOrg -
@@ -134,36 +135,29 @@ func (om *OrgManager) UpdateOrg(org CCOrg) (err error) {
 		return
 	}
 
-	request, err := om.ccGateway.NewRequest("PUT",
-		fmt.Sprintf("%s/v2/organizations/%s", om.apiEndpoint, org.ID),
-		om.config.AccessToken(), bytes.NewReader(body))
+	path := fmt.Sprintf("%s/v2/organizations/%s", om.apiEndpoint, org.ID)
+	request, err := om.ccGateway.NewRequest("PUT", path, om.config.AccessToken(), bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 
 	resource := &CCOrgResource{}
 	_, err = om.ccGateway.PerformRequestForJSONResponse(request, resource)
-	return
+	return err
 }
 
 // AddUser -
 func (om *OrgManager) AddUser(orgID string, userID string, role OrgRole) (err error) {
-
-	err = om.ccGateway.UpdateResource(om.apiEndpoint,
-		fmt.Sprintf("/v2/organizations/%s/%s/%s", orgID, role, userID),
-		strings.NewReader(""))
-	return
+	path := fmt.Sprintf("/v2/organizations/%s/%s/%s", orgID, role, userID)
+	return om.ccGateway.UpdateResource(om.apiEndpoint, path, strings.NewReader(""))
 }
 
 // RemoveUser -
 func (om *OrgManager) RemoveUser(orgID string, userID string, role OrgRole) (err error) {
-
-	err = om.ccGateway.DeleteResource(om.apiEndpoint,
-		fmt.Sprintf("/v2/organizations/%s/%s/%s", orgID, role, userID))
-
+	path := fmt.Sprintf("/v2/organizations/%s/%s/%s", orgID, role, userID)
+	err = om.ccGateway.DeleteResource(om.apiEndpoint, path)
 	if err != nil {
 		if strings.HasSuffix(err.Error(), "Please delete the user associations for your spaces in the org.") {
-
 			om.log.DebugMessage("removing user '%s' from all spaces associated with org '%s'", userID, role, orgID)
 
 			spaceRepo := spaces.NewCloudControllerSpaceRepository(om.config, om.ccGateway)
@@ -190,23 +184,24 @@ func (om *OrgManager) RemoveUser(orgID string, userID string, role OrgRole) (err
 			err = nil
 		}
 	}
-	return
+	return err
 }
 
 // ListUsers -
 func (om *OrgManager) ListUsers(orgID string, role OrgRole) (userIDs []interface{}, err error) {
-
 	userList := &CCUserList{}
-	err = om.ccGateway.GetResource(
-		fmt.Sprintf("%s/v2/organizations/%s/%s", om.apiEndpoint, orgID, role), userList)
+	path := fmt.Sprintf("%s/v2/organizations/%s/%s", om.apiEndpoint, orgID, role)
+	if err = om.ccGateway.GetResource(path, userList); err != nil {
+		return userIDs, err
+	}
 	for _, r := range userList.Resources {
 		userIDs = append(userIDs, r.Metadata.GUID)
 	}
-	return
+	return userIDs, nil
 }
 
 // DeleteOrg -
 func (om *OrgManager) DeleteOrg(id string) (err error) {
-	err = om.ccGateway.DeleteResource(om.apiEndpoint, fmt.Sprintf("/v2/organizations/%s", id))
-	return
+	path := fmt.Sprintf("/v2/organizations/%s", id)
+	return om.ccGateway.DeleteResource(om.apiEndpoint, path)
 }

@@ -2,6 +2,7 @@ package cloudfoundry
 
 import (
 	"fmt"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
@@ -110,7 +111,9 @@ func resourceServicePlanAccessDelete(d *schema.ResourceData, meta interface{}) (
 	_, hasOrg := d.GetOk("org")
 	if hasOrg {
 		sm := session.ServiceManager()
-		err = sm.DeleteServicePlanAccess(d.Id())
+		if err = sm.DeleteServicePlanAccess(d.Id()); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -2,9 +2,10 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform/helper/schema"
 	"reflect"
 	"strings"
+
+	"github.com/hashicorp/terraform/helper/schema"
 )
 
 const importStateKey = "is_import_state"
@@ -123,7 +124,7 @@ func getListChanges(old interface{}, new interface{}) (remove []string, add []st
 			add = append(add, nn)
 		}
 	}
-	return
+	return remove, add
 }
 
 // getListChangedSchemaLists -
@@ -148,7 +149,7 @@ func getListChangedSchemaLists(old []interface{}, new []interface{}) (remove []m
 			add = append(add, nn)
 		}
 	}
-	return
+	return remove, add
 }
 
 // ImportStatePassthrough -
@@ -189,5 +190,5 @@ func parseID(id string) (first string, second string, err error) {
 		first = parts[0]
 		second = parts[1]
 	}
-	return
+	return first, second, err
 }

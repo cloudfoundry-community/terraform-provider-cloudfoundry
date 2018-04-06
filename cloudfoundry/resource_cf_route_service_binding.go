@@ -65,19 +65,19 @@ func resourceRouteServiceBindingCreate(d *schema.ResourceData, meta interface{})
 
 	if okParams {
 		if err = json.Unmarshal([]byte(params.(string)), &data); err != nil {
-			return
+			return err
 		}
 	}
 
 	sm := session.ServiceManager()
 
 	if err = sm.CreateRouteServiceBinding(serviceID, routeID, data); err != nil {
-		return
+		return err
 	}
 
 	session.Log.DebugMessage("New Route Binding : %# v", id)
 	d.SetId(computeID(serviceID, routeID))
-	return
+	return nil
 }
 
 func resourceRouteServiceBindingRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -90,25 +90,24 @@ func resourceRouteServiceBindingRead(d *schema.ResourceData, meta interface{}) (
 
 	serviceID, routeID, err := parseID(d.Id())
 	if err != nil {
-		return
+		return err
 	}
 
 	sm := session.ServiceManager()
 
 	found, err := sm.HasRouteServiceBinding(serviceID, routeID)
 	if err != nil {
-		return
+		return err
 	}
-	if found == false {
+	if !found {
 		d.SetId("")
-		err = fmt.Errorf("Route '%s' not found in service instance '%s'", routeID, serviceID)
-		return
+		return fmt.Errorf("Route '%s' not found in service instance '%s'", routeID, serviceID)
 	}
 
 	d.Set("service_instance", serviceID)
 	d.Set("route", routeID)
 	session.Log.DebugMessage("Read Route Binding : %s", d.Id())
-	return
+	return nil
 }
 
 func resourceRouteServiceBindingDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -120,17 +119,12 @@ func resourceRouteServiceBindingDelete(d *schema.ResourceData, meta interface{})
 
 	serviceID := d.Get("service_instance").(string)
 	routeID := d.Get("route").(string)
-	if err != nil {
-		return
-	}
 	sm := session.ServiceManager()
 
-	err = sm.DeleteRouteServiceBinding(serviceID, routeID)
-	if err != nil {
-		return
+	if err = sm.DeleteRouteServiceBinding(serviceID, routeID); err != nil {
+		return err
 	}
 
 	session.Log.DebugMessage("Deleted RouteServiceBinding : %s", d.Id())
-
-	return
+	return nil
 }

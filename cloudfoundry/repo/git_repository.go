@@ -40,12 +40,11 @@ func (r *GitRepository) SetVersion(version string, versionType VersionType) (err
 	)
 
 	if w, err = r.gitRepo.Worktree(); err != nil {
-		return
+		return err
 	}
 
 	switch versionType {
 	case GitVersionTypeBranch:
-
 		refName = plumbing.ReferenceName("refs/heads/" + version)
 		if err = r.gitRepo.Pull(
 			&git.PullOptions{
@@ -53,27 +52,23 @@ func (r *GitRepository) SetVersion(version string, versionType VersionType) (err
 				SingleBranch:      true,
 				RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
 			}); err != nil && err != git.NoErrAlreadyUpToDate {
-			return
+			return err
 		}
-		err = nil
 
 	case GitVersionTypeTag:
-
 		refName = plumbing.ReferenceName("refs/tags/" + version)
 		if err = w.Checkout(&git.CheckoutOptions{
 			Branch: refName,
 			Force:  true,
 		}); err != nil && err != git.NoErrAlreadyUpToDate {
-			return
+			return err
 		}
-		err = nil
 
 	default:
-		err = fmt.Errorf("invalid git version type")
-		return
+		return fmt.Errorf("invalid git version type")
 	}
 
-	return
+	return nil
 }
 
 // String -

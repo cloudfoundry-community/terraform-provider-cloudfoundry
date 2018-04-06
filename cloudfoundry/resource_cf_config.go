@@ -7,6 +7,12 @@ import (
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
+// FlagStatusEnabled - Status returned by CF api for enabled flags
+const FlagStatusEnabled = "enabled"
+
+// FlagStatusDisabled - Status returned by CF api for disabled flags
+const FlagStatusDisabled = "disabled"
+
 func resourceConfig() *schema.Resource {
 
 	return &schema.Resource{
@@ -117,10 +123,10 @@ func resourceConfig() *schema.Resource {
 
 func validateFeatureFlagValue(v interface{}, k string) (ws []string, errs []error) {
 	value := v.(string)
-	if value != "enabled" && value != "disabled" {
+	if value != FlagStatusEnabled && value != FlagStatusDisabled {
 		errs = append(errs, fmt.Errorf("%q must be one of 'enabled' or 'disabled'", k))
 	}
-	return
+	return ws, errs
 }
 
 func resourceConfigCreate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -155,14 +161,14 @@ func resourceConfigRead(d *schema.ResourceData, meta interface{}) (err error) {
 	flags := make(map[string]interface{})
 	for k, v := range featureFlags {
 		if v {
-			flags[k] = "enabled"
+			flags[k] = FlagStatusEnabled
 		} else {
-			flags[k] = "disabled"
+			flags[k] = FlagStatusDisabled
 		}
 	}
 
 	d.Set("feature_flags", []interface{}{flags})
-	return
+	return err
 }
 
 func resourceConfigUpdate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -177,11 +183,11 @@ func resourceConfigUpdate(d *schema.ResourceData, meta interface{}) (err error) 
 			return
 		}
 	}
-	return
+	return err
 }
 
 func resourceConfigDelete(d *schema.ResourceData, meta interface{}) (err error) {
-	return
+	return nil
 }
 
 func getFeatureFlags(v interface{}) map[string]bool {
@@ -191,7 +197,7 @@ func getFeatureFlags(v interface{}) map[string]bool {
 
 		vv := v.(string)
 		if len(vv) > 0 {
-			featureFlags[k] = (vv == "enabled")
+			featureFlags[k] = (vv == FlagStatusEnabled)
 		}
 	}
 	return featureFlags
