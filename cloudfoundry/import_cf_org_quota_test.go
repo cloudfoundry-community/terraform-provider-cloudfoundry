@@ -6,19 +6,19 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 )
 
-func TestAccQuota_importBasic(t *testing.T) {
-	resourceName := "cloudfoundry_quota.50g"
-	quotaname := "50g"
+func TestAccOrgQuota_importBasic(t *testing.T) {
+	resourceName := "cloudfoundry_org_quota.50g-org"
+	quotaname := "50g-org"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckQuotaResourceDestroy(quotaname),
+			CheckDestroy: testAccCheckOrgQuotaResourceDestroy(quotaname),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: quotaResource,
+					Config: orgQuotaResource,
 				},
 
 				resource.TestStep{

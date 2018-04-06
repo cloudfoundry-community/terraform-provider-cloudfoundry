@@ -417,6 +417,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 			prepare <- err
 		}()
 	}
+
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
 
 		routeConfig = v.([]interface{})[0].(map[string]interface{})
@@ -443,15 +444,17 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	if app, err = am.CreateApp(app); err != nil {
 		return err
 	}
+
 	// Delete application if an error occurs
 	defer func() {
 		e := &err
 		if *e == nil {
 			return
 		}
-		err = am.DeleteApp(app.ID, true)
-		if err != nil {
-			panic(err)
+		err2 := am.DeleteApp(app.ID, true)
+		fmt.Printf("Error while creating app %s (%s), the application has been deleted\n", app.Name, app.ID)
+		if err2 != nil {
+			err = err2
 		}
 	}()
 

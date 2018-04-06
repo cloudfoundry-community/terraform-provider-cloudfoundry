@@ -96,8 +96,8 @@ func testAccCheckServiceKeyExists(resource string) resource.TestCheckFunc {
 			return err
 		}
 
-		normalized := normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_")
-		return assertMapEquals("credentials", attributes, normalized)
+		//normalized := normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_")
+		return assertMapEquals("credentials", attributes, serviceKey.Credentials)
 	}
 }
 
