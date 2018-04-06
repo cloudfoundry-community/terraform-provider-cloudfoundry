@@ -50,10 +50,10 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the Service Instance in Cloud Foundry
 * `space` - (Required) The ID of the [space](/docs/providers/cloudfoundry/r/space.html)
-* `credentials` - (Optional) Arbitrary credentials in the form of key-value pairs and delivered to applications via [VCAP_SERVICES Env variables](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES). Conflicts with `credentials_json`.
-* `credentials_json` - (Optional) Same as `credentials` but in the form of a stringified JSON object. Conflicts with `credentials`.
-* `syslog_drain_url` - (Optional) URL to which logs for bound applications will be streamed
-* `route_service_url` - (Optional) URL to which requests for bound routes will be forwarded. Scheme for this URL must be https
+* `credentials` - (Optional) Arbitrary credentials in the form of key-value pairs and delivered to applications via [VCAP_SERVICES Env variables](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES). Conflicts with `credentials_json` and defaults to empty map.
+* `credentials_json` - (Optional) Same as `credentials` but in the form of a stringified JSON object. Conflicts with `credentials` and defaults to empty map.
+* `syslog_drain_url` - (Optional) URL to which logs for bound applications will be streamed. Defaults to empty.
+* `route_service_url` - (Optional) URL to which requests for bound routes will be forwarded. Scheme for this URL must be https and defaults to empty
 
 ## Attributes Reference
 

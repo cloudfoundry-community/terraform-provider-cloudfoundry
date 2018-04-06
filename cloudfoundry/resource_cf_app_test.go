@@ -3,9 +3,7 @@ package cloudfoundry
 import (
 	"fmt"
 	"testing"
-
 	"code.cloudfoundry.org/cli/cf/errors"
-
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
@@ -589,7 +587,6 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 
 		if err = assertListEquals(attributes, "service_binding", len(serviceBindings),
 			func(values map[string]string, i int) (match bool) {
-
 				var binding map[string]interface{}
 
 				serviceInstanceID := values["service_instance"]

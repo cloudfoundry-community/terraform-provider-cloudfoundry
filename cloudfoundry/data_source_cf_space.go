@@ -69,6 +69,8 @@ func dataSourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 		if org, err = om.FindOrg(v.(string)); err != nil {
 			return err
 		}
+	} else {
+		return fmt.Errorf("You must provide either 'org' or 'org_name' attribute")
 	}
 	space, err = sm.FindSpaceInOrg(name, org.ID)
 	if err != nil {
@@ -82,3 +84,7 @@ func dataSourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	return err
 }
+
+// Local Variables:
+// ispell-local-dictionary: "american"
+// End:

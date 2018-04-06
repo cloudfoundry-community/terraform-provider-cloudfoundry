@@ -117,8 +117,8 @@ func (am *AppManager) FindApp(appName string) (app CCApp, err error) {
 			app.ID = appResource.Metadata.GUID
 			return false
 		}); err != nil {
-		return CCApp{}, err
-	}
+			return CCApp{}, err
+		}
 	if len(app.ID) == 0 {
 		return CCApp{}, errors.NewModelNotFoundError("Application", appName)
 	}
