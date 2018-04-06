@@ -8,8 +8,10 @@ description: |-
 
 # cf\_user
 
-Provides a Cloud Foundry resource for managing users. This resource provides extended 
+Provides a Cloud Foundry resource for registering users. This resource provides extended 
 functionality to attach additional UAA roles to the user.
+
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions and UAA admin client. See related [uaa documentation](http://docs.cloudfoundry.org/uaa/uaa-user-management.html#creating-users) 
 
 ## Example Usage
 
@@ -49,7 +51,7 @@ The following attributes are exported:
 
 ## Import
 
-The current User can be imported using the `user`, e.g.
+An existing User can be imported using its guid, e.g.
 
 ```
 $ terraform import cf_user.admin-service-user a-guid
