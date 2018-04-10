@@ -81,7 +81,7 @@ resource "cf_route" "fake-service-broker-route"{
 
 resource "cf_app" "fake-service-broker" {
     name = "fake-service-broker"
-	url = "file://service_broker/"
+	url = "file://../vendor/github.com/cf-acceptance-tests/assets/service_broker/"
 	space = "${data.cf_space.space.id}"
 	timeout = 700
 
