@@ -58,6 +58,7 @@ func Provider() terraform.ResourceProvider {
 			"cf_org":          dataSourceOrg(),
 			"cf_space":        dataSourceSpace(),
 			"cf_service":      dataSourceService(),
+			"cf_service_key":  dataServiceKey(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{

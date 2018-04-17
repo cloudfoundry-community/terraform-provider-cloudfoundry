@@ -645,6 +645,7 @@ func (sm *ServiceManager) FindServiceKey(name string, serviceInstanceID string) 
 			if sk, ok := resource.(CCServiceKeyResource); ok {
 				if sk.Entity.ServiceGUID == serviceInstanceID {
 					serviceKey = sk.Entity
+					serviceKey.ID = sk.Metadata.GUID
 					found = true
 					return false
 				}
