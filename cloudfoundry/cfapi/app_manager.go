@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mholt/archiver"
+
 	"code.cloudfoundry.org/cli/cf/actors"
 	"code.cloudfoundry.org/cli/cf/api"
 	"code.cloudfoundry.org/cli/cf/api/applicationbits"
@@ -205,6 +207,24 @@ func (am *AppManager) DeleteApp(appID string, deleteServiceBindings bool) (err e
 
 // UploadApp -
 func (am *AppManager) UploadApp(app CCApp, path string, addContent []map[string]interface{}) (err error) {
+
+	// Handle tar and tar.gz and other archive files that aren't zip
+	if extractDir, err := ioutil.TempDir("", app.Name); err == nil {
+		defer func(dir string) { os.RemoveAll(dir) }(extractDir)
+		extractionComplete := false
+		if !extractionComplete && archiver.TarGz.Open(path, extractDir) == nil {
+			extractionComplete = true
+		}
+		if !extractionComplete && archiver.TarBz2.Open(path, extractDir) == nil {
+			extractionComplete = true
+		}
+		if !extractionComplete && archiver.Tar.Open(path, extractDir) == nil {
+			extractionComplete = true
+		}
+		if extractionComplete {
+			path = extractDir
+		}
+	}
 
 	err = am.pushActor.ProcessPath(path, func(appDir string) error {
 

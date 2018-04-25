@@ -1229,6 +1229,12 @@
 			"revisionTime": "2017-05-10T07:48:58Z"
 		},
 		{
+			"checksumSHA1": "eSZkVn8RL79pF5FJJ6sxK+9OUZk=",
+			"path": "github.com/mholt/archiver",
+			"revision": "e4ef56d48eb029648b0e895bb0b6a393ef0829c3",
+			"revisionTime": "2018-04-17T22:02:35Z"
+		},
+		{
 			"checksumSHA1": "GTwA+0jQnOqTHsVaBIMvTKaE5eI=",
 			"path": "github.com/mitchellh/cli",
 			"revision": "518dc677a1e1222682f4e7db06721942cb8e9e4c",
