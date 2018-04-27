@@ -639,7 +639,21 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		if err = am.UploadApp(app, appPath, addContent); err != nil {
 			return err
 		}
-		restage = true
+
+		// check the package state of the application after binary upload
+		var curApp cfapi.CCApp
+		if curApp, err = am.ReadApp(app.ID); err != nil {
+			return
+		}
+		if *curApp.PackageState != "PENDING" {
+			// if it's not already pending, we need to force a restage
+			restage = true
+		} else {
+			// if the package state is pending, we need to restart the application to force an immediate restage
+			// (this is how the CF CLI does this)
+			restage = false
+			restart = true
+		}
 	}
 
 	timeout := time.Second * time.Duration(d.Get("timeout").(int))
@@ -649,8 +663,16 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			return
 		}
 	}
-	if d.HasChange("stopped") {
-
+	if restart {
+		if err = am.StopApp(app.ID, timeout); err != nil {
+			return
+		}
+		if !d.Get("stopped").(bool) {
+			if err = am.StartApp(app.ID, timeout); err != nil {
+				return
+			}
+		}
+	} else if d.HasChange("stopped") { // restart will take care ensuring this state is correct if it was run
 		if d.Get("stopped").(bool) {
 			if err = am.StopApp(app.ID, timeout); err != nil {
 				return
@@ -660,7 +682,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 				return
 			}
 		}
-	} else if restage {
+	} else if restage && !d.Get("stopped").(bool) {
+		// if the app is supposed to be running and we did a restage without a restart (somehow)
+		// then we need to ensure that the application is running when all is said and done
 		err = am.WaitForAppToStart(app, timeout)
 	}
 	return
