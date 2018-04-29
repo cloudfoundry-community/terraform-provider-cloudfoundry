@@ -900,8 +900,8 @@ func addServiceBindings(
 		b["binding_id"] = bindingID
 
 		credentials = b["credentials"].(map[string]interface{})
-		for k, v := range bindingCredentials {
-			credentials[k] = fmt.Sprintf("%v", v)
+		for k, v := range normalizeMap(bindingCredentials, make(map[string]interface{}), "", "_") {
+			credentials[k] = v
 		}
 
 		bindings = append(bindings, b)

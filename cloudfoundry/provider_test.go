@@ -382,8 +382,16 @@ func assertMapEquals(key string, attributes map[string]string, actual map[string
 			m[keyParts[l-1]] = v
 		}
 	}
-	if !reflect.DeepEqual(expected, actual) {
-		return fmt.Errorf("map with key '%s' expected to be %#v but was %#v", key, expected, actual)
+
+	normExpected := normalizeMap(expected, make(map[string]interface{}), "", "_")
+	normActual := normalizeMap(actual, make(map[string]interface{}), "", "_")
+
+	tstSession.Log.DebugMessage(
+		"Matching key '%s' expected value: %# v\n...with actual value: %# v",
+		key, normExpected, normActual)
+
+	if !reflect.DeepEqual(normExpected, normActual) {
+		return fmt.Errorf("map with key '%s' expected to be:\n%# v\nbut was:%# v", key, expected, actual)
 	}
 	return nil
 }
