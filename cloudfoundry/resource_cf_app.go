@@ -834,14 +834,6 @@ func prepareApp(app cfapi.CCApp, d *schema.ResourceData, log *cfapi.Logger) (<-c
 	return pathChan, errChan
 }
 
-func downloadAppFromURL(d *schema.ResourceData) {
-
-}
-
-func downloadAppSourceBinary(d *schema.ResourceData) {
-
-}
-
 func validateRoute(routeConfig map[string]interface{}, route string, rm *cfapi.RouteManager) (routeID string, err error) {
 
 	if v, ok := routeConfig[route]; ok {
