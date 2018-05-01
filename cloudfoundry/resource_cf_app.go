@@ -638,6 +638,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 				newRouteConfig[r+"_mapping_id"] = mappingID
 			}
 		}
+		d.Set("route", [...]interface{}{newRouteConfig})
 		d.SetPartial("route")
 	}
 
