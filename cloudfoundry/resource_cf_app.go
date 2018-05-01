@@ -304,8 +304,6 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 		app cfapi.CCApp
 
-		appPath string
-
 		addContent []map[string]interface{}
 
 		defaultRoute, stageRoute, liveRoute string
@@ -414,13 +412,14 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	}()
 
 	// Upload application binary / source asynchronously once download has completed
-	appPath = <-appPathChan
-	err = <-errChan
-	if err != nil {
-		return
-	}
 	upload := make(chan error)
 	go func() {
+		appPath := <-appPathChan
+		err := <-errChan
+		if err != nil {
+			upload <- err
+			return
+		}
 		err = am.UploadApp(app, appPath, addContent)
 		upload <- err
 	}()
