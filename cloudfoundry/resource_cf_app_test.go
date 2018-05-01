@@ -194,6 +194,62 @@ resource "cf_route" "test-app-9999" {
 }
 `
 
+const appResourceDocker = `
+
+data "cf_domain" "local" {
+    sub_domain = "local"
+}
+data "cf_org" "org" {
+    name = "pcfdev-org"
+}
+data "cf_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cf_org.org.id}"
+}
+resource "cf_app" "test-docker-app" {
+	name = "test-docker-app"
+	space = "${data.cf_space.space.id}"
+	docker_image = "nginxdemos/hello"
+	
+	route {
+		default_route = "${cf_route.test-docker-app.id}"
+	}
+
+	depends_on = ["cf_route.test-docker-app"]
+}
+resource "cf_route" "test-docker-app" {
+	domain = "${data.cf_domain.local.id}"
+	space = "${data.cf_space.space.id}"
+	hostname = "test-docker-app"
+}
+`
+
+func TestAccApp_dockerApp(t *testing.T) {
+	refApp := "cf_app.test-docker-app"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"test-docker-app"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceDocker),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-docker-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+				},
+			},
+		})
+}
+
 func TestAccApp_app1(t *testing.T) {
 
 	refApp := "cf_app.spring-music"
