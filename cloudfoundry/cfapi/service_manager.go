@@ -507,7 +507,7 @@ func (sm *ServiceManager) ReadServiceInstance(serviceInstanceID string) (service
 	return serviceInstance, nil
 }
 
-// WaitServiceInstanceToStart -
+// WaitServiceInstanceTo -
 func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceInstanceID string) (err error) {
 	sm.log.UI.Say("Waiting for service instance %s to finish starting ..", terminal.EntityNameColor(serviceInstanceID))
 
