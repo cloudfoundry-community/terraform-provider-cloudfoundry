@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -502,6 +503,27 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 	} else {
 		setAppArguments(app, d)
 	}
+
+	var serviceBindings []map[string]interface{}
+	if serviceBindings, err = am.ReadServiceBindingsByApp(app.ID); err != nil {
+		return
+	}
+	var newStateServiceBindings []map[string]interface{}
+	for _, binding := range serviceBindings {
+		stateBindingData := make(map[string]interface{})
+		stateBindingData["service_instance"] = binding["service_instance"].(string)
+		stateBindingData["binding_id"] = binding["binding_id"].(string)
+		credentials := binding["credentials"].(map[string]interface{})
+		for k, v := range credentials {
+			credentials[k] = fmt.Sprintf("%v", v)
+		}
+		stateBindingData["credentials"] = credentials
+		newStateServiceBindings = append(newStateServiceBindings, stateBindingData)
+	}
+	if err := d.Set("service_binding", newStateServiceBindings); err != nil {
+		log.Printf("[WARN] Error setting service_binding to cf_app (%s): %s", d.Id(), err)
+	}
+
 	return
 }
 
