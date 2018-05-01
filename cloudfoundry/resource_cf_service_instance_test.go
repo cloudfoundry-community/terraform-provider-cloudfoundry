@@ -88,6 +88,11 @@ resource "cf_app" "fake-service-broker" {
 	route {
 		default_route = "${cf_route.fake-service-broker-route.id}"
 	}
+
+	provisioner "local-exec"{
+		command = "curl http://fake-service-broker.local.pcfdev.io/config -X POST -d ../tests/data.json"
+	}
+
 	depends_on = ["cf_route.fake-service-broker-route"]
 }
 
@@ -117,69 +122,14 @@ func TestAccServiceInstance_normal(t *testing.T) {
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"mysql", "mysql-updated", "test-service-instance"}, "data.cf_space.space"),
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"mysql", "mysql-updated", "fake-service}"}, "data.cf_space.space"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
 					Config: serviceInstanceResourceAsyncCreate,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(refAsync),
-						resource.TestCheckResourceAttr(refAsync, "name", "test-service-instance"),
-					),
-				},
-				resource.TestStep{
-					Config: serviceInstanceResourceCreate,
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckServiceInstanceExists(ref),
-						resource.TestCheckResourceAttr(
-							ref, "name", "mysql"),
-						resource.TestCheckResourceAttr(
-							ref, "tags.#", "2"),
-						resource.TestCheckResourceAttr(
-							ref, "tags.0", "tag-1"),
-						resource.TestCheckResourceAttr(
-							ref, "tags.1", "tag-2"),
-					),
-				},
-
-				resource.TestStep{
-					Config: serviceInstanceResourceUpdate,
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckServiceInstanceExists(ref),
-						resource.TestCheckResourceAttr(
-							ref, "name", "mysql-updated"),
-						resource.TestCheckResourceAttr(
-							ref, "tags.#", "3"),
-						resource.TestCheckResourceAttr(
-							ref, "tags.0", "tag-2"),
-						resource.TestCheckResourceAttr(
-							ref, "tags.1", "tag-3"),
-						resource.TestCheckResourceAttr(
-							ref, "tags.2", "tag-4"),
-					),
-				},
-			},
-		})
-}
-
-// TODO - Add Service Broker with async. service plans
-func TestAccServiceInstance_normal(t *testing.T) {
-
-	ref := "cf_service_instance.mysql"
-	refAsync := "cf_service_instance.fake-service"
-
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"mysql", "mysql-updated", "test-service-instance"}, "data.cf_space.space"),
-			Steps: []resource.TestStep{
-
-				resource.TestStep{
-					Config: serviceInstanceResourceAsyncCreate,
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckServiceInstanceExists(refAsync),
-						resource.TestCheckResourceAttr(refAsync, "name", "test-service-instance"),
+						resource.TestCheckResourceAttr(refAsync, "name", "fake-service"),
 					),
 				},
 				resource.TestStep{
