@@ -97,8 +97,6 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 
 	session.Log.DebugMessage("New Service Instance : %# v", id)
 
-	// TODO deal with asynchronous responses
-
 	d.SetId(id)
 
 	return nil
