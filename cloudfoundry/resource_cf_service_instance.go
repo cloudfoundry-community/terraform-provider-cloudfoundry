@@ -1,8 +1,8 @@
 package cloudfoundry
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
