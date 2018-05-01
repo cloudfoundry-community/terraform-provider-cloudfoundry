@@ -516,19 +516,24 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 		stateRouteMappings = make(map[string]interface{})
 	}
 	currentRouteMappings := make(map[string]interface{})
-	for _, r := range []string{
-		"default_route",
-		"stage_route",
-		"live_route",
-	} {
-		currentRouteMappings[r] = ""
-		currentRouteMappings[r+"_mapping_id"] = ""
-		for _, mapping := range routeMappings {
-			var mappingID, route = mapping["mapping_id"], mapping["route"]
-			if route == stateRouteMappings[r] {
-				currentRouteMappings[r+"_mapping_id"] = mappingID
-				currentRouteMappings[r] = route
-				break
+	if IsImportState(d) && len(routeMappings) == 1 {
+		currentRouteMappings["default_route"] = routeMappings[0]["route"]
+		currentRouteMappings["default_route_mapping_id"] = routeMappings[0]["mapping_id"]
+	} else {
+		for _, r := range []string{
+			"default_route",
+			"stage_route",
+			"live_route",
+		} {
+			currentRouteMappings[r] = ""
+			currentRouteMappings[r+"_mapping_id"] = ""
+			for _, mapping := range routeMappings {
+				var mappingID, route = mapping["mapping_id"], mapping["route"]
+				if route == stateRouteMappings[r] {
+					currentRouteMappings[r+"_mapping_id"] = mappingID
+					currentRouteMappings[r] = route
+					break
+				}
 			}
 		}
 	}
