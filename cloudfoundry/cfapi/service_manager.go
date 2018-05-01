@@ -549,6 +549,48 @@ func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceIns
 	return
 }
 
+// WaitServiceInstanceToStart -
+func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceInstanceID string) (err error) {
+	sm.log.UI.Say("Waiting for service instance %s to finish starting ..", terminal.EntityNameColor(serviceInstanceID))
+
+	c := make(chan error)
+	go func() {
+
+		var err error
+		var serviceInstance CCServiceInstance
+
+		for {
+			if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
+				c <- err
+				return
+			}
+
+			if serviceInstance.LastOperation["type"] == operationType {
+				state := serviceInstance.LastOperation["state"]
+
+				switch state {
+				case "succeeded":
+					c <- nil
+					return
+				case "failed":
+					c <- fmt.Errorf("service instance %s crashed", serviceInstanceID)
+					return
+				}
+			}
+			time.Sleep(appStatePingSleep)
+		}
+	}()
+
+	select {
+	case err = <-c:
+		if err != nil {
+			return
+		}
+		sm.log.UI.Say("%s finished starting ...", terminal.EntityNameColor(serviceInstanceID))
+	}
+	return
+}
+
 // FindServiceInstance -
 func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serviceInstance CCServiceInstance, err error) {
 
