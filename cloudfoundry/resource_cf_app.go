@@ -507,6 +507,11 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
+	// Enable partial state mode
+	// We need to explicitly set state updates ourselves or
+	// tell terraform when a state change is applied and thus okay to persist
+	d.Partial(true)
+
 	session := meta.(*cfapi.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
@@ -542,6 +547,19 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			return
 		}
 		setAppArguments(app, d)
+		d.SetPartial("name")
+		d.SetPartial("space")
+		d.SetPartial("ports")
+		d.SetPartial("instances")
+		d.SetPartial("memory")
+		d.SetPartial("disk_quota")
+		d.SetPartial("command")
+		d.SetPartial("enable_ssh")
+		d.SetPartial("health_check_http_endpoint")
+		d.SetPartial("health_check_type")
+		d.SetPartial("health_check_timeout")
+		d.SetPartial("buildpack")
+		d.SetPartial("environment")
 	}
 
 	if d.HasChange("service_binding") {
@@ -578,6 +596,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 				d.Set("service_binding", new)
 			}
 		}
+		// the changes were applied, in CF even though they might not have taken effect
+		// in the application, we'll allow the state updates for this property to occur
+		d.SetPartial("service_binding")
 		restage = true
 	}
 
@@ -617,6 +638,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 				newRouteConfig[r+"_mapping_id"] = mappingID
 			}
 		}
+		d.SetPartial("route")
 	}
 
 	if d.HasChange("url") || d.HasChange("git") || d.HasChange("github_release") || d.HasChange("add_content") {
@@ -663,6 +685,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	} else if restage {
 		err = am.WaitForAppToStart(app, timeout)
 	}
+
+	// We succeeded, disable partial mode
+	d.Partial(false)
 	return
 }
 
