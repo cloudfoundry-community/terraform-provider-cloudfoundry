@@ -4,7 +4,7 @@ set -xe
 
 which om >/dev/null 2>&1
 if [[ $? -ne 0 ]]; then
-    echo "The OM CLI installed. Please download it from https://github.com/pivotal-cf/om/releases."
+    echo "The OM CLI is not installed. Please download it from https://github.com/pivotal-cf/om/releases."
     exit 1
 fi
 
