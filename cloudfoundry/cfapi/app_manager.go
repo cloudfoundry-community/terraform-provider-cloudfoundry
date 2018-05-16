@@ -410,6 +410,7 @@ func (am *AppManager) WaitForAppToStage(app CCApp, timeout time.Duration) (err e
 		var err error
 
 		for {
+			time.Sleep(appStatePingSleep)
 			if app, err = am.ReadApp(app.ID); err != nil {
 				c <- err
 				return
@@ -424,7 +425,6 @@ func (am *AppManager) WaitForAppToStage(app CCApp, timeout time.Duration) (err e
 					return
 				}
 			}
-			time.Sleep(appStatePingSleep)
 		}
 	}()
 
