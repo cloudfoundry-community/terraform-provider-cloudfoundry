@@ -213,13 +213,13 @@ resource "cf_route" "test-docker-app" {
 	hostname = "test-docker-app"
 	target {
 		app = "${cf_app.test-docker-app.id}"
-		port = 80
+		port = 8080
 	}
 }
 resource "cf_app" "test-docker-app" {
 	name = "test-docker-app"
 	space = "${data.cf_space.space.id}"
-	docker_image = "nginxdemos/hello"
+	docker_image = "cloudfoundry/diego-docker-app:latest"
 	timeout = 900
 }
 
@@ -389,7 +389,7 @@ func TestAccApp_dockerApp(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(
-							refApp, "ports.80", "80"),
+							refApp, "ports.8080", "8080"),
 						resource.TestCheckResourceAttr(
 							refApp, "instances", "1"),
 						resource.TestCheckResourceAttrSet(
@@ -399,7 +399,7 @@ func TestAccApp_dockerApp(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							refApp, "enable_ssh", "true"),
 						resource.TestCheckResourceAttr(
-							refApp, "docker_image", "nginxdemos/hello"),
+							refApp, "docker_image", "cloudfoundry/diego-docker-app:latest"),
 					),
 				},
 			},
