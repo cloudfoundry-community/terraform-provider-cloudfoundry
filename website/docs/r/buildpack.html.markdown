@@ -8,11 +8,13 @@ description: |-
 
 # cf\_buildpack
 
-Provides a Cloud Foundry resource for managing Cloud Foundry [buildpacks](https://docs.cloudfoundry.org/adminguide/buildpacks.html).
+Provides a Cloud Foundry resource for managing Cloud Foundry admin [buildpacks](https://docs.cloudfoundry.org/adminguide/buildpacks.html).
+
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
 
 ## Example Usage
 
-The following example creates a Cloud Foundry Buildpack .
+The following example creates a Cloud Foundry buildpack .
 
 ```
 resource "cf_buildpack" "tomee" {
@@ -60,11 +62,11 @@ One of the following arguments must be declared to locate buildpack source or ar
 
 The following attributes are exported:
 
-* `id` - The GUID of the organization
+* `id` - The GUID of the buildpack
 
 ## Import
 
-The current Buildpack can be imported using the `buildpack`, e.g.
+The current buildpack can be imported using the `buildpack` guid, e.g.
 
 ```
 $ terraform import cf_buildpack.tomee a-guid

@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -114,15 +116,19 @@ func apiURL() string {
 
 func defaultSysDomain() (domain string) {
 	apiURL := apiURL()
-	domain = apiURL[strings.Index(apiURL, ".")+1:]
-	return
+	return apiURL[strings.Index(apiURL, ".")+1:]
 }
 
 func defaultAppDomain() (domain string) {
 	if domain = os.Getenv("CF_TEST_APP_DOMAIN"); len(domain) == 0 {
 		domain = defaultSysDomain()
 	}
-	return
+	return domain
+}
+
+func defaultBaseDir() string {
+	_, file, _, _ := runtime.Caller(1)
+	return filepath.Dir(filepath.Dir(file))
 }
 
 func defaultPcfDevOrgID() string {
@@ -170,11 +176,10 @@ func deleteServiceBroker(name string) {
 }
 
 func getDefaultSecurityGroup() (defaultAsg string) {
-
 	if defaultAsg = os.Getenv("CF_TEST_DEFAULT_ASG"); len(defaultAsg) == 0 {
 		defaultAsg = "public_networks"
 	}
-	return
+	return defaultAsg
 }
 
 func getRedisBrokerCredentials() (user string, password string) {
@@ -185,17 +190,17 @@ func getRedisBrokerCredentials() (user string, password string) {
 	if password = os.Getenv("CF_TEST_REDIS_BROKER_PASSWORD"); len(password) == 0 {
 		password = "admin"
 	}
-	return
+	return user, password
 }
 
-func assertContains(str string, list []string) bool {
-	for _, s := range list {
-		if str == s {
-			return true
-		}
-	}
-	return false
-}
+// func assertContains(str string, list []string) bool {
+// 	for _, s := range list {
+// 		if str == s {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 func assertSame(actual interface{}, expected interface{}) error {
 	if actual != expected {
@@ -222,7 +227,7 @@ func assertEquals(attributes map[string]string,
 			expectedValueContent := reflect.Indirect(reflect.ValueOf(expected))
 			switch expectedValueContent.Kind() {
 			case reflect.String:
-				s = fmt.Sprintf("%s", expectedValueContent.String())
+				s = expectedValueContent.String()
 			case reflect.Int:
 				s = fmt.Sprintf("%d", expectedValueContent.Int())
 			case reflect.Bool:
@@ -318,8 +323,10 @@ func assertListEquals(attributes map[string]string,
 	return nil
 }
 
-func assertSetEquals(attributes map[string]string,
-	key string, expected []interface{}) (err error) {
+func assertSetEquals(
+	attributes map[string]string,
+	key string,
+	expected []interface{}) (err error) {
 
 	var n int
 
@@ -327,7 +334,7 @@ func assertSetEquals(attributes map[string]string,
 	if len(num) > 0 {
 		n, err = strconv.Atoi(num)
 		if err != nil {
-			return
+			return err
 		}
 	} else {
 		n = 0
@@ -355,11 +362,10 @@ func assertSetEquals(attributes map[string]string,
 				key, expected, found)
 		}
 	}
-	return
+	return err
 }
 
-func assertMapEquals(key string, attributes map[string]string, actual map[string]interface{}) (err error) {
-
+func assertMapEquals(key string, attributes map[string]string, actual map[string]interface{}) error {
 	expected := make(map[string]interface{})
 	for k, v := range attributes {
 		keyParts := strings.Split(k, ".")
@@ -377,7 +383,7 @@ func assertMapEquals(key string, attributes map[string]string, actual map[string
 		}
 	}
 	if !reflect.DeepEqual(expected, actual) {
-		err = fmt.Errorf("map with key '%s' expected to be %#v but was %#v", key, expected, actual)
+		return fmt.Errorf("map with key '%s' expected to be %#v but was %#v", key, expected, actual)
 	}
 	return nil
 }
@@ -392,19 +398,18 @@ func assertHTTPResponse(url string, expectedStatusCode int, expectedResponses *[
 	client := &http.Client{Transport: tr}
 
 	if resp, err = client.Get(url); err != nil {
-		return
+		return err
 	}
 	if expectedStatusCode != resp.StatusCode {
-		err = fmt.Errorf(
+		return fmt.Errorf(
 			"expected response status code from url '%s' to be '%d', but actual was: %s",
 			url, expectedStatusCode, resp.Status)
-		return
 	}
 	if expectedResponses != nil {
 		in := resp.Body
 		out := bytes.NewBuffer(nil)
 		if _, err = io.Copy(out, in); err != nil {
-			return
+			return err
 		}
 		content := out.String()
 
@@ -416,10 +421,10 @@ func assertHTTPResponse(url string, expectedStatusCode int, expectedResponses *[
 			}
 		}
 		if !found {
-			err = fmt.Errorf(
+			return fmt.Errorf(
 				"expected response from url '%s' to be one of '%v', but actual was '%s'",
 				url, *expectedResponses, content)
 		}
 	}
-	return
+	return nil
 }

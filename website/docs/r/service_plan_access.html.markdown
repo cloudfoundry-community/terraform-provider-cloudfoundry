@@ -11,6 +11,12 @@ description: |-
 Provides a Cloud Foundry resource for managing [access](https://docs.cloudfoundry.org/services/access-control.html)
 to service plans published by Cloud Foundry [service brokers](https://docs.cloudfoundry.org/services/).
 
+~> **NOTE:** Multiple instances of this resource can be used to share a given service plan with multiple orgs.
+
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
+
+
+
 ## Example Usage
 
 The first example enables access to a specific plan of a given service broker to all organizations.

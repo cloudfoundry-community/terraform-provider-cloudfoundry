@@ -173,20 +173,20 @@ func testAccCheckOrgExists(resOrg, resQuota string, refUserRemoved *string) reso
 		var org cfapi.CCOrg
 		om := session.OrgManager()
 		if org, err = om.ReadOrg(id); err != nil {
-			return
+			return err
 		}
 		session.Log.DebugMessage(
 			"retrieved org for resource '%s' with id '%s': %# v",
 			resOrg, id, org)
 
-		if err := assertEquals(attributes, "name", org.Name); err != nil {
+		if err = assertEquals(attributes, "name", org.Name); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "quota", org.QuotaGUID); err != nil {
+		if err = assertEquals(attributes, "quota", org.QuotaGUID); err != nil {
 			return err
 		}
 
-		rs, ok = s.RootModule().Resources[resQuota]
+		rs = s.RootModule().Resources[resQuota]
 		if org.QuotaGUID != rs.Primary.ID {
 			return fmt.Errorf("expected org '%s' to be associated with quota '%s' but it was not", resOrg, resQuota)
 		}
@@ -194,16 +194,14 @@ func testAccCheckOrgExists(resOrg, resQuota string, refUserRemoved *string) reso
 		for t, r := range orgRoleMap {
 			var users []interface{}
 			if users, err = om.ListUsers(id, r); err != nil {
-				return
+				return err
 			}
 			if err = assertSetEquals(attributes, t, users); err != nil {
-				return
+				return err
 			}
 		}
 
-		err = testUserRemovedFromOrg(refUserRemoved, id, om, s)
-
-		return
+		return testUserRemovedFromOrg(refUserRemoved, id, om, s)
 	}
 }
 
@@ -224,8 +222,11 @@ func testAccCheckOrgDestroyed(orgname string) resource.TestCheckFunc {
 	}
 }
 
-func testUserRemovedFromOrg(refUserRemoved *string, orgID string,
-	om *cfapi.OrgManager, s *terraform.State) (err error) {
+func testUserRemovedFromOrg(
+	refUserRemoved *string,
+	orgID string,
+	om *cfapi.OrgManager,
+	s *terraform.State) (err error) {
 
 	if refUserRemoved != nil {
 
@@ -254,5 +255,5 @@ func testUserRemovedFromOrg(refUserRemoved *string, orgID string,
 			return
 		}
 	}
-	return
+	return err
 }

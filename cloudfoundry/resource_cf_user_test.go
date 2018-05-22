@@ -229,19 +229,19 @@ func testAccCheckUserExists(resource string) resource.TestCheckFunc {
 			"retrieved user for resource '%s' with id '%s': %# v",
 			resource, id, user)
 
-		if err := assertEquals(attributes, "name", user.Username); err != nil {
+		if err = assertEquals(attributes, "name", user.Username); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "origin", user.Origin); err != nil {
+		if err = assertEquals(attributes, "origin", user.Origin); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "given_name", user.Name.GivenName); err != nil {
+		if err = assertEquals(attributes, "given_name", user.Name.GivenName); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "family_name", user.Name.FamilyName); err != nil {
+		if err = assertEquals(attributes, "family_name", user.Name.FamilyName); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "email", user.Emails[0].Value); err != nil {
+		if err = assertEquals(attributes, "email", user.Emails[0].Value); err != nil {
 			return err
 		}
 
@@ -251,11 +251,8 @@ func testAccCheckUserExists(resource string) resource.TestCheckFunc {
 				groups = append(groups, g.Display)
 			}
 		}
-		if err := assertSetEquals(attributes, "groups", groups); err != nil {
-			return err
-		}
-
-		return nil
+		err = assertSetEquals(attributes, "groups", groups)
+		return err
 	}
 }
 

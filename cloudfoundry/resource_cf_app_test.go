@@ -52,7 +52,7 @@ resource "cf_app" "spring-music" {
 	memory = "768"
 	disk_quota = "512"
 	timeout = 1800
-	
+
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
@@ -194,6 +194,37 @@ resource "cf_route" "test-app-9999" {
 }
 `
 
+const appResourceDocker = `
+
+data "cf_domain" "local" {
+    name = "%s"
+}
+data "cf_org" "org" {
+    name = "pcfdev-org"
+}
+data "cf_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cf_org.org.id}"
+}
+
+resource "cf_route" "test-docker-app" {
+	domain = "${data.cf_domain.local.id}"
+	space = "${data.cf_space.space.id}"
+	hostname = "test-docker-app"
+	target {
+		app = "${cf_app.test-docker-app.id}"
+		port = 8080
+	}
+}
+resource "cf_app" "test-docker-app" {
+	name = "test-docker-app"
+	space = "${data.cf_space.space.id}"
+	docker_image = "cloudfoundry/diego-docker-app:latest"
+	timeout = 900
+}
+
+`
+
 func TestAccApp_app1(t *testing.T) {
 
 	refApp := "cf_app.spring-music"
@@ -304,10 +335,7 @@ func TestAccApp_app2(t *testing.T) {
 					Config: fmt.Sprintf(appResourceWithMultiplePorts, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
-
-							var responses []string
-
-							responses = []string{"8888"}
+							responses := []string{"8888"}
 							if err = assertHTTPResponse("https://test-app-8888."+defaultAppDomain()+"/port", 200, &responses); err != nil {
 								return err
 							}
@@ -327,6 +355,51 @@ func TestAccApp_app2(t *testing.T) {
 							refApp, "ports.8888", "8888"),
 						resource.TestCheckResourceAttr(
 							refApp, "ports.9999", "9999"),
+					),
+				},
+			},
+		})
+}
+
+
+func TestAccApp_dockerApp(t *testing.T) {
+	refApp := "cf_app.test-docker-app"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"test-docker-app"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceDocker, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-docker-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						resource.TestCheckResourceAttr(
+							refApp, "name", "test-docker-app"),
+						resource.TestCheckResourceAttr(
+							refApp, "space", defaultPcfDevSpaceID()),
+						resource.TestCheckResourceAttr(
+							refApp, "ports.#", "1"),
+						resource.TestCheckResourceAttr(
+							refApp, "ports.8080", "8080"),
+						resource.TestCheckResourceAttr(
+							refApp, "instances", "1"),
+						resource.TestCheckResourceAttrSet(
+							refApp, "stack"),
+						resource.TestCheckResourceAttr(
+							refApp, "environment.%", "0"),
+						resource.TestCheckResourceAttr(
+							refApp, "enable_ssh", "true"),
+						resource.TestCheckResourceAttr(
+							refApp, "docker_image", "cloudfoundry/diego-docker-app:latest"),
 					),
 				},
 			},
@@ -361,7 +434,7 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 		rm := session.RouteManager()
 
 		if app, err = am.ReadApp(id); err != nil {
-			return
+			return err
 		}
 		session.Log.DebugMessage(
 			"retrieved app for resource '%s' with id '%s': %# v",
@@ -408,13 +481,13 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 		}
 
 		if serviceBindings, err = am.ReadServiceBindingsByApp(id); err != nil {
-			return
+			return err
 		}
 		session.Log.DebugMessage(
 			"retrieved service bindings for app with id '%s': %# v",
 			id, serviceBindings)
 
-		if err := assertListEquals(attributes, "service_binding", len(serviceBindings),
+		if err = assertListEquals(attributes, "service_binding", len(serviceBindings),
 			func(values map[string]string, i int) (match bool) {
 
 				var binding map[string]interface{}
@@ -430,8 +503,7 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 				}
 
 				if binding != nil && values["binding_id"] == binding["binding_id"] {
-					if err := assertMapEquals("credentials", values, binding["credentials"].(map[string]interface{})); err != nil {
-
+					if err2 := assertMapEquals("credentials", values, binding["credentials"].(map[string]interface{})); err2 != nil {
 						session.Log.LogMessage(
 							"Crendentials for service instance %s do not match:\nactual=%# v\nexpected=% #v\n",
 							serviceInstanceID, pretty.Formatter(values), pretty.Formatter(binding["credentials"]))
@@ -498,7 +570,7 @@ func validateRouteMapping(routeName string, attributes map[string]string, routeM
 			return fmt.Errorf("route mapping with id '%s' does not map to route '%s'", mappingID, routeID)
 		}
 	}
-	return
+	return err
 }
 
 func testAccCheckAppDestroyed(apps []string) resource.TestCheckFunc {
