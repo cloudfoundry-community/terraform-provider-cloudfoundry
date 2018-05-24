@@ -114,6 +114,12 @@ func resourceConfig() *schema.Resource {
 							Optional:     true,
 							Computed:     true,
 						},
+						"service_instance_sharing": &schema.Schema{
+							Type:         schema.TypeString,
+							ValidateFunc: validateFeatureFlagValue,
+							Optional:     true,
+							Computed:     true,
+						},
 					},
 				},
 			},

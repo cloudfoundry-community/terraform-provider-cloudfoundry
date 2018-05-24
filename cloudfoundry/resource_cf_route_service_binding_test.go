@@ -138,6 +138,13 @@ resource "cf_route" "php-app-other" {
 }
 `
 
+const routeServiceBrokerCfgYml = `---
+basic_auth_service_broker:
+  route_service_url: "https://basic-auth-router.{{ .Domain }}"
+  broker_username: "admin"
+  broker_password: "letmein"
+`
+
 func TestAccRouteServiceBinding_normal(t *testing.T) {
 	dir, err := ioutil.TempDir("", "git-clone")
 	if err != nil {
@@ -153,9 +160,16 @@ func TestAccRouteServiceBinding_normal(t *testing.T) {
 		t.Fatalf("unable to clone repository '%s'", url)
 	}
 
-	ref := "cf_route_service_binding.route-bind"
-	tpl, _ := template.New("sql").Parse(routeBindingResourceCommon)
+	tpl, _ := template.New("sql").Parse(routeServiceBrokerCfgYml)
 	buf := &bytes.Buffer{}
+	tpl.Execute(buf, map[string]interface{}{
+		"Domain": defaultAppDomain(),
+	})
+	err = ioutil.WriteFile(dir+"/servicebroker/config.yml", buf.Bytes(), 0666)
+
+	ref := "cf_route_service_binding.route-bind"
+	tpl, _ = template.New("sql").Parse(routeBindingResourceCommon)
+	buf = &bytes.Buffer{}
 	tpl.Execute(buf, map[string]interface{}{
 		"Domain":   defaultAppDomain(),
 		"BaseDir":  defaultBaseDir(),
