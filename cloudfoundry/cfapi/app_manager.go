@@ -105,10 +105,17 @@ func newAppManager(config coreconfig.Reader, ccGateway net.Gateway,
 }
 
 // FindApp -
-func (am *AppManager) FindApp(appName string) (app CCApp, err error) {
+func (am *AppManager) FindApp(appName string, spaceID string) (app CCApp, err error) {
+
+	var queryEndpoint string
+	if spaceID != "" {
+		queryEndpoint = fmt.Sprintf("/v2/spaces/%s/apps?q=name:%%s", spaceID)
+	} else {
+		queryEndpoint = "/v2/apps?q=name:%s"
+	}
 
 	if err = am.ccGateway.ListPaginatedResources(am.apiEndpoint,
-		fmt.Sprintf("/v2/apps?q=name:%s", appName),
+		fmt.Sprintf(queryEndpoint, appName),
 		CCAppResource{}, func(resource interface{}) bool {
 
 			appResource := resource.(CCAppResource)

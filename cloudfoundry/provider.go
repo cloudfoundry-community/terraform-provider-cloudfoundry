@@ -48,6 +48,7 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
+			"cf_app":              dataSourceApp(),
 			"cf_info":         dataSourceInfo(),
 			"cf_stack":        dataSourceStack(),
 			"cf_router_group": dataSourceRouterGroup(),

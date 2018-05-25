@@ -507,7 +507,7 @@ func testAccCheckAppDestroyed(apps []string) resource.TestCheckFunc {
 
 		session := testAccProvider.Meta().(*cfapi.Session)
 		for _, a := range apps {
-			if _, err := session.AppManager().FindApp(a); err != nil {
+			if _, err := session.AppManager().FindApp(a, ""); err != nil {
 				switch err.(type) {
 				case *errors.ModelNotFoundError:
 					continue
