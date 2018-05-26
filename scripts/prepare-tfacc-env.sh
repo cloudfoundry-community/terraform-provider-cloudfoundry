@@ -68,7 +68,7 @@ if [[ -n $GITHUB_TOKEN ]]; then
     travis encrypt CF_TEST_DEFAULT_ASG=default_security_group --add
 fi
 
-cf login --skip-ssl-validation -a https://api.$cf_sys_domain -u $cf_user -p $cf_password -o system
+cf login --skip-ssl-validation -a https://api.$cf_sys_domain -u $cf_user -p $cf_password -o system -s system
 cf create-org pcfdev-org >/dev/null 2>&1
 cf target -o pcfdev-org >/dev/null 2>&1
 cf create-space pcfdev-space -o pcfdev-org >/dev/null 2>&1
