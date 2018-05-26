@@ -72,7 +72,7 @@ cf login --skip-ssl-validation -a https://api.$cf_sys_domain -u $cf_user -p $cf_
 cf create-org pcfdev-org >/dev/null 2>&1
 cf target -o pcfdev-org >/dev/null 2>&1
 cf create-space pcfdev-space -o pcfdev-org >/dev/null 2>&1
-cf create-shared-domain tcp.apps.pas.cf1.tfacc.pcfs.io --router-group default-tcp >/dev/null 2>&1
+cf create-shared-domain tcp.apps.pcf.cf1.tfacc.pcfs.io --router-group default-tcp >/dev/null 2>&1
 cf enable-feature-flag diego_docker >/dev/null 2>&1
 
 set +xe
