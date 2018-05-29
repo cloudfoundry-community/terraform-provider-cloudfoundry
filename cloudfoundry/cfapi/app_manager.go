@@ -78,6 +78,22 @@ type CCAppResource struct {
 	Entity   CCApp              `json:"entity"`
 }
 
+// CCSeviceBinding -
+type CCSeviceBinding struct {
+	ID string
+
+	Name            string                  `json:"name,omitempty"`
+	ServiceInstance string                  `json:"service_instance_guid,omitempty"`
+	Application     string                  `json:"app_guid,omitempty"`
+	Credentials     *map[string]interface{} `json:"credentials,omitempty"`
+}
+
+// CCSeviceBindingResource -
+type CCSeviceBindingResource struct {
+	Metadata resources.Metadata `json:"metadata"`
+	Entity   CCSeviceBinding    `json:"entity"`
+}
+
 const appStatePingSleep = time.Second * 5
 
 // newAppManager -
@@ -511,6 +527,18 @@ func (am *AppManager) CreateServiceBinding(appID, serviceInstanceID string,
 		credentials = v.(map[string]interface{})
 	}
 	return
+}
+
+// ReadServiceBinding -
+func (am *AppManager) ReadServiceBinding(bindingID string) (serviceBinding CCSeviceBinding, err error) {
+	resource := CCSeviceBindingResource{}
+	if err = am.ccGateway.GetResource(fmt.Sprintf("%s/v2/service_bindings/%s", am.apiEndpoint, bindingID), &resource); err != nil {
+		return serviceBinding, err
+	}
+
+	serviceBinding = resource.Entity
+	serviceBinding.ID = resource.Metadata.GUID
+	return serviceBinding, nil
 }
 
 // ReadServiceBindingsByApp -
