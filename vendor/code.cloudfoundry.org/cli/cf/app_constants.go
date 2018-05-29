@@ -1,5 +1,5 @@
 package cf
 
 var (
-	Name = "cf"
+	Name = "cloudfoundry"
 )

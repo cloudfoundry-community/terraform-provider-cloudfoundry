@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccRoute_importBasic(t *testing.T) {
-	resourceName := "cf_route.test-app-route"
+	resourceName := "cloudfoundry_route.test-app-route"
 
 	resource.Test(t,
 		resource.TestCase{

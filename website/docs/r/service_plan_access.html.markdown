@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_service_plan_access"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_service_plan_access"
 sidebar_current: "docs-cf-resource-service-access"
 description: |-
   Provides a Cloud Foundry Service Access resource.
@@ -23,14 +23,14 @@ The first example enables access to a specific plan of a given service broker to
 The second example gives access to a specific org.
 
 ```
-resource "cf_service_plan_access" "org1-mysql-512mb" {
-    plan = "${cf_service_broker.mysql.service_plans["p-mysql/512mb"]}"
+resource "cloudfoundry_service_plan_access" "org1-mysql-512mb" {
+    plan = "${cloudfoundry_service_broker.mysql.service_plans["p-mysql/512mb"]}"
     public = true
 }
 
-resource "cf_service_plan_access" "org1-mysql-512mb" {
-    plan = "${cf_service_broker.mysql.service_plans["p-mysql/1gb"]}"
-    org = "${cf_org.org1.id}"
+resource "cloudfoundry_service_plan_access" "org1-mysql-512mb" {
+    plan = "${cloudfoundry_service_broker.mysql.service_plans["p-mysql/1gb"]}"
+    org = "${cloudfoundry_org.org1.id}"
 }
 ```
 
@@ -57,5 +57,5 @@ Otherwise, the import would fail.
 E.g.
 
 ```
-$ terraform import cf_service_plan_access.org1-mysql-512mb a-guid
+$ terraform import cloudfoundry_service_plan_access.org1-mysql-512mb a-guid
 ```
