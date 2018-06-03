@@ -203,7 +203,6 @@ func TestAccServiceInstance_async(t *testing.T) {
 							ref, "tags.1", "tag-2"),
 					),
 				},
-
 			},
 		})
 }
@@ -241,12 +240,9 @@ func TestAccServiceBroker_async(t *testing.T) {
 							ref, "tags.1", "tag-2"),
 					),
 				},
-
 			},
 		})
 }
-
-
 
 func testAccCheckServiceInstanceExists(resource string) resource.TestCheckFunc {
 
