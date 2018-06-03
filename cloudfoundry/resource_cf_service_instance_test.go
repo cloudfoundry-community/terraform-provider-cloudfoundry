@@ -20,14 +20,14 @@ data "cf_space" "space" {
     name = "pcfdev-space"
 	org = "${data.cf_org.org.id}"
 }
-data "cf_service" "mysql" {
-    name = "p-mysql"
+data "cf_service" "redis" {
+    name = "p.redis"
 }
 
-resource "cf_service_instance" "mysql" {
-	name = "mysql"
+resource "cf_service_instance" "redis" {
+	name = "redis"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans["1gb"]}"
+    service_plan = "${data.cf_service.mysql.service_plans["cache-medium"]}"
 	tags = [ "tag-1" , "tag-2" ]
 }
 `
@@ -41,27 +41,27 @@ data "cf_space" "space" {
     name = "pcfdev-space"
 	org = "${data.cf_org.org.id}"
 }
-data "cf_service" "mysql" {
-    name = "p-mysql"
+data "cf_service" "redis" {
+    name = "p.redis"
 }
 
-resource "cf_service_instance" "mysql" {
-	name = "mysql-updated"
+resource "cf_service_instance" "redis" {
+	name = "redis-updated"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans["100mb"]}"
+    service_plan = "${data.cf_service.mysql.service_plans["cache-small"]}"
 	tags = [ "tag-2", "tag-3", "tag-4" ]
 }
 `
 
 func TestAccServiceInstance_normal(t *testing.T) {
 
-	ref := "cf_service_instance.mysql"
+	ref := "cf_service_instance.redis"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"mysql", "mysql-updated"}, "data.cf_space.space"),
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"mysql", "redis-updated"}, "data.cf_space.space"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -69,7 +69,7 @@ func TestAccServiceInstance_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "mysql"),
+							ref, "name", "redis"),
 						resource.TestCheckResourceAttr(
 							ref, "tags.#", "2"),
 						resource.TestCheckResourceAttr(
@@ -84,7 +84,7 @@ func TestAccServiceInstance_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "mysql-updated"),
+							ref, "name", "mysql-redis"),
 						resource.TestCheckResourceAttr(
 							ref, "tags.#", "3"),
 						resource.TestCheckResourceAttr(
