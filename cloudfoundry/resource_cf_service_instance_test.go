@@ -27,7 +27,7 @@ data "cf_service" "mysql" {
 resource "cf_service_instance" "mysql" {
 	name = "mysql"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans["1gb"]}"
+    service_plan = "${data.cf_service.mysql.service_plans["100mb"]}"
 	tags = [ "tag-1" , "tag-2" ]
 }
 `
@@ -48,8 +48,33 @@ data "cf_service" "mysql" {
 resource "cf_service_instance" "mysql" {
 	name = "mysql-updated"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans["512mb"]}"
+    service_plan = "${data.cf_service.mysql.service_plans["100mb"]}"
 	tags = [ "tag-2", "tag-3", "tag-4" ]
+}
+`
+
+const serviceInstanceResourceCreateRedis = `
+
+data "cf_org" "org" {
+    name = "pcfdev-org"
+}
+data "cf_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cf_org.org.id}"
+}
+data "cf_service" "redis" {
+    name = "p.redis"
+}
+
+resource "cf_service_instance" "redis" {
+	name = "redis"
+    space = "${data.cf_space.space.id}"
+    service_plan = "${data.cf_service.redis.service_plans["cache-medium"]}"
+	tags = [ "tag-1" , "tag-2" ]
+    timeouts {
+      create = "30m"
+      delete = "30m"
+    }
 }
 `
 
@@ -111,22 +136,13 @@ resource "cf_service_instance" "fake-service" {
 func TestAccServiceInstance_normal(t *testing.T) {
 
 	ref := "cf_service_instance.mysql"
-	refAsync := "cf_service_instance.fake-service"
-
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"mysql", "mysql-updated", "fake-service}"}, "data.cf_space.space"),
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"mysql", "mysql-updated"}, "data.cf_space.space"),
 			Steps: []resource.TestStep{
 
-				resource.TestStep{
-					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate, defaultAppDomain(), defaultAppDomain()),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckServiceInstanceExists(refAsync),
-						resource.TestCheckResourceAttr(refAsync, "name", "fake-service"),
-					),
-				},
 				resource.TestStep{
 					Config: serviceInstanceResourceCreate,
 					Check: resource.ComposeTestCheckFunc(
@@ -161,6 +177,76 @@ func TestAccServiceInstance_normal(t *testing.T) {
 			},
 		})
 }
+
+func TestAccServiceInstance_async(t *testing.T) {
+
+	ref := "cf_service_instance.redis"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"redis"}, "data.cf_space.space"),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: serviceInstanceResourceCreateRedis,
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckServiceInstanceExists(ref),
+						resource.TestCheckResourceAttr(
+							ref, "name", "redis"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.#", "2"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.0", "tag-1"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.1", "tag-2"),
+					),
+				},
+
+			},
+		})
+}
+
+func TestAccServiceBroker_async(t *testing.T) {
+
+	ref := "cf_service_instance.redis"
+	refAsync := "cf_service_instance.fake-service"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"redis", "fake-service"}, "data.cf_space.space"),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate, defaultAppDomain(), defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckServiceInstanceExists(refAsync),
+						resource.TestCheckResourceAttr(refAsync, "name", "fake-service"),
+					),
+				},
+				resource.TestStep{
+					Config: serviceInstanceResourceCreateRedis,
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckServiceInstanceExists(ref),
+						resource.TestCheckResourceAttr(
+							ref, "name", "redis"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.#", "2"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.0", "tag-1"),
+						resource.TestCheckResourceAttr(
+							ref, "tags.1", "tag-2"),
+					),
+				},
+
+			},
+		})
+}
+
+
 
 func testAccCheckServiceInstanceExists(resource string) resource.TestCheckFunc {
 
