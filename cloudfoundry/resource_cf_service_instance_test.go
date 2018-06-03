@@ -55,6 +55,10 @@ resource "cf_service_instance" "mysql" {
 
 const serviceInstanceResourceAsyncCreate = `
 
+data "cf_domain" "fake-service-broker-domain" {
+    name = "%s"
+}
+
 data "cf_org" "org" {
     name = "pcfdev-org"
 }
@@ -64,15 +68,10 @@ data "cf_space" "space" {
 }
 data "cf_service" "fake-service" {
 	name = "fake-service"
-	
 	depends_on = ["cf_service_broker.fake-service-broker"]
 }
 
-data "cf_domain" "fake-service-broker-domain"{
-	sub_domain = "local"   
-}
-
-resource "cf_route" "fake-service-broker-route"{
+resource "cf_route" "fake-service-broker-route" {
 	domain = "${data.cf_domain.fake-service-broker-domain.id}"
     space = "${data.cf_space.space.id}"
 	hostname = "fake-service-broker"
@@ -89,16 +88,12 @@ resource "cf_app" "fake-service-broker" {
 		default_route = "${cf_route.fake-service-broker-route.id}"
 	}
 
-	provisioner "local-exec"{
-		command = "curl http://fake-service-broker.local.pcfdev.io/config -X POST -d ../tests/data.json"
-	}
-
 	depends_on = ["cf_route.fake-service-broker-route"]
 }
 
 resource "cf_service_broker" "fake-service-broker" {
 	name = "fake-service-broker"
-	url = "http://fake-service-broker.local.pcfdev.io"
+	url = "http://fake-service-broker.%s"
 	username = "admin"
 	password = "admin"
 	space = "${data.cf_space.space.id}"
@@ -126,7 +121,7 @@ func TestAccServiceInstance_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: serviceInstanceResourceAsyncCreate,
+					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate, defaultAppDomain(), defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(refAsync),
 						resource.TestCheckResourceAttr(refAsync, "name", "fake-service"),
