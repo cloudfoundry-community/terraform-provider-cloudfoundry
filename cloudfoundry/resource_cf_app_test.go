@@ -38,7 +38,7 @@ resource "cf_route" "spring-music" {
 resource "cf_service_instance" "db" {
 	name = "db"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans.512mb}"
+    service_plan = "${data.cf_service.mysql.service_plans["100mb"]}"
 }
 resource "cf_service_instance" "fs1" {
 	name = "fs1"
@@ -99,7 +99,7 @@ resource "cf_route" "spring-music" {
 resource "cf_service_instance" "db" {
 	name = "db"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans.512mb}"
+    service_plan = "${data.cf_service.mysql.service_plans["100mb"]}"
 }
 resource "cf_service_instance" "fs1" {
 	name = "fs1"

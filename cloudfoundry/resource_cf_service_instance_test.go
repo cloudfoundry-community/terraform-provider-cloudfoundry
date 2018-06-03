@@ -27,7 +27,7 @@ data "cf_service" "mysql" {
 resource "cf_service_instance" "mysql" {
 	name = "mysql"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans["1gb"]}"
+    service_plan = "${data.cf_service.mysql.service_plans["100mb"]}"
 	tags = [ "tag-1" , "tag-2" ]
 }
 `
@@ -48,7 +48,7 @@ data "cf_service" "mysql" {
 resource "cf_service_instance" "mysql" {
 	name = "mysql-updated"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans["512mb"]}"
+    service_plan = "${data.cf_service.mysql.service_plans["100mb"]}"
 	tags = [ "tag-2", "tag-3", "tag-4" ]
 }
 `

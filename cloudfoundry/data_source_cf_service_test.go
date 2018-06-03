@@ -35,9 +35,7 @@ func TestAccDataSourceService_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", "p-mysql"),
 						resource.TestCheckResourceAttrSet(
-							ref, "service_plans.512mb"),
-						resource.TestCheckResourceAttrSet(
-							ref, "service_plans.1gb"),
+							ref, "service_plans.100mb"),
 					),
 				},
 			},
