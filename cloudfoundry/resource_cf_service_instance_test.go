@@ -84,7 +84,7 @@ func TestAccServiceInstance_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "mysql-redis"),
+							ref, "name", "redis-updated"),
 						resource.TestCheckResourceAttr(
 							ref, "tags.#", "3"),
 						resource.TestCheckResourceAttr(
