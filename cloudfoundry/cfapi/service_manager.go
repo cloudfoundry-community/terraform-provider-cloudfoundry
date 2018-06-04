@@ -549,6 +549,55 @@ func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceIns
 	return
 }
 
+// WaitDeletionServiceInstance -
+func (sm *ServiceManager) WaitDeletionServiceInstance(serviceInstanceID string) (err error) {
+	sm.log.UI.Say("Waiting for service instance %s to delete ..", terminal.EntityNameColor(serviceInstanceID))
+	c := make(chan error)
+	go func() {
+
+		var err error
+		var serviceInstance CCServiceInstance
+
+		for {
+			if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
+				// if the service instance is gone the error message should contain 60004
+				// cf_service_instance.redis: Server error, status code: 404, error code: 60004, message: The service instance could not be found: babababa-d977-4e9c-9bd0-4903d146d822
+				if strings.Contains(err.Error(), "60004") {
+					c <- nil
+					return
+				} else {
+					c <- err
+					return
+				}
+			}
+
+			if serviceInstance.LastOperation["type"] == "delete" {
+				state := serviceInstance.LastOperation["state"]
+
+				switch state {
+				// this probably never happens
+				case "succeeded":
+					c <- nil
+					return
+				case "failed":
+					c <- fmt.Errorf("service instance %s crashed", serviceInstanceID)
+					return
+				}
+			}
+			time.Sleep(appStatePingSleep)
+		}
+	}()
+
+	select {
+	case err = <-c:
+		if err != nil {
+			return
+		}
+		sm.log.UI.Say("%s finished deletion ...", terminal.EntityNameColor(serviceInstanceID))
+	}
+	return
+}
+
 // FindServiceInstance -
 func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serviceInstance CCServiceInstance, err error) {
 

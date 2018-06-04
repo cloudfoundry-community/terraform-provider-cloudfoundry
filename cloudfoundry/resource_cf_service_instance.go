@@ -187,6 +187,8 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 	session := meta.(*cfapi.Session)
+	id := d.Id()
+
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
@@ -194,7 +196,12 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 
 	sm := session.ServiceManager()
 
-	if err = sm.DeleteServiceInstance(d.Id()); err != nil {
+	if err = sm.DeleteServiceInstance(id); err != nil {
+		return
+	}
+
+	// Check whether service_instance has been indeed deleted (sometimes takes very long))
+	if err = sm.WaitDeletionServiceInstance(id); err != nil {
 		return
 	}
 

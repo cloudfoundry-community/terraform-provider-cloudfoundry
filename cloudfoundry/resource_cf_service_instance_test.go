@@ -209,14 +209,13 @@ func TestAccServiceInstance_async(t *testing.T) {
 
 func TestAccServiceBroker_async(t *testing.T) {
 
-	ref := "cf_service_instance.redis"
 	refAsync := "cf_service_instance.fake-service"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"redis", "fake-service"}, "data.cf_space.space"),
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"fake-service"}, "data.cf_space.space"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -224,20 +223,6 @@ func TestAccServiceBroker_async(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(refAsync),
 						resource.TestCheckResourceAttr(refAsync, "name", "fake-service"),
-					),
-				},
-				resource.TestStep{
-					Config: serviceInstanceResourceCreateRedis,
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckServiceInstanceExists(ref),
-						resource.TestCheckResourceAttr(
-							ref, "name", "redis"),
-						resource.TestCheckResourceAttr(
-							ref, "tags.#", "2"),
-						resource.TestCheckResourceAttr(
-							ref, "tags.0", "tag-1"),
-						resource.TestCheckResourceAttr(
-							ref, "tags.1", "tag-2"),
 					),
 				},
 			},
