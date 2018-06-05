@@ -252,13 +252,13 @@ func testAccCheckServiceInstanceExists(resource string) resource.TestCheckFunc {
 
 		sm := session.ServiceManager()
 		if serviceInstance, err = sm.ReadServiceInstance(id); err != nil {
-			return
+			return err
 		}
 		session.Log.DebugMessage(
 			"retrieved service instance for resource '%s' with id '%s': %# v",
 			resource, id, serviceInstance)
 
-		return
+		return nil
 	}
 }
 

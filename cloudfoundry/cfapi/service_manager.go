@@ -542,11 +542,11 @@ func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceIns
 	select {
 	case err = <-c:
 		if err != nil {
-			return
+			return err
 		}
 		sm.log.UI.Say("%s finished starting ...", terminal.EntityNameColor(serviceInstanceID))
 	}
-	return
+	return nil
 }
 
 // WaitDeletionServiceInstance -
@@ -562,7 +562,7 @@ func (sm *ServiceManager) WaitDeletionServiceInstance(serviceInstanceID string) 
 			if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
 				// if the service instance is gone the error message should contain 60004
 				// cf_service_instance.redis: Server error, status code: 404, error code: 60004, message: The service instance could not be found: babababa-d977-4e9c-9bd0-4903d146d822
-				if strings.Contains(err.Error(), "60004") {
+				if strings.Contains(err.Error(), "error code: 60004") {
 					c <- nil
 					return
 				} else {
@@ -591,11 +591,11 @@ func (sm *ServiceManager) WaitDeletionServiceInstance(serviceInstanceID string) 
 	select {
 	case err = <-c:
 		if err != nil {
-			return
+			return err
 		}
 		sm.log.UI.Say("%s finished deletion ...", terminal.EntityNameColor(serviceInstanceID))
 	}
-	return
+	return nil
 }
 
 // FindServiceInstance -
@@ -639,7 +639,7 @@ func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serv
 func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string) (err error) {
 
 	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?accepts_incomplete=true", serviceInstanceID))
-	return
+	return err
 
 }
 

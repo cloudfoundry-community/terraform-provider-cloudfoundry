@@ -87,12 +87,12 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 	sm := session.ServiceManager()
 
 	if id, err = sm.CreateServiceInstance(name, servicePlan, space, params, tags); err != nil {
-		return
+		return err
 	}
 
 	// Check whetever service_instance exists and is in state 'succeeded'
 	if err = sm.WaitServiceInstanceTo("create", id); err != nil {
-		return
+		return err
 	}
 
 	session.Log.DebugMessage("New Service Instance : %# v", id)
@@ -169,19 +169,19 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 	}
 
 	if _, err = sm.UpdateServiceInstance(id, name, servicePlan, params, tags); err != nil {
-		return
+		return err
 	}
 
 	if err != nil {
-		return
+		return err
 	}
 
 	// Check whetever service_instance exists and is in state 'succeeded'
 	if err = sm.WaitServiceInstanceTo("update", id); err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }
 
 func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -197,12 +197,12 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	sm := session.ServiceManager()
 
 	if err = sm.DeleteServiceInstance(id); err != nil {
-		return
+		return err
 	}
 
 	// Check whether service_instance has been indeed deleted (sometimes takes very long))
 	if err = sm.WaitDeletionServiceInstance(id); err != nil {
-		return
+		return err
 	}
 
 	session.Log.DebugMessage("Deleted Service Instance : %s", d.Id())
