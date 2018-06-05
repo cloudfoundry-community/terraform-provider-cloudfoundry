@@ -55,80 +55,86 @@ const SpaceRoleAuditor = SpaceRole("auditors")
 
 // NewSpaceManager -
 func newSpaceManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logger) (dm *SpaceManager, err error) {
-
 	dm = &SpaceManager{
-		log: logger,
-
-		config:    config,
-		ccGateway: ccGateway,
-
+		log:         logger,
+		config:      config,
+		ccGateway:   ccGateway,
 		apiEndpoint: config.APIEndpoint(),
-
-		repo: spaces.NewCloudControllerSpaceRepository(config, ccGateway),
+		repo:        spaces.NewCloudControllerSpaceRepository(config, ccGateway),
 	}
 
 	if len(dm.apiEndpoint) == 0 {
-		err = errors.New("API endpoint missing from config file")
-		return
+		return nil, errors.New("API endpoint missing from config file")
 	}
 
-	return
+	return dm, nil
 }
 
 // FindSpaceInOrg -
 func (sm *SpaceManager) FindSpaceInOrg(name string, orgID string) (space CCSpace, err error) {
 	spaceModel, err := sm.repo.FindByNameInOrg(name, orgID)
+	if err != nil {
+		return CCSpace{}, err
+	}
+
 	space.ID = spaceModel.GUID
 	space.Name = spaceModel.Name
 	space.OrgGUID = orgID
 	space.QuotaGUID = spaceModel.SpaceQuotaGUID
-	return
+	return space, nil
 }
 
 // FindSpacesInOrg  -
 func (sm *SpaceManager) FindSpacesInOrg(orgID string) (spaces []CCSpace, err error) {
-
-	err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint,
-		fmt.Sprintf("/v2/organizations/%s/spaces", orgID),
-		CCSpaceResource{}, func(resource interface{}) bool {
-
+	path := fmt.Sprintf("/v2/organizations/%s/spaces", orgID)
+	err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint, path, CCSpaceResource{},
+		func(resource interface{}) bool {
 			spaceResource := resource.(CCSpaceResource)
 			space := spaceResource.Entity
 			space.ID = spaceResource.Metadata.GUID
-
 			spaces = append(spaces, space)
 			return true
 		})
+	if err != nil {
+		return []CCSpace{}, err
+	}
 
-	return
+	return spaces, nil
 }
 
 // FindSpace -
 func (sm *SpaceManager) FindSpace(name string) (space CCSpace, err error) {
 	spaceModel, err := sm.repo.FindByName(name)
+	if err != nil {
+		return CCSpace{}, err
+	}
+
 	space.ID = spaceModel.GUID
 	space.Name = spaceModel.Name
 	space.OrgGUID = sm.config.OrganizationFields().GUID
 	space.QuotaGUID = spaceModel.SpaceQuotaGUID
-	return
+	return space, nil
 }
 
 // ReadSpace -
 func (sm *SpaceManager) ReadSpace(spaceID string) (space CCSpace, err error) {
-
 	resource := &CCSpaceResource{}
-	err = sm.ccGateway.GetResource(
-		fmt.Sprintf("%s/v2/spaces/%s", sm.apiEndpoint, spaceID), &resource)
-
+	path := fmt.Sprintf("%s/v2/spaces/%s", sm.apiEndpoint, spaceID)
+	if err = sm.ccGateway.GetResource(path, &resource); err != nil {
+		return CCSpace{}, err
+	}
 	space = resource.Entity
 	space.ID = resource.Metadata.GUID
-	return
+	return space, nil
 }
 
 // CreateSpace -
 func (sm *SpaceManager) CreateSpace(
-	name string, orgID string, quotaID string,
-	allowSSH bool, asgs []interface{}) (id string, err error) {
+	name string,
+	orgID string,
+	quotaID string,
+	allowSSH bool,
+	asgs []interface{}) (id string, err error) {
 
 	payload := map[string]interface{}{
 		"name":              name,
@@ -144,16 +150,15 @@ func (sm *SpaceManager) CreateSpace(
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	resource := CCSpaceResource{}
-	if err = sm.ccGateway.CreateResource(sm.apiEndpoint,
-		"/v2/spaces", bytes.NewReader(body), &resource); err != nil {
-		return
+	if err = sm.ccGateway.CreateResource(sm.apiEndpoint, "/v2/spaces", bytes.NewReader(body), &resource); err != nil {
+		return "", err
 	}
 	id = resource.Metadata.GUID
-	return
+	return id, nil
 }
 
 // UpdateSpace -
@@ -170,101 +175,97 @@ func (sm *SpaceManager) UpdateSpace(space CCSpace, asgs []interface{}) (err erro
 	}
 
 	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
 
-	request, err := sm.ccGateway.NewRequest("PUT",
-		fmt.Sprintf("%s/v2/spaces/%s", sm.apiEndpoint, space.ID),
-		sm.config.AccessToken(), bytes.NewReader(body))
+	path := fmt.Sprintf("%s/v2/spaces/%s", sm.apiEndpoint, space.ID)
+	request, err := sm.ccGateway.NewRequest("PUT", path, sm.config.AccessToken(), bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 
 	resource := &CCSpaceResource{}
 	_, err = sm.ccGateway.PerformRequestForJSONResponse(request, resource)
-	return
+	return err
 }
 
 // DeleteSpace -
 func (sm *SpaceManager) DeleteSpace(id string) (err error) {
-	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/spaces/%s", id))
-	return
+	return sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/spaces/%s", id))
 }
 
 // AddUser -
 func (sm *SpaceManager) AddUser(spaceID string, userID string, role SpaceRole) (err error) {
-
-	err = sm.ccGateway.UpdateResource(sm.apiEndpoint,
-		fmt.Sprintf("/v2/spaces/%s/%s/%s", spaceID, role, userID),
-		strings.NewReader(""))
-	return
+	path := fmt.Sprintf("/v2/spaces/%s/%s/%s", spaceID, role, userID)
+	return sm.ccGateway.UpdateResource(sm.apiEndpoint, path, strings.NewReader(""))
 }
 
 // RemoveUser -
 func (sm *SpaceManager) RemoveUser(spaceID string, userID string, role SpaceRole) (err error) {
-
-	err = sm.ccGateway.DeleteResource(sm.apiEndpoint,
-		fmt.Sprintf("/v2/spaces/%s/%s/%s", spaceID, role, userID))
-	return
+	path := fmt.Sprintf("/v2/spaces/%s/%s/%s", spaceID, role, userID)
+	return sm.ccGateway.DeleteResource(sm.apiEndpoint, path)
 }
 
 // ListUsers -
 func (sm *SpaceManager) ListUsers(spaceID string, role SpaceRole) (userIDs []interface{}, err error) {
-
 	userList := &CCUserList{}
-	err = sm.ccGateway.GetResource(
-		fmt.Sprintf("%s/v2/spaces/%s/%s", sm.apiEndpoint, spaceID, role), userList)
+	path := fmt.Sprintf("%s/v2/spaces/%s/%s", sm.apiEndpoint, spaceID, role)
+	if err = sm.ccGateway.GetResource(path, userList); err != nil {
+		return userIDs, err
+	}
+
 	for _, r := range userList.Resources {
 		userIDs = append(userIDs, r.Metadata.GUID)
 	}
-	return
+	return userIDs, nil
 }
 
 // AddStagingASG -
 func (sm *SpaceManager) AddStagingASG(spaceID string, asgID string) (err error) {
-
-	err = sm.ccGateway.UpdateResource(sm.apiEndpoint,
-		fmt.Sprintf("/v2/spaces/%s/staging_security_groups/%s", spaceID, asgID),
-		strings.NewReader(""))
-	return
+	path := fmt.Sprintf("/v2/spaces/%s/staging_security_groups/%s", spaceID, asgID)
+	return sm.ccGateway.UpdateResource(sm.apiEndpoint, path, strings.NewReader(""))
 }
 
 // RemoveStagingASG -
 func (sm *SpaceManager) RemoveStagingASG(spaceID string, asgID string) (err error) {
-
-	err = sm.ccGateway.DeleteResource(sm.apiEndpoint,
-		fmt.Sprintf("/v2/spaces/%s/staging_security_groups/%s", spaceID, asgID))
-	return
+	path := fmt.Sprintf("/v2/spaces/%s/staging_security_groups/%s", spaceID, asgID)
+	return sm.ccGateway.DeleteResource(sm.apiEndpoint, path)
 }
 
 // ListStagingASGs -
 func (sm *SpaceManager) ListStagingASGs(spaceID string) (asgIDs []interface{}, err error) {
-
 	asgList := struct {
 		Resources []struct {
 			Metadata resources.Metadata `json:"metadata"`
 		} `json:"resources"`
 	}{}
 
-	err = sm.ccGateway.GetResource(
-		fmt.Sprintf("%s/v2/spaces/%s/staging_security_groups", sm.apiEndpoint, spaceID), &asgList)
+	path := fmt.Sprintf("%s/v2/spaces/%s/staging_security_groups", sm.apiEndpoint, spaceID)
+	if err = sm.ccGateway.GetResource(path, &asgList); err != nil {
+		return asgIDs, err
+	}
+
 	for _, r := range asgList.Resources {
 		asgIDs = append(asgIDs, r.Metadata.GUID)
 	}
-	return
+	return asgIDs, nil
 }
 
 // ListASGs -
 func (sm *SpaceManager) ListASGs(spaceID string) (asgIDs []interface{}, err error) {
-
 	asgList := struct {
 		Resources []struct {
 			Metadata resources.Metadata `json:"metadata"`
 		} `json:"resources"`
 	}{}
 
-	err = sm.ccGateway.GetResource(
-		fmt.Sprintf("%s/v2/spaces/%s/security_groups", sm.apiEndpoint, spaceID), &asgList)
+	path := fmt.Sprintf("%s/v2/spaces/%s/security_groups", sm.apiEndpoint, spaceID)
+	if err = sm.ccGateway.GetResource(path, &asgList); err != nil {
+		return asgIDs, err
+	}
 	for _, r := range asgList.Resources {
 		asgIDs = append(asgIDs, r.Metadata.GUID)
 	}
-	return
+	return asgIDs, nil
 }

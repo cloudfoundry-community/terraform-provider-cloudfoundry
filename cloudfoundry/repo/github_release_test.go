@@ -26,7 +26,7 @@ func TestGithubReleaseRepo(t *testing.T) {
 func testReleaseFileDownload(workspace string, t *testing.T) {
 	fmt.Println("Test: release file download")
 
-	repoManager := repo.NewRepoManager(workspace)
+	repoManager := repo.NewManager(workspace)
 	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "test_release_file.zip", nil)
 	checkError(t, err)
 
@@ -50,7 +50,7 @@ func testReleaseFileDownload(workspace string, t *testing.T) {
 func testSourceZipFileDownload(workspace string, t *testing.T) {
 	fmt.Println("Test: source zip file download")
 
-	repoManager := repo.NewRepoManager(workspace)
+	repoManager := repo.NewManager(workspace)
 	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "zipball", nil)
 	checkError(t, err)
 
@@ -63,7 +63,7 @@ func testSourceZipFileDownload(workspace string, t *testing.T) {
 func testSourceTarFileDownload(workspace string, t *testing.T) {
 	fmt.Println("Test: source tar file download")
 
-	repoManager := repo.NewRepoManager(workspace)
+	repoManager := repo.NewManager(workspace)
 	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "tarball", nil)
 	checkError(t, err)
 
@@ -76,14 +76,14 @@ func testSourceTarFileDownload(workspace string, t *testing.T) {
 func readArchiveZip(path string, t *testing.T) (content string) {
 
 	r, err := zip.OpenReader(path)
-	defer r.Close()
 	checkError(t, err)
+	defer r.Close()
 
 	if len(r.File) == 1 {
-
-		rc, err := r.File[0].Open()
-		defer rc.Close()
+		var rc io.ReadCloser
+		rc, err = r.File[0].Open()
 		checkError(t, err)
+		defer rc.Close()
 
 		buf := bytes.NewBuffer(nil)
 		_, err = io.Copy(buf, rc)
@@ -93,28 +93,32 @@ func readArchiveZip(path string, t *testing.T) (content string) {
 
 	} else {
 		err = fmt.Errorf("expected only 1 file in the test release archive zip '%s'", path)
+		checkError(t, err)
 	}
-	return
+	return content
 }
 
 func validateSourceZip(path string, t *testing.T) {
 
 	r, err := zip.OpenReader(path)
+	checkError(t, err)
 	defer r.Close()
+
+	var matcher *regexp.Regexp
+	matcher, err = regexp.Compile("# Test App - a simple Go webapp\n")
 	checkError(t, err)
 
 	for _, f := range r.File {
 		if f.Name == "README.md" {
 			rc, err := f.Open()
-			defer rc.Close()
 			checkError(t, err)
+			defer rc.Close()
 
 			buf := bytes.NewBuffer(nil)
 			_, err = io.Copy(buf, rc)
 			checkError(t, err)
 
-			matched, err := regexp.Match("# Test App - a simple Go webapp\n", buf.Bytes())
-			checkError(t, err)
+			matched := matcher.Match(buf.Bytes())
 			if matched {
 				return
 			}

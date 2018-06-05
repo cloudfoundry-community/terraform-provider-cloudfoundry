@@ -151,23 +151,22 @@ func resourceDomainRead(d *schema.ResourceData, meta interface{}) (err error) {
 		d.Set("domain", domain)
 		d.Set("route_group", ccDomain.RouterGroupGUID)
 		d.Set("router_type", ccDomain.RouterType)
-
-		return
+		return nil
 	}
+
 	ccDomain, err = dm.GetPrivateDomain(id)
 	if err == nil {
 		domainParts := strings.Split(ccDomain.Name, ".")
 		subDomain := domainParts[0]
 		domain := strings.Join(domainParts[1:], ".")
-
 		d.Set("name", ccDomain.Name)
 		d.Set("sub_domain", subDomain)
 		d.Set("domain", domain)
 		d.Set("org", ccDomain.OwningOrganizationGUID)
-
-		return
+		return nil
 	}
 
+	// TODO: bug ?
 	return nil
 }
 
@@ -182,9 +181,7 @@ func resourceDomainDelete(d *schema.ResourceData, meta interface{}) (err error) 
 	id := d.Id()
 
 	if _, orgOk := d.GetOk("org"); orgOk {
-		err = dm.DeletePrivateDomain(id)
-	} else {
-		err = dm.DeleteSharedDomain(id)
+		return dm.DeletePrivateDomain(id)
 	}
-	return
+	return dm.DeleteSharedDomain(id)
 }

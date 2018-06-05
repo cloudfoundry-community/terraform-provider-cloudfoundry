@@ -8,8 +8,10 @@ description: |-
 
 # cf\_quota
 
-Provides a Cloud Foundry resource to manage [quotas](https://docs.cloudfoundry.org/adminguide/quota-plans.html) 
-that can be applied to Orgs and Spaces.
+Provides a Cloud Foundry resource to manage org or space [quotas](https://docs.cloudfoundry.org/adminguide/quota-plans.html) definitions.
+
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
+
 
 ## Example Usage
 
