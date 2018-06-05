@@ -450,7 +450,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		// Upload application binary / source
 		// asynchronously once download has completed
 		if err = <-prepare; err != nil {
-			return
+			return err
 		}
 
 		go func() {
@@ -479,7 +479,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		// Start application if not stopped
 		// state once upload has completed
 		if err = <-upload; err != nil {
-			return
+			return err
 		}
 	}
 
@@ -489,7 +489,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	if _, ok := d.GetOk("docker_image"); ok {
 		if !stopped {
 			if err = am.StartDockerApp(app.ID, timeout); err != nil {
-				return
+				return err
 			}
 		}
 	} else if !stopped {
@@ -646,10 +646,10 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			"live_route",
 		} {
 			if _, err = validateRoute(newRouteConfig, r, rm); err != nil {
-				return
+				return err
 			}
 			if mappingID, err = updateMapping(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
-				return
+				return err
 			}
 			if len(mappingID) > 0 {
 				newRouteConfig[r+"_mapping_id"] = mappingID
@@ -716,7 +716,7 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if v, ok := d.GetOk("service_binding"); ok {
 		if err = removeServiceBindings(getListOfStructs(v), am, session.Log); err != nil {
-			return
+			return err
 		}
 	}
 	if v, ok := d.GetOk("route"); ok {
@@ -733,7 +733,7 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 				if len(mappingID) > 0 {
 					if err = rm.DeleteRouteMapping(v.(string)); err != nil {
 						if !strings.Contains(err.Error(), "status code: 404") {
-							return
+							return err
 						}
 						err = nil
 					}

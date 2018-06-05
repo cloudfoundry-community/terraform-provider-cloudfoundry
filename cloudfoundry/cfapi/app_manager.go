@@ -315,7 +315,7 @@ func (am *AppManager) StartDockerApp(appID string, timeout time.Duration) (err e
 	var startApp CCApp
 
 	if app, err = am.ReadApp(appID); err != nil {
-		return
+		return err
 	}
 
 	if app.State != nil && *app.State == AppStopped {
@@ -324,12 +324,12 @@ func (am *AppManager) StartDockerApp(appID string, timeout time.Duration) (err e
 		startApp.State = &AppStarted
 
 		if app, err = am.UpdateApp(startApp); err != nil {
-			return
+			return err
 		}
 
 		err = am.WaitForAppToStart(startApp, timeout)
 	}
-	return
+	return nil
 }
 
 // WaitForAppToStart -
