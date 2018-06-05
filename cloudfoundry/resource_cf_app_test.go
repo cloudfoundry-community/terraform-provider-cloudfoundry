@@ -361,7 +361,6 @@ func TestAccApp_app2(t *testing.T) {
 		})
 }
 
-
 func TestAccApp_dockerApp(t *testing.T) {
 	refApp := "cf_app.test-docker-app"
 
