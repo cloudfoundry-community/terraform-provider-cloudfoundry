@@ -55,23 +55,19 @@ type CCDomainList struct {
 func newDomainManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logger) (dm *DomainManager, err error) {
 
 	dm = &DomainManager{
-		log: logger,
-
-		config:    config,
-		ccGateway: ccGateway,
-
-		apiEndpoint: config.APIEndpoint(),
-
+		log:            logger,
+		config:         config,
+		ccGateway:      ccGateway,
+		apiEndpoint:    config.APIEndpoint(),
 		repo:           api.NewCloudControllerDomainRepository(config, ccGateway),
 		routingAPIRepo: api.NewRoutingAPIRepository(config, ccGateway),
 	}
 
 	if len(dm.apiEndpoint) == 0 {
-		err = errors.New("API endpoint missing from config file")
-		return
+		return nil, errors.New("API endpoint missing from config file")
 	}
 
-	return
+	return dm, nil
 }
 
 // GetSharedDomains -
@@ -79,20 +75,22 @@ func (dm *DomainManager) GetSharedDomains() (domains []CCDomain, err error) {
 
 	domainList := CCDomainList{}
 	err = dm.ccGateway.GetResource(fmt.Sprintf("%s/v2/shared_domains", dm.apiEndpoint), &domainList)
+	if err != nil {
+		return []CCDomain{}, err
+	}
 
 	for _, r := range domainList.Resources {
 		domain := r.Entity
 		domain.ID = r.Metadata.GUID
 		domains = append(domains, domain)
 	}
-	return
+	return domains, nil
 }
 
 // CreateSharedDomain -
 func (dm *DomainManager) CreateSharedDomain(name string, routeGroupGUID *string) (domain CCDomain, err error) {
 
 	var body []byte
-
 	if routeGroupGUID != nil {
 		body, err = json.Marshal(map[string]string{
 			"name":              name,
@@ -104,15 +102,18 @@ func (dm *DomainManager) CreateSharedDomain(name string, routeGroupGUID *string)
 		})
 	}
 	if err != nil {
-		return
+		return CCDomain{}, err
 	}
 
 	resource := CCDomainResource{}
 	err = dm.ccGateway.CreateResource(dm.apiEndpoint, "/v2/shared_domains", bytes.NewReader(body), &resource)
+	if err != nil {
+		return CCDomain{}, err
+	}
+
 	domain = resource.Entity
 	domain.ID = resource.Metadata.GUID
-
-	return
+	return domain, nil
 }
 
 // GetSharedDomain -
@@ -120,30 +121,33 @@ func (dm *DomainManager) GetSharedDomain(guid string) (domain CCDomain, err erro
 
 	resource := CCDomainResource{}
 	err = dm.ccGateway.GetResource(fmt.Sprintf("%s/v2/shared_domains/%s", dm.apiEndpoint, guid), &resource)
+	if err != nil {
+		return CCDomain{}, err
+	}
 	domain = resource.Entity
 	domain.ID = resource.Metadata.GUID
-
-	return
+	return domain, nil
 }
 
 // DeleteSharedDomain -
 func (dm *DomainManager) DeleteSharedDomain(guid string) (err error) {
-	err = dm.ccGateway.DeleteResource(dm.apiEndpoint, fmt.Sprintf("/v2/shared_domains/%s", guid))
-	return
+	return dm.ccGateway.DeleteResource(dm.apiEndpoint, fmt.Sprintf("/v2/shared_domains/%s", guid))
 }
 
 // GetPrivateDomains -
 func (dm *DomainManager) GetPrivateDomains() (domains []CCDomain, err error) {
-
 	domainList := CCDomainList{}
 	err = dm.ccGateway.GetResource(fmt.Sprintf("%s/v2/private_domains", dm.apiEndpoint), &domainList)
+	if err != nil {
+		return []CCDomain{}, err
+	}
 
 	for _, r := range domainList.Resources {
 		domain := r.Entity
 		domain.ID = r.Metadata.GUID
 		domains = append(domains, domain)
 	}
-	return
+	return domains, nil
 }
 
 // CreatePrivateDomain -
@@ -154,26 +158,30 @@ func (dm *DomainManager) CreatePrivateDomain(name string, orgGUID string) (domai
 		"owning_organization_guid": orgGUID,
 	})
 	if err != nil {
-		return
+		return CCDomain{}, err
 	}
 
 	resource := CCDomainResource{}
 	err = dm.ccGateway.CreateResource(dm.apiEndpoint, "/v2/private_domains", bytes.NewReader(body), &resource)
+	if err != nil {
+		return CCDomain{}, err
+	}
+
 	domain = resource.Entity
 	domain.ID = resource.Metadata.GUID
-
-	return
+	return domain, nil
 }
 
 // GetPrivateDomain -
 func (dm *DomainManager) GetPrivateDomain(guid string) (domain CCDomain, err error) {
-
 	resource := &CCDomainResource{}
 	err = dm.ccGateway.GetResource(fmt.Sprintf("%s/v2/private_domains/%s", dm.apiEndpoint, guid), resource)
+	if err != nil {
+		return CCDomain{}, err
+	}
 	domain = resource.Entity
 	domain.ID = resource.Metadata.GUID
-
-	return
+	return domain, nil
 }
 
 // HasPrivateDomainAccess -
@@ -195,30 +203,28 @@ func (dm *DomainManager) HasPrivateDomainAccess(org, domain string) (bool, error
 func (dm *DomainManager) CreatePrivateDomainAccess(org, domain string) (err error) {
 	resource := CCOrgResource{}
 	path := fmt.Sprintf("/v2/organizations/%s/private_domains/%s", org, domain)
-	err = dm.ccGateway.UpdateResource(dm.apiEndpoint, path, nil, &resource)
-	return
+	return dm.ccGateway.UpdateResource(dm.apiEndpoint, path, nil, &resource)
 }
 
 // DeletePrivateDomainAccess -
 func (dm *DomainManager) DeletePrivateDomainAccess(org, domain string) (err error) {
 	path := fmt.Sprintf("/v2/organizations/%s/private_domains/%s", org, domain)
-	err = dm.ccGateway.DeleteResource(dm.apiEndpoint, path)
-	return
+	return dm.ccGateway.DeleteResource(dm.apiEndpoint, path)
 }
 
 // DeletePrivateDomain -
 func (dm *DomainManager) DeletePrivateDomain(guid string) (err error) {
-	err = dm.ccGateway.DeleteResource(dm.apiEndpoint, fmt.Sprintf("/v2/private_domains/%s", guid))
-	return
+	return dm.ccGateway.DeleteResource(dm.apiEndpoint, fmt.Sprintf("/v2/private_domains/%s", guid))
 }
 
 // FindDomain -
 func (dm *DomainManager) FindDomain(guid string) (domain CCDomain, err error) {
-
 	if domain, err = dm.GetSharedDomain(guid); err != nil {
-		domain, err = dm.GetPrivateDomain(guid)
+		if domain, err = dm.GetPrivateDomain(guid); err != nil {
+			return CCDomain{}, err
+		}
 	}
-	return
+	return domain, nil
 }
 
 // FindSharedByName -
@@ -243,8 +249,12 @@ func (dm *DomainManager) FindRouterGroupByName(name string) (routerGroup models.
 			return true
 		})
 
-	if routerGroup.Name != name {
-		err = fmt.Errorf("Router group with name '%s' was not found.", name)
+	if err != nil {
+		return models.RouterGroup{}, err
 	}
-	return
+
+	if routerGroup.Name != name {
+		return models.RouterGroup{}, fmt.Errorf("Router group with name '%s' was not found", name)
+	}
+	return routerGroup, nil
 }

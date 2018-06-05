@@ -10,9 +10,12 @@ description: |-
 
 Provides a Cloud Foundry resource for managing Cloud Foundry [spaces](https://docs.cloudfoundry.org/concepts/roles.html) within organizations.
 
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted org manager permissions.
+
+
 ## Example Usage
 
-The following is a Space created within the referenced Org. All refeenced users must have been added as a member to the owning Org.
+The following is a Space created within the referenced Org. All referenced users must have been added as a member to the owning Org.
 
 ```
 resource "cf_space" "s1" {
@@ -42,7 +45,7 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the Space in Cloud Foundry.
 * `org` - (Required) The ID of the [Org](/docs/providers/cloudfoundry/r/org.html) within which to create the space.
-* `quota` - (Optional) The ID of the Space [quota](/docs/providers/cloudfoundry/r/quota.html) or plan defined for the owning Org.
+* `quota` - (Optional) The ID of the Space [quota](/docs/providers/cloudfoundry/r/quota.html) or plan defined for the owning Org. By default, no space quota is assigned to the space. 
 * `allow_ssh` - (Optional) Allows SSH to application containers via the [CF CLI](https://github.com/cloudfoundry/cli)
 * `asgs` - (Optional) List of running [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications running within this space.
 * `staging_asgs` - (Optional) List of staging [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications being staged for this space.
@@ -58,7 +61,7 @@ The following attributes are exported:
 
 ## Import
 
-The current Space can be imported using the `space`, e.g.
+An existing Space can be imported using its guid, e.g.
 
 ```
 $ terraform import cf_space.s1 a-guid

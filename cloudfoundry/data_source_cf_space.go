@@ -63,16 +63,16 @@ func dataSourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if v, ok = d.GetOk("org"); ok {
 		if org, err = om.ReadOrg(v.(string)); err != nil {
-			return
+			return err
 		}
 	} else if v, ok = d.GetOk("org_name"); ok {
 		if org, err = om.FindOrg(v.(string)); err != nil {
-			return
+			return err
 		}
 	}
 	space, err = sm.FindSpaceInOrg(name, org.ID)
 	if err != nil {
-		return
+		return err
 	}
 
 	d.SetId(space.ID)
@@ -80,5 +80,5 @@ func dataSourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 	d.Set("org", org.ID)
 	d.Set("quota", space.QuotaGUID)
 
-	return
+	return err
 }
