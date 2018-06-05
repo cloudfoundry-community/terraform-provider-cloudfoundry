@@ -1,7 +1,9 @@
 package cloudfoundry
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -122,7 +124,7 @@ func getListChanges(old interface{}, new interface{}) (remove []string, add []st
 			add = append(add, nn)
 		}
 	}
-	return
+	return remove, add
 }
 
 // getListChangedSchemaLists -
@@ -147,7 +149,7 @@ func getListChangedSchemaLists(old []interface{}, new []interface{}) (remove []m
 			add = append(add, nn)
 		}
 	}
-	return
+	return remove, add
 }
 
 // ImportStatePassthrough -
@@ -174,4 +176,19 @@ func IsImportState(d *schema.ResourceData) bool {
 	}
 	_, ok := connInfo[importStateKey]
 	return ok
+}
+
+func computeID(first, second string) string {
+	return fmt.Sprintf("%s/%s", first, second)
+}
+
+func parseID(id string) (first string, second string, err error) {
+	parts := strings.Split(id, "/")
+	if len(parts) != 2 {
+		err = fmt.Errorf("unable to parse ID '%s', expected format is '<guid>/<guid>'", id)
+	} else {
+		first = parts[0]
+		second = parts[1]
+	}
+	return first, second, err
 }
