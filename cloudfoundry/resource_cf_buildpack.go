@@ -154,12 +154,12 @@ func resourceBuildpackCreate(d *schema.ResourceData, meta interface{}) (err erro
 		path = v.(string)
 	} else {
 		if repository, err = getRepositoryFromConfig(d); err != nil {
-			return
+			return err
 		}
 		path = repository.GetPath()
 	}
 	if bp, err = session.BuildpackManager().CreateBuildpack(name, position, enabled, locked, path); err != nil {
-		return
+		return err
 	}
 
 	d.SetId(bp.ID)
@@ -167,7 +167,7 @@ func resourceBuildpackCreate(d *schema.ResourceData, meta interface{}) (err erro
 	d.Set("enabled", bp.Enabled)
 	d.Set("locked", bp.Locked)
 
-	return
+	return err
 }
 
 func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -182,7 +182,7 @@ func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) (err error)
 
 	var bp cfapi.CCBuildpack
 	if bp, err = bpm.ReadBuildpack(id); err != nil {
-		return
+		return err
 	}
 
 	d.Set("name", bp.Name)
@@ -190,7 +190,7 @@ func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) (err error)
 	d.Set("enabled", bp.Enabled)
 	d.Set("locked", bp.Locked)
 
-	return
+	return err
 }
 
 func resourceBuildpackUpdate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -240,15 +240,15 @@ func resourceBuildpackUpdate(d *schema.ResourceData, meta interface{}) (err erro
 			path = v.(string)
 		} else {
 			if repository, err = getRepositoryFromConfig(d); err != nil {
-				return
+				return err
 			}
 			path = repository.GetPath()
 		}
 		if bp, err = session.BuildpackManager().UploadBuildpackBits(bp, path); err != nil {
-			return
+			return err
 		}
 	}
-	return
+	return err
 }
 
 func resourceBuildpackDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -259,5 +259,5 @@ func resourceBuildpackDelete(d *schema.ResourceData, meta interface{}) (err erro
 	}
 
 	err = session.BuildpackManager().DeleteBuildpack(d.Id())
-	return
+	return err
 }

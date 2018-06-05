@@ -3,13 +3,15 @@ layout: "cf"
 page_title: "Cloud Foundry: cf_default_asg"
 sidebar_current: "docs-cf-resource-default-asg"
 description: |-
-  Provides a Cloud Foundry Default Appliction Security Group resource.
+  Provides a Cloud Foundry Default Application Security Group resource.
 ---
 
 # cf\_default\_asg
 
 Provides a resource for modifying the default staging or running
 [application security groups](https://docs.cloudfoundry.org/adminguide/app-sec-groups.html).
+
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
 
 ## Example Usage
 
@@ -32,7 +34,7 @@ The following arguments are supported:
 
 ## Import
 
-The current Default Asg can be imported using the `default_asg`, e.g.
+The current Default Asg can be imported using the `name` (either `running` or `staging` constant) e.g. 
 
 ```
 $ terraform import cf_default_asg.running <running/staging>

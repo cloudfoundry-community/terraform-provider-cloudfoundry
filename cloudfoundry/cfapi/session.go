@@ -20,15 +20,11 @@ import (
 
 // Session - wraps the CF CLI session objects
 type Session struct {
-	Log *Logger
-
-	ccInfo CCInfo
-
-	config     coreconfig.Repository
-	refresher  coreconfig.APIConfigRefresher
-	ccGateway  net.Gateway
-	uaaGateway net.Gateway
-
+	Log              *Logger
+	ccInfo           CCInfo
+	config           coreconfig.Repository
+	ccGateway        net.Gateway
+	uaaGateway       net.Gateway
 	authManager      *AuthManager
 	stackManager     *StackManager
 	userManager      *UserManager
@@ -65,13 +61,6 @@ type CCInfo struct {
 	RoutingAPIEndpoint       string `json:"routing_endpoint"`
 }
 
-// apiErrResponse -
-type apiErrResponse struct {
-	Code        int    `json:"code,omitempty"`
-	ErrorCode   string `json:"error_code,omitempty"`
-	Description string `json:"description,omitempty"`
-}
-
 // uaaErrorResponse -
 type uaaErrorResponse struct {
 	Code        string `json:"error"`
@@ -80,7 +69,12 @@ type uaaErrorResponse struct {
 
 // NewSession -
 func NewSession(
-	endpoint, user, password, uaaClientID, uaaClientSecret, caCert string,
+	endpoint string,
+	user string,
+	password string,
+	uaaClientID string,
+	uaaClientSecret string,
+	caCert string,
 	skipSslValidation bool) (s *Session, err error) {
 
 	s = &Session{
@@ -92,11 +86,21 @@ func NewSession(
 	}
 
 	err = s.initCliConnection(endpoint, user, password, caCert, skipSslValidation)
-	if err == nil && len(uaaClientID) > 0 {
-		s.userManager.clientToken, err = s.authManager.getClientToken(uaaClientID, uaaClientSecret)
-		err = s.userManager.loadGroups()
+	if err != nil {
+		return nil, err
 	}
-	return
+
+	if len(uaaClientID) > 0 {
+		s.userManager.clientToken, err = s.authManager.getClientToken(uaaClientID, uaaClientSecret)
+		if err != nil {
+			return nil, err
+		}
+		if err = s.userManager.loadGroups(); err != nil {
+			return nil, err
+		}
+	}
+
+	return s, nil
 }
 
 // initCliConnection
@@ -219,11 +223,7 @@ func (s *Session) initCliConnection(
 	}
 
 	s.appManager, err = newAppManager(s.config, s.ccGateway, s.domainManager.repo, s.routeManager.repo, s.Log)
-	if err != nil {
-		return err
-	}
-
-	return
+	return err
 }
 
 // Info -
@@ -293,43 +293,34 @@ func (s *Session) AppManager() *AppManager {
 
 // GetFeatureFlags -
 func (s *Session) GetFeatureFlags() (featurFlags map[string]bool, err error) {
-
 	featurFlags = make(map[string]bool)
-
 	response := []interface{}{}
-	if err = s.ccGateway.GetResource(
-		fmt.Sprintf("%s/v2/config/feature_flags", s.config.APIEndpoint()),
-		&response); err != nil {
-		return
+	path := fmt.Sprintf("%s/v2/config/feature_flags", s.config.APIEndpoint())
+	if err = s.ccGateway.GetResource(path, &response); err != nil {
+		return featurFlags, err
 	}
+
 	for _, v := range response {
 		m := v.(map[string]interface{})
 		featurFlags[m["name"].(string)] = m["enabled"].(bool)
 	}
-	return
+	return featurFlags, nil
 }
 
 // SetFeatureFlags -
 func (s *Session) SetFeatureFlags(featureFlags map[string]bool) (err error) {
-
 	for k, v := range featureFlags {
-
-		if err = s.ccGateway.UpdateResource(s.config.APIEndpoint(),
-			fmt.Sprintf("/v2/config/feature_flags/%s", k),
-			strings.NewReader(fmt.Sprintf("{\"enabled\":%t}", v))); err != nil {
-
-			return
+		path := fmt.Sprintf("/v2/config/feature_flags/%s", k)
+		data := strings.NewReader(fmt.Sprintf("{\"enabled\":%t}", v))
+		if err = s.ccGateway.UpdateResource(s.config.APIEndpoint(), path, data); err != nil {
+			return err
 		}
 	}
-	return
+	return nil
 }
 
 // noopPersistor - No Op Persistor for CF CLI session
 type noopPersistor struct {
-}
-
-func newNoopPersistor() configuration.Persistor {
-	return &noopPersistor{}
 }
 
 func (p *noopPersistor) Delete() {
