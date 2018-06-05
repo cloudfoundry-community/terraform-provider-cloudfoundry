@@ -41,10 +41,10 @@ func resourceEvg() *schema.Resource {
 func resourceEvgCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if err = resourceEvgUpdate(d, meta); err != nil {
-		return
+		return err
 	}
 	d.SetId(d.Get("name").(string))
-	return
+	return nil
 }
 
 func resourceEvgRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -72,8 +72,7 @@ func resourceEvgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	name := d.Get("name").(string)
 	variables := d.Get("variables").(map[string]interface{})
 
-	err = session.EVGManager().SetEVG(name, variables)
-	return
+	return session.EVGManager().SetEVG(name, variables)
 }
 
 func resourceEvgDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -83,6 +82,5 @@ func resourceEvgDelete(d *schema.ResourceData, meta interface{}) (err error) {
 		return fmt.Errorf("client is nil")
 	}
 
-	err = session.EVGManager().SetEVG(d.Get("name").(string), map[string]interface{}{})
-	return nil
+	return session.EVGManager().SetEVG(d.Get("name").(string), map[string]interface{}{})
 }

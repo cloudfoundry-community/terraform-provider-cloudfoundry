@@ -8,7 +8,7 @@ description: |-
 
 # cf\_app
 
-Provides a Cloud Foundry application resource for managing Cloud Foundry [applications](https://docs.cloudfoundry.org/devguide/deploy-apps/deploy-app.html).
+Provides a Cloud Foundry [application](https://docs.cloudfoundry.org/devguide/deploy-apps/deploy-app.html) resource.
 
 ## Example Usage
 
@@ -25,19 +25,20 @@ resource "cf_app" "spring-music" {
 
 The following arguments are supported:
 
-* `name` - (Required) The name of the application in Cloud Foundry space.
-* `space` - (Required) The GUID of the associated space.
-* `ports` - (Optional, Array of Number) A list of ports which the app will listen on.
-* `instances` - (Optional, Number) The number of app instances that you want to start.
+* `name` - (Required) The name of the application.
+* `space` - (Required) The GUID of the associated Cloud Foundry space.
+* `instances` - (Optional, Number) The number of app instances to start.
 * `memory` - (Optional, Number) The memory limit for each application instance in megabytes.
 * `disk_quota` - (Optional, Number) The disk space to be allocated for each application instance in megabytes.
 * `stack` - (Optional) The GUID of the stack the application will be deployed to. Use the [`cf_stack`](/docs/providers/cf/d/stack.html) data resource to lookup the stack GUID to overriding the default.
-* `buildpack` - (Optional, String) The custom buildpack to use. This will bypass the buildpack detect phase. There are three options to choose from:
-a) Blank means autodetection; b) A Git Url pointing to a buildpack; c) Name of an installed admin buildpack.
+* `buildpack` - (Optional, String) The buildpack used to stage the application. There are multiple options to choose from:
+   * a Git URL (e.g. https://github.com/cloudfoundry/java-buildpack.git) or a Git URL with a branch or tag (e.g. https://github.com/cloudfoundry/java-buildpack.git#v3.3.0 for v3.3.0 tag) 
+   * an installed admin buildpack name (e.g. my-buildpack)
+   * an empty blank string to use built-in buildpacks (i.e. autodetection)
 * `command` - (Optional, String) A custom start command for the application. This overrides the start command provided by the buildpack.
-* `enable_ssh` - (Optional, Boolean) Whether to enable or disable SSH access to the container. Default is `true` unless disabled globally.
-* `timeout` - (Optional, Number) Defines the number of seconds that Cloud Foundry waits for starting your application.
-* `stopped` - (Optional, Boolean) The application will be created and remain in an stopped state. Default is to stage and start the application.
+* `enable_ssh` - (Optional, Boolean) Whether to enable or disable SSH access to the container. Default is `true`.
+* `timeout` - (Optional, Number) Max wait time for app instance startup, in seconds
+* `stopped` - (Optional, Boolean) Defines the desired application state. Set to `false` to have the application remain in a stopped state. Default is `false`, i.e. application will be started.
 
 ### Application Source / Binary
 
@@ -45,7 +46,7 @@ One of the following arguments must be declared to locate application source or 
 
 * `url` - (Optional, String) The URL for the application binary. A local path may be referenced via "`file://...`".
 
-* `git` - (Optional, String) The git location to pull the application source directly from source control.
+* `git` - (Optional, String) The git repository where to pull the application source from.
 
   - `url` - (Required, String) The git URL for the application repository.
   - `branch` - (Optional, String) The branch of from which the repository contents should be retrieved.
@@ -54,9 +55,9 @@ One of the following arguments must be declared to locate application source or 
   - `user` - (Optional, String) Git user for accessing a private repo.
   - `password` - (Optional, String) Git password for accessing a private repo.
 
-      > Arguments "`tag`" and "`branch`" are mutually exclusive. If a git SSH "`key`" is provided and it is protected the "`password`" argument should be used as the key's password.
+~> **NOTE:** Arguments "`tag`" and "`branch`" are mutually exclusive. If a git SSH "`key`" is provided and it is protected the "`password`" argument should be used as the key's password.
 
-* `github_release` - (Optional, String) The Buildpack archive published as a github release.
+* `github_release` - (Optional, String) The github release where to download the application archive from.
 
   - `owner` - (Required, String) The github owner or organization name
   - `repo` - (Required, String) The repository containing the release
@@ -71,30 +72,23 @@ One of the following arguments must be declared to locate application source or 
 
 ### Service bindings
 
-Modifying this argument will cause the application to be restaged.
-
-* `service_binding` - (Optional, Array) Service instances to bind to.
+* `service_binding` - (Optional, Array) Service instances to bind to the application.
 
   - `service_instance` - (Required, String) The service instance GUID.
   - `params` - (Optional, Map) A list of key/value parameters used by the service broker to create the binding.
 
-### Routing and Blue-Green Deployment Strategy
+~> **NOTE:** Modifying this argument will cause the application to be restaged.   
 
-* `route` - (Optional) Configures how the application or service will be accessed. This can be also used to define a blue-green app deployment strategy. When doing a blue-green deployment the actual name of the application will be timestamped to differentiate between the current live application and the more recent staged application.
+### Routing
 
-  - `default_route` - (Optional, String) The GUID of the default route where the application will be available once deployed.
-
-  > TO BE IMPLEMENTED
-
-  - `stage_route` - (Optional, String) The GUID of the route where the staged application will be available.
-  - `live_route` - (Optional, String) The GUID of the route where the live application will be available.
-  - `validation_script` - (Optional, String) The validation script to execute against the stage application before mapping the live route to the staged application.
+* `route` - (Optional) Configures how the application will be accessed externally to cloudfoundry. 
+  - `default_route` - (Optional, String) The ID of the route where the application will be reachable from once deployed.
 
 ### Environment Variables
 
-Modifying this argument will cause the application to be restaged.
+* `environment` - (Optional, Map) Key/value pairs of custom environment variables to set in your app. Does not include any [system or service variables](http://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#app-system-env). 
 
-* `environment` - (Optional, Map) Key/value pairs of all the environment variables to run in your app. Does not include any system or service variables.
+~> **NOTE:** Modifying this argument will cause the application to be restaged.
 
 ### Health Checks
 
@@ -110,7 +104,7 @@ The following attributes are exported along with any defaults for the inputs att
 
 ## Import
 
-The current App can be imported using the `app`, e.g.
+The current App can be imported using the `app` GUID, e.g.
 
 ```
 $ terraform import cf_app.spring-music a-guid

@@ -3,8 +3,9 @@ package cloudfoundry
 import (
 	"testing"
 
-	"code.cloudfoundry.org/cli/cf/errors"
 	"fmt"
+
+	"code.cloudfoundry.org/cli/cf/errors"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
@@ -38,25 +39,22 @@ func TestAccServiceInstance_importBasic(t *testing.T) {
 func testAccCheckServiceInstanceDestroyedImportState(names []string, serviceInstanceResource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
-
 		session := testAccProvider.Meta().(*cfapi.Session)
-
 		rs, ok := s.RootModule().Resources[serviceInstanceResource]
 		if !ok {
 			return fmt.Errorf("Service instance '%s' not found in terraform state", spaceResource)
 		}
-		spaceId := rs.Primary.Attributes["space"]
+		spaceID := rs.Primary.Attributes["space"]
+
 		for _, n := range names {
-
 			session.Log.DebugMessage("checking ServiceInstance is Destroyed %s", n)
-
-			if _, err := session.ServiceManager().FindServiceInstance(n, spaceId); err != nil {
+			_, err := session.ServiceManager().FindServiceInstance(n, spaceID)
+			if err != nil {
 				switch err.(type) {
 				case *errors.ModelNotFoundError:
-					return nil
-
+					continue
 				default:
-					break
+					continue
 				}
 			}
 			return fmt.Errorf("service instance with name '%s' still exists in cloud foundry", n)

@@ -159,59 +159,59 @@ type CCServiceKeyResource struct {
 	Entity   CCServiceKey       `json:"entity"`
 }
 
+// CCServiceInstanceRoute -
+type CCServiceInstanceRoute struct {
+	Host string `json:"host"`
+}
+
+// CCServiceInstanceRouteResource -
+type CCServiceInstanceRouteResource struct {
+	Metadata resources.Metadata     `json:"metadata"`
+	Entity   CCServiceInstanceRoute `json:"entity"`
+}
+
 // NewServiceManager -
 func newServiceManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logger) (sm *ServiceManager, err error) {
-
-	sm = &ServiceManager{
-		log: logger,
-
+	return &ServiceManager{
+		log:         logger,
 		config:      config,
 		ccGateway:   ccGateway,
 		apiEndpoint: config.APIEndpoint(),
-
-		repo:   api.NewCloudControllerServiceRepository(config, ccGateway),
-		sbRepo: api.NewCloudControllerServiceBrokerRepository(config, ccGateway),
-	}
-
-	return
+		repo:        api.NewCloudControllerServiceRepository(config, ccGateway),
+		sbRepo:      api.NewCloudControllerServiceBrokerRepository(config, ccGateway),
+	}, nil
 }
 
 // ReadServiceInfo -
 func (sm *ServiceManager) ReadServiceInfo(serviceBrokerID string) (services []CCService, err error) {
+	path := fmt.Sprintf("/v2/services?q=service_broker_guid:%s", serviceBrokerID)
+	err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint, path, CCServiceResource{}, func(resource interface{}) bool {
+		sr := resource.(CCServiceResource)
+		service := sr.Entity
+		service.ID = sr.Metadata.GUID
 
-	if err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint,
-		fmt.Sprintf("/v2/services?q=service_broker_guid:%s", serviceBrokerID),
-		CCServiceResource{}, func(resource interface{}) bool {
+		if err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint,
+			fmt.Sprintf("/v2/services/%s/service_plans", service.ID),
+			CCServicePlanResource{}, func(resource interface{}) bool {
 
-			sr := resource.(CCServiceResource)
-			service := sr.Entity
-			service.ID = sr.Metadata.GUID
+				spr := resource.(CCServicePlanResource)
+				servicePlan := spr.Entity
+				servicePlan.ID = spr.Metadata.GUID
 
-			if err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint,
-				fmt.Sprintf("/v2/services/%s/service_plans", service.ID),
-				CCServicePlanResource{}, func(resource interface{}) bool {
+				service.ServicePlans = append(service.ServicePlans, servicePlan)
+				return true
 
-					spr := resource.(CCServicePlanResource)
-					servicePlan := spr.Entity
-					servicePlan.ID = spr.Metadata.GUID
+			}); err != nil {
 
-					service.ServicePlans = append(service.ServicePlans, servicePlan)
-					return true
+			sm.log.DebugMessage("WARNING! Unable to retrieve service plans for service '%s': %s", service.ID, err.Error())
+			err = nil
+		}
 
-				}); err != nil {
+		services = append(services, service)
+		return true
 
-				sm.log.DebugMessage("WARNING! Unable to retrieve service plans for service '%s': %s", service.ID, err.Error())
-				err = nil
-			}
-
-			services = append(services, service)
-			return true
-
-		}); err != nil {
-
-		return
-	}
-	return
+	})
+	return services, err
 }
 
 // CreateServiceBroker -
@@ -229,19 +229,26 @@ func (sm *ServiceManager) CreateServiceBroker(name, brokerURL, authUserName, aut
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	resource := CCServiceBrokerResource{}
-	err = sm.ccGateway.CreateResource(sm.apiEndpoint, path, bytes.NewReader(body), &resource)
+	if err = sm.ccGateway.CreateResource(sm.apiEndpoint, path, bytes.NewReader(body), &resource); err != nil {
+		return "", err
+	}
 
 	id = resource.Metadata.GUID
-	return
+	return id, nil
 }
 
 // UpdateServiceBroker -
-func (sm *ServiceManager) UpdateServiceBroker(serviceBrokerID,
-	name, brokerURL, authUserName, authPassword, spaceGUID string) (serviceBroker CCServiceBroker, err error) {
+func (sm *ServiceManager) UpdateServiceBroker(
+	serviceBrokerID,
+	name,
+	brokerURL,
+	authUserName,
+	authPassword,
+	spaceGUID string) (serviceBroker CCServiceBroker, err error) {
 
 	path := fmt.Sprintf("/v2/service_brokers/%s", serviceBrokerID)
 	request := CCServiceBroker{
@@ -256,14 +263,16 @@ func (sm *ServiceManager) UpdateServiceBroker(serviceBrokerID,
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return
+		return serviceBroker, err
 	}
 
 	resource := CCServiceBrokerResource{}
-	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(body), &resource)
+	if err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(body), &resource); err != nil {
+		return serviceBroker, err
+	}
 
 	serviceBroker = resource.Entity
-	return
+	return serviceBroker, nil
 }
 
 // ReadServiceBroker -
@@ -274,18 +283,18 @@ func (sm *ServiceManager) ReadServiceBroker(serviceBrokerID string) (serviceBrok
 	resource := CCServiceBrokerResource{}
 	err = sm.ccGateway.GetResource(url, &resource)
 	if err != nil {
-		return
+		return serviceBroker, err
 	}
 
 	serviceBroker = resource.Entity
-	return
+	return serviceBroker, nil
 }
 
 // DeleteServiceBroker -
 func (sm *ServiceManager) DeleteServiceBroker(serviceBrokerID string) (err error) {
 
 	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_brokers/%s", serviceBrokerID))
-	return
+	return err
 }
 
 // ForceDeleteServiceBroker -
@@ -293,30 +302,25 @@ func (sm *ServiceManager) ForceDeleteServiceBroker(serviceBrokerID string) (err 
 
 	services, err := sm.ReadServiceInfo(serviceBrokerID)
 	if err != nil {
-		return
+		return err
 	}
 
 	for _, s := range services {
 		for _, sp := range s.ServicePlans {
-
-			if err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint,
+			if err = sm.ccGateway.ListPaginatedResources(
+				sm.apiEndpoint,
 				fmt.Sprintf("/v2/service_instances?q=service_plan_guid:%s", sp.ID),
-				CCServiceInstanceResource{}, func(resource interface{}) bool {
-
+				CCServiceInstanceResource{},
+				func(resource interface{}) bool {
 					sir := resource.(CCServiceInstanceResource)
-
 					if err = sm.ccGateway.DeleteResource(sm.apiEndpoint,
 						fmt.Sprintf("/v2/service_instances/%s?purge=true", sir.Metadata.GUID)); err != nil {
-
 						sm.log.DebugMessage("WARNING! Unable to delete service instance '%s': %s", sir.Metadata.GUID, err.Error())
 						err = nil
 					}
 					return true
-
 				}); err != nil {
-
 				sm.log.DebugMessage("WARNING! Unable to retrieve service instances for service '%s': %s", sp.ID, err.Error())
-				err = nil
 			}
 		}
 	}
@@ -326,13 +330,12 @@ func (sm *ServiceManager) ForceDeleteServiceBroker(serviceBrokerID string) (err 
 
 // GetServiceBrokerID -
 func (sm *ServiceManager) GetServiceBrokerID(name string) (id string, err error) {
-
 	sb, err := sm.sbRepo.FindByName(name)
 	if err != nil {
-		return
+		return "", err
 	}
 	id = sb.GUID
-	return
+	return id, nil
 }
 
 // CreateServicePlanAccess -
@@ -345,21 +348,23 @@ func (sm *ServiceManager) CreateServicePlanAccess(servicePlanGUID, orgGUID strin
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	response := make(map[string]interface{})
 	err = sm.ccGateway.CreateResource(sm.apiEndpoint, path, bytes.NewReader(body), &response)
 	if err != nil {
-		return
+		return "", err
 	}
 	servicePlanAccessGUID = response["metadata"].(map[string]interface{})["guid"].(string)
-	return
+	return servicePlanAccessGUID, nil
 }
 
 // UpdateServicePlanAccess -
-func (sm *ServiceManager) UpdateServicePlanAccess(servicePlanAccessGUID,
-	servicePlanGUID, orgGUID string) (err error) {
+func (sm *ServiceManager) UpdateServicePlanAccess(
+	servicePlanAccessGUID,
+	servicePlanGUID,
+	orgGUID string) (err error) {
 
 	path := fmt.Sprintf("/v2/service_plan_visibilities/%s", servicePlanAccessGUID)
 	request := map[string]string{
@@ -369,15 +374,12 @@ func (sm *ServiceManager) UpdateServicePlanAccess(servicePlanAccessGUID,
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return
+		return err
 	}
 
 	response := make(map[string]interface{})
 	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(body), &response)
-	if err != nil {
-		return
-	}
-	return
+	return err
 }
 
 // ReadServicePlanAccess -
@@ -388,29 +390,56 @@ func (sm *ServiceManager) ReadServicePlanAccess(servicePlanAccessGUID string) (p
 	response := make(map[string]interface{})
 	err = sm.ccGateway.GetResource(url, &response)
 	if err != nil {
-		return
+		return "", "", err
 	}
 
 	if entity, ok := response["entity"]; ok {
 		planGUID = entity.(map[string]interface{})["service_plan_guid"].(string)
 		orgGUID = entity.(map[string]interface{})["organization_guid"].(string)
 	} else {
-		err = errors.NewModelNotFoundError("service plan access", servicePlanAccessGUID)
+		return "", "", errors.NewModelNotFoundError("service plan access", servicePlanAccessGUID)
 	}
 
-	return
+	return planGUID, orgGUID, nil
 }
 
 // DeleteServicePlanAccess -
 func (sm *ServiceManager) DeleteServicePlanAccess(servicePlanAccessGUID string) (err error) {
-
 	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_plan_visibilities/%s", servicePlanAccessGUID))
-	return
+	return err
+}
+
+// UpdateServicePlanVisibility -
+func (sm *ServiceManager) UpdateServicePlanVisibility(planID string, state bool) (err error) {
+	path := fmt.Sprintf("/v2/service_plans/%s", planID)
+	request := map[string]bool{
+		"public": state,
+	}
+	jsonBytes, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+
+	ups := CCServicePlanResource{}
+	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &ups)
+	return err
+}
+
+// ReadServicePlan -
+func (sm *ServiceManager) ReadServicePlan(planID string) (CCServicePlan, error) {
+	res := CCServicePlanResource{}
+	url := fmt.Sprintf("%s/v2/service_plans/%s", sm.apiEndpoint, planID)
+	err := sm.ccGateway.GetResource(url, &res)
+	return res.Entity, err
 }
 
 // CreateServiceInstance -
-func (sm *ServiceManager) CreateServiceInstance(name, servicePlanID, spaceID string,
-	params map[string]interface{}, tags []string) (id string, err error) {
+func (sm *ServiceManager) CreateServiceInstance(
+	name,
+	servicePlanID,
+	spaceID string,
+	params map[string]interface{},
+	tags []string) (id string, err error) {
 
 	path := "/v2/service_instances"
 	request := models.ServiceInstanceCreateRequest{
@@ -423,19 +452,24 @@ func (sm *ServiceManager) CreateServiceInstance(name, servicePlanID, spaceID str
 
 	jsonBytes, err := json.Marshal(request)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	resource := CCServiceInstanceResource{}
-	err = sm.ccGateway.CreateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource)
-
+	if err = sm.ccGateway.CreateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource); err != nil {
+		return "", err
+	}
 	id = resource.Metadata.GUID
-	return
+	return id, nil
 }
 
 // UpdateServiceInstance -
-func (sm *ServiceManager) UpdateServiceInstance(serviceInstanceID, name, servicePlanID string,
-	params map[string]interface{}, tags []string) (serviceInstance CCServiceInstance, err error) {
+func (sm *ServiceManager) UpdateServiceInstance(
+	serviceInstanceID,
+	name,
+	servicePlanID string,
+	params map[string]interface{},
+	tags []string) (serviceInstance CCServiceInstance, err error) {
 
 	path := fmt.Sprintf("/v2/service_instances/%s", serviceInstanceID)
 	request := CCServiceInstanceUpdateRequest{
@@ -447,29 +481,28 @@ func (sm *ServiceManager) UpdateServiceInstance(serviceInstanceID, name, service
 
 	jsonBytes, err := json.Marshal(request)
 	if err != nil {
-		return
+		return CCServiceInstance{}, err
 	}
 
 	resource := CCServiceInstanceResource{}
-	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource)
+	if err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource); err != nil {
+		return CCServiceInstance{}, err
+	}
 
 	serviceInstance = resource.Entity
-	return
+	return serviceInstance, nil
 }
 
 // ReadServiceInstance -
 func (sm *ServiceManager) ReadServiceInstance(serviceInstanceID string) (serviceInstance CCServiceInstance, err error) {
-
 	path := fmt.Sprintf("%s/v2/service_instances/%s", sm.apiEndpoint, serviceInstanceID)
-
 	resource := CCServiceInstanceResource{}
 	err = sm.ccGateway.GetResource(path, &resource)
 	if err != nil {
-		return
+		return CCServiceInstance{}, err
 	}
-
 	serviceInstance = resource.Entity
-	return
+	return serviceInstance, nil
 }
 
 // FindServiceInstance -
@@ -506,18 +539,22 @@ func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serv
 		}
 	}
 
-	return
+	return serviceInstance, err
 }
 
 // DeleteServiceInstance -
 func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string) (err error) {
-
 	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s", serviceInstanceID))
-	return
+	return err
 }
 
 // CreateUserProvidedService -
-func (sm *ServiceManager) CreateUserProvidedService(name string, spaceID string, credentials map[string]interface{}, syslogDrainURL string, routeServiceURL string) (id string, err error) {
+func (sm *ServiceManager) CreateUserProvidedService(
+	name string,
+	spaceID string,
+	credentials map[string]interface{},
+	syslogDrainURL string,
+	routeServiceURL string) (id string, err error) {
 
 	path := "/v2/user_provided_service_instances"
 	request := models.UserProvidedService{
@@ -530,35 +567,38 @@ func (sm *ServiceManager) CreateUserProvidedService(name string, spaceID string,
 
 	jsonBytes, err := json.Marshal(request)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	ups := CCUserProvidedServiceResource{}
-	err = sm.ccGateway.CreateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &ups)
+	if err = sm.ccGateway.CreateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &ups); err != nil {
+		return "", err
+	}
 
 	id = ups.Metadata.GUID
-
-	return
+	return id, nil
 }
 
 // ReadUserProvidedService -
 func (sm *ServiceManager) ReadUserProvidedService(serviceInstanceID string) (ups CCUserProvidedService, err error) {
-
 	path := fmt.Sprintf("%s/v2/user_provided_service_instances/%s", sm.apiEndpoint, serviceInstanceID)
 	resource := CCUserProvidedServiceResource{}
 	err = sm.ccGateway.GetResource(path, &resource)
 	if err != nil {
-		return
+		return CCUserProvidedService{}, err
 	}
 
 	ups = resource.Entity
-
-	return
+	return ups, nil
 }
 
 // UpdateUserProvidedService -
-func (sm *ServiceManager) UpdateUserProvidedService(serviceInstanceID string, name string, credentials map[string]interface{},
-	syslogDrainURL string, routeServiceURL string) (ups CCUserProvidedService, err error) {
+func (sm *ServiceManager) UpdateUserProvidedService(
+	serviceInstanceID string,
+	name string,
+	credentials map[string]interface{},
+	syslogDrainURL string,
+	routeServiceURL string) (ups CCUserProvidedService, err error) {
 
 	path := fmt.Sprintf("/v2/user_provided_service_instances/%s", serviceInstanceID)
 	request := CCUserProvidedServiceUpdateRequest{
@@ -570,20 +610,22 @@ func (sm *ServiceManager) UpdateUserProvidedService(serviceInstanceID string, na
 
 	jsonBytes, err := json.Marshal(request)
 	if err != nil {
-		return
+		return CCUserProvidedService{}, err
 	}
 
 	ups = CCUserProvidedService{}
-	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &ups)
+	if err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &ups); err != nil {
+		return CCUserProvidedService{}, err
+	}
 
-	return
+	return ups, nil
 }
 
 // DeleteUserProvidedService -
 func (sm *ServiceManager) DeleteUserProvidedService(serviceInstanceID string) (err error) {
 
 	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/user_provided_service_instances/%s", serviceInstanceID))
-	return
+	return err
 }
 
 // CreateServiceKey -
@@ -595,17 +637,16 @@ func (sm *ServiceManager) CreateServiceKey(name, serviceID string, params map[st
 		"parameters":            params,
 	})
 	if err != nil {
-		return
+		return CCServiceKey{}, err
 	}
 
 	resource := CCServiceKeyResource{}
-	if err = sm.ccGateway.CreateResource(sm.apiEndpoint,
-		"/v2/service_keys", bytes.NewReader(body), &resource); err != nil {
-		return
+	if err = sm.ccGateway.CreateResource(sm.apiEndpoint, "/v2/service_keys", bytes.NewReader(body), &resource); err != nil {
+		return CCServiceKey{}, err
 	}
 	serviceKey = resource.Entity
 	serviceKey.ID = resource.Metadata.GUID
-	return
+	return serviceKey, nil
 }
 
 // ReadServiceKey -
@@ -616,19 +657,18 @@ func (sm *ServiceManager) ReadServiceKey(serviceKeyID string) (serviceKey CCServ
 	resource := CCServiceKeyResource{}
 	err = sm.ccGateway.GetResource(url, &resource)
 	if err != nil {
-		return
+		return CCServiceKey{}, err
 	}
 
 	serviceKey = resource.Entity
 	serviceKey.ID = resource.Metadata.GUID
-	return
+	return serviceKey, nil
 }
 
 // DeleteServiceKey -
 func (sm *ServiceManager) DeleteServiceKey(serviceKeyID string) (err error) {
-
 	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_keys/%s", serviceKeyID))
-	return
+	return err
 }
 
 // FindServiceKey -
@@ -660,7 +700,7 @@ func (sm *ServiceManager) FindServiceKey(name string, serviceInstanceID string) 
 		}
 	}
 
-	return
+	return serviceKey, err
 }
 
 // FindSpaceService -
@@ -681,7 +721,7 @@ func (sm *ServiceManager) FindSpaceService(label string, spaceID string) (offeri
 
 	offering = offerings[0]
 
-	return
+	return offering, err
 }
 
 // FindServiceByName -
@@ -706,7 +746,7 @@ func (sm *ServiceManager) FindServiceByName(label string) (offering models.Servi
 		err = fmt.Errorf("Service %s not found", label)
 	}
 
-	return
+	return offering, err
 }
 
 // GetServicePlans -
@@ -725,19 +765,72 @@ func (sm *ServiceManager) GetServicePlans(serviceID string) (servicePlans map[st
 			return true
 		})
 
-	return
+	return servicePlans, err
 }
 
 // FindServicePlanID -
 func (sm *ServiceManager) FindServicePlanID(serviceID string, plan string) (id string, err error) {
-
 	servicePlans, err := sm.GetServicePlans(serviceID)
+	if err != nil {
+		return "", err
+	}
 
 	servicePlanID, ok := servicePlans[plan]
 	if !ok {
-		err = fmt.Errorf("plan %s does not exist in service %s", plan, serviceID)
-	} else {
-		id = servicePlanID.(string)
+		return "", fmt.Errorf("plan %s does not exist in service %s", plan, serviceID)
 	}
-	return
+
+	id = servicePlanID.(string)
+	return id, nil
+}
+
+// ReadRouteServiceBindings -
+func (sm *ServiceManager) ReadRouteServiceBindings(serviceInstanceID string) (routeIDs []string, err error) {
+	path := fmt.Sprintf("/v2/service_instances/%s/routes", serviceInstanceID)
+	err = sm.ccGateway.ListPaginatedResources(sm.apiEndpoint, path, CCServiceInstanceRouteResource{}, func(route interface{}) bool {
+		r := route.(CCServiceInstanceRouteResource)
+		routeIDs = append(routeIDs, r.Metadata.GUID)
+		return true
+	})
+	if err != nil {
+		return []string{}, err
+	}
+
+	return routeIDs, nil
+}
+
+// HasRouteServiceBinding -
+func (sm *ServiceManager) HasRouteServiceBinding(serviceInstanceID, routeID string) (bool, error) {
+	routes, err := sm.ReadRouteServiceBindings(serviceInstanceID)
+	if err != nil {
+		return false, err
+	}
+	for _, route := range routes {
+		if route == routeID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// CreateRouteServiceBinding -
+func (sm *ServiceManager) CreateRouteServiceBinding(serviceID, routeID string, params interface{}) (err error) {
+	path := fmt.Sprintf("/v2/service_instances/%s/routes/%s", serviceID, routeID)
+
+	jsonBytes, err := json.Marshal(map[string]interface{}{
+		"parameters": params,
+	})
+	if err != nil {
+		return err
+	}
+
+	resource := CCServiceInstanceResource{}
+	err = sm.ccGateway.UpdateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource)
+	return err
+}
+
+// DeleteRouteServiceBinding -
+func (sm *ServiceManager) DeleteRouteServiceBinding(serviceID, routeID string) (err error) {
+	path := fmt.Sprintf("/v2/service_instances/%s/routes/%s", serviceID, routeID)
+	return sm.ccGateway.DeleteResource(sm.apiEndpoint, path)
 }

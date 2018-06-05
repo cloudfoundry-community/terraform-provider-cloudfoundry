@@ -57,26 +57,21 @@ type CCASGResource struct {
 
 // NewASGManager -
 func newASGManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logger) (dm *ASGManager, err error) {
-
 	dm = &ASGManager{
-		log: logger,
-
-		config:    config,
-		ccGateway: ccGateway,
-
+		log:         logger,
+		config:      config,
+		ccGateway:   ccGateway,
 		apiEndpoint: config.APIEndpoint(),
-
 		repo:        securitygroups.NewSecurityGroupRepo(config, ccGateway),
 		runningRepo: running.NewSecurityGroupsRepo(config, ccGateway),
 		stagingRepo: staging.NewSecurityGroupsRepo(config, ccGateway),
 	}
 
 	if len(dm.apiEndpoint) == 0 {
-		err = errors.New("API endpoint missing from config file")
-		return
+		return nil, errors.New("API endpoint missing from config file")
 	}
 
-	return
+	return dm, nil
 }
 
 // CreateASG -
@@ -87,16 +82,15 @@ func (am *ASGManager) CreateASG(name string, rules []CCASGRule) (id string, err 
 		"rules": rules,
 	})
 	if err != nil {
-		return
+		return "", err
 	}
 
 	resource := CCASGResource{}
-	if err = am.ccGateway.CreateResource(am.apiEndpoint,
-		"/v2/security_groups", bytes.NewReader(body), &resource); err != nil {
-		return
+	if err = am.ccGateway.CreateResource(am.apiEndpoint, "/v2/security_groups", bytes.NewReader(body), &resource); err != nil {
+		return "", err
 	}
 	id = resource.Metadata.GUID
-	return
+	return id, nil
 }
 
 // UpdateASG -
@@ -106,33 +100,36 @@ func (am *ASGManager) UpdateASG(id string, name string, rules []CCASGRule) (err 
 		"name":  name,
 		"rules": rules,
 	})
+	if err != nil {
+		return err
+	}
 
-	request, err := am.ccGateway.NewRequest("PUT",
-		fmt.Sprintf("%s/v2/security_groups/%s", am.apiEndpoint, id),
-		am.config.AccessToken(), bytes.NewReader(body))
+	path := fmt.Sprintf("%s/v2/security_groups/%s", am.apiEndpoint, id)
+	request, err := am.ccGateway.NewRequest("PUT", path, am.config.AccessToken(), bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 
 	resource := &CCASGResource{}
 	_, err = am.ccGateway.PerformRequestForJSONResponse(request, resource)
-	return
+	return err
 }
 
 // GetASG -
 func (am *ASGManager) GetASG(id string) (asg CCASG, err error) {
-
 	resource := &CCASGResource{}
-	err = am.ccGateway.GetResource(fmt.Sprintf("%s/v2/security_groups/%s", am.apiEndpoint, id), resource)
+	path := fmt.Sprintf("%s/v2/security_groups/%s", am.apiEndpoint, id)
+	if err = am.ccGateway.GetResource(path, resource); err != nil {
+		return CCASG{}, err
+	}
 	asg = resource.Entity
 	asg.ID = resource.Metadata.GUID
-	return
+	return asg, nil
 }
 
 // Delete -
 func (am *ASGManager) Delete(id string) (err error) {
-	err = am.ccGateway.DeleteResource(am.apiEndpoint, fmt.Sprintf("/v2/security_groups/%s", id))
-	return
+	return am.ccGateway.DeleteResource(am.apiEndpoint, fmt.Sprintf("/v2/security_groups/%s", id))
 }
 
 // Read -
@@ -143,10 +140,13 @@ func (am *ASGManager) Read(name string) (models.SecurityGroup, error) {
 // Running -
 func (am *ASGManager) Running() (asgs []string, err error) {
 	securityGroups, err := am.runningRepo.List()
+	if err != nil {
+		return []string{}, err
+	}
 	for _, s := range securityGroups {
 		asgs = append(asgs, s.GUID)
 	}
-	return
+	return asgs, nil
 }
 
 // BindToRunning -
@@ -163,24 +163,27 @@ func (am *ASGManager) UnbindFromRunning(id string) error {
 func (am *ASGManager) UnbindAllFromRunning() (err error) {
 	securityGroups, err := am.runningRepo.List()
 	if err != nil {
-		return
+		return err
 	}
 	for _, s := range securityGroups {
 		err = am.runningRepo.UnbindFromRunningSet(s.GUID)
 		if err != nil {
-			return
+			return err
 		}
 	}
-	return
+	return nil
 }
 
 // Staging -
 func (am *ASGManager) Staging() (asgs []string, err error) {
 	securityGroups, err := am.stagingRepo.List()
+	if err != nil {
+		return []string{}, err
+	}
 	for _, s := range securityGroups {
 		asgs = append(asgs, s.GUID)
 	}
-	return
+	return asgs, nil
 }
 
 // BindToStaging -
@@ -197,13 +200,13 @@ func (am *ASGManager) UnbindFromStaging(id string) error {
 func (am *ASGManager) UnbindAllFromStaging() (err error) {
 	securityGroups, err := am.stagingRepo.List()
 	if err != nil {
-		return
+		return err
 	}
 	for _, s := range securityGroups {
 		err = am.stagingRepo.UnbindFromStagingSet(s.GUID)
 		if err != nil {
-			return
+			return err
 		}
 	}
-	return
+	return nil
 }
