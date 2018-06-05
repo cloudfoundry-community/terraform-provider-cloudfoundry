@@ -55,20 +55,20 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 
 	ctx := context.Background()
 	if release, _, err = r.client.Repositories.GetReleaseByTag(ctx, r.owner, r.repoName, version); err != nil {
-		return
+		return err
 	}
 
 	if r.archiveName == string(github.Zipball) {
 
 		if resp, err = http.Get(*release.ZipballURL); err != nil {
-			return
+			return err
 		}
 		in = resp.Body
 
 	} else if r.archiveName == string(github.Tarball) {
 
 		if resp, err = http.Get(*release.TarballURL); err != nil {
-			return
+			return err
 		}
 		in = resp.Body
 
@@ -77,11 +77,11 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 
 			if r.archiveName == *asset.Name {
 				if in, url, err = r.client.Repositories.DownloadReleaseAsset(ctx, r.owner, r.repoName, *asset.ID); err != nil {
-					return
+					return err
 				}
 				if len(url) > 0 {
 					if resp, err = http.Get(url); err != nil {
-						return
+						return err
 					}
 					in = resp.Body
 				}
@@ -91,23 +91,23 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 	}
 
 	if err = r.createArchive(in); err != nil {
-		return
+		return err
 	}
 	if r.archiveName == string(github.Zipball) {
 
 		origArchive := r.archivePath + ".orig"
 		if err = os.Rename(r.archivePath, origArchive); err != nil {
-			return
+			return err
 		}
 		defer os.Remove(origArchive)
 
 		if zipIn, err = zip.OpenReader(origArchive); err != nil {
-			return
+			return err
 		}
 		defer zipIn.Close()
 
 		if zipFile, err = os.Create(r.archivePath); err != nil {
-			return
+			return err
 		}
 		defer zipFile.Close()
 
@@ -127,10 +127,10 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 				}
 				if !strings.HasSuffix(fh.Name, "/") {
 					if in, err = f.Open(); err != nil {
-						return
+						return err
 					}
 					if _, err = io.Copy(out, in); err != nil {
-						return
+						return err
 					}
 				}
 			}
@@ -140,12 +140,12 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 
 		origArchive := r.archivePath + ".orig"
 		if err = os.Rename(r.archivePath, origArchive); err != nil {
-			return
+			return err
 		}
 		defer os.Remove(origArchive)
 
 		if in, err = os.Open(origArchive); err != nil {
-			return
+			return err
 		}
 		defer in.Close()
 
@@ -156,7 +156,7 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 		tarIn = tar.NewReader(gzipIn)
 
 		if zipFile, err = os.Create(r.archivePath); err != nil {
-			return
+			return err
 		}
 		defer zipFile.Close()
 
@@ -166,7 +166,6 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 		for {
 			tarHeader, err = tarIn.Next()
 			if err == io.EOF {
-				err = nil
 				break
 			} else if err != nil {
 				return err
@@ -178,7 +177,7 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 
 			fi := tarHeader.FileInfo()
 			if fh, err = zip.FileInfoHeader(fi); err != nil {
-				return
+				return err
 
 			}
 			fh.Name = tarHeader.Name[strings.Index(tarHeader.Name, "/")+1:]
@@ -192,17 +191,16 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 				}
 				if !fi.IsDir() {
 					if _, err = io.Copy(out, tarIn); err != nil {
-						return
+						return err
 					}
 				}
 			}
 		}
 	}
-	return
+	return nil
 }
 
 func (r *GithubRelease) createArchive(in io.ReadCloser) (err error) {
-
 	out, err := os.Create(r.archivePath)
 	defer in.Close()
 	defer out.Close()
@@ -210,5 +208,5 @@ func (r *GithubRelease) createArchive(in io.ReadCloser) (err error) {
 	if err == nil {
 		_, err = io.Copy(out, in)
 	}
-	return
+	return err
 }

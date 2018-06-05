@@ -103,5 +103,5 @@ func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) (err error) 
 	d.Set("domain", strings.Join(domainParts[1:], "."))
 	d.Set("org", domain.OwningOrganizationGUID)
 	d.SetId(domain.ID)
-	return
+	return err
 }
