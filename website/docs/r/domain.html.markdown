@@ -32,11 +32,14 @@ resource "cf_domain" "private" {
 }
 ```
 
+~> **NOTE:** To control sharing of a private domain, use the [cf_private_domain](private_domain_access.html) resource. 
+
+
 ## Argument Reference
 
 The following arguments are supported:
 
-* `name` - Full name of domain. If specified then the `sub_domain` and `domain` attributes will be computed from the `name` 
+* `name` - (Optional, String) Full name of domain. If specified then the `sub_domain` and `domain` attributes will be computed from the `name` 
 * `sub_domain` - (Optional, String) Sub-domain part of full domain name. If specified the `domain` argument needs to be provided and the `name` will be computed.
 * `domain` - (Optional, String) Domain part of full domain name. If specified the `sub_domain` argument needs to be provided and the `name` will be computed.
 
@@ -46,7 +49,7 @@ The following argument applies only to shared domains.
 
 The following argument applies only to private domains.
 
-* `org` - (Optional, String) The GUID of the Org that owns this domain. If provided then this will be a private domain.
+* `org` - (Optional, String) The ID of the Org that owns this domain. If specified, this resource will provision a private domain. By default, the provisioned domain is a public (shared) domain.
 
 ## Attributes Reference
 
@@ -56,7 +59,7 @@ The following attributes are exported:
 
 ## Import
 
-The current Domain can be imported using the `domain`, e.g.
+An existing Domain can be imported using its Domain Guid, e.g.
 
 ```
 $ terraform import cf_domain.private a-guid

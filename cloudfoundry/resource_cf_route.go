@@ -134,11 +134,12 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		return err
 	}
 	// Delete route if an error occurs
-	defer func() {
+	defer func() error {
 		e := &err
 		if *e != nil {
-			rm.DeleteRoute(route.ID)
+			return rm.DeleteRoute(route.ID)
 		}
+		return nil
 	}()
 
 	if err = setRouteArguments(session, route, d); err != nil {
@@ -155,7 +156,7 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	d.SetId(route.ID)
-	return
+	return err
 }
 
 func resourceRouteRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -174,22 +175,22 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) (err error) {
 			d.SetId("")
 			err = nil
 		}
-		return
+		return err
 	}
 	if err = setRouteArguments(session, route, d); err != nil {
-		return
+		return err
 	}
 
 	if _, ok := d.GetOk("target"); ok || IsImportState(d) {
 		var mappings []map[string]interface{}
 		if mappings, err = rm.ReadRouteMappingsByRoute(id); err != nil {
-			return
+			return err
 		}
 		if len(mappings) > 0 {
 			d.Set("target", mappings)
 		}
 	}
-	return
+	return nil
 }
 
 func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -214,7 +215,7 @@ func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			return err
 		}
 		if err = setRouteArguments(session, route, d); err != nil {
-			return
+			return err
 		}
 	}
 
@@ -224,17 +225,17 @@ func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		session.Log.DebugMessage("New route mappings state:: %# v", new)
 
 		if err = removeTargets(getListOfStructs(old.(*schema.Set).List()), rm, session.Log); err != nil {
-			return
+			return err
 		}
 
 		var t interface{}
 		if t, err = addTargets(route.ID, getListOfStructs(new.(*schema.Set).List()), rm, session.Log); err != nil {
-			return
+			return err
 		}
 		d.Set("target", t)
 		session.Log.DebugMessage("Updated route target mappings: %# v", d.Get("target"))
 	}
-	return
+	return nil
 }
 
 func resourceRouteDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -247,11 +248,14 @@ func resourceRouteDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if targets, ok := d.GetOk("target"); ok {
 		err = removeTargets(getListOfStructs(targets.(*schema.Set).List()), rm, session.Log)
+		if err != nil {
+			return err
+		}
 	}
 	if err = rm.DeleteRoute(d.Id()); err != nil {
-		return
+		return err
 	}
-	return
+	return nil
 }
 
 func setRouteArguments(session *cfapi.Session, route cfapi.CCRoute, d *schema.ResourceData) (err error) {
@@ -270,7 +274,7 @@ func setRouteArguments(session *cfapi.Session, route cfapi.CCRoute, d *schema.Re
 
 	domain, err := session.DomainManager().FindDomain(route.DomainGUID)
 	if err != nil {
-		return
+		return err
 	}
 	if route.Port != nil && *route.Port > 0 {
 		d.Set("endpoint", fmt.Sprintf("%s:%d", domain.Name, *route.Port))
@@ -280,11 +284,14 @@ func setRouteArguments(session *cfapi.Session, route cfapi.CCRoute, d *schema.Re
 		d.Set("endpoint", fmt.Sprintf("%s.%s/%s", *route.Hostname, domain.Name, *route.Path))
 	}
 
-	return
+	return nil
 }
 
-func addTargets(id string, add []map[string]interface{},
-	rm *cfapi.RouteManager, log *cfapi.Logger) (targets []map[string]interface{}, err error) {
+func addTargets(
+	id string,
+	add []map[string]interface{},
+	rm *cfapi.RouteManager,
+	log *cfapi.Logger) (targets []map[string]interface{}, err error) {
 
 	var (
 		appID, mappingID string
@@ -300,18 +307,20 @@ func addTargets(id string, add []map[string]interface{},
 			port = &vv
 		}
 		if mappingID, err = rm.CreateRouteMapping(id, appID, port); err != nil {
-			return
+			return targets, err
 		}
 		t["mapping_id"] = mappingID
 		targets = append(targets, t)
 
 		log.DebugMessage("Created route mapping with id '%s' to app instance '%s'.", mappingID, appID)
 	}
-	return
+	return targets, nil
 }
 
-func removeTargets(delete []map[string]interface{},
-	rm *cfapi.RouteManager, log *cfapi.Logger) error {
+func removeTargets(
+	delete []map[string]interface{},
+	rm *cfapi.RouteManager,
+	log *cfapi.Logger) error {
 
 	for _, t := range delete {
 

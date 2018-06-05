@@ -20,19 +20,19 @@ data "cf_space" "space" {
     name = "pcfdev-space"
 	org = "${data.cf_org.org.id}"
 }
-data "cf_service" "mysql" {
-    name = "p-mysql"
+data "cf_service" "rabbitmq" {
+    name = "p-rabbitmq"
 }
 
-resource "cf_service_instance" "mysql" {
-	name = "mysql"
+resource "cf_service_instance" "rabbitmq" {
+	name = "rabbitmq"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans["512mb"]}"
+    service_plan = "${data.cf_service.rabbitmq.service_plans["standard"]}"
 }
 
-resource "cf_service_key" "mysql-key" {
-	name = "mysql-key"
-	service_instance = "${cf_service_instance.mysql.id}"
+resource "cf_service_key" "rabbitmq-key" {
+	name = "rabbitmq-key"
+	service_instance = "${cf_service_instance.rabbitmq.id}"
 
 	params {
 		"key1" = "aaaa"
@@ -43,13 +43,13 @@ resource "cf_service_key" "mysql-key" {
 
 func TestAccServiceKey_normal(t *testing.T) {
 
-	ref := "cf_service_key.mysql-key"
+	ref := "cf_service_key.rabbitmq-key"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceKeyDestroyed("mysql-key", "cf_service_instance.mysql"),
+			CheckDestroy: testAccCheckServiceKeyDestroyed("rabbitmq-key", "cf_service_instance.rabbitmq"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -57,7 +57,7 @@ func TestAccServiceKey_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceKeyExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "mysql-key"),
+							ref, "name", "rabbitmq-key"),
 					),
 				},
 			},
@@ -95,8 +95,9 @@ func testAccCheckServiceKeyExists(resource string) resource.TestCheckFunc {
 		if err = assertEquals(attributes, "name", serviceKey.Name); err != nil {
 			return err
 		}
-		err = assertMapEquals("credentials", attributes, serviceKey.Credentials)
-		return
+
+		normalized := normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_")
+		return assertMapEquals("credentials", attributes, normalized)
 	}
 }
 

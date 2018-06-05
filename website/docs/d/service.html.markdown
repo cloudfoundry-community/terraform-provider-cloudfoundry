@@ -8,11 +8,11 @@ description: |-
 
 # cf\_service
 
-Gets information on a Cloud Foundry service.
+Gets information on a Cloud Foundry service definition.
 
 ## Example Usage
 
-The following example looks up a service named 'p-redis' globally. 
+The following example looks up a service definition named 'p-redis', globally. 
 
 ```
 data "cf_service" "redis" {
@@ -20,7 +20,7 @@ data "cf_service" "redis" {
 }
 ```
 
-The following example looks up a service named 'p-redis' within the Space identified by the id of an Space resource defined elsewhere in the Terraform configuration
+The following example looks up a service named 'p-redis', registered as a space-scoped service within the specified Space id
 
 ```
 data "cf_service" "redis" {
@@ -34,7 +34,7 @@ data "cf_service" "redis" {
 The following arguments are supported:
 
 * `name` - (Required) The name of the service to look up
-* `space` - (Optional) The space within which the service is defined
+* `space` - (Optional) The space within which the service is defined (as a [space-scoped](http://docs.cloudfoundry.org/services/managing-service-brokers.html#register-broker) service)
 
 ## Attributes Reference
 
