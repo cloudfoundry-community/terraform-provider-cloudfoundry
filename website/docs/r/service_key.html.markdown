@@ -37,7 +37,7 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the Service Key in Cloud Foundry.
 * `service_instance` - (Required) The ID of the Service Instance the key should be associated with.
-* `params` - (Optional, Map) A list of key/value parameters used by the service broker to create the binding for the key.
+* `params` - (Optional, Map) A list of key/value parameters used by the service broker to create the binding for the key. By default, no parameters are provided.
 
 ## Attributes Reference
 
@@ -48,7 +48,7 @@ The following attributes are exported:
 
 ## Import
 
-The current Service Key can be imported using the `service_broker`, e.g.
+An existing Service Key can be imported using its guid , e.g.
 
 ```
 $ terraform import cf_service_key.redis1-key1 a-guid

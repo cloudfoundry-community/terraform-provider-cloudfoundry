@@ -109,7 +109,7 @@ func testTaggedContent(workspace string, t *testing.T) {
 
 func getGitRepo(workspace string, t *testing.T) (gitRepo repo.Repository) {
 
-	repoManager := repo.NewRepoManager(workspace)
+	repoManager := repo.NewManager(workspace)
 	gitRepo, err := repoManager.GetGitRepository("https://github.com/mevansam/test-app.git", nil, nil, nil)
 	checkError(t, err)
 
@@ -124,7 +124,7 @@ func getGitRepo(workspace string, t *testing.T) (gitRepo repo.Repository) {
 	if _, err := os.Stat(path + "/README.md"); os.IsNotExist(err) {
 		t.Fatalf("file '%s/README.md' does not exist", path)
 	}
-	return
+	return gitRepo
 }
 
 func getGitWorkspaceDirectory() (dir string) {
@@ -136,7 +136,7 @@ func getGitWorkspaceDirectory() (dir string) {
 		dir += "/.test_git"
 		if err = os.RemoveAll(dir); err == nil {
 			if err = os.Mkdir(dir, os.ModePerm); err == nil {
-				return
+				return dir
 			}
 		}
 	}
