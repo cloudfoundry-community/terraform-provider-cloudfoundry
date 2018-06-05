@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/kr/pretty"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
@@ -52,7 +51,7 @@ resource "cf_app" "spring-music" {
 	memory = "768"
 	disk_quota = "512"
 	timeout = 1800
-	
+
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
@@ -304,10 +303,7 @@ func TestAccApp_app2(t *testing.T) {
 					Config: fmt.Sprintf(appResourceWithMultiplePorts, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
-
-							var responses []string
-
-							responses = []string{"8888"}
+							responses := []string{"8888"}
 							if err = assertHTTPResponse("https://test-app-8888."+defaultAppDomain()+"/port", 200, &responses); err != nil {
 								return err
 							}
@@ -361,7 +357,7 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 		rm := session.RouteManager()
 
 		if app, err = am.ReadApp(id); err != nil {
-			return
+			return err
 		}
 		session.Log.DebugMessage(
 			"retrieved app for resource '%s' with id '%s': %# v",
@@ -408,13 +404,13 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 		}
 
 		if serviceBindings, err = am.ReadServiceBindingsByApp(id); err != nil {
-			return
+			return err
 		}
 		session.Log.DebugMessage(
 			"retrieved service bindings for app with id '%s': %# v",
 			id, serviceBindings)
 
-		if err := assertListEquals(attributes, "service_binding", len(serviceBindings),
+		if err = assertListEquals(attributes, "service_binding", len(serviceBindings),
 			func(values map[string]string, i int) (match bool) {
 
 				var binding map[string]interface{}
@@ -430,11 +426,10 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 				}
 
 				if binding != nil && values["binding_id"] == binding["binding_id"] {
-					if err := assertMapEquals("credentials", values, binding["credentials"].(map[string]interface{})); err != nil {
-
+					if err2 := assertMapEquals("credentials", values, binding["credentials"].(map[string]interface{})); err2 != nil {
 						session.Log.LogMessage(
-							"Crendentials for service instance %s do not match:\nactual=%# v\nexpected=% #v\n",
-							serviceInstanceID, pretty.Formatter(values), pretty.Formatter(binding["credentials"]))
+							"Credentials for service instance %s do not match: %s",
+							serviceInstanceID, err2.Error())
 						return false
 					}
 					return true
@@ -498,7 +493,7 @@ func validateRouteMapping(routeName string, attributes map[string]string, routeM
 			return fmt.Errorf("route mapping with id '%s' does not map to route '%s'", mappingID, routeID)
 		}
 	}
-	return
+	return err
 }
 
 func testAccCheckAppDestroyed(apps []string) resource.TestCheckFunc {

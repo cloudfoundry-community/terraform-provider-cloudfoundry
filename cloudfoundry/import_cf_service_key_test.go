@@ -7,13 +7,13 @@ import (
 )
 
 func TestAccServiceKey_importBasic(t *testing.T) {
-	resourceName := "cf_service_key.mysql-key"
+	resourceName := "cf_service_key.rabbitmq-key"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceKeyDestroyed("mysql-key", "cf_service_instance.mysql"),
+			CheckDestroy: testAccCheckServiceKeyDestroyed("rabbitmq-key", "cf_service_instance.rabbitmq"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

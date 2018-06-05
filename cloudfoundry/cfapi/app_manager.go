@@ -81,27 +81,26 @@ type CCAppResource struct {
 const appStatePingSleep = time.Second * 5
 
 // newAppManager -
-func newAppManager(config coreconfig.Reader, ccGateway net.Gateway,
-	domainRepository api.DomainRepository, routeRepository api.RouteRepository, logger *Logger) (am *AppManager, err error) {
+func newAppManager(
+	config coreconfig.Reader,
+	ccGateway net.Gateway,
+	domainRepository api.DomainRepository,
+	routeRepository api.RouteRepository,
+	logger *Logger) (am *AppManager, err error) {
 
 	am = &AppManager{
-		log: logger,
-
-		config:    config,
-		ccGateway: ccGateway,
-
+		log:         logger,
+		config:      config,
+		ccGateway:   ccGateway,
 		apiEndpoint: config.APIEndpoint(),
-
 		appRepo:     applications.NewCloudControllerRepository(config, ccGateway),
 		appBitsRepo: applicationbits.NewCloudControllerApplicationBitsRepository(config, ccGateway),
-
-		appFiles:  appfiles.ApplicationFiles{},
-		appZipper: appfiles.ApplicationZipper{},
-
-		starter: application.Start{},
+		appFiles:    appfiles.ApplicationFiles{},
+		appZipper:   appfiles.ApplicationZipper{},
+		starter:     application.Start{},
 	}
 	am.pushActor = actors.NewPushActor(am.appBitsRepo, am.appZipper, am.appFiles, nil)
-	return
+	return am, nil
 }
 
 // FindApp -
@@ -114,36 +113,33 @@ func (am *AppManager) FindApp(appName string, spaceID string) (app CCApp, err er
 		queryEndpoint = "/v2/apps?q=name:%s"
 	}
 
-	if err = am.ccGateway.ListPaginatedResources(am.apiEndpoint,
-		fmt.Sprintf(queryEndpoint, appName),
-		CCAppResource{}, func(resource interface{}) bool {
-
+	path := fmt.Sprintf(queryEndpoint, appName)
+	if err = am.ccGateway.ListPaginatedResources(am.apiEndpoint, path, CCAppResource{},
+		func(resource interface{}) bool {
 			appResource := resource.(CCAppResource)
 			app = appResource.Entity
 			app.ID = appResource.Metadata.GUID
-
 			return false
 		}); err != nil {
-
-		return
+		return CCApp{}, err
 	}
-
 	if len(app.ID) == 0 {
-		err = errors.NewModelNotFoundError("Application", appName)
+		return CCApp{}, errors.NewModelNotFoundError("Application", appName)
 	}
-	return
+	return app, nil
 }
 
 // ReadApp -
 func (am *AppManager) ReadApp(appID string) (app CCApp, err error) {
 
 	resource := CCAppResource{}
-	err = am.ccGateway.GetResource(
-		fmt.Sprintf("%s/v2/apps/%s", am.apiEndpoint, appID), &resource)
-
+	path := fmt.Sprintf("%s/v2/apps/%s", am.apiEndpoint, appID)
+	if err = am.ccGateway.GetResource(path, &resource); err != nil {
+		return CCApp{}, err
+	}
 	app = resource.Entity
 	app.ID = resource.Metadata.GUID
-	return
+	return app, nil
 }
 
 // CreateApp -
@@ -151,17 +147,15 @@ func (am *AppManager) CreateApp(a CCApp) (app CCApp, err error) {
 
 	body, err := json.Marshal(a)
 	if err != nil {
-		return
+		return CCApp{}, err
 	}
-
 	resource := CCAppResource{}
-	if err = am.ccGateway.CreateResource(am.apiEndpoint,
-		"/v2/apps", bytes.NewReader(body), &resource); err != nil {
-		return
+	if err = am.ccGateway.CreateResource(am.apiEndpoint, "/v2/apps", bytes.NewReader(body), &resource); err != nil {
+		return CCApp{}, err
 	}
 	app = resource.Entity
 	app.ID = resource.Metadata.GUID
-	return
+	return app, nil
 }
 
 // UpdateApp -
@@ -169,62 +163,56 @@ func (am *AppManager) UpdateApp(a CCApp) (app CCApp, err error) {
 
 	body, err := json.Marshal(a)
 	if err != nil {
-		return
+		return CCApp{}, err
 	}
 
-	request, err := am.ccGateway.NewRequest("PUT",
-		fmt.Sprintf("%s/v2/apps/%s", am.apiEndpoint, a.ID),
-		am.config.AccessToken(), bytes.NewReader(body))
+	path := fmt.Sprintf("%s/v2/apps/%s", am.apiEndpoint, a.ID)
+	request, err := am.ccGateway.NewRequest("PUT", path, am.config.AccessToken(), bytes.NewReader(body))
 	if err != nil {
-		return
+		return CCApp{}, err
 	}
 
 	resource := CCAppResource{}
 	_, err = am.ccGateway.PerformRequestForJSONResponse(request, &resource)
+	if err != nil {
+		return CCApp{}, err
+	}
 
 	app = resource.Entity
 	app.ID = resource.Metadata.GUID
-	return
+	return app, nil
 }
 
 // DeleteApp -
 func (am *AppManager) DeleteApp(appID string, deleteServiceBindings bool) (err error) {
 
 	if deleteServiceBindings {
-
 		var mappings []map[string]interface{}
-
 		if mappings, err = am.ReadServiceBindingsByApp(appID); err != nil {
-			return
+			return err
 		}
 		for _, m := range mappings {
 			if bindingID, ok := m["binding_id"]; ok {
 				if err = am.DeleteServiceBinding(bindingID.(string)); err != nil {
-					return
+					return err
 				}
 			}
 		}
 	}
 
-	err = am.ccGateway.DeleteResource(am.apiEndpoint, fmt.Sprintf("/v2/apps/%s", appID))
-	return
+	return am.ccGateway.DeleteResource(am.apiEndpoint, fmt.Sprintf("/v2/apps/%s", appID))
 }
 
 // UploadApp -
 func (am *AppManager) UploadApp(app CCApp, path string, addContent []map[string]interface{}) (err error) {
-
-	err = am.pushActor.ProcessPath(path, func(appDir string) error {
-
+	processor := func(appDir string) error {
 		for _, c := range addContent {
-
 			s := c["source"].(string)
 			d := filepath.Join(appDir, c["destination"].(string))
-
 			var (
 				err error
 				sfi os.FileInfo
 			)
-
 			if sfi, err = os.Stat(s); err != nil {
 				return err
 			}
@@ -237,38 +225,30 @@ func (am *AppManager) UploadApp(app CCApp, path string, addContent []map[string]
 				return err
 			}
 		}
-
 		localFiles, err := am.appFiles.AppFilesInDir(appDir)
 		if err != nil {
 			return fmt.Errorf("error processing app files in '%s': %s", path, err.Error())
 		}
-
 		if len(localFiles) == 0 {
 			return fmt.Errorf("no app files found in '%s'", path)
 		}
-
 		am.log.UI.Say("Uploading %s...", terminal.EntityNameColor(app.Name))
-
 		uploadDir, err := ioutil.TempDir("", "apps")
 		if err != nil {
 			return err
 		}
 		defer os.RemoveAll(uploadDir)
-
 		remoteFiles, hasFileToUpload, err := am.pushActor.GatherFiles(localFiles, appDir, uploadDir, true)
 		if err != nil {
 			return err
 		}
-
 		if httpError, isHTTPError := err.(errors.HTTPError); isHTTPError && httpError.StatusCode() == 504 {
-
 			am.log.UI.Warn("Resource matching API timed out; pushing all app files.")
 			remoteFiles, hasFileToUpload, err = am.pushActor.GatherFiles(localFiles, appDir, uploadDir, false)
 			if err != nil {
 				return err
 			}
 		}
-
 		zipFile, err := ioutil.TempFile("", "uploads")
 		if err != nil {
 			return err
@@ -303,31 +283,31 @@ func (am *AppManager) UploadApp(app CCApp, path string, addContent []map[string]
 		if err = am.pushActor.UploadApp(app.ID, zipFile, remoteFiles); err != nil {
 			return fmt.Errorf("error uploading application.\n%s", err.Error())
 		}
-
 		am.log.UI.Ok()
 		return nil
-	})
+	}
 
-	return
+	return am.pushActor.ProcessPath(path, processor)
 }
 
 // StartApp -
 func (am *AppManager) StartApp(appID string, timeout time.Duration) (err error) {
 
 	var app CCApp
-
 	if app, err = am.ReadApp(appID); err != nil {
-		return
+		return err
 	}
 	if app.State != nil && *app.State == AppStopped {
 		app.State = &AppStarted
 		if app, err = am.UpdateApp(app); err != nil {
-			return
+			return err
 		}
 
-		err = am.WaitForAppToStart(app, timeout)
+		if err = am.WaitForAppToStart(app, timeout); err != nil {
+			return err
+		}
 	}
-	return
+	return nil
 }
 
 // WaitForAppToStart -
@@ -338,11 +318,11 @@ func (am *AppManager) WaitForAppToStart(app CCApp, timeout time.Duration) (err e
 	c := make(chan error, 1)
 	go func() {
 
-		var err error
+		var ferr error
 
 		for {
-			if app, err = am.ReadApp(app.ID); err != nil {
-				c <- err
+			if app, ferr = am.ReadApp(app.ID); err != nil {
+				c <- ferr
 				return
 			}
 			if app.State != nil {
@@ -353,8 +333,8 @@ func (am *AppManager) WaitForAppToStart(app CCApp, timeout time.Duration) (err e
 				if *app.State == AppStarted {
 
 					response := make(map[string]interface{})
-					if err = am.ccGateway.GetResource(fmt.Sprintf("%s/v2/apps/%s/stats", am.apiEndpoint, app.ID), &response); err != nil {
-						c <- err
+					if ferr = am.ccGateway.GetResource(fmt.Sprintf("%s/v2/apps/%s/stats", am.apiEndpoint, app.ID), &response); err != nil {
+						c <- ferr
 						return
 					}
 					if i, ok := response["0"]; ok {
@@ -377,13 +357,13 @@ func (am *AppManager) WaitForAppToStart(app CCApp, timeout time.Duration) (err e
 	select {
 	case err = <-c:
 		if err != nil {
-			return
+			return err
 		}
 		am.log.UI.Say("App %s is running.", terminal.EntityNameColor(app.Name))
 	case <-time.After(timeout):
-		err = fmt.Errorf("app %s failed to start after %d seconds", app.Name, timeout/time.Second)
+		return fmt.Errorf("app %s failed to start after %d seconds", app.Name, timeout/time.Second)
 	}
-	return
+	return nil
 }
 
 // RestageApp -
@@ -393,17 +373,17 @@ func (am *AppManager) RestageApp(appID string, timeout time.Duration) (err error
 		fmt.Sprintf("%s/v2/apps/%s/restage", am.apiEndpoint, appID),
 		am.config.AccessToken(), bytes.NewReader([]byte{}))
 	if err != nil {
-		return
+		return err
 	}
 
 	resource := CCAppResource{}
-	_, err = am.ccGateway.PerformRequestForJSONResponse(request, &resource)
+	if _, err = am.ccGateway.PerformRequestForJSONResponse(request, &resource); err != nil {
+		return err
+	}
 
 	app := resource.Entity
 	app.ID = resource.Metadata.GUID
-
-	err = am.WaitForAppToStage(app, timeout)
-	return
+	return am.WaitForAppToStage(app, timeout)
 }
 
 // WaitForAppToStage -
@@ -414,11 +394,11 @@ func (am *AppManager) WaitForAppToStage(app CCApp, timeout time.Duration) (err e
 	c := make(chan error)
 	go func() {
 
-		var err error
+		var ferr error
 
 		for {
-			if app, err = am.ReadApp(app.ID); err != nil {
-				c <- err
+			if app, ferr = am.ReadApp(app.ID); err != nil {
+				c <- ferr
 				return
 			}
 			if app.PackageState != nil {
@@ -438,13 +418,13 @@ func (am *AppManager) WaitForAppToStage(app CCApp, timeout time.Duration) (err e
 	select {
 	case err = <-c:
 		if err != nil {
-			return
+			return err
 		}
 		am.log.UI.Say("App %s has finish staging.", terminal.EntityNameColor(app.Name))
 	case <-time.After(timeout):
-		err = fmt.Errorf("app %s failed to stage after %d seconds", app.Name, timeout/time.Second)
+		return fmt.Errorf("app %s failed to stage after %d seconds", app.Name, timeout/time.Second)
 	}
-	return
+	return nil
 }
 
 // StopApp -
@@ -453,23 +433,23 @@ func (am *AppManager) StopApp(appID string, timeout time.Duration) (err error) {
 	var app CCApp
 
 	if app, err = am.ReadApp(appID); err != nil {
-		return
+		return err
 	}
 	if app.State != nil && *app.State == AppStarted {
 		app.State = &AppStopped
 		if app, err = am.UpdateApp(app); err != nil {
-			return
+			return err
 		}
 
 		c := make(chan error)
 		go func() {
 
-			var err error
+			var ferr error
 
 			for {
 				time.Sleep(appStatePingSleep)
-				if app, err = am.ReadApp(app.ID); err != nil {
-					c <- err
+				if app, ferr = am.ReadApp(app.ID); err != nil {
+					c <- ferr
 					break
 				}
 				if app.State != nil && *app.State == "STOPPED" {
@@ -482,17 +462,19 @@ func (am *AppManager) StopApp(appID string, timeout time.Duration) (err error) {
 		select {
 		case err = <-c:
 			if err != nil {
-				return
+				return err
 			}
 		case <-time.After(timeout):
-			err = fmt.Errorf("app %s failed to stop after %d seconds", app.Name, timeout/time.Second)
+			return fmt.Errorf("app %s failed to stop after %d seconds", app.Name, timeout/time.Second)
 		}
 	}
-	return
+	return nil
 }
 
 // CreateServiceBinding -
-func (am *AppManager) CreateServiceBinding(appID, serviceInstanceID string,
+func (am *AppManager) CreateServiceBinding(
+	appID string,
+	serviceInstanceID string,
 	params *map[string]interface{}) (bindingID string, credentials map[string]interface{}, err error) {
 
 	request := map[string]interface{}{
@@ -504,20 +486,20 @@ func (am *AppManager) CreateServiceBinding(appID, serviceInstanceID string,
 	}
 	body, err := json.Marshal(request)
 	if err != nil {
-		return
+		return bindingID, credentials, err
 	}
 
 	response := make(map[string]interface{})
-	if err = am.ccGateway.CreateResource(am.apiEndpoint,
-		"/v2/service_bindings", bytes.NewReader(body), &response); err != nil {
-		return
+	err = am.ccGateway.CreateResource(am.apiEndpoint, "/v2/service_bindings", bytes.NewReader(body), &response)
+	if err != nil {
+		return bindingID, credentials, err
 	}
 
 	bindingID = response["metadata"].(map[string]interface{})["guid"].(string)
 	if v, ok := response["entity"].(map[string]interface{})["credentials"]; ok {
 		credentials = v.(map[string]interface{})
 	}
-	return
+	return bindingID, credentials, nil
 }
 
 // ReadServiceBindingsByApp -
@@ -535,9 +517,9 @@ func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string
 
 	resource := make(map[string]interface{})
 
-	if err = am.ccGateway.ListPaginatedResources(am.apiEndpoint,
-		fmt.Sprintf("/v2/service_bindings?q=%s:%s", key, id),
-		resource, func(resource interface{}) bool {
+	path := fmt.Sprintf("/v2/service_bindings?q=%s:%s", key, id)
+	err = am.ccGateway.ListPaginatedResources(am.apiEndpoint, path, resource,
+		func(resource interface{}) bool {
 
 			routeResource := resource.(map[string]interface{})
 			mapping := make(map[string]interface{})
@@ -560,16 +542,12 @@ func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string
 
 			mappings = append(mappings, mapping)
 			return true
-
-		}); err != nil {
-
-		return
-	}
-	return
+		})
+	return mappings, err
 }
 
 // DeleteServiceBinding -
 func (am *AppManager) DeleteServiceBinding(bindingID string) (err error) {
-	err = am.ccGateway.DeleteResource(am.apiEndpoint, fmt.Sprintf("/v2/service_bindings/%s", bindingID))
-	return
+	path := fmt.Sprintf("/v2/service_bindings/%s", bindingID)
+	return am.ccGateway.DeleteResource(am.apiEndpoint, path)
 }

@@ -166,11 +166,11 @@ func (tm *AuthManager) getClientToken(clientID, clientSecret string) (clientToke
 				err = errors.New(i18n.T("The targeted API endpoint could not be reached."))
 			}
 		}
-		return
+		return "", err
 	}
 
 	clientToken = fmt.Sprintf("%s %s", response.TokenType, response.AccessToken)
-	return
+	return clientToken, nil
 }
 
 // GetLoginPromptsAndSaveUAAServerURL -
@@ -181,7 +181,7 @@ func (tm *AuthManager) GetLoginPromptsAndSaveUAAServerURL() (prompts map[string]
 	resource := &loginResource{}
 	err = tm.gateway.GetResource(url, resource)
 	if err != nil {
-		return
+		return prompts, nil
 	}
 
 	prompts = resource.parsePrompts()
@@ -190,7 +190,7 @@ func (tm *AuthManager) GetLoginPromptsAndSaveUAAServerURL() (prompts map[string]
 	} else {
 		tm.config.SetUaaEndpoint(resource.Links["uaa"])
 	}
-	return
+	return prompts, nil
 }
 
 // RefreshAuthToken -
@@ -263,5 +263,5 @@ func (r *loginResource) parsePrompts() (prompts map[string]coreconfig.AuthPrompt
 			DisplayName: val[1],
 		}
 	}
-	return
+	return prompts
 }

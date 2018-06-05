@@ -2,11 +2,12 @@ package cloudfoundry
 
 import (
 	"fmt"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
-const DL_IMPORT_PATH = "%s/v2/apps/%s/download"
+const dlImportPath = "%s/v2/apps/%s/download"
 
 func resourceAppImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	session := meta.(*cfapi.Session)
@@ -29,7 +30,7 @@ func resourceAppImport(d *schema.ResourceData, meta interface{}) ([]*schema.Reso
 	if err != nil {
 		return []*schema.ResourceData{}, err
 	}
-	d.Set("url", fmt.Sprintf(DL_IMPORT_PATH, session.Info().APIEndpoint, d.Id()))
+	d.Set("url", fmt.Sprintf(dlImportPath, session.Info().APIEndpoint, d.Id()))
 	d.Set("route", make([]interface{}, 0))
 	d.Set("timeout", DefaultAppTimeout)
 	return ImportStatePassthrough(d, meta)
