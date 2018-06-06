@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	"fmt"
+
 	"github.com/hashicorp/terraform/helper/resource"
 )
 
-func TestAccServiceAccess_importBasic(t *testing.T) {
-	resourceName := "cf_service_access.redis-access"
+func TestAccServicePlanAccess_importBasic(t *testing.T) {
+	resourceName := "cf_service_plan_access.redis-access"
 
 	user, password := getRedisBrokerCredentials()
 	deleteServiceBroker("p-redis")
@@ -19,7 +20,7 @@ func TestAccServiceAccess_importBasic(t *testing.T) {
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceAccessDestroyed(servicePlanAccessGUID),
+			CheckDestroy: testAccCheckServicePlanAccessDestroyed(servicePlanAccessGUID),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

@@ -135,25 +135,20 @@ func testAccCheckServiceInstanceExists(resource string) resource.TestCheckFunc {
 func testAccCheckServiceInstanceDestroyed(names []string, spaceResource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
-
 		session := testAccProvider.Meta().(*cfapi.Session)
-
 		rs, ok := s.RootModule().Resources[spaceResource]
 		if !ok {
 			return fmt.Errorf("space '%s' not found in terraform state", spaceResource)
 		}
 
 		for _, n := range names {
-
 			session.Log.DebugMessage("checking ServiceInstance is Destroyed %s", n)
-
 			if _, err := session.ServiceManager().FindServiceInstance(n, rs.Primary.ID); err != nil {
 				switch err.(type) {
 				case *errors.ModelNotFoundError:
 					return nil
-
 				default:
-					break
+					continue
 				}
 			}
 			return fmt.Errorf("service instance with name '%s' still exists in cloud foundry", n)

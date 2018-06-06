@@ -28,7 +28,6 @@ func dataSourceRouterGroup() *schema.Resource {
 }
 
 func dataSourceRouterGroupRead(d *schema.ResourceData, meta interface{}) (err error) {
-
 	session := meta.(*cfapi.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
@@ -39,9 +38,9 @@ func dataSourceRouterGroupRead(d *schema.ResourceData, meta interface{}) (err er
 
 	routerGroup, err := dm.FindRouterGroupByName(name)
 	if err != nil {
-		return
+		return err
 	}
 	d.SetId(routerGroup.GUID)
 	d.Set("type", routerGroup.Type)
-	return
+	return nil
 }

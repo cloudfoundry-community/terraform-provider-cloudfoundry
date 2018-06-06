@@ -52,25 +52,20 @@ type CCQuotaResource struct {
 
 // NewQuotaManager -
 func newQuotaManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logger) (dm *QuotaManager, err error) {
-
 	dm = &QuotaManager{
-		log: logger,
-
-		config:    config,
-		ccGateway: ccGateway,
-
+		log:         logger,
+		config:      config,
+		ccGateway:   ccGateway,
 		apiEndpoint: config.APIEndpoint(),
-
-		repo:      quotas.NewCloudControllerQuotaRepository(config, ccGateway),
-		spaceRepo: spacequotas.NewCloudControllerSpaceQuotaRepository(config, ccGateway),
+		repo:        quotas.NewCloudControllerQuotaRepository(config, ccGateway),
+		spaceRepo:   spacequotas.NewCloudControllerSpaceQuotaRepository(config, ccGateway),
 	}
 
 	if len(dm.apiEndpoint) == 0 {
-		err = errors.New("API endpoint missing from config file")
-		return
+		return nil, errors.New("API endpoint missing from config file")
 	}
 
-	return
+	return dm, nil
 }
 
 // CreateQuota -
@@ -89,12 +84,12 @@ func (qm *QuotaManager) CreateQuota(quota CCQuota) (id string, err error) {
 	}
 
 	resource := CCQuotaResource{}
-	if err = qm.ccGateway.CreateResource(qm.apiEndpoint, url,
-		bytes.NewReader(body), &resource); err != nil {
-		return
+	err = qm.ccGateway.CreateResource(qm.apiEndpoint, url, bytes.NewReader(body), &resource)
+	if err != nil {
+		return "", err
 	}
 	id = resource.Metadata.GUID
-	return
+	return id, nil
 }
 
 // UpdateQuota -
@@ -102,7 +97,7 @@ func (qm *QuotaManager) UpdateQuota(quota CCQuota) (err error) {
 
 	body, err := json.Marshal(quota)
 	if err != nil {
-		return
+		return err
 	}
 
 	var url string
@@ -113,66 +108,61 @@ func (qm *QuotaManager) UpdateQuota(quota CCQuota) (err error) {
 	}
 
 	resource := CCQuotaResource{}
-	err = qm.ccGateway.UpdateResource(qm.apiEndpoint, url,
-		bytes.NewReader(body), &resource)
-	return
+	return qm.ccGateway.UpdateResource(qm.apiEndpoint, url, bytes.NewReader(body), &resource)
 }
 
 // ReadQuota -
 func (qm *QuotaManager) ReadQuota(id string) (quota CCQuota, err error) {
 
 	resource := CCQuotaResource{}
-
-	if err = qm.ccGateway.GetResource(
-		fmt.Sprintf("%s/v2/quota_definitions/%s", qm.apiEndpoint, id),
-		&resource); err != nil {
-
-		if err = qm.ccGateway.GetResource(
-			fmt.Sprintf("%s/v2/space_quota_definitions/%s", qm.apiEndpoint, id),
-			&resource); err != nil {
-
-			return
+	path := fmt.Sprintf("%s/v2/quota_definitions/%s", qm.apiEndpoint, id)
+	if err = qm.ccGateway.GetResource(path, &resource); err != nil {
+		spacePath := fmt.Sprintf("%s/v2/space_quota_definitions/%s", qm.apiEndpoint, id)
+		if err = qm.ccGateway.GetResource(spacePath, &resource); err != nil {
+			return CCQuota{}, err
 		}
 	}
 	quota = resource.Entity
 	quota.ID = resource.Metadata.GUID
-	return
+	return quota, nil
 }
 
 // FindQuota -
 func (qm *QuotaManager) FindQuota(name string) (quota CCQuota, err error) {
-
 	quotaFields, err := qm.repo.FindByName(name)
-	if err == nil {
-		quota.ID = quotaFields.GUID
-		quota.Name = quotaFields.Name
-		quota.AppInstanceLimit = quotaFields.AppInstanceLimit
-		quota.InstanceMemoryLimit = quotaFields.InstanceMemoryLimit
-		quota.MemoryLimit = quotaFields.MemoryLimit
-		quota.NonBasicServicesAllowed = quotaFields.NonBasicServicesAllowed
-		quota.TotalServices = quotaFields.ServicesLimit
-		quota.TotalRoutes = quotaFields.RoutesLimit
-		quota.TotalReserveredPorts, _ = strconv.Atoi(quotaFields.ReservedRoutePorts.String())
+	if err != nil {
+		return CCQuota{}, err
 	}
-	return
+
+	quota.ID = quotaFields.GUID
+	quota.Name = quotaFields.Name
+	quota.AppInstanceLimit = quotaFields.AppInstanceLimit
+	quota.InstanceMemoryLimit = quotaFields.InstanceMemoryLimit
+	quota.MemoryLimit = quotaFields.MemoryLimit
+	quota.NonBasicServicesAllowed = quotaFields.NonBasicServicesAllowed
+	quota.TotalServices = quotaFields.ServicesLimit
+	quota.TotalRoutes = quotaFields.RoutesLimit
+	quota.TotalReserveredPorts, _ = strconv.Atoi(quotaFields.ReservedRoutePorts.String())
+	return quota, nil
 }
 
 // FindSpaceQuota -
 func (qm *QuotaManager) FindSpaceQuota(name string, orgGUID string) (quota CCQuota, err error) {
 
 	spaceQuota, err := qm.spaceRepo.FindByNameAndOrgGUID(name, orgGUID)
-	if err == nil {
-		quota.ID = spaceQuota.GUID
-		quota.OrgGUID = spaceQuota.OrgGUID
-		quota.Name = spaceQuota.Name
-		quota.AppInstanceLimit = spaceQuota.AppInstanceLimit
-		quota.InstanceMemoryLimit = spaceQuota.InstanceMemoryLimit
-		quota.MemoryLimit = spaceQuota.MemoryLimit
-		quota.NonBasicServicesAllowed = spaceQuota.NonBasicServicesAllowed
-		quota.TotalServices = spaceQuota.ServicesLimit
-		quota.TotalRoutes = spaceQuota.RoutesLimit
+	if err != nil {
+		return CCQuota{}, err
 	}
-	return
+	quota.ID = spaceQuota.GUID
+	quota.OrgGUID = spaceQuota.OrgGUID
+	quota.Name = spaceQuota.Name
+	quota.AppInstanceLimit = spaceQuota.AppInstanceLimit
+	quota.InstanceMemoryLimit = spaceQuota.InstanceMemoryLimit
+	quota.MemoryLimit = spaceQuota.MemoryLimit
+	quota.NonBasicServicesAllowed = spaceQuota.NonBasicServicesAllowed
+	quota.TotalServices = spaceQuota.ServicesLimit
+	quota.TotalRoutes = spaceQuota.RoutesLimit
+	return quota, nil
 }
 
 // DeleteQuota -
@@ -185,6 +175,5 @@ func (qm *QuotaManager) DeleteQuota(id string, orgGUID string) (err error) {
 		url = fmt.Sprintf("/v2/quota_definitions/%s", id)
 	}
 
-	err = qm.ccGateway.DeleteResource(qm.apiEndpoint, url)
-	return
+	return qm.ccGateway.DeleteResource(qm.apiEndpoint, url)
 }
