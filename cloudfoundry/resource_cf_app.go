@@ -496,7 +496,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 	var app cfapi.CCApp
 	if app, err = am.ReadApp(id); err != nil {
 		if strings.Contains(err.Error(), "status code: 404") {
-			d.MarkNewResource()
+			d.SetId("")
 			err = nil
 		}
 	} else {
