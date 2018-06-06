@@ -7,6 +7,11 @@ import (
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
+const protocolICMP = "icmp"
+const protocolTCP = "tcp"
+const protocolUDP = "udp"
+const protocolALL = "all"
+
 func resourceAsg() *schema.Resource {
 
 	return &schema.Resource{
@@ -72,10 +77,10 @@ func resourceAsg() *schema.Resource {
 
 func validateAsgProtocol(v interface{}, k string) (ws []string, errs []error) {
 	value := v.(string)
-	if value != "tcp" && value != "icmp" && value != "udp" && value != "all" {
+	if value != protocolTCP && value != protocolICMP && value != protocolUDP && value != protocolALL {
 		errs = append(errs, fmt.Errorf("%q must be one of 'tcp', 'icmp', 'udp' or 'all'", k))
 	}
-	return
+	return ws, errs
 }
 
 func resourceAsgCreate(d *schema.ResourceData, meta interface{}) error {
@@ -125,7 +130,7 @@ func resourceAsgRead(d *schema.ResourceData, meta interface{}) error {
 		if len(r.Ports) > 0 {
 			tfRule["ports"] = r.Ports
 		}
-		if r.Protocol == "icmp" {
+		if r.Protocol == protocolICMP {
 			tfRule["type"] = r.Type
 			tfRule["code"] = r.Code
 		}
@@ -152,10 +157,7 @@ func resourceAsgUpdate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 	err = am.UpdateASG(d.Id(), d.Get("name").(string), rules)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func resourceAsgDelete(d *schema.ResourceData, meta interface{}) error {
@@ -193,7 +195,7 @@ func readASGRulesFromConfig(d *schema.ResourceData) (rules []cfapi.CCASGRule, er
 			asgRule.Description = v.(string)
 		}
 
-		if asgRule.Protocol != "icmp" && (asgRule.Type > 0 || asgRule.Code > 0) {
+		if asgRule.Protocol != protocolICMP && (asgRule.Type > 0 || asgRule.Code > 0) {
 			err = fmt.Errorf(
 				"'type' or 'code' arguments are valid only for 'icmp' protocol and not for '%s' protocol",
 				asgRule.Protocol)
@@ -202,5 +204,5 @@ func readASGRulesFromConfig(d *schema.ResourceData) (rules []cfapi.CCASGRule, er
 
 		rules = append(rules, asgRule)
 	}
-	return
+	return rules, err
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
 )
 
-var repoManager *repo.RepoManager
+var repoManager *repo.Manager
 
 // initRepoManager -
 func initRepoManager() error {
@@ -33,7 +33,7 @@ func initRepoManager() error {
 	if err = os.MkdirAll(workspace, os.ModePerm); err != nil {
 		return err
 	}
-	repoManager = repo.NewRepoManager(workspace)
+	repoManager = repo.NewManager(workspace)
 	return nil
 }
 
@@ -104,10 +104,12 @@ func getRepositoryGitRepo(gitArgs map[string]interface{}) (repository repo.Repos
 	}
 
 	if repository, err = repoManager.GetGitRepository(repoURL, user, password, privateKey); err != nil {
-		return
+		return repository, err
 	}
-	err = repository.SetVersion(version, versionType)
-	return
+	if err = repository.SetVersion(version, versionType); err != nil {
+		return repository, err
+	}
+	return repository, nil
 }
 
 // getRepositoryGithubRelease -
@@ -130,8 +132,10 @@ func getRepositoryGithubRelease(githubArgs map[string]interface{}) (repository r
 	}
 
 	if repository, err = repoManager.GetGithubRelease(ghOwner, ghRepo, archiveName, token); err != nil {
-		return
+		return repository, err
 	}
-	err = repository.SetVersion(version, versionType)
-	return
+	if err = repository.SetVersion(version, versionType); err != nil {
+		return repository, err
+	}
+	return repository, nil
 }

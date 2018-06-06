@@ -129,7 +129,7 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 	)
 
 	if space, err = sm.ReadSpace(id); err != nil {
-		return
+		return err
 	}
 	d.Set("name", space.Name)
 	d.Set("org", space.OrgGUID)
@@ -148,7 +148,7 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 		return err
 	}
 	if spaceAsgs, err = sm.ListASGs(id); err != nil {
-		return
+		return err
 	}
 	for _, a := range spaceAsgs {
 		if !isStringInList(runningAsgs, a.(string)) {
@@ -157,7 +157,7 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 	d.Set("asgs", schema.NewSet(resourceStringHash, asgs))
 
-	return
+	return err
 }
 
 func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -283,7 +283,7 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
-	return
+	return err
 }
 
 func resourceSpaceDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -294,5 +294,5 @@ func resourceSpaceDelete(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	err = session.SpaceManager().DeleteSpace(d.Id())
-	return
+	return err
 }

@@ -12,14 +12,13 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/terminal"
 
-	"github.com/hashicorp/terraform/helper/hashcode"
+	// "github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
-const (
-	DefaultAppTimeout = 60
-)
+// DefaultAppTimeout - Timeout (in seconds) when pushing apps to CF
+const DefaultAppTimeout = 60
 
 func resourceApp() *schema.Resource {
 
@@ -276,16 +275,16 @@ func resourceApp() *schema.Resource {
 	}
 }
 
-func serviceBindingHash(d interface{}) int {
-	return hashcode.String(d.(map[string]interface{})["service_instance"].(string))
-}
+// func serviceBindingHash(d interface{}) int {
+// 	return hashcode.String(d.(map[string]interface{})["service_instance"].(string))
+// }
 
 func validateAppHealthCheckType(v interface{}, k string) (ws []string, errs []error) {
 	value := v.(string)
 	if value != "port" && value != "process" && value != "http" && value != "none" {
 		errs = append(errs, fmt.Errorf("%q must be one of 'port', 'process', 'http' or 'none'", k))
 	}
-	return
+	return ws, errs
 }
 
 func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -307,7 +306,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		addContent []map[string]interface{}
 
 		defaultRoute, stageRoute, liveRoute string
-		isBlueGreen                         bool
+		//isBlueGreen                         bool
 
 		serviceBindings    []map[string]interface{}
 		hasServiceBindings bool
@@ -379,36 +378,37 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
 
 		routeConfig = v.([]interface{})[0].(map[string]interface{})
-		isBlueGreen = false
+		//isBlueGreen = false
 
 		if defaultRoute, err = validateRoute(routeConfig, "default_route", rm); err != nil {
-			return
+			return err
 		}
 		if stageRoute, err = validateRoute(routeConfig, "stage_route", rm); err != nil {
-			return
+			return err
 		}
 		if liveRoute, err = validateRoute(routeConfig, "live_route", rm); err != nil {
-			return
+			return err
 		}
 
 		if len(stageRoute) > 0 && len(liveRoute) > 0 {
-			isBlueGreen = true
+			//isBlueGreen = true
 		} else if len(stageRoute) > 0 || len(liveRoute) > 0 {
 			err = fmt.Errorf("both 'stage_route' and 'live_route' need to be provided to deploy the app using blue-green routing")
-			return
+			return err
 		}
 	}
 
 	// Create application
 	if app, err = am.CreateApp(app); err != nil {
-		return
+		return err
 	}
 	// Delete application if an error occurs
-	defer func() {
+	defer func() error {
 		e := &err
 		if *e != nil {
-			am.DeleteApp(app.ID, true)
+			return am.DeleteApp(app.ID, true)
 		}
+		return nil
 	}()
 
 	// Upload application binary / source asynchronously once download has completed
@@ -427,7 +427,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	// Bind services
 	if v, hasServiceBindings = d.GetOk("service_binding"); hasServiceBindings {
 		if serviceBindings, err = addServiceBindings(app.ID, getListOfStructs(v), am, session.Log); err != nil {
-			return
+			return err
 		}
 	}
 
@@ -435,7 +435,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	if len(defaultRoute) > 0 {
 		var mappingID string
 		if mappingID, err = rm.CreateRouteMapping(defaultRoute, app.ID, nil); err != nil {
-			return
+			return err
 		}
 		routeConfig["default_route_mapping_id"] = mappingID
 	}
@@ -446,20 +446,20 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	// Start application if not stopped
 	// state once upload has completed
 	if err = <-upload; err != nil {
-		return
+		return err
 	}
 	if !stopped {
 		if err = am.StartApp(app.ID, timeout); err != nil {
-			return
+			return err
 		}
 
 		// Execute blue-green validation
-		if isBlueGreen {
-		}
+		// if isBlueGreen {
+		// }
 	}
 
 	if app, err = am.ReadApp(app.ID); err != nil {
-		return
+		return err
 	}
 	d.SetId(app.ID)
 
@@ -475,7 +475,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		session.Log.DebugMessage("Created routes: %# v", d.Get("route"))
 	}
 
-	return
+	return err
 }
 
 func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -497,7 +497,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 	} else {
 		setAppArguments(app, d)
 	}
-	return
+	return err
 }
 
 func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -534,7 +534,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if update || restart || restage {
 		if app, err = am.UpdateApp(app); err != nil {
-			return
+			return err
 		}
 		setAppArguments(app, d)
 	}
@@ -550,12 +550,12 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		session.Log.DebugMessage("Service bindings to be added: %# v", bindingsToAdd)
 
 		if err = removeServiceBindings(bindingsToDelete, am, session.Log); err != nil {
-			return
+			return err
 		}
 
 		var added []map[string]interface{}
 		if added, err = addServiceBindings(app.ID, bindingsToAdd, am, session.Log); err != nil {
-			return
+			return err
 		}
 		if len(added) > 0 {
 			if new != nil {
@@ -629,7 +629,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		appPath = <-appPathChan
 		err = <-errChan
 		if err != nil {
-			return
+			return err
 		}
 		if v, ok = d.GetOk("add_content"); ok {
 			addContent = getListOfStructs(v)
@@ -644,24 +644,24 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if restage {
 		if err = am.RestageApp(app.ID, timeout); err != nil {
-			return
+			return err
 		}
 	}
 	if d.HasChange("stopped") {
 
 		if d.Get("stopped").(bool) {
 			if err = am.StopApp(app.ID, timeout); err != nil {
-				return
+				return err
 			}
 		} else {
 			if err = am.StartApp(app.ID, timeout); err != nil {
-				return
+				return err
 			}
 		}
 	} else if restage {
 		err = am.WaitForAppToStart(app, timeout)
 	}
-	return
+	return err
 }
 
 func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -701,7 +701,7 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 			}
 		}
 	}
-	am.DeleteApp(d.Id(), false)
+	err = am.DeleteApp(d.Id(), false)
 	if err = am.DeleteApp(d.Id(), false); err != nil {
 		if strings.Contains(err.Error(), "status code: 404") {
 			session.Log.DebugMessage(
@@ -847,10 +847,12 @@ func validateRoute(routeConfig map[string]interface{}, route string, rm *cfapi.R
 				routeID)
 		}
 	}
-	return
+	return routeID, err
 }
 
-func updateMapping(old map[string]interface{}, new map[string]interface{},
+func updateMapping(
+	old map[string]interface{},
+	new map[string]interface{},
 	route, appID string, rm *cfapi.RouteManager) (mappingID string, err error) {
 
 	var (
@@ -868,21 +870,24 @@ func updateMapping(old map[string]interface{}, new map[string]interface{},
 		if len(oldRouteID) > 0 {
 			if v, ok := old[route+"_mapping_id"]; ok {
 				if err = rm.DeleteRouteMapping(v.(string)); err != nil {
-					return
+					return "", err
 				}
 			}
 		}
 		if len(newRouteID) > 0 {
 			if mappingID, err = rm.CreateRouteMapping(newRouteID, appID, nil); err != nil {
-				return
+				return "", err
 			}
 		}
 	}
-	return
+	return mappingID, err
 }
 
-func addServiceBindings(id string, add []map[string]interface{},
-	am *cfapi.AppManager, log *cfapi.Logger) (bindings []map[string]interface{}, err error) {
+func addServiceBindings(
+	id string,
+	add []map[string]interface{},
+	am *cfapi.AppManager,
+	log *cfapi.Logger) (bindings []map[string]interface{}, err error) {
 
 	var (
 		serviceInstanceID, bindingID string
@@ -893,7 +898,6 @@ func addServiceBindings(id string, add []map[string]interface{},
 	)
 
 	for _, b := range add {
-
 		serviceInstanceID = b["service_instance"].(string)
 		params = nil
 		if v, ok := b["params"]; ok {
@@ -901,19 +905,19 @@ func addServiceBindings(id string, add []map[string]interface{},
 			params = &vv
 		}
 		if bindingID, bindingCredentials, err = am.CreateServiceBinding(id, serviceInstanceID, params); err != nil {
-			return
+			return bindings, err
 		}
 		b["binding_id"] = bindingID
 
 		credentials = b["credentials"].(map[string]interface{})
-		for k, v := range bindingCredentials {
-			credentials[k] = fmt.Sprintf("%v", v)
+		for k, v := range normalizeMap(bindingCredentials, make(map[string]interface{}), "", "_") {
+			credentials[k] = v
 		}
 
 		bindings = append(bindings, b)
 		log.DebugMessage("Created binding with id '%s' for service instance '%s'.", bindingID, serviceInstanceID)
 	}
-	return
+	return bindings, nil
 }
 
 func removeServiceBindings(delete []map[string]interface{},

@@ -52,7 +52,7 @@ func (bp *CCBuildpack) toModel() (buildpack models.Buildpack) {
 	buildpack.Position = bp.Position
 	buildpack.Enabled = bp.Enabled
 	buildpack.Locked = bp.Locked
-	return
+	return buildpack
 }
 
 // fromModel -
@@ -66,55 +66,55 @@ func (bp *CCBuildpack) fromModel(buildpack models.Buildpack) {
 
 // newBuildpackManager -
 func newBuildpackManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logger) (sm *BuildpackManager, err error) {
-
 	zipper := appfiles.ApplicationZipper{}
-
 	sm = &BuildpackManager{
-		log: logger,
-
-		config:    config,
-		ccGateway: ccGateway,
-
+		log:         logger,
+		config:      config,
+		ccGateway:   ccGateway,
 		apiEndpoint: config.APIEndpoint(),
-
-		bpRepo:     api.NewCloudControllerBuildpackRepository(config, ccGateway),
-		bpBitsRepo: api.NewCloudControllerBuildpackBitsRepository(config, ccGateway, zipper),
-
-		zipper: zipper,
+		bpRepo:      api.NewCloudControllerBuildpackRepository(config, ccGateway),
+		bpBitsRepo:  api.NewCloudControllerBuildpackBitsRepository(config, ccGateway, zipper),
+		zipper:      zipper,
 	}
 
-	return
+	return sm, nil
 }
 
 // ReadBuildpack -
 func (bpm *BuildpackManager) ReadBuildpack(buildpackID string) (bp CCBuildpack, err error) {
-
 	resource := &CCBuildpackResource{}
-	err = bpm.ccGateway.GetResource(
-		fmt.Sprintf("%s/v2/buildpacks/%s", bpm.apiEndpoint, buildpackID), &resource)
+	path := fmt.Sprintf("%s/v2/buildpacks/%s", bpm.apiEndpoint, buildpackID)
+	if err = bpm.ccGateway.GetResource(path, &resource); err != nil {
+		return bp, err
+	}
 
 	bp = resource.Entity
 	bp.ID = resource.Metadata.GUID
-	return
+	return bp, nil
 }
 
 // CreateBuildpack -
 func (bpm *BuildpackManager) CreateBuildpack(
-	name string, position *int, enabled *bool, locked *bool, buildpackPath string) (bp CCBuildpack, err error) {
+	name string,
+	position *int,
+	enabled *bool,
+	locked *bool,
+	buildpackPath string) (bp CCBuildpack, err error) {
 
 	var b models.Buildpack
-
 	if b, err = bpm.bpRepo.Create(name, position, enabled, locked); err != nil {
-		return
+		return bp, err
 	}
 	bp.fromModel(b)
-	bp, err = bpm.UploadBuildpackBits(bp, buildpackPath)
-	return
+	return bpm.UploadBuildpackBits(bp, buildpackPath)
 }
 
 // UpdateBuildpack -
 func (bpm *BuildpackManager) UpdateBuildpack(buildpackID string,
-	name string, position *int, enabled *bool, locked *bool) (bp CCBuildpack, err error) {
+	name string,
+	position *int,
+	enabled *bool,
+	locked *bool) (bp CCBuildpack, err error) {
 
 	b := models.Buildpack{
 		GUID:     buildpackID,
@@ -126,7 +126,7 @@ func (bpm *BuildpackManager) UpdateBuildpack(buildpackID string,
 	if b, err = bpm.bpRepo.Update(b); err == nil {
 		bp.fromModel(b)
 	}
-	return
+	return bp, err
 }
 
 // UploadBuildpackBits -
@@ -137,9 +137,7 @@ func (bpm *BuildpackManager) UploadBuildpackBits(bp CCBuildpack, buildpackPath s
 		err     error
 	)
 
-	if strings.HasPrefix(buildpackPath, "file://") {
-		buildpackPath = buildpackPath[7:]
-	}
+	buildpackPath = strings.TrimPrefix(buildpackPath, "file://")
 	if zipFile, bp.Filename, err = bpm.bpBitsRepo.CreateBuildpackZipFile(buildpackPath); err != nil {
 		return bp, err
 	}
@@ -156,12 +154,10 @@ func (bpm *BuildpackManager) DeleteBuildpack(buildpackID string) error {
 
 // FindBuildpack -
 func (bpm *BuildpackManager) FindBuildpack(buildpackName string) (bp CCBuildpack, err error) {
-
 	var b models.Buildpack
-
 	if b, err = bpm.bpRepo.FindByName(buildpackName); err != nil {
-		return
+		return bp, err
 	}
 	bp.fromModel(b)
-	return
+	return bp, nil
 }
