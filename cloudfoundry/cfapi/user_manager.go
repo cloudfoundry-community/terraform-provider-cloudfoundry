@@ -106,27 +106,23 @@ const UserIsOrgMember = UserRoleInOrg("organizations")
 
 // NewUserManager -
 func newUserManager(config coreconfig.Reader, uaaGateway net.Gateway, ccGateway net.Gateway, logger *Logger) (um *UserManager, err error) {
-
 	um = &UserManager{
-		log: logger,
-
+		log:           logger,
 		config:        config,
 		uaaGateway:    uaaGateway,
 		ccGateway:     ccGateway,
 		groupMap:      make(map[string]string),
 		defaultGroups: make(map[string]byte),
-
-		repo: api.NewCloudControllerUserRepository(config, uaaGateway, ccGateway),
+		repo:          api.NewCloudControllerUserRepository(config, uaaGateway, ccGateway),
 	}
-	return
+	return um, nil
 }
 
 func (um *UserManager) loadGroups() (err error) {
 
 	uaaEndpoint := um.config.UaaEndpoint()
 	if len(uaaEndpoint) == 0 {
-		err = errors.New("UAA endpoint missing from config file")
-		return
+		return errors.New("UAA endpoint missing from config file")
 	}
 
 	// Retrieve alls groups
@@ -135,7 +131,7 @@ func (um *UserManager) loadGroups() (err error) {
 		fmt.Sprintf("%s/Groups", uaaEndpoint),
 		groupList)
 	if err != nil {
-		return
+		return err
 	}
 	for _, r := range groupList.Resources {
 		um.groupMap[r.DisplayName] = r.ID
@@ -145,7 +141,7 @@ func (um *UserManager) loadGroups() (err error) {
 	// a dummy user and extracting the default scope of that user
 	username, err := newUUID()
 	if err != nil {
-		return
+		return err
 	}
 	userResource := UAAUser{
 		Username: username,
@@ -155,7 +151,7 @@ func (um *UserManager) loadGroups() (err error) {
 	}
 	body, err := json.Marshal(userResource)
 	if err != nil {
-		return
+		return err
 	}
 	user := &UAAUser{}
 	err = um.uaaGateway.CreateResource(uaaEndpoint, "/Users", bytes.NewReader(body), user)
@@ -170,40 +166,43 @@ func (um *UserManager) loadGroups() (err error) {
 		um.defaultGroups[g.Display] = 1
 	}
 
-	return
+	return nil
 }
 
 // IsDefaultGroup -
 func (um *UserManager) IsDefaultGroup(group string) (ok bool) {
 	_, ok = um.defaultGroups[group]
-	return
+	return ok
 }
 
 // GetUser -
 func (um *UserManager) GetUser(id string) (user *UAAUser, err error) {
-
 	uaaEndpoint := um.config.UaaEndpoint()
 	if len(uaaEndpoint) == 0 {
-		err = errors.New("UAA endpoint missing from config file")
-		return
+		return nil, errors.New("UAA endpoint missing from config file")
 	}
 
 	user = &UAAUser{}
-	err = um.uaaGateway.GetResource(
-		fmt.Sprintf("%s/Users/%s", uaaEndpoint, id),
-		user)
+	path := fmt.Sprintf("%s/Users/%s", uaaEndpoint, id)
+	if err = um.uaaGateway.GetResource(path, user); err != nil {
+		return nil, err
+	}
 
-	return
+	return user, nil
 }
 
 // CreateUser -
 func (um *UserManager) CreateUser(
-	username, password, origin, givenName, familyName, email string) (user *UAAUser, err error) {
+	username string,
+	password string,
+	origin string,
+	givenName string,
+	familyName string,
+	email string) (user *UAAUser, err error) {
 
 	uaaEndpoint := um.config.UaaEndpoint()
 	if len(uaaEndpoint) == 0 {
-		err = errors.New("UAA endpoint missing from config file")
-		return
+		return nil, errors.New("UAA endpoint missing from config file")
 	}
 
 	userResource := UAAUser{
@@ -223,7 +222,7 @@ func (um *UserManager) CreateUser(
 
 	body, err := json.Marshal(userResource)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	user = &UAAUser{}
@@ -232,31 +231,37 @@ func (um *UserManager) CreateUser(
 	case nil:
 	case errors.HTTPError:
 		if httpErr.StatusCode() == http.StatusConflict {
-			err = errors.NewModelAlreadyExistsError("user", username)
-			return
+			return nil, errors.NewModelAlreadyExistsError("user", username)
 		}
-		return
+		return nil, err
 	default:
-		return
+		return nil, err
 	}
 
-	body, err = json.Marshal(resources.Metadata{
-		GUID: user.ID,
-	})
-	if err == nil {
-		err = um.ccGateway.CreateResource(um.config.APIEndpoint(), "/v2/users", bytes.NewReader(body))
+	body, err = json.Marshal(resources.Metadata{GUID: user.ID})
+	if err != nil {
+		return nil, err
 	}
-	return
+
+	err = um.ccGateway.CreateResource(um.config.APIEndpoint(), "/v2/users", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
 
 // UpdateUser -
 func (um *UserManager) UpdateUser(
-	id, username, givenName, familyName, email string) (user *UAAUser, err error) {
+	id string,
+	username string,
+	givenName string,
+	familyName string,
+	email string) (user *UAAUser, err error) {
 
 	uaaEndpoint := um.config.UaaEndpoint()
 	if len(uaaEndpoint) == 0 {
-		err = errors.New("UAA endpoint missing from config file")
-		return
+		return nil, errors.New("UAA endpoint missing from config file")
 	}
 
 	userResource := UAAUser{
@@ -274,12 +279,11 @@ func (um *UserManager) UpdateUser(
 
 	body, err := json.Marshal(userResource)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	request, err := um.uaaGateway.NewRequest("PUT",
-		fmt.Sprintf("%s/Users/%s", uaaEndpoint, id),
-		um.config.AccessToken(), bytes.NewReader(body))
+	path := fmt.Sprintf("%s/Users/%s", uaaEndpoint, id)
+	request, err := um.uaaGateway.NewRequest("PUT", path, um.config.AccessToken(), bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -287,18 +291,22 @@ func (um *UserManager) UpdateUser(
 
 	user = &UAAUser{}
 	_, err = um.uaaGateway.PerformRequestForJSONResponse(request, user)
+	if err != nil {
+		return nil, err
+	}
 
-	return
+	return user, nil
 }
 
 // ChangePassword -
 func (um *UserManager) ChangePassword(
-	id, oldPassword, newPassword string) (err error) {
+	id string,
+	oldPassword string,
+	newPassword string) (err error) {
 
 	uaaEndpoint := um.config.UaaEndpoint()
 	if len(uaaEndpoint) == 0 {
-		err = errors.New("UAA endpoint missing from config file")
-		return
+		return errors.New("UAA endpoint missing from config file")
 	}
 
 	body, err := json.Marshal(map[string]string{
@@ -306,7 +314,7 @@ func (um *UserManager) ChangePassword(
 		"password":    newPassword,
 	})
 	if err != nil {
-		return
+		return err
 	}
 
 	request, err := um.uaaGateway.NewRequest("PUT",
@@ -319,10 +327,7 @@ func (um *UserManager) ChangePassword(
 
 	response := make(map[string]interface{})
 	_, err = um.uaaGateway.PerformRequestForJSONResponse(request, response)
-	if err != nil {
-		return err
-	}
-	return
+	return err
 }
 
 // UpdateRoles -
@@ -331,20 +336,22 @@ func (um *UserManager) UpdateRoles(
 
 	uaaEndpoint := um.config.UaaEndpoint()
 	if len(uaaEndpoint) == 0 {
-		err = errors.New("UAA endpoint missing from config file")
-		return
+		return errors.New("UAA endpoint missing from config file")
 	}
 
 	for _, s := range scopesToDelete {
 		roleID := um.groupMap[s]
 		err = um.uaaGateway.DeleteResource(uaaEndpoint,
 			fmt.Sprintf("/Groups/%s/members/%s", roleID, id))
+		if err != nil {
+			return err
+		}
 	}
+
 	for _, s := range scopesToAdd {
 		roleID, exists := um.groupMap[s]
 		if !exists {
-			err = fmt.Errorf("Group '%s' was not found", s)
-			return
+			return fmt.Errorf("Group '%s' was not found", s)
 		}
 
 		var body []byte
@@ -354,48 +361,46 @@ func (um *UserManager) UpdateRoles(
 			"value":  id,
 		})
 		if err != nil {
-			return
+			return err
 		}
 
 		response := make(map[string]interface{})
-		err = um.uaaGateway.CreateResource(uaaEndpoint,
-			fmt.Sprintf("/Groups/%s/members", roleID),
-			bytes.NewReader(body), &response)
+		path := fmt.Sprintf("/Groups/%s/members", roleID)
+		err = um.uaaGateway.CreateResource(uaaEndpoint, path, bytes.NewReader(body), &response)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
 // AddUserToOrg -
 func (um *UserManager) AddUserToOrg(userID string, orgID string) error {
 
-	return um.ccGateway.CreateResource(um.config.APIEndpoint(),
-		fmt.Sprintf("/v2/users/%s/organizations/%s", userID, orgID),
-		bytes.NewReader([]byte{}))
+	path := fmt.Sprintf("/v2/users/%s/organizations/%s", userID, orgID)
+	return um.ccGateway.CreateResource(um.config.APIEndpoint(), path, bytes.NewReader([]byte{}))
 }
 
 // RemoveUserFromOrg -
 func (um *UserManager) RemoveUserFromOrg(userID string, orgID string) error {
-
-	return um.ccGateway.DeleteResource(um.config.APIEndpoint(),
-		fmt.Sprintf("/v2/users/%s/organizations/%s", userID, orgID))
+	path := fmt.Sprintf("/v2/users/%s/organizations/%s", userID, orgID)
+	return um.ccGateway.DeleteResource(um.config.APIEndpoint(), path)
 }
 
 // ListOrgsForUser -
 func (um *UserManager) ListOrgsForUser(userID string, orgRole UserRoleInOrg) (orgIDs []string, err error) {
-
 	orgList := &CCOrgResourceList{}
-	err = um.ccGateway.GetResource(
-		fmt.Sprintf("%s/v2/users/%s/%s", um.config.APIEndpoint(), userID, orgRole), orgList)
+	path := fmt.Sprintf("%s/v2/users/%s/%s", um.config.APIEndpoint(), userID, orgRole)
+	if err = um.ccGateway.GetResource(path, orgList); err != nil {
+		return []string{}, err
+	}
 
 	orgIDs = []string{}
 	for _, o := range orgList.Resources {
 		orgIDs = append(orgIDs, o.Metadata.GUID)
 	}
-	return
+	return orgIDs, nil
 }
 
 // FindByUsername -

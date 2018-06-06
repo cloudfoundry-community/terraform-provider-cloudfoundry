@@ -12,7 +12,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [User Provided Serv
 
 ## Example Usage
 
-The following are User Provided Service created within the referenced space.
+The following is a User Provided Service created within the referenced space.
 
 ```
 resource "cf_user_provided_service" "mq" {
@@ -63,7 +63,7 @@ The following attributes are exported:
 
 ## Import
 
-The current User Provided Service can be imported using the `user_provided_service`, e.g.
+An existing User Provided Service can be imported using its guid, e.g.
 
 ```
 $ terraform import cf_user_provided_service.mq-server a-guid

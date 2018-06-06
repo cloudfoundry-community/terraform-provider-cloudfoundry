@@ -49,7 +49,7 @@ resource "cf_evg" "staging" {
         name3 = "value3"
         name4 = "value4"
         name5 = "value5"
-    }    
+    }
 }
 `
 
@@ -61,7 +61,7 @@ resource "cf_evg" "staging" {
     variables = {
         name4 = "value4"
         name5 = "valueE"
-    }    
+    }
 }
 `
 
@@ -188,6 +188,10 @@ func checkEvgExists(resource string) resource.TestCheckFunc {
 			resource, attributes)
 
 		variables, err := session.EVGManager().GetEVG(id)
+		if err != nil {
+			return err
+		}
+
 		if err := assertMapEquals("variables", attributes, variables); err != nil {
 			return err
 		}

@@ -45,10 +45,10 @@ func dataSourceStackRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	stack, err = sm.FindStackByName(name)
 	if err != nil {
-		return
+		return err
 	}
 
 	d.SetId(stack.ID)
 	d.Set("description", stack.Description)
-	return
+	return err
 }

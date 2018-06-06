@@ -24,5 +24,5 @@ The following attributes are exported:
 * `auth_endpoint` - The autentication endpoint URL
 * `uaa_endpoint` - The UAA endpoint URL
 * `routing_endpoint` - The routing endpoint URL
-* `logging_endpoint` - The endpoint for logging services
-* `doppler_endpoint` - The endpoint for doppler services
+* `logging_endpoint` - The logging services endpoint URL
+* `doppler_endpoint` - The doppler services endpoint URL 

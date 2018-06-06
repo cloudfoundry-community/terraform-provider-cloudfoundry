@@ -52,8 +52,8 @@ func dataSourceQuotaRead(d *schema.ResourceData, meta interface{}) (err error) {
 		quota, err = qm.FindQuota(name)
 	}
 	if err != nil {
-		return
+		return err
 	}
 	d.SetId(quota.ID)
-	return
+	return nil
 }
