@@ -85,17 +85,17 @@ resource "cf_space" "space1" {
 	quota = "${cf_quota.dev.id}"
 	asgs = [ "${cf_asg.svc.id}" ]
 	staging_asgs = [ "${cf_asg.stg1.id}", "${cf_asg.stg2.id}" ]
-    managers = [ 
-        "${cf_user.tl.id}" 
+    managers = [
+        "${cf_user.tl.id}"
     ]
-    developers = [ 
+    developers = [
         "${cf_user.tl.id}",
         "${cf_user.dev1.id}",
-		"${cf_user.dev2.id}" 
+		"${cf_user.dev2.id}"
     ]
-    auditors = [ 
+    auditors = [
         "${cf_user.adr.id}",
-		"${cf_user.dev3.id}" 
+		"${cf_user.dev3.id}"
     ]
 	allow_ssh = true
 }
@@ -174,16 +174,16 @@ resource "cf_space" "space1" {
 	quota = "${cf_quota.dev.id}"
 	asgs = [ "${cf_asg.svc.id}" ]
 	staging_asgs = [ "${cf_asg.stg2.id}", "${cf_asg.stg3.id}" ]
-    managers = [ 
-        "${cf_user.tl.id}" 
+    managers = [
+        "${cf_user.tl.id}"
     ]
-    developers = [ 
+    developers = [
         "${cf_user.tl.id}",
         "${cf_user.dev1.id}",
     ]
-    auditors = [ 
+    auditors = [
         "${cf_user.adr.id}",
-		"${cf_user.dev2.id}" 
+		"${cf_user.dev2.id}"
     ]
 	allow_ssh = true
 }
@@ -272,16 +272,16 @@ func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.T
 			"retrieved space for resource '%s' with id '%s': %# v",
 			resource, id, space)
 
-		if err := assertEquals(attributes, "name", space.Name); err != nil {
+		if err = assertEquals(attributes, "name", space.Name); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "org", space.OrgGUID); err != nil {
+		if err = assertEquals(attributes, "org", space.OrgGUID); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "quota", space.QuotaGUID); err != nil {
+		if err = assertEquals(attributes, "quota", space.QuotaGUID); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "allow_ssh", strconv.FormatBool(space.AllowSSH)); err != nil {
+		if err = assertEquals(attributes, "allow_ssh", strconv.FormatBool(space.AllowSSH)); err != nil {
 			return err
 		}
 
@@ -301,7 +301,7 @@ func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.T
 			"retrieved asgs of space identified resource '%s': %# v",
 			resource, asgs)
 
-		if err := assertSetEquals(attributes, "asgs", asgs); err != nil {
+		if err = assertSetEquals(attributes, "asgs", asgs); err != nil {
 			return err
 		}
 
@@ -321,7 +321,7 @@ func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.T
 			"retrieved staging asgs of space identified resource '%s': %# v",
 			resource, asgs)
 
-		if err := assertSetEquals(attributes, "staging_asgs", asgs); err != nil {
+		if err = assertSetEquals(attributes, "staging_asgs", asgs); err != nil {
 			return err
 		}
 
@@ -332,7 +332,7 @@ func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.T
 			"retrieved managers of space identified resource '%s': %# v",
 			resource, managers)
 
-		if err := assertSetEquals(attributes, "managers", managers); err != nil {
+		if err = assertSetEquals(attributes, "managers", managers); err != nil {
 			return err
 		}
 
@@ -343,7 +343,7 @@ func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.T
 			"retrieved developers of space identified resource '%s': %# v",
 			resource, developers)
 
-		if err := assertSetEquals(attributes, "developers", developers); err != nil {
+		if err = assertSetEquals(attributes, "developers", developers); err != nil {
 			return err
 		}
 
@@ -354,7 +354,7 @@ func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.T
 			"retrieved managers of space identified resource '%s': %# v",
 			resource, auditors)
 
-		if err := assertSetEquals(attributes, "auditors", auditors); err != nil {
+		if err = assertSetEquals(attributes, "auditors", auditors); err != nil {
 			return err
 		}
 

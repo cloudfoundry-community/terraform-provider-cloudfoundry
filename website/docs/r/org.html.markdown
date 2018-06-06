@@ -8,7 +8,10 @@ description: |-
 
 # cf\_org
 
-Provides a Cloud Foundry resource for managing Cloud Foundry [organizations](https://docs.cloudfoundry.org/concepts/roles.html). To associate users with specific org roles use the [cf_user_org_role](user_org_role.html) resource.
+Provides a Cloud Foundry resource for managing Cloud Foundry [organizations](https://docs.cloudfoundry.org/concepts/roles.html), assigning quota definitions, and members. 
+
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
+
 
 ## Example Usage
 
@@ -26,10 +29,10 @@ resource "cf_org" "o1" {
 The following arguments are supported:
 
 * `name` - (Required) The name of the Org in Cloud Foundry
-* `quota` - (Optional) The quota or plan to be given to this Org
-* `managers` - (Optional) List of users to assign [OrgManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to
-* `billing_managers` - (Optional) List of users to assign [BillingManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to
-* `auditors` - (Optional) List of users to assign [OrgAuditor](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to
+* `quota` - (Optional) The ID of quota or plan to be given to this Org. By default, no quota is assigned to the org.  
+* `managers` - (Optional) List of users to assign [OrgManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to. By default, no managers are assigned.
+* `billing_managers` - (Optional) List of ID of users to assign [BillingManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to.  By default, no billing managers are assigned.
+* `auditors` - (Optional) List of ID of users to assign [OrgAuditor](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to.  By default, no auditors are assigned.
 
 ## Attributes Reference
 
@@ -40,7 +43,7 @@ The following attributes are exported:
 
 ## Import
 
-The current Organization can be imported using the `org`, e.g.
+An existing Organization can be imported using its guid, e.g.
 
 ```
 $ terraform import cf_org.o1 a-guid

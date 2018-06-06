@@ -98,7 +98,7 @@ func resourceOrgRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	var org cfapi.CCOrg
 	if org, err = om.ReadOrg(id); err != nil {
-		return
+		return err
 	}
 
 	d.Set("name", org.Name)
@@ -107,12 +107,12 @@ func resourceOrgRead(d *schema.ResourceData, meta interface{}) (err error) {
 	var users []interface{}
 	for t, r := range orgRoleMap {
 		if users, err = om.ListUsers(id, r); err != nil {
-			return
+			return err
 		}
 		d.Set(t, schema.NewSet(resourceStringHash, users))
 	}
 
-	return
+	return nil
 }
 
 func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -158,17 +158,17 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		for _, uid := range remove {
 			session.Log.DebugMessage("Removing user '%s' from organization '%s' with role '%s'.", uid, id, r)
 			if err = om.RemoveUser(id, uid, r); err != nil {
-				return
+				return err
 			}
 		}
 		for _, uid := range add {
 			session.Log.DebugMessage("Adding user '%s' to organization '%s' with role '%s'.", uid, id, r)
 			if err = om.AddUser(id, uid, r); err != nil {
-				return
+				return err
 			}
 		}
 	}
-	return
+	return nil
 }
 
 func resourceOrgDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -185,14 +185,13 @@ func resourceOrgDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 	var spaces []cfapi.CCSpace
 	if spaces, err = sm.FindSpacesInOrg(id); err != nil {
-		return
+		return err
 	}
 	for _, s := range spaces {
 		if err = sm.DeleteSpace(s.ID); err != nil {
-			return
+			return err
 		}
 	}
 
-	err = om.DeleteOrg(d.Id())
-	return
+	return om.DeleteOrg(d.Id())
 }

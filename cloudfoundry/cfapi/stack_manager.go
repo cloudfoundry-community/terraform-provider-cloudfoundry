@@ -28,31 +28,27 @@ type CCStack struct {
 
 // NewStackManager -
 func newStackManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logger) (sm *StackManager, err error) {
-
 	sm = &StackManager{
-		log: logger,
-
-		config:    config,
-		ccGateway: ccGateway,
-
+		log:         logger,
+		config:      config,
+		ccGateway:   ccGateway,
 		apiEndpoint: config.APIEndpoint(),
-
-		repo: stacks.NewCloudControllerStackRepository(config, ccGateway),
+		repo:        stacks.NewCloudControllerStackRepository(config, ccGateway),
 	}
 
-	return
+	return sm, nil
 }
 
 // FindStackByName -
 func (sm *StackManager) FindStackByName(name string) (stack CCStack, err error) {
 
 	var s models.Stack
-
-	s, err = sm.repo.FindByName(name)
-	if err == nil {
-		stack.ID = s.GUID
-		stack.Name = s.Name
-		stack.Description = s.Description
+	if s, err = sm.repo.FindByName(name); err != nil {
+		return CCStack{}, err
 	}
-	return
+
+	stack.ID = s.GUID
+	stack.Name = s.Name
+	stack.Description = s.Description
+	return stack, nil
 }

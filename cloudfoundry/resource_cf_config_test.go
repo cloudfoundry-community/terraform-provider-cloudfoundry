@@ -70,6 +70,8 @@ func TestAccConfig_normal(t *testing.T) {
 							resConfig, "feature_flags.0.space_scoped_private_broker_creation", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.space_developer_env_var_visibility", "enabled"),
+						resource.TestCheckResourceAttr(
+							resConfig, "feature_flags.0.service_instance_sharing", "disabled"),
 					),
 				},
 
@@ -103,6 +105,8 @@ func TestAccConfig_normal(t *testing.T) {
 							resConfig, "feature_flags.0.space_scoped_private_broker_creation", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.space_developer_env_var_visibility", "enabled"),
+						resource.TestCheckResourceAttr(
+							resConfig, "feature_flags.0.service_instance_sharing", "disabled"),
 					),
 				},
 			},
