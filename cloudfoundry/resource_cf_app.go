@@ -379,7 +379,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	// Download application binary
 	appPath, err = prepareApp(app, d, session.Log)
 	if err != nil {
-		return
+		return err
 	}
 
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
