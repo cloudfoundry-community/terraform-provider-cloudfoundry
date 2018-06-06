@@ -390,6 +390,7 @@ func (am *AppManager) WaitForAppToStage(app CCApp, timeout time.Duration) (err e
 		var ferr error
 
 		for {
+			time.Sleep(appStatePingSleep)
 			if app, ferr = am.ReadApp(app.ID); err != nil {
 				c <- ferr
 				return
@@ -404,7 +405,6 @@ func (am *AppManager) WaitForAppToStage(app CCApp, timeout time.Duration) (err e
 					return
 				}
 			}
-			time.Sleep(appStatePingSleep)
 		}
 	}()
 
