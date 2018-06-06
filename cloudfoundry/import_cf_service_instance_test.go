@@ -50,7 +50,7 @@ func testAccCheckServiceInstanceDestroyedImportState(names []string, serviceInst
 
 			session.Log.DebugMessage("checking ServiceInstance is Destroyed %s", n)
 
-			if _, _, err := session.ServiceManager().FindServiceInstance(n, spaceId); err != nil {
+			if _, err := session.ServiceManager().FindServiceInstance(n, spaceId); err != nil {
 				switch err.(type) {
 				case *errors.ModelNotFoundError:
 					return nil

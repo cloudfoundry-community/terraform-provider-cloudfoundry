@@ -54,7 +54,6 @@ func dataSourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) (er
 	var (
 		name_or_id      string
 		space           string
-		guid            string
 		serviceInstance cfapi.CCServiceInstance
 	)
 
@@ -63,16 +62,15 @@ func dataSourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) (er
 
 	isUUID := uuid.FromStringOrNil(name_or_id)
 	if &isUUID == nil || uuid.Equal(isUUID, uuid.Nil) {
-		guid, serviceInstance, err = sm.FindServiceInstance(name_or_id, space)
+		serviceInstance, err = sm.FindServiceInstance(name_or_id, space)
 	} else {
-		guid = name_or_id
 		serviceInstance, err = sm.ReadServiceInstance(name_or_id)
 	}
 	if err != nil {
 		return err
 	}
 
-	d.SetId(guid)
+	d.SetId(serviceInstance.ID)
 	d.Set("name", serviceInstance.Name)
 	d.Set("service_plan_id", serviceInstance.ServicePlanGUID)
 	d.Set("tags", serviceInstance.Tags)
