@@ -1,9 +1,12 @@
 package cloudfoundry
 
 import (
-	"fmt"
-
+	"context"
 	"encoding/json"
+	"fmt"
+	"sync"
+
+	"golang.org/x/sync/semaphore"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
@@ -22,6 +25,7 @@ func resourceServiceInstance() *schema.Resource {
 			State: ImportStatePassthrough,
 		},
 
+		SchemaVersion: 1,
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{
@@ -45,6 +49,11 @@ func resourceServiceInstance() *schema.Resource {
 				Type:     schema.TypeList,
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+			"service_plan_concurrency": &schema.Schema{
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Allows for the concurrency of changes to service instances, sharing a particular service_plan, to be restricted.",
 			},
 		},
 	}
@@ -78,6 +87,10 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 	}
 
 	sm := session.ServiceManager()
+
+	if sem := limitConcurrency(d); sem != nil {
+		defer (*sem).Release(1)
+	}
 
 	if id, err = sm.CreateServiceInstance(name, servicePlan, space, params, tags); err != nil {
 		return err
@@ -157,8 +170,15 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 		tags = append(tags, v.(string))
 	}
 
-	_, err = sm.UpdateServiceInstance(id, name, servicePlan, params, tags)
-	return err
+	if sem := limitConcurrency(d); sem != nil {
+		defer (*sem).Release(1)
+	}
+
+	if _, err = sm.UpdateServiceInstance(id, name, servicePlan, params, tags); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -171,6 +191,10 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 
 	sm := session.ServiceManager()
 
+	if sem := limitConcurrency(d); sem != nil {
+		defer (*sem).Release(1)
+	}
+
 	err = sm.DeleteServiceInstance(d.Id())
 	if err != nil {
 		return err
@@ -179,4 +203,40 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	session.Log.DebugMessage("Deleted Service Instance : %s", d.Id())
 
 	return nil
+}
+
+// #######################
+// # Concurrency Limiter #
+// #######################
+// Updates to some types of services in Cloud Foundry (generally badly behaved service brokers)
+// cannot be done in parallel or need to be done with limited concurrency.  This is a hack around
+// the lack of a terraform provided method to limit the level of concurrency around a particular
+// type of resource.  The idea here is that for all of the cf_service_instance resources
+// which share a service_plan ID and set the service_plan_concurrency to a value greater than
+// zero, then this code will cause all creates/updates/deletes of those service plan instances
+// to be throttled to the defined concurrency limit.
+//
+// Limitations
+// - The concurrency defined by the first resource to use a given service_plan ID wins
+// - cf_service_instance resources of the same service plan which do not define service_plan_concurrency
+//   will not take part in the limitation on concurrency
+
+var concurrencySemaphore = make(map[string]*semaphore.Weighted)
+var concurrencySemaphoreMutex = &sync.Mutex{}
+
+func limitConcurrency(d *schema.ResourceData) *semaphore.Weighted {
+	if d.Get("service_plan_concurrency").(int) <= 0 {
+		// if no limit, then just skip
+		return nil
+	}
+
+	concurrencySemaphoreMutex.Lock()
+	if _, ok := concurrencySemaphore[d.Get("service_plan").(string)]; !ok {
+		concurrencySemaphore[d.Get("service_plan").(string)] = semaphore.NewWeighted(int64(d.Get("service_plan_concurrency").(int)))
+	}
+	sem := concurrencySemaphore[d.Get("service_plan").(string)]
+	concurrencySemaphoreMutex.Unlock()
+
+	sem.Acquire(context.TODO(), 1)
+	return sem
 }
