@@ -26,6 +26,7 @@ const (
 type Repository interface {
 	GetPath() string
 	SetVersion(version string, versionType VersionType) (err error)
+	Clean() error
 }
 
 // RepoManager -

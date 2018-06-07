@@ -12,10 +12,10 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/terminal"
 
-	// "github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
+	"github.com/prometheus/common/log"
 )
 
 // DefaultAppTimeout - Timeout (in seconds) when pushing apps to CF
@@ -307,10 +307,6 @@ func resourceApp() *schema.Resource {
 	}
 }
 
-// func serviceBindingHash(d interface{}) int {
-// 	return hashcode.String(d.(map[string]interface{})["service_instance"].(string))
-// }
-
 func validateAppHealthCheckType(v interface{}, k string) (ws []string, errs []error) {
 	value := v.(string)
 	if value != "port" && value != "process" && value != "http" && value != "none" {
@@ -340,7 +336,6 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		addContent []map[string]interface{}
 
 		defaultRoute, stageRoute, liveRoute string
-		//isBlueGreen                         bool
 
 		serviceBindings    []map[string]interface{}
 		hasServiceBindings bool
@@ -430,7 +425,6 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
 
 		routeConfig = v.([]interface{})[0].(map[string]interface{})
-		//isBlueGreen = false
 
 		if defaultRoute, err = validateRoute(routeConfig, "default_route", rm); err != nil {
 			return err
@@ -443,7 +437,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 
 		if len(stageRoute) > 0 && len(liveRoute) > 0 {
-			//isBlueGreen = true
+
 		} else if len(stageRoute) > 0 || len(liveRoute) > 0 {
 			err = fmt.Errorf("both 'stage_route' and 'live_route' need to be provided to deploy the app using blue-green routing")
 			return err
@@ -455,12 +449,15 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		return err
 	}
 	// Delete application if an error occurs
-	defer func() error {
+	defer func() {
 		e := &err
-		if *e != nil {
-			return am.DeleteApp(app.ID, true)
+		if *e == nil {
+			return
 		}
-		return nil
+		err = am.DeleteApp(app.ID, true)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}()
 
 	upload := make(chan error)
@@ -475,6 +472,11 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 		go func() {
 			err = am.UploadApp(app, appPath, addContent)
+			if err != nil {
+				upload <- err
+				return
+			}
+			err = os.Remove(appPath)
 			upload <- err
 		}()
 	}
@@ -517,10 +519,6 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		if err = am.StartApp(app.ID, timeout); err != nil {
 			return err
 		}
-
-		// Execute blue-green validation
-		// if isBlueGreen {
-		// }
 	}
 
 	if app, err = am.ReadApp(app.ID); err != nil {
@@ -706,7 +704,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		} else {
 			appPath = appPathCalc
 		}
-
+		defer func() {
+			os.Remove(appPath)
+		}()
 		if v, ok = d.GetOk("add_content"); ok {
 			addContent = getListOfStructs(v)
 		}
