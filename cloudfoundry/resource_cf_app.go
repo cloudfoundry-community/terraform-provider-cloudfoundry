@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
-	"github.com/prometheus/common/log"
 )
 
 // DefaultAppTimeout - Timeout (in seconds) when pushing apps to CF
@@ -456,7 +455,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 		err = am.DeleteApp(app.ID, true)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	}()
 
