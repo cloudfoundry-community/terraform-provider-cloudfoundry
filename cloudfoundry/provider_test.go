@@ -30,10 +30,6 @@ var pcfDevSpaceID string
 
 func init() {
 
-	if err := initRepoManager(); err != nil {
-		panic(err)
-	}
-
 	testAccProvider = Provider().(*schema.Provider)
 	testAccProviders = map[string]terraform.ResourceProvider{
 		"cloudfoundry": testAccProvider,
@@ -377,7 +373,7 @@ func assertMapEquals(key string, attributes map[string]string, actual map[string
 
 			l := len(keyParts)
 			m := expected
-			for _, kk := range keyParts[1 : l-1] {
+			for _, kk := range keyParts[1: l-1] {
 				if _, ok := m[kk]; !ok {
 					m[kk] = make(map[string]interface{})
 				}

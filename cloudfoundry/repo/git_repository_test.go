@@ -10,7 +10,7 @@ import (
 
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
 
-	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
@@ -109,7 +109,7 @@ func testTaggedContent(workspace string, t *testing.T) {
 
 func getGitRepo(workspace string, t *testing.T) (gitRepo repo.Repository) {
 
-	repoManager := repo.NewManager(workspace)
+	repoManager := repo.NewManager()
 	gitRepo, err := repoManager.GetGitRepository("https://github.com/mevansam/test-app.git", nil, nil, nil)
 	checkError(t, err)
 
