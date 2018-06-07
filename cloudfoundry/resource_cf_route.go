@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
-	"github.com/prometheus/common/log"
 )
 
 func resourceRoute() *schema.Resource {
@@ -141,7 +140,7 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 		err = rm.DeleteRoute(route.ID)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	}()
 
