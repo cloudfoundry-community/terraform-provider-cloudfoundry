@@ -518,6 +518,7 @@ func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceIns
 		var serviceInstance CCServiceInstance
 
 		for {
+			time.Sleep(appStatePingSleep)
 			if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
 				c <- err
 				return
@@ -535,7 +536,6 @@ func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceIns
 					return
 				}
 			}
-			time.Sleep(appStatePingSleep)
 		}
 	}()
 
@@ -559,6 +559,7 @@ func (sm *ServiceManager) WaitDeletionServiceInstance(serviceInstanceID string) 
 		var serviceInstance CCServiceInstance
 
 		for {
+			time.Sleep(appStatePingSleep)
 			if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
 				// if the service instance is gone the error message should contain 60004
 				// cf_service_instance.redis: Server error, status code: 404, error code: 60004, message: The service instance could not be found: babababa-d977-4e9c-9bd0-4903d146d822
@@ -584,7 +585,6 @@ func (sm *ServiceManager) WaitDeletionServiceInstance(serviceInstanceID string) 
 					return
 				}
 			}
-			time.Sleep(appStatePingSleep)
 		}
 	}()
 
