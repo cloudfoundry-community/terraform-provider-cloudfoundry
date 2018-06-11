@@ -509,7 +509,7 @@ func (sm *ServiceManager) ReadServiceInstance(serviceInstanceID string) (service
 
 // WaitServiceInstanceTo -
 func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceInstanceID string) (err error) {
-	sm.log.UI.Say("Waiting for service instance %s to finish starting ..", terminal.EntityNameColor(serviceInstanceID))
+	sm.log.UI.Say("Waiting for service instance %s to complete async provisioning", terminal.EntityNameColor(serviceInstanceID))
 
 	c := make(chan error)
 	go func() {
@@ -532,7 +532,7 @@ func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceIns
 					c <- nil
 					return
 				case "failed":
-					c <- fmt.Errorf("service instance %s crashed", serviceInstanceID)
+					c <- fmt.Errorf("service instance with guid=%s async provisioning has failed", serviceInstanceID)
 					return
 				}
 			}
@@ -551,7 +551,7 @@ func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceIns
 
 // WaitDeletionServiceInstance -
 func (sm *ServiceManager) WaitDeletionServiceInstance(serviceInstanceID string) (err error) {
-	sm.log.UI.Say("Waiting for service instance %s to delete ..", terminal.EntityNameColor(serviceInstanceID))
+	sm.log.UI.Say("Waiting for service instance %s to complete async deletion ..", terminal.EntityNameColor(serviceInstanceID))
 	c := make(chan error)
 	go func() {
 
@@ -561,8 +561,8 @@ func (sm *ServiceManager) WaitDeletionServiceInstance(serviceInstanceID string) 
 		for {
 			time.Sleep(appStatePingSleep)
 			if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
-				// if the service instance is gone the error message should contain 60004
-				// cf_service_instance.redis: Server error, status code: 404, error code: 60004, message: The service instance could not be found: babababa-d977-4e9c-9bd0-4903d146d822
+				// if the service instance is gone the error message should contain error code 60004 ("ServiceInstanceNotFound")
+				// e.g. CLI output: cf_service_instance.redis: Server error, status code: 404, error code: 60004, message: The service instance could not be found: babababa-d977-4e9c-9bd0-4903d146d822
 				if strings.Contains(err.Error(), "error code: 60004") {
 					c <- nil
 					return
@@ -581,7 +581,7 @@ func (sm *ServiceManager) WaitDeletionServiceInstance(serviceInstanceID string) 
 					c <- nil
 					return
 				case "failed":
-					c <- fmt.Errorf("service instance %s crashed", serviceInstanceID)
+					c <- fmt.Errorf("service instance with guid=%s async deletion has failed", serviceInstanceID)
 					return
 				}
 			}
