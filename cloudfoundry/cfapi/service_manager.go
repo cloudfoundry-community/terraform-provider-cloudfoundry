@@ -455,14 +455,16 @@ func (sm *ServiceManager) CreateServiceInstance(
 
 	jsonBytes, err := json.Marshal(request)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	resource := CCServiceInstanceResource{}
-	err = sm.ccGateway.CreateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource)
+	if err = sm.ccGateway.CreateResource(sm.apiEndpoint, path, bytes.NewReader(jsonBytes), &resource); err != nil {
+		return "", err
+	}
 
 	id = resource.Metadata.GUID
-	return
+	return id, nil
 }
 
 // UpdateServiceInstance -
