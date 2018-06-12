@@ -210,6 +210,7 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 			if err = sm.WaitDeletionServiceInstance(id); err != nil {
 				return err
 			}
+			session.Log.DebugMessage("Deleted Service Instance : %s via asynchronous service operation", d.Id())
 		} else {
 			return err
 		}
