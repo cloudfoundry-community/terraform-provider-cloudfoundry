@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"strings"
 )
 
 func resourceServiceInstance() *schema.Resource {
@@ -192,20 +193,29 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
-	session.Log.DebugMessage("begin resourceServiceInstanceDelete")
+	session.Log.DebugMessage("begin resourceServiceInstanceDelete via synchronous service operation")
 
 	sm := session.ServiceManager()
 
-	if err = sm.DeleteServiceInstance(id); err != nil {
-		return err
+	if err = sm.DeleteServiceInstanceSync(id); err != nil {
+		// This logic first tries to delete the service via a synchronous service operation
+		// If that does not work, it does asynchronous service operation which takes longer due to the constant pooling of the status.
+		if strings.Contains(err.Error(), "error code: 10001") {
+			session.Log.DebugMessage("Service Instance : %s does not support deletion via synchronous service operation", id)
+			session.Log.DebugMessage("begin resourceServiceInstanceDelete via asynchronous service operation")
+			if err = sm.DeleteServiceInstance(id); err != nil {
+				return err
+			}
+			// Check whether service_instance has been indeed deleted (sometimes takes very long))
+			if err = sm.WaitDeletionServiceInstance(id); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
-	// Check whether service_instance has been indeed deleted (sometimes takes very long))
-	if err = sm.WaitDeletionServiceInstance(id); err != nil {
-		return err
-	}
-
-	session.Log.DebugMessage("Deleted Service Instance : %s", d.Id())
+	session.Log.DebugMessage("Deleted Service Instance : %s via synchronous service operation", d.Id())
 
 	return nil
 }

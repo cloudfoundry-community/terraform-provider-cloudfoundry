@@ -645,6 +645,14 @@ func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string) (err e
 
 }
 
+// DeleteServiceInstanceSync -
+func (sm *ServiceManager) DeleteServiceInstanceSync(serviceInstanceID string) (err error) {
+
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s", serviceInstanceID))
+	return err
+
+}
+
 // CreateUserProvidedService -
 func (sm *ServiceManager) CreateUserProvidedService(
 	name string,

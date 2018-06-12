@@ -69,7 +69,7 @@ data "cf_service" "redis" {
 resource "cf_service_instance" "redis" {
 	name = "redis"
     space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.redis.service_plans["cache-medium"]}"
+    service_plan = "${data.cf_service.redis.service_plans["cache-small"]}"
 	tags = [ "tag-1" , "tag-2" ]
     timeouts {
       create = "30m"
