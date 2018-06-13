@@ -23,7 +23,7 @@ func resourceServiceInstance() *schema.Resource {
 		Delete: resourceServiceInstanceDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: resourceServiceInstanceImport,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
@@ -262,7 +262,7 @@ func resourceServiceInstanceImport(d *schema.ResourceData, meta interface{}) ([]
 	// json_param can't be retrieved from CF, please inject manually if necessary
 	d.Set("json_param", "")
 
-	return []*schema.ResourceData{d}, nil
+	return ImportStatePassthrough(d, meta)
 }
 
 func resourceServiceInstanceStateFunc(serviceInstanceID string, operationType string, meta interface{}) resource.StateRefreshFunc {
