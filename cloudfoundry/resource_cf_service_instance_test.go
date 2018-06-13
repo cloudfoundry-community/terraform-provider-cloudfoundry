@@ -128,7 +128,7 @@ resource "cf_service_broker" "fake-service-broker" {
 resource "cf_service_instance" "fake-service" {
 	name = "fake-service"
     space = "${data.cf_space.space.id}"
-	service_plan = "${cf_service_broker.fake-service-broker.service_plans["fake-service/fake-async-plan"]}"
+	service_plan = "${cf_service_broker.fake-service-broker.service_plans["fake-service/fake-async-only-plan"]}"
 	depends_on = ["cf_app.fake-service-broker"]
 }
 `
