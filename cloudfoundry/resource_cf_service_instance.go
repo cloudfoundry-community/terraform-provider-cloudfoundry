@@ -6,6 +6,8 @@ import (
 
 	"encoding/json"
 
+	"code.cloudfoundry.org/cli/cf/terminal"
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 	"strings"
@@ -90,9 +92,16 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 	if id, err = sm.CreateServiceInstance(name, servicePlan, space, params, tags); err != nil {
 		return err
 	}
+	stateConf := &resource.StateChangeConf{
+		Pending:      resourceServiceInstancePendingStates,
+		Target:       resourceServiceInstanceSucceesStates,
+		Refresh:      resourceServiceInstanceStateFunc(id, "create", meta),
+		Timeout:      d.Timeout(schema.TimeoutCreate),
+		PollInterval: 5 * time.Second,
+	}
 
-	// Check whetever service_instance exists and is in state 'succeeded'
-	if err = sm.WaitServiceInstanceTo("create", id); err != nil {
+	// Wait, catching any errors
+	if _, err = stateConf.WaitForState(); err != nil {
 		return err
 	}
 
@@ -109,7 +118,7 @@ func resourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) (err 
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
-	session.Log.DebugMessage("Reading Service Instance : %s", d.Id())
+	session.Log.DebugMessage("Reading Service Instance : %s", terminal.EntityNameColor(d.Id()))
 
 	sm := session.ServiceManager()
 	var serviceInstance cfapi.CCServiceInstance
@@ -173,12 +182,15 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 		return err
 	}
 
-	if err != nil {
-		return err
+	stateConf := &resource.StateChangeConf{
+		Pending:      resourceServiceInstancePendingStates,
+		Target:       resourceServiceInstanceSucceesStates,
+		Refresh:      resourceServiceInstanceStateFunc(id, "update", meta),
+		Timeout:      d.Timeout(schema.TimeoutUpdate),
+		PollInterval: 5 * time.Second,
 	}
-
-	// Check whetever service_instance exists and is in state 'succeeded'
-	if err = sm.WaitServiceInstanceTo("update", id); err != nil {
+	// Wait, catching any errors
+	if _, err = stateConf.WaitForState(); err != nil {
 		return err
 	}
 
@@ -193,7 +205,7 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
-	session.Log.DebugMessage("begin resourceServiceInstanceDelete via synchronous service operation")
+	session.Log.DebugMessage("begin resourceServiceInstanceDelete via %s service operation", terminal.EntityNameColor("synchronous"))
 
 	sm := session.ServiceManager()
 
@@ -201,22 +213,28 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 		// This logic first tries to delete the service via a synchronous service operation
 		// If that does not work, it does asynchronous service operation which takes longer due to the constant pooling of the status.
 		if strings.Contains(err.Error(), "error code: 10001") {
-			session.Log.DebugMessage("Service Instance : %s does not support deletion via synchronous service operation", id)
-			session.Log.DebugMessage("begin resourceServiceInstanceDelete via asynchronous service operation")
+			session.Log.DebugMessage("Service Instance : %s does not support deletion via %s service operation", terminal.EntityNameColor(id), terminal.EntityNameColor("synchronous"))
+			session.Log.DebugMessage("begin resourceServiceInstanceDelete via %s service operation", terminal.EntityNameColor("asynchronous"))
 			if err = sm.DeleteServiceInstance(id); err != nil {
 				return err
 			}
-			// Check whether service_instance has been indeed deleted (sometimes takes very long))
-			if err = sm.WaitDeletionServiceInstance(id); err != nil {
+			stateConf := &resource.StateChangeConf{
+				Pending:      resourceServiceInstancePendingStates,
+				Target:       resourceServiceInstanceSucceesStates,
+				Refresh:      resourceServiceInstanceStateFunc(id, "delete", meta),
+				Timeout:      d.Timeout(schema.TimeoutDelete),
+				PollInterval: 5 * time.Second,
+			}
+			// Wait, catching any errors
+			if _, err = stateConf.WaitForState(); err != nil {
 				return err
 			}
-			session.Log.DebugMessage("Deleted Service Instance : %s via asynchronous service operation", d.Id())
 		} else {
 			return err
 		}
 	}
 
-	session.Log.DebugMessage("Deleted Service Instance : %s via synchronous service operation", d.Id())
+	session.Log.DebugMessage("Deleted Service Instance : %s", terminal.EntityNameColor(d.Id()))
 
 	return nil
 }
@@ -245,4 +263,46 @@ func resourceServiceInstanceImport(d *schema.ResourceData, meta interface{}) ([]
 	d.Set("json_param", "")
 
 	return []*schema.ResourceData{d}, nil
+}
+
+func resourceServiceInstanceStateFunc(serviceInstanceID string, operationType string, meta interface{}) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		session := meta.(*cfapi.Session)
+		sm := session.ServiceManager()
+		var err error
+		var serviceInstance cfapi.CCServiceInstance
+		if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
+			// if the service instance is gone the error message should contain error code 60004 ("ServiceInstanceNotFound")
+			// which is the correct behavour if the service instance has been deleted
+			// e.g. CLI output: cf_service_instance.redis: Server error, status code: 404, error code: 60004, message: The service instance could not be found: babababa-d977-4e9c-9bd0-4903d146d822
+			if strings.Contains(err.Error(), "error code: 60004") && operationType == "delete" {
+				return serviceInstance, "succeeded", nil
+			} else {
+				session.Log.DebugMessage("Error on retrieving the serviceInstance %s", serviceInstanceID)
+				return nil, "", err
+			}
+			return nil, "", err
+		}
+
+		if serviceInstance.LastOperation["type"] == operationType {
+			state := serviceInstance.LastOperation["state"]
+			switch state {
+			case "succeeded":
+				return serviceInstance, "succeeded", nil
+			case "failed":
+				session.Log.DebugMessage("service instance with guid=%s async provisioning has failed", serviceInstanceID)
+				return nil, "", err
+			}
+		}
+
+		return serviceInstance, "in progress", nil
+	}
+}
+
+var resourceServiceInstancePendingStates = []string{
+	"in progress",
+}
+
+var resourceServiceInstanceSucceesStates = []string{
+	"succeeded",
 }

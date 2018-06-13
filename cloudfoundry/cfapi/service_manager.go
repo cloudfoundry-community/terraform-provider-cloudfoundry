@@ -6,15 +6,12 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
-
 	"code.cloudfoundry.org/cli/cf/api"
 	"code.cloudfoundry.org/cli/cf/api/resources"
 	"code.cloudfoundry.org/cli/cf/configuration/coreconfig"
 	"code.cloudfoundry.org/cli/cf/errors"
 	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/cf/net"
-	"code.cloudfoundry.org/cli/cf/terminal"
 )
 
 // ServiceManager -
@@ -507,97 +504,6 @@ func (sm *ServiceManager) ReadServiceInstance(serviceInstanceID string) (service
 	}
 	serviceInstance = resource.Entity
 	return serviceInstance, nil
-}
-
-// WaitServiceInstanceTo -
-func (sm *ServiceManager) WaitServiceInstanceTo(operationType string, serviceInstanceID string) (err error) {
-	sm.log.UI.Say("Waiting for service instance %s to complete async provisioning", terminal.EntityNameColor(serviceInstanceID))
-
-	c := make(chan error)
-	go func() {
-
-		var err error
-		var serviceInstance CCServiceInstance
-
-		for {
-			time.Sleep(appStatePingSleep)
-			if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
-				c <- err
-				return
-			}
-
-			if serviceInstance.LastOperation["type"] == operationType {
-				state := serviceInstance.LastOperation["state"]
-
-				switch state {
-				case "succeeded":
-					c <- nil
-					return
-				case "failed":
-					c <- fmt.Errorf("service instance with guid=%s async provisioning has failed", serviceInstanceID)
-					return
-				}
-			}
-		}
-	}()
-
-	select {
-	case err = <-c:
-		if err != nil {
-			return err
-		}
-		sm.log.UI.Say("%s finished starting ...", terminal.EntityNameColor(serviceInstanceID))
-	}
-	return nil
-}
-
-// WaitDeletionServiceInstance -
-func (sm *ServiceManager) WaitDeletionServiceInstance(serviceInstanceID string) (err error) {
-	sm.log.UI.Say("Waiting for service instance %s to complete async deletion ..", terminal.EntityNameColor(serviceInstanceID))
-	c := make(chan error)
-	go func() {
-
-		var err error
-		var serviceInstance CCServiceInstance
-
-		for {
-			time.Sleep(appStatePingSleep)
-			if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
-				// if the service instance is gone the error message should contain error code 60004 ("ServiceInstanceNotFound")
-				// e.g. CLI output: cf_service_instance.redis: Server error, status code: 404, error code: 60004, message: The service instance could not be found: babababa-d977-4e9c-9bd0-4903d146d822
-				if strings.Contains(err.Error(), "error code: 60004") {
-					c <- nil
-					return
-				} else {
-					c <- err
-					return
-				}
-			}
-
-			if serviceInstance.LastOperation["type"] == "delete" {
-				state := serviceInstance.LastOperation["state"]
-
-				switch state {
-				// this probably never happens
-				case "succeeded":
-					c <- nil
-					return
-				case "failed":
-					c <- fmt.Errorf("service instance with guid=%s async deletion has failed", serviceInstanceID)
-					return
-				}
-			}
-		}
-	}()
-
-	select {
-	case err = <-c:
-		if err != nil {
-			return err
-		}
-		sm.log.UI.Say("%s finished deletion ...", terminal.EntityNameColor(serviceInstanceID))
-	}
-	return nil
 }
 
 // FindServiceInstance -
