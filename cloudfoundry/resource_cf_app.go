@@ -505,7 +505,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 	return err
 }
 
-func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	session := meta.(*cfapi.Session)
 	if session == nil {
@@ -540,6 +540,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if update || restart || restage {
 		// push any updates to CF, we'll do any restage/restart later
+		var err error
 		if app, err = am.UpdateApp(app); err != nil {
 			return err
 		}
@@ -557,15 +558,13 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		session.Log.DebugMessage("Service bindings to be deleted: %# v", bindingsToDelete)
 		session.Log.DebugMessage("Service bindings to be added: %# v", bindingsToAdd)
 
-		if err = removeServiceBindings(bindingsToDelete, am, session.Log); err != nil {
+		if err := removeServiceBindings(bindingsToDelete, am, session.Log); err != nil {
 			return err
 		}
 
-		var added []map[string]interface{}
-		if added, err = addServiceBindings(app.ID, bindingsToAdd, am, session.Log); err != nil {
+		if added, err := addServiceBindings(app.ID, bindingsToAdd, am, session.Log); err != nil {
 			return err
-		}
-		if len(added) > 0 {
+		} else if len(added) > 0 {
 			if new != nil {
 				for _, b := range new.([]interface{}) {
 					bb := b.(map[string]interface{})
@@ -589,7 +588,6 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 		var (
 			oldRouteConfig, newRouteConfig map[string]interface{}
-			mappingID                      string
 		)
 
 		oldA := old.([]interface{})
@@ -610,13 +608,12 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			"stage_route",
 			"live_route",
 		} {
-			if _, err = validateRoute(newRouteConfig, r, rm); err != nil {
-				return
+			if _, err := validateRoute(newRouteConfig, r, rm); err != nil {
+				return err
 			}
-			if mappingID, err = updateMapping(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
-				return
-			}
-			if len(mappingID) > 0 {
+			if mappingID, err := updateMapping(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
+				return err
+			} else if len(mappingID) > 0 {
 				newRouteConfig[r+"_mapping_id"] = mappingID
 			}
 		}
@@ -634,13 +631,17 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			addContent []map[string]interface{}
 		)
 
-		if appPath, err = prepareApp(app, d, session.Log); err != nil {
+		if appPathCalc, err := prepareApp(app, d, session.Log); err != nil {
 			return err
+		} else {
+			appPath = appPathCalc
 		}
+
 		if v, ok = d.GetOk("add_content"); ok {
 			addContent = getListOfStructs(v)
 		}
-		if err = am.UploadApp(app, appPath, addContent); err != nil {
+
+		if err := am.UploadApp(app, appPath, addContent); err != nil {
 			return err
 		}
 		binaryUpdated = true
@@ -651,8 +652,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	// check the package state of the application after binary upload
 	var curApp cfapi.CCApp
-	if curApp, err = am.ReadApp(app.ID); err != nil {
-		return
+	var readErr error
+	if curApp, readErr = am.ReadApp(app.ID); readErr != nil {
+		return readErr
 	}
 	if binaryUpdated {
 		if *curApp.PackageState != "PENDING" {
@@ -668,18 +670,20 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	if restage {
-		if err = am.RestageApp(app.ID, timeout); err != nil {
+		if err := am.RestageApp(app.ID, timeout); err != nil {
 			return err
 		}
 		if *curApp.State == "STARTED" {
 			// if the app was running before the restage when wait for it to start again
-			err = am.WaitForAppToStart(app, timeout)
+			if err := am.WaitForAppToStart(app, timeout); err != nil {
+				return err
+			}
 		}
 	} else if restart && !d.Get("stopped").(bool) { // only run restart if the final state is running
-		if err = am.StopApp(app.ID, timeout); err != nil {
+		if err := am.StopApp(app.ID, timeout); err != nil {
 			return err
 		}
-		if err = am.StartApp(app.ID, timeout); err != nil {
+		if err := am.StartApp(app.ID, timeout); err != nil {
 			return err
 		}
 	}
@@ -687,17 +691,17 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	// now set the final started/stopped state, whatever it is
 	if d.HasChange("stopped") {
 		if d.Get("stopped").(bool) {
-			if err = am.StopApp(app.ID, timeout); err != nil {
+			if err := am.StopApp(app.ID, timeout); err != nil {
 				return err
 			}
 		} else {
-			if err = am.StartApp(app.ID, timeout); err != nil {
+			if err := am.StartApp(app.ID, timeout); err != nil {
 				return err
 			}
 		}
 	}
 
-	return err // probably nil here, but return the variable just in case
+	return nil
 }
 
 func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
