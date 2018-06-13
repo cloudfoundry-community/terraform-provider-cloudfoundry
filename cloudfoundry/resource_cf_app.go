@@ -518,32 +518,35 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	app := cfapi.CCApp{
 		ID: d.Id(),
 	}
-	update := false
-	restage := false
-	restart := false
 
+	update := false // for changes where no restart is required
 	app.Name = *getChangedValueString("name", &update, d)
 	app.SpaceGUID = *getChangedValueString("space", &update, d)
-	app.Ports = getChangedValueIntList("ports", &update, d)
 	app.Instances = getChangedValueInt("instances", &update, d)
-	app.Memory = getChangedValueInt("memory", &update, d)
-	app.DiskQuota = getChangedValueInt("disk_quota", &update, d)
-	app.Command = getChangedValueString("command", &update, d)
 	app.EnableSSH = getChangedValueBool("enable_ssh", &update, d)
 	app.HealthCheckHTTPEndpoint = getChangedValueString("health_check_http_endpoint", &update, d)
 	app.HealthCheckType = getChangedValueString("health_check_type", &update, d)
 	app.HealthCheckTimeout = getChangedValueInt("health_check_timeout", &update, d)
 
+	restart := false // for changes where just a restart is required
+	app.Ports = getChangedValueIntList("ports", &restart, d)
+	app.Memory = getChangedValueInt("memory", &restart, d)
+	app.DiskQuota = getChangedValueInt("disk_quota", &restart, d)
+	app.Command = getChangedValueString("command", &restart, d)
+
+	restage := false // for changes where a full restage is required
 	app.Buildpack = getChangedValueString("buildpack", &restage, d)
 	app.Environment = getChangedValueMap("environment", &restage, d)
 
 	if update || restart || restage {
+		// push any updates to CF, we'll do any restage/restart later
 		if app, err = am.UpdateApp(app); err != nil {
 			return err
 		}
 		setAppArguments(app, d)
 	}
 
+	// update the application's service bindings (the necessary restage is dealt with later)
 	if d.HasChange("service_binding") {
 
 		old, new := d.GetChange("service_binding")
@@ -619,6 +622,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
+	binaryUpdated := false // check if we need to update the application's binary
 	if d.HasChange("url") || d.HasChange("git") || d.HasChange("github_release") || d.HasChange("add_content") {
 
 		var (
@@ -639,40 +643,49 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		if err = am.UploadApp(app, appPath, addContent); err != nil {
 			return err
 		}
+		binaryUpdated = true
+	}
 
-		// check the package state of the application after binary upload
-		var curApp cfapi.CCApp
-		if curApp, err = am.ReadApp(app.ID); err != nil {
-			return
-		}
+	// now that all of the reconfiguration is done, we can deal doing a restage or restart, as required
+	timeout := time.Second * time.Duration(d.Get("timeout").(int))
+
+	// check the package state of the application after binary upload
+	var curApp cfapi.CCApp
+	if curApp, err = am.ReadApp(app.ID); err != nil {
+		return
+	}
+	if binaryUpdated {
 		if *curApp.PackageState != "PENDING" {
-			// if it's not already pending, we need to force a restage
+			// if it's not already pending, we need to restage
 			restage = true
 		} else {
-			// if the package state is pending, we need to restart the application to force an immediate restage
+			// uploading the binary flagged the app for restaging,
+			// but we need to restart in order to force that to happen now
 			// (this is how the CF CLI does this)
 			restage = false
 			restart = true
 		}
 	}
 
-	timeout := time.Second * time.Duration(d.Get("timeout").(int))
-
 	if restage {
 		if err = am.RestageApp(app.ID, timeout); err != nil {
 			return err
 		}
-	}
-	if restart {
+		if *curApp.State == "STARTED" {
+			// if the app was running before the restage when wait for it to start again
+			err = am.WaitForAppToStart(app, timeout)
+		}
+	} else if restart && !d.Get("stopped").(bool) { // only run restart if the final state is running
 		if err = am.StopApp(app.ID, timeout); err != nil {
-			return
+			return err
 		}
-		if !d.Get("stopped").(bool) {
-			if err = am.StartApp(app.ID, timeout); err != nil {
-				return
-			}
+		if err = am.StartApp(app.ID, timeout); err != nil {
+			return err
 		}
-	} else if d.HasChange("stopped") { // restart will take care ensuring this state is correct if it was run
+	}
+
+	// now set the final started/stopped state, whatever it is
+	if d.HasChange("stopped") {
 		if d.Get("stopped").(bool) {
 			if err = am.StopApp(app.ID, timeout); err != nil {
 				return err
@@ -682,12 +695,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 				return err
 			}
 		}
-	} else if restage && !d.Get("stopped").(bool) {
-		// if the app is supposed to be running and we did a restage without a restart (somehow)
-		// then we need to ensure that the application is running when all is said and done
-		err = am.WaitForAppToStart(app, timeout)
 	}
-	return err
+
+	return err // probably nil here, but return the variable just in case
 }
 
 func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
