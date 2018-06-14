@@ -124,9 +124,31 @@ resource "cf_service_broker" "fake-service-broker" {
 	space = "${data.cf_space.space.id}"
 	depends_on = ["cf_app.fake-service-broker"]
 }
+%s
+`
 
-resource "cf_service_instance" "fake-service-instance" {
-	name = "fake-service-instance"
+const serviceInstanceResourceAsyncCreateWithFakePlan=`
+
+resource "cf_service_instance" "fake-service-instance-with-fake-plan" {
+	name = "fake-service-instance-with-fake-plan"
+    space = "${data.cf_space.space.id}"
+	service_plan = "${cf_service_broker.fake-service-broker.service_plans["fake-service/fake-plan"]}"
+	depends_on = ["cf_app.fake-service-broker"]
+}
+`
+
+const serviceInstanceResourceAsyncCreateWithAsyncFakePlan=`
+resource "cf_service_instance" "fake-service-instance-with-fake-async-plan" {
+	name = "fake-service-instance-with-fake-async-plan"
+    space = "${data.cf_space.space.id}"
+	service_plan = "${cf_service_broker.fake-service-broker.service_plans["fake-service/fake-async-plan"]}"
+	depends_on = ["cf_app.fake-service-broker"]
+}
+`
+
+const serviceInstanceResourceAsyncCreateWithAsyncOnlyFakePlan=`
+resource "cf_service_instance" "fake-service-instance-with-fake-async-only-plan" {
+	name = "fake-service-instance-with-fake-async-only-plan"
     space = "${data.cf_space.space.id}"
 	service_plan = "${cf_service_broker.fake-service-broker.service_plans["fake-service/fake-async-only-plan"]}"
 	depends_on = ["cf_app.fake-service-broker"]
@@ -207,22 +229,82 @@ func TestAccServiceInstance_async(t *testing.T) {
 		})
 }
 
-func TestAccServiceBroker_async(t *testing.T) {
+func TestAccServiceInstanceWithFakePlan_serviceBroker(t *testing.T) {
 
-	refAsync := "cf_service_instance.fake-service-instance"
+	refAsync := "cf_service_instance.fake-service-instance-with-fake-plan"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"fake-service-instance"}, "data.cf_space.space"),
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"fake-service-instance-with-fake-plan"}, "data.cf_space.space"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate, defaultAppDomain(), defaultAppDomain()),
+					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate, defaultAppDomain(), defaultAppDomain(), serviceInstanceResourceAsyncCreateWithFakePlan),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(refAsync),
-						resource.TestCheckResourceAttr(refAsync, "name", "fake-service-instance"),
+						resource.TestCheckResourceAttr(refAsync, "name", "fake-service-instance-with-fake-plan"),
+					),
+					// ExpectNonEmptyPlan to avoid the following bug in the test
+					// --- FAIL: TestAccServiceBroker_async (174.55s)
+					//testing.go:513: Step 0 error: After applying this step and refreshing, the plan was not empty:
+					//  DIFF:
+					//  CREATE: data.cf_service.fake-service
+					//    name:            "" => "fake-service"
+					//    service_plans.%: "" => "<computed>"
+					ExpectNonEmptyPlan: true,
+				},
+			},
+		})
+}
+
+func TestAccServiceInstanceWithAsyncFakePlan_serviceBroker(t *testing.T) {
+
+	refAsync := "cf_service_instance.fake-service-instance-with-fake-async-plan"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"fake-service-instance-with-fake-async-plan"}, "data.cf_space.space"),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate, defaultAppDomain(), defaultAppDomain(), serviceInstanceResourceAsyncCreateWithAsyncFakePlan),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckServiceInstanceExists(refAsync),
+						resource.TestCheckResourceAttr(refAsync, "name", "fake-service-instance-with-fake-async-plan"),
+					),
+					// ExpectNonEmptyPlan to avoid the following bug in the test
+					// --- FAIL: TestAccServiceBroker_async (174.55s)
+					//testing.go:513: Step 0 error: After applying this step and refreshing, the plan was not empty:
+					//  DIFF:
+					//  CREATE: data.cf_service.fake-service
+					//    name:            "" => "fake-service"
+					//    service_plans.%: "" => "<computed>"
+					ExpectNonEmptyPlan: true,
+				},
+			},
+		})
+}
+
+func TestAccServiceInstanceWithAsyncOnlyFakePlan_serviceBroker(t *testing.T) {
+
+	refAsync := "cf_service_instance.fake-service-instance-with-fake-async-only-plan"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"fake-service-instance-with-fake-async-only-plan"}, "data.cf_space.space"),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate, defaultAppDomain(), defaultAppDomain(), serviceInstanceResourceAsyncCreateWithAsyncOnlyFakePlan),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckServiceInstanceExists(refAsync),
+						resource.TestCheckResourceAttr(refAsync, "name", "fake-service-instance-with-fake-async-only-plan"),
 					),
 					// ExpectNonEmptyPlan to avoid the following bug in the test
 					// --- FAIL: TestAccServiceBroker_async (174.55s)
