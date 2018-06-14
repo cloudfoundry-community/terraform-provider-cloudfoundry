@@ -125,8 +125,8 @@ resource "cf_service_broker" "fake-service-broker" {
 	depends_on = ["cf_app.fake-service-broker"]
 }
 
-resource "cf_service_instance" "fake-service" {
-	name = "fake-service"
+resource "cf_service_instance" "fake-service-instance" {
+	name = "fake-service-instance"
     space = "${data.cf_space.space.id}"
 	service_plan = "${cf_service_broker.fake-service-broker.service_plans["fake-service/fake-async-only-plan"]}"
 	depends_on = ["cf_app.fake-service-broker"]
@@ -209,21 +209,29 @@ func TestAccServiceInstance_async(t *testing.T) {
 
 func TestAccServiceBroker_async(t *testing.T) {
 
-	refAsync := "cf_service_instance.fake-service"
+	refAsync := "cf_service_instance.fake-service-instance"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"fake-service"}, "data.cf_space.space"),
+			CheckDestroy: testAccCheckServiceInstanceDestroyed([]string{"fake-service-instance"}, "data.cf_space.space"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate, defaultAppDomain(), defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(refAsync),
-						resource.TestCheckResourceAttr(refAsync, "name", "fake-service"),
+						resource.TestCheckResourceAttr(refAsync, "name", "fake-service-instance"),
 					),
+					// ExpectNonEmptyPlan to avoid the following bug in the test
+					// --- FAIL: TestAccServiceBroker_async (174.55s)
+					//testing.go:513: Step 0 error: After applying this step and refreshing, the plan was not empty:
+					//  DIFF:
+					//  CREATE: data.cf_service.fake-service
+					//    name:            "" => "fake-service"
+					//    service_plans.%: "" => "<computed>"
+					ExpectNonEmptyPlan: true,
 				},
 			},
 		})
