@@ -11,14 +11,14 @@ import (
 
 const stackDataResource = `
 
-data "cf_stack" "s" {
+data "cloudfoundry_stack" "s" {
     name = "cflinuxfs2"
 }
 `
 
 func TestAccDataSourceStack_normal(t *testing.T) {
 
-	ref := "data.cf_stack.s"
+	ref := "data.cloudfoundry_stack.s"
 
 	resource.Test(t,
 		resource.TestCase{

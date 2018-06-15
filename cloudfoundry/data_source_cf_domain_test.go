@@ -8,31 +8,31 @@ import (
 )
 
 const domainDataResource = `
-data "cf_domain" "tcp" {
+data "cloudfoundry_domain" "tcp" {
     sub_domain = "tcp"
 }
 `
 
 const privateDomainDataResource = `
-resource "cf_org" "myorg" {
+resource "cloudfoundry_org" "myorg" {
 	name = "myorg"
 }
 
-resource "cf_domain" "mydomain" {
+resource "cloudfoundry_domain" "mydomain" {
   sub_domain = "private"
   domain     = "%[1]s"
-  org = "${cf_org.myorg.id}"
+  org = "${cloudfoundry_org.myorg.id}"
 }
 
-data "cf_domain" "private" {
-  domain = "${cf_domain.mydomain.domain}"
+data "cloudfoundry_domain" "private" {
+  domain = "${cloudfoundry_domain.mydomain.domain}"
   sub_domain = "private"
 }
 `
 
 func TestAccDataSourceDomain_normal(t *testing.T) {
 
-	ref := "data.cf_domain.tcp"
+	ref := "data.cloudfoundry_domain.tcp"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -56,7 +56,7 @@ func TestAccDataSourceDomain_normal(t *testing.T) {
 }
 
 func TestAccDataSourceDomain_private(t *testing.T) {
-	ref := "data.cf_domain.private"
+	ref := "data.cloudfoundry_domain.private"
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },

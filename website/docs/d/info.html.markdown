@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_info"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_info"
 sidebar_current: "docs-cf-datasource-info"
 description: |-
   Get information on a Cloud Foundry target.
@@ -13,7 +13,7 @@ Gets information on a Cloud Foundry target.
 ## Example Usage
 
 ```
-data "cf_info" "info" {}
+data "cloudfoundry_info" "info" {}
 ```
 
 ## Attributes Reference

@@ -10,7 +10,7 @@ import (
 )
 
 const configResource = `
-resource "cf_config" "ff" {
+resource "cloudfoundry_feature_flags" "ff" {
 	feature_flags{
 		route_creation = "disabled"
 		task_creation = "enabled"
@@ -20,7 +20,7 @@ resource "cf_config" "ff" {
 `
 
 const configResourceUpdate = `
-resource "cf_config" "ff" {
+resource "cloudfoundry_feature_flags" "ff" {
 	feature_flags{
 		route_creation = "enabled"
 		task_creation = "disabled"
@@ -31,7 +31,7 @@ resource "cf_config" "ff" {
 
 func TestAccConfig_normal(t *testing.T) {
 
-	resConfig := "cf_config.ff"
+	resConfig := "cloudfoundry_feature_flags.ff"
 
 	resource.Test(t,
 		resource.TestCase{

@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_user"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_user"
 sidebar_current: "docs-cf-datasource-user"
 description: |-
   Get information on a Cloud Foundry User.
@@ -15,7 +15,7 @@ Gets information on a Cloud Foundry user.
 The following example looks up an user named 'myuser'. 
 
 ```
-data "cf_user" "myuser" {
+data "cloudfoundry_user" "myuser" {
     name = "myuser"    
 }
 ```

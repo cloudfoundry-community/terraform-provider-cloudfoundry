@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_stack"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_stack"
 sidebar_current: "docs-cf-datasource-stack"
 description: |-
   Get information on a Cloud Foundry stack.
@@ -15,7 +15,7 @@ Gets information on a particular Cloud Foundry [stack](https://docs.cloudfoundry
 The following example looks up a stack named 'my_custom_stack'. 
 
 ```
-data "cf_stack" "mystack" {
+data "cloudfoundry_stack" "mystack" {
     name = "my_custom_stack"
 }
 ```

@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_service_key"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_service_key"
 sidebar_current: "docs-cf-resource-service-key"
 description: |-
   Provides a Cloud Foundry Service Key.
@@ -15,19 +15,19 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [Service Keys](http
 The following creates a Service Key for the referenced Service Instance.
 
 ```
-data "cf_service" "redis" {
+data "cloudfoundry_service" "redis" {
     name = "p-redis"
 }
 
-resource "cf_service_instance" "redis1" {
+resource "cloudfoundry_service_instance" "redis1" {
   name = "pricing-grid"
-  space = "${cf_space.dev.id}"
-  service_plan = "${data.cf_service.redis.service_plans["shared-vm"]}"
+  space = "${cloudfoundry_space.dev.id}"
+  service_plan = "${data.cloudfoundry_service.redis.service_plans["shared-vm"]}"
 }
 
-resource "cf_service_key" "redis1-key1" {
+resource "cloudfoundry_service_key" "redis1-key1" {
   name = "pricing-grid-key1"
-  service_instance = "${cf_service_instance.redis.id}
+  service_instance = "${cloudfoundry_service_instance.redis.id}
 }
 ```
 
@@ -51,5 +51,5 @@ The following attributes are exported:
 An existing Service Key can be imported using its guid , e.g.
 
 ```
-$ terraform import cf_service_key.redis1-key1 a-guid
+$ terraform import cloudfoundry_service_key.redis1-key1 a-guid
 ```

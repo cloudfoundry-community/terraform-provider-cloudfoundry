@@ -7,7 +7,7 @@ import (
 )
 
 func TestAccSpace_importBasic(t *testing.T) {
-	resourceName := "cf_space.space1"
+	resourceName := "cloudfoundry_space.space1"
 
 	resource.Test(t,
 		resource.TestCase{

@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_quota"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_quota"
 sidebar_current: "docs-cf-datasource-quota"
 description: |-
   Get information on a Cloud Foundry Quota.
@@ -15,9 +15,9 @@ Gets information on a Cloud Foundry quota.
 The following example looks up a quota named 'myquota' within the Org identified by the id of an Org resource defined elsewhere in the Terraform configuration. 
 
 ```
-data "cf_quota" "q" {
+data "cloudfoundry_quota" "q" {
     name = "myquota"
-    org = "${cf_org.o1.id}"
+    org = "${cloudfoundry_org.o1.id}"
 }
 ```
 

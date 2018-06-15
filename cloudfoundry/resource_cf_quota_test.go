@@ -14,7 +14,7 @@ import (
 
 const quotaResource = `
 
-resource "cf_quota" "50g" {
+resource "cloudfoundry_quota" "50g" {
 	name = "50g"
     allow_paid_service_plans = false
     instance_memory = 2048
@@ -28,7 +28,7 @@ resource "cf_quota" "50g" {
 
 const quotaResourceUpdate = `
 
-resource "cf_quota" "50g" {
+resource "cloudfoundry_quota" "50g" {
 	name = "50g"
     allow_paid_service_plans = true
     instance_memory = 1024
@@ -42,7 +42,7 @@ resource "cf_quota" "50g" {
 
 const spaceQuotaResource = `
 
-resource "cf_quota" "10g" {
+resource "cloudfoundry_quota" "10g" {
 	name = "10g"
     allow_paid_service_plans = false
     instance_memory = 512
@@ -56,7 +56,7 @@ resource "cf_quota" "10g" {
 
 func TestAccQuota_normal(t *testing.T) {
 
-	ref := "cf_quota.50g"
+	ref := "cloudfoundry_quota.50g"
 	quotaname := "50g"
 
 	resource.Test(t,
@@ -117,7 +117,7 @@ func TestAccQuota_normal(t *testing.T) {
 
 func TestAccSpaceQuota_normal(t *testing.T) {
 
-	ref := "cf_quota.10g"
+	ref := "cloudfoundry_quota.10g"
 	quotaname := "10g"
 	orgID := defaultPcfDevOrgID()
 
