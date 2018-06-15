@@ -127,7 +127,7 @@ resource "cf_service_broker" "fake-service-broker" {
 %s
 `
 
-const serviceInstanceResourceAsyncCreateWithFakePlan=`
+const serviceInstanceResourceAsyncCreateWithFakePlan = `
 
 resource "cf_service_instance" "fake-service-instance-with-fake-plan" {
 	name = "fake-service-instance-with-fake-plan"
@@ -137,7 +137,7 @@ resource "cf_service_instance" "fake-service-instance-with-fake-plan" {
 }
 `
 
-const serviceInstanceResourceAsyncCreateWithAsyncFakePlan=`
+const serviceInstanceResourceAsyncCreateWithAsyncFakePlan = `
 resource "cf_service_instance" "fake-service-instance-with-fake-async-plan" {
 	name = "fake-service-instance-with-fake-async-plan"
     space = "${data.cf_space.space.id}"
@@ -146,7 +146,7 @@ resource "cf_service_instance" "fake-service-instance-with-fake-async-plan" {
 }
 `
 
-const serviceInstanceResourceAsyncCreateWithAsyncOnlyFakePlan=`
+const serviceInstanceResourceAsyncCreateWithAsyncOnlyFakePlan = `
 resource "cf_service_instance" "fake-service-instance-with-fake-async-only-plan" {
 	name = "fake-service-instance-with-fake-async-only-plan"
     space = "${data.cf_space.space.id}"
