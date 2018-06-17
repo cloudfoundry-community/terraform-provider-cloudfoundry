@@ -51,7 +51,7 @@ One of the following arguments must be declared to locate application source or 
   - `username` - (Required, String) Username for the private docker repo 
   - `password` - (Required, String) Password for the private docker repo 
  
-* `git` - (Optional, String) The git location to pull the application source directly from source control.
+* `git` - (Optional, String) The git repository where to pull the application source from.
 
   - `url` - (Required, String) The git URL for the application repository.
   - `branch` - (Optional, String) The branch of from which the repository contents should be retrieved.
@@ -78,7 +78,7 @@ One of the following arguments must be declared to locate application source or 
 ### Service bindings
 
 * `service_binding` - (Optional, Array) Service instances to bind to the application.
-  - `service_instance` - (Required, String) The service instance GUID.
+  - `service` - (Required, String) The service instance GUID.
   - `params` - (Optional, Map) A list of key/value parameters used by the service broker to create the binding.
 
 ~> **NOTE:** Modifying this argument will cause the application to be restaged.   
