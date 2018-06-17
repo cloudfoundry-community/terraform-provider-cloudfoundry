@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_service_key"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_service_key"
 sidebar_current: "docs-cf-datasource-service-key"
 description: |-
   Get information on a Cloud Foundry Service.
@@ -15,9 +15,9 @@ Gets information on a Cloud Foundry service key.
 The following example looks up a service key named 'mydb-key' within the given space reference. 
 
 ```
-data "cf_service_instance" "mydb-key" {
+data "cloudfoundry_service_instance" "mydb-key" {
     name = "mydb-key"
-    space = "${data.cf_space.dev.id}
+    space = "${data.cloudfoundry_space.dev.id}
 }
 ```
 

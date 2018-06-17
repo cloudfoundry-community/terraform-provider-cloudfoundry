@@ -8,47 +8,46 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/kr/pretty"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 const appResourceSpringMusic = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
-data "cf_service" "mysql" {
+data "cloudfoundry_service" "mysql" {
     name = "p-mysql"
 }
-data "cf_service" "rmq" {
+data "cloudfoundry_service" "rmq" {
     name = "p-rabbitmq"
 }
 
-resource "cf_route" "spring-music" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "spring-music" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "spring-music"
 }
-resource "cf_service_instance" "db" {
+resource "cloudfoundry_service_instance" "db" {
 	name = "db"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans.512mb}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.mysql.service_plans.512mb}"
 }
-resource "cf_service_instance" "fs1" {
+resource "cloudfoundry_service_instance" "fs1" {
 	name = "fs1"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.rmq.service_plans.standard}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
-resource "cf_app" "spring-music" {
+resource "cloudfoundry_app" "spring-music" {
 	name = "spring-music"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	memory = "768"
 	disk_quota = "512"
 	timeout = 1800
@@ -56,14 +55,14 @@ resource "cf_app" "spring-music" {
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
-		service_instance = "${cf_service_instance.db.id}"
+		service_instance = "${cloudfoundry_service_instance.db.id}"
 	}
 	service_binding {
-		service_instance = "${cf_service_instance.fs1.id}"
+		service_instance = "${cloudfoundry_service_instance.fs1.id}"
 	}
 
 	route {
-		default_route = "${cf_route.spring-music.id}"
+		default_route = "${cloudfoundry_route.spring-music.id}"
 	}
 
 	environment {
@@ -75,46 +74,46 @@ resource "cf_app" "spring-music" {
 
 const appResourceSpringMusicUpdate = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
-data "cf_service" "mysql" {
+data "cloudfoundry_service" "mysql" {
     name = "p-mysql"
 }
-data "cf_service" "rmq" {
+data "cloudfoundry_service" "rmq" {
     name = "p-rabbitmq"
 }
 
-resource "cf_route" "spring-music" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "spring-music" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "spring-music"
 }
-resource "cf_service_instance" "db" {
+resource "cloudfoundry_service_instance" "db" {
 	name = "db"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans.512mb}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.mysql.service_plans.512mb}"
 }
-resource "cf_service_instance" "fs1" {
+resource "cloudfoundry_service_instance" "fs1" {
 	name = "fs1"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.rmq.service_plans.standard}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
-resource "cf_service_instance" "fs2" {
+resource "cloudfoundry_service_instance" "fs2" {
 	name = "fs2"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.rmq.service_plans.standard}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
-resource "cf_app" "spring-music" {
+resource "cloudfoundry_app" "spring-music" {
 	name = "spring-music-updated"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	instances ="2"
 	memory = "1024"
 	disk_quota = "1024"
@@ -123,17 +122,17 @@ resource "cf_app" "spring-music" {
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
-		service_instance = "${cf_service_instance.db.id}"
+		service_instance = "${cloudfoundry_service_instance.db.id}"
 	}
 	service_binding {
-		service_instance = "${cf_service_instance.fs2.id}"
+		service_instance = "${cloudfoundry_service_instance.fs2.id}"
 	}
 	service_binding {
-		service_instance = "${cf_service_instance.fs1.id}"
+		service_instance = "${cloudfoundry_service_instance.fs1.id}"
 	}
 
 	route {
-		default_route = "${cf_route.spring-music.id}"
+		default_route = "${cloudfoundry_route.spring-music.id}"
 	}
 
 	environment {
@@ -145,20 +144,20 @@ resource "cf_app" "spring-music" {
 
 const appResourceWithMultiplePorts = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
 
-resource "cf_app" "test-app" {
+resource "cloudfoundry_app" "test-app" {
 	name = "test-app"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	timeout = 1800
 	ports = [ 8888, 9999 ]
 	buildpack = "binary_buildpack"
@@ -172,23 +171,23 @@ resource "cf_app" "test-app" {
 		version = "v0.0.1"
 	}
 }
-resource "cf_route" "test-app-8888" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "test-app-8888" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "test-app-8888"
 
 	target {
-		app = "${cf_app.test-app.id}"
+		app = "${cloudfoundry_app.test-app.id}"
 		port = 8888
 	}
 }
-resource "cf_route" "test-app-9999" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "test-app-9999" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "test-app-9999"
 
 	target {
-		app = "${cf_app.test-app.id}"
+		app = "${cloudfoundry_app.test-app.id}"
 		port = 9999
 	}
 }
@@ -196,7 +195,7 @@ resource "cf_route" "test-app-9999" {
 
 func TestAccApp_app1(t *testing.T) {
 
-	refApp := "cf_app.spring-music"
+	refApp := "cloudfoundry_app.spring-music"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -291,7 +290,7 @@ func TestAccApp_app1(t *testing.T) {
 }
 func TestAccApp_app2(t *testing.T) {
 
-	refApp := "cf_app.test-app"
+	refApp := "cloudfoundry_app.test-app"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -429,8 +428,8 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 				if binding != nil && values["binding_id"] == binding["binding_id"] {
 					if err2 := assertMapEquals("credentials", values, binding["credentials"].(map[string]interface{})); err2 != nil {
 						session.Log.LogMessage(
-							"Crendentials for service instance %s do not match:\nactual=%# v\nexpected=% #v\n",
-							serviceInstanceID, pretty.Formatter(values), pretty.Formatter(binding["credentials"]))
+							"Credentials for service instance %s do not match: %s",
+							serviceInstanceID, err2.Error())
 						return false
 					}
 					return true

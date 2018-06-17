@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_service_broker"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_service_broker"
 sidebar_current: "docs-cf-resource-service-broker"
 description: |-
   Provides a Cloud Foundry Service Broker resource.
@@ -10,7 +10,7 @@ description: |-
 
 Provides a Cloud Foundry resource for managing [service brokers](https://docs.cloudfoundry.org/services/) definitions. 
 
-~> **NOTE:** To visibility of service plans provided by a registred service brijer, use the [cf_service_plan_access](service_plan_access.html) resource. 
+~> **NOTE:** To visibility of service plans provided by a registred service brijer, use the [cloudfoundry_service_plan_access](service_plan_access.html) resource. 
 
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted org manager permissions.
 
@@ -20,7 +20,7 @@ Provides a Cloud Foundry resource for managing [service brokers](https://docs.cl
 The following example registers a service broker.
 
 ```
-resource "cf_service_broker" "mysql" {
+resource "cloudfoundry_service_broker" "mysql" {
 	name = "test-mysql"
 	url = "http://mysql-broker.local.pcfdev.io"
 	username = "admin"
@@ -50,5 +50,5 @@ The following attributes are exported:
 An existing Service Broker can be imported using its guid, e.g.
 
 ```
-$ terraform import cf_service_broker.mysql a-guid
+$ terraform import cloudfoundry_service_broker.mysql a-guid
 ```

@@ -14,7 +14,7 @@ import (
 
 const quotaDataResource = `
 
-resource "cf_quota" "q" {
+resource "cloudfoundry_quota" "q" {
 	name = "50g"
     allow_paid_service_plans = false
     instance_memory = 2048
@@ -25,14 +25,14 @@ resource "cf_quota" "q" {
     total_route_ports = 5
 }
 
-data "cf_quota" "qq" {
-    name = "${cf_quota.q.name}"
+data "cloudfoundry_quota" "qq" {
+    name = "${cloudfoundry_quota.q.name}"
 }
 `
 
 const spaceQuotaDataResource = `
 
-resource "cf_quota" "q" {
+resource "cloudfoundry_quota" "q" {
 	name = "20g"
     allow_paid_service_plans = false
     instance_memory = 512
@@ -43,15 +43,15 @@ resource "cf_quota" "q" {
 	org = "%s"
 }
 
-data "cf_quota" "qq" {
-    name = "${cf_quota.q.name}"
+data "cloudfoundry_quota" "qq" {
+    name = "${cloudfoundry_quota.q.name}"
 	org = "%s"
 }
 `
 
 func TestAccDataSourceQuota_normal(t *testing.T) {
 
-	ref := "data.cf_quota.qq"
+	ref := "data.cloudfoundry_quota.qq"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -80,7 +80,7 @@ func TestAccDataSourceSpaceQuota_normal(t *testing.T) {
 		return
 	}
 
-	ref := "data.cf_quota.qq"
+	ref := "data.cloudfoundry_quota.qq"
 	orgID := defaultPcfDevOrgID()
 
 	resource.Test(t,

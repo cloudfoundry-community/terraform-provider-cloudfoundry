@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_asg"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_asg"
 sidebar_current: "docs-cf-resource-asg"
 description: |-
   Provides a Cloud Foundry Application Security Group resource.
@@ -20,7 +20,7 @@ stage and run applications.
 Basic usage
 
 ```
-resource "cf_asg" "messaging" {
+resource "cloudfoundry_asg" "messaging" {
 
 	name = "rmq-service"
 	
@@ -64,6 +64,6 @@ The following attributes are exported:
 The current Asg can be imported using the `asg` guid, e.g.
 
 ```
-$ terraform import cf_asg.messaging a-guid
+$ terraform import cloudfoundry_asg.messaging a-guid
 ```
 

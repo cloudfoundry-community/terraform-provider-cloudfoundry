@@ -1,5 +1,5 @@
 ---
-layout: "cf"
+layout: "cloudfoundry"
 page_title: "Cloud Foundry: cloudfoundry_asg"
 sidebar_current: "docs-cf-datasource-asg"
 description: |-
@@ -13,7 +13,7 @@ Gets information on a Cloud Foundry application security group.
 ## Example Usage
 
 ```
-data "cf_asg" "public" {
+data "cloudfoundry_asg" "public" {
     name = "public_networks"
 }
 ```

@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_service_instance"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_service_instance"
 sidebar_current: "docs-cf-resource-service-instance"
 description: |-
   Provides a Cloud Foundry Service Instance.
@@ -15,14 +15,14 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [Service Instances]
 The following is a Service Instance created in the referenced space with the specified service plan. 
 
 ```
-data "cf_service" "redis" {
+data "cloudfoundry_service" "redis" {
     name = "p-redis"
 }
 
-resource "cf_service_instance" "redis1" {
+resource "cloudfoundry_service_instance" "redis1" {
   name = "pricing-grid"
-  space = "${cf_space.dev.id}"
-  service_plan = "${data.cf_service.redis.service_plans["shared-vm"]}"
+  space = "${cloudfoundry_space.dev.id}"
+  service_plan = "${data.cloudfoundry_service.redis.service_plans["shared-vm"]}"
 }
 ```
 
@@ -47,7 +47,7 @@ The following attributes are exported:
 An existing Service Instance can be imported using its guid, e.g.
 
 ```
-$ terraform import cf_service.redis a-guid
+$ terraform import cloudfoundry_service.redis a-guid
 ```
 
 ## Timeouts

@@ -7,7 +7,7 @@ import (
 )
 
 func TestAccAsg_importBasic(t *testing.T) {
-	resourceName := "cf_asg.rmq"
+	resourceName := "cloudfoundry_asg.rmq"
 	asgname := "rmq-dev"
 
 	resource.Test(t,

@@ -4,7 +4,7 @@ set -xe
 
 which om >/dev/null 2>&1
 if [[ $? -ne 0 ]]; then
-    "The OM CLI installed. Please download it from https://github.com/pivotal-cf/om/releases."
+    echo "The OM CLI is not installed. Please download it from https://github.com/pivotal-cf/om/releases."
     exit 1
 fi
 
@@ -14,6 +14,11 @@ opsman_endpoint=${1:-$OPSMAN_ENDPOINT}
 opsman_user=${2:-$OPSMAN_USER}
 opsman_password=${3:-$OPSMAN_PASSWORD}
 
+if [[ -z $opsman_endpoint && -z $opsman_user && -z opsman_password ]]; then
+    echo "USAGE: ./prepare-tfacc-env.sh $OPSMAN_ENDPOINT $OPSMAN_USER $OPSMAN_PASSWORD"
+    exit 1
+fi
+
 om_cli="om --skip-ssl-validation --target https://$opsman_endpoint --username $opsman_user --password $opsman_password"
 
 $om_cli curl -p /api/installation_settings > /tmp/installation_settings.json
@@ -21,8 +26,6 @@ cf_sys_domain=$(cat /tmp/installation_settings.json \
     | jq -r '.products[] | select(.installation_name | match("cf-.*")) | .jobs[] | select(.installation_name == "cloud_controller") | .properties[] | select(.identifier == "system_domain") | .value')
 cf_apps_domain=$(cat /tmp/installation_settings.json \
     | jq -r '.products[] | select(.installation_name | match("cf-.*")) | .jobs[] | select(.installation_name == "cloud_controller") | .properties[] | select(.identifier == "apps_domain") | .value')
-
-cf_api_endpoint=https://api.
 
 cf_user=$($om_cli credentials -p cf -c .uaa.admin_credentials -f identity)
 cf_password=$($om_cli credentials -p cf -c .uaa.admin_credentials -f password)
@@ -69,7 +72,7 @@ cf login --skip-ssl-validation -a https://api.$cf_sys_domain -u $cf_user -p $cf_
 cf create-org pcfdev-org >/dev/null 2>&1
 cf target -o pcfdev-org >/dev/null 2>&1
 cf create-space pcfdev-space -o pcfdev-org >/dev/null 2>&1
-cf create-shared-domain tcp.apps.pas.cf1.tfacc.pcfs.io --router-group default-tcp >/dev/null 2>&1
+cf create-shared-domain tcp.apps.pcf.cf1.tfacc.pcfs.io --router-group default-tcp >/dev/null 2>&1
 cf enable-feature-flag diego_docker >/dev/null 2>&1
 
 set +xe

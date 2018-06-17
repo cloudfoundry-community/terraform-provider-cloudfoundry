@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccServiceInstance_importBasic(t *testing.T) {
-	resourceName := "cf_service_instance.mysql"
+	resourceName := "cloudfoundry_service_instance.mysql"
 
 	resource.Test(t,
 		resource.TestCase{
