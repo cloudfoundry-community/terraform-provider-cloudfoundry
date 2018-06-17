@@ -78,6 +78,7 @@ One of the following arguments must be declared to locate application source or 
 ### Service bindings
 
 * `service_binding` - (Optional, Array) Service instances to bind to the application.
+
   - `service` - (Required, String) The service instance GUID.
   - `params` - (Optional, Map) A list of key/value parameters used by the service broker to create the binding.
 
