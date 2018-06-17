@@ -13,14 +13,14 @@ import (
 
 const userDataResource = `
 
-data "cf_user" "admin-user" {
+data "cloudfoundry_user" "admin-user" {
     name = "admin"
 }
 `
 
 func TestAccDataSourceUser_normal(t *testing.T) {
 
-	ref := "data.cf_user.admin-user"
+	ref := "data.cloudfoundry_user.admin-user"
 
 	resource.Test(t,
 		resource.TestCase{

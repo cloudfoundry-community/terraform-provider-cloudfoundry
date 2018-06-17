@@ -7,7 +7,7 @@ import (
 )
 
 func TestAccBuildpack_importBasic(t *testing.T) {
-	resourceName := "cf_buildpack.tomee"
+	resourceName := "cloudfoundry_buildpack.tomee"
 
 	resource.Test(t,
 		resource.TestCase{

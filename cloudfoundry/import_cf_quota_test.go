@@ -7,7 +7,7 @@ import (
 )
 
 func TestAccQuota_importBasic(t *testing.T) {
-	resourceName := "cf_quota.50g"
+	resourceName := "cloudfoundry_quota.50g"
 	quotaname := "50g"
 
 	resource.Test(t,

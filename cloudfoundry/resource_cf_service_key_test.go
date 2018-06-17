@@ -13,26 +13,26 @@ import (
 
 const serviceKeyResource = `
 
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
-data "cf_service" "mysql" {
-    name = "p-mysql"
-}
-
-resource "cf_service_instance" "mysql" {
-	name = "mysql"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans["512mb"]}"
+data "cloudfoundry_service" "rabbitmq" {
+    name = "p-rabbitmq"
 }
 
-resource "cf_service_key" "mysql-key" {
-	name = "mysql-key"
-	service_instance = "${cf_service_instance.mysql.id}"
+resource "cloudfoundry_service_instance" "rabbitmq" {
+	name = "rabbitmq"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.rabbitmq.service_plans["standard"]}"
+}
+
+resource "cloudfoundry_service_key" "rabbitmq-key" {
+	name = "rabbitmq-key"
+	service_instance = "${cloudfoundry_service_instance.rabbitmq.id}"
 
 	params {
 		"key1" = "aaaa"
@@ -43,13 +43,13 @@ resource "cf_service_key" "mysql-key" {
 
 func TestAccServiceKey_normal(t *testing.T) {
 
-	ref := "cf_service_key.mysql-key"
+	ref := "cloudfoundry_service_key.rabbitmq-key"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceKeyDestroyed("mysql-key", "cf_service_instance.mysql"),
+			CheckDestroy: testAccCheckServiceKeyDestroyed("rabbitmq-key", "cloudfoundry_service_instance.rabbitmq"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -57,7 +57,7 @@ func TestAccServiceKey_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceKeyExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "mysql-key"),
+							ref, "name", "rabbitmq-key"),
 					),
 				},
 			},

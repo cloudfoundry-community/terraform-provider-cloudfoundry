@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_user_provided_service"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_user_provided_service"
 sidebar_current: "docs-cf-resource-user-provided-service"
 description: |-
   Provides a Cloud Foundry User Provided Service.
@@ -15,9 +15,9 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [User Provided Serv
 The following is a User Provided Service created within the referenced space.
 
 ```
-resource "cf_user_provided_service" "mq" {
+resource "cloudfoundry_user_provided_service" "mq" {
   name = "mq-server"
-  space = "${cf_space.dev.id}"
+  space = "${cloudfoundry_space.dev.id}"
   credentials = {
     "url" = "mq://localhost:9000"
     "username" = "admin"
@@ -25,9 +25,9 @@ resource "cf_user_provided_service" "mq" {
   }
 }
 
-resource "cf_user_provided_service" "mail" {
+resource "cloudfoundry_user_provided_service" "mail" {
   name = "mail-server"
-  space = "${cf_space.dev.id}"
+  space = "${cloudfoundry_space.dev.id}"
   credentials_json = <<JSON
   {
     "server" : {
@@ -66,5 +66,5 @@ The following attributes are exported:
 An existing User Provided Service can be imported using its guid, e.g.
 
 ```
-$ terraform import cf_user_provided_service.mq-server a-guid
+$ terraform import cloudfoundry_user_provided_service.mq-server a-guid
 ```

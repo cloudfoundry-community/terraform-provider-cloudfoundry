@@ -871,7 +871,7 @@ func validateRoute(routeConfig map[string]interface{}, route string, rm *cfapi.R
 		var mappings []map[string]interface{}
 		if mappings, err = rm.ReadRouteMappingsByRoute(routeID); err == nil && len(mappings) > 0 {
 			err = fmt.Errorf(
-				"route with id %s is already mapped. routes specificed in the 'route' argument can only be mapped to one 'cf_app' resource",
+				"route with id %s is already mapped. routes specificed in the 'route' argument can only be mapped to one 'cloudfoundry_app' resource",
 				routeID)
 		}
 	}
@@ -938,8 +938,8 @@ func addServiceBindings(
 		b["binding_id"] = bindingID
 
 		credentials = b["credentials"].(map[string]interface{})
-		for k, v := range bindingCredentials {
-			credentials[k] = fmt.Sprintf("%v", v)
+		for k, v := range normalizeMap(bindingCredentials, make(map[string]interface{}), "", "_") {
+			credentials[k] = v
 		}
 
 		bindings = append(bindings, b)

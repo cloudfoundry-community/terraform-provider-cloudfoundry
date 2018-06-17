@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_org"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_org"
 sidebar_current: "docs-cf-resource-org"
 description: |-
   Provides a Cloud Foundry Org resource.
@@ -18,9 +18,9 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [organizations](htt
 The following example creates an org with a specific org-wide quota.
 
 ```
-resource "cf_org" "o1" {
+resource "cloudfoundry_org" "o1" {
     name = "organization-one"
-    quota = "${cf_quota.runaway.id}"
+    quota = "${cloudfoundry_quota.runaway.id}"
 }
 ```
 
@@ -46,5 +46,5 @@ The following attributes are exported:
 An existing Organization can be imported using its guid, e.g.
 
 ```
-$ terraform import cf_org.o1 a-guid
+$ terraform import cloudfoundry_org.o1 a-guid
 ```

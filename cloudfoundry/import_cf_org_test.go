@@ -7,7 +7,7 @@ import (
 )
 
 func TestAccOrg_importBasic(t *testing.T) {
-	resourceName := "cf_org.org1"
+	resourceName := "cloudfoundry_org.org1"
 
 	resource.Test(t,
 		resource.TestCase{

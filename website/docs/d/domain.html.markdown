@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_domain"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_domain"
 sidebar_current: "docs-cf-datasource-domain"
 description: |-
   Get information on a Cloud Foundry Domain.
@@ -15,7 +15,7 @@ Gets information on a Cloud Foundry domain.
 The following example looks up a name in the current deployment with the host name `local` within the local application domain.
 
 ```
-data "cf_domain" "l" {
+data "cloudfoundry_domain" "l" {
     sub_domain = "local"
 }
 ```
