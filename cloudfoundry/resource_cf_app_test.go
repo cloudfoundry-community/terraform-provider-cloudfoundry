@@ -195,29 +195,29 @@ resource "cloudfoundry_route" "test-app-9999" {
 
 const appResourceDocker = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
 
-resource "cf_route" "test-docker-app" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "test-docker-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "test-docker-app"
 	target {
-		app = "${cf_app.test-docker-app.id}"
+		app = "${cloudfoundry_app.test-docker-app.id}"
 		port = 8080
 	}
 }
-resource "cf_app" "test-docker-app" {
+resource "cloudfoundry_app" "test-docker-app" {
 	name = "test-docker-app"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	docker_image = "cloudfoundry/diego-docker-app:latest"
 	timeout = 900
 }
@@ -361,7 +361,7 @@ func TestAccApp_app2(t *testing.T) {
 }
 
 func TestAccApp_dockerApp(t *testing.T) {
-	refApp := "cf_app.test-docker-app"
+	refApp := "cloudfoundry_app.test-docker-app"
 
 	resource.Test(t,
 		resource.TestCase{
