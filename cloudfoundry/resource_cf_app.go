@@ -656,7 +656,12 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	if curApp, readErr = am.ReadApp(app.ID); readErr != nil {
 		return readErr
 	}
-	if binaryUpdated {
+	if binaryUpdated || restage {
+		// There seem to be more types of updates that can automagically put an app's package_stage into "PENDING"
+		// for right now, I have observed this after a service binding update as well, but I have no idea what other
+		// optierations might cause this.  For now, we'll just do a blanket check since calling restage when the app
+		// is in this state causes the API to throw an error.
+		time.Sleep(time.Second * time.Duration(5)) // pause for a few seconds here to ensure the CF API has caught up
 		if *curApp.PackageState != "PENDING" {
 			// if it's not already pending, we need to restage
 			restage = true
