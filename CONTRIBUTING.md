@@ -5,7 +5,7 @@ Please send PR against the `dev` branches.
 
 You may reach core contributors in the [cloudfoundry slack, within the terraform channel](https://cloudfoundry.slack.com/messages/C7JRBR8CV/) (get an account from http://slack.cloudfoundry.org/). Please prefer slack channel for support requests, and github issues for qualified bugs and enhancements requests.
 
-## Coding comppliance
+## Compliance
 
 Linters are run as part of the travis build. Detected flaws will prevent the merge of the PR.
 
