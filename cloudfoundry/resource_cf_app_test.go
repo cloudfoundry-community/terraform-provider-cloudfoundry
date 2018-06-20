@@ -193,6 +193,37 @@ resource "cloudfoundry_route" "test-app-9999" {
 }
 `
 
+const appResourceDocker = `
+
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+
+resource "cloudfoundry_route" "test-docker-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "test-docker-app"
+	target {
+		app = "${cloudfoundry_app.test-docker-app.id}"
+		port = 8080
+	}
+}
+resource "cloudfoundry_app" "test-docker-app" {
+	name = "test-docker-app"
+	space = "${data.cloudfoundry_space.space.id}"
+	docker_image = "cloudfoundry/diego-docker-app:latest"
+	timeout = 900
+}
+
+`
+
 func TestAccApp_app1(t *testing.T) {
 
 	refApp := "cloudfoundry_app.spring-music"
@@ -323,6 +354,50 @@ func TestAccApp_app2(t *testing.T) {
 							refApp, "ports.8888", "8888"),
 						resource.TestCheckResourceAttr(
 							refApp, "ports.9999", "9999"),
+					),
+				},
+			},
+		})
+}
+
+func TestAccApp_dockerApp(t *testing.T) {
+	refApp := "cloudfoundry_app.test-docker-app"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"test-docker-app"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceDocker, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-docker-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						resource.TestCheckResourceAttr(
+							refApp, "name", "test-docker-app"),
+						resource.TestCheckResourceAttr(
+							refApp, "space", defaultPcfDevSpaceID()),
+						resource.TestCheckResourceAttr(
+							refApp, "ports.#", "1"),
+						resource.TestCheckResourceAttr(
+							refApp, "ports.8080", "8080"),
+						resource.TestCheckResourceAttr(
+							refApp, "instances", "1"),
+						resource.TestCheckResourceAttrSet(
+							refApp, "stack"),
+						resource.TestCheckResourceAttr(
+							refApp, "environment.%", "0"),
+						resource.TestCheckResourceAttr(
+							refApp, "enable_ssh", "true"),
+						resource.TestCheckResourceAttr(
+							refApp, "docker_image", "cloudfoundry/diego-docker-app:latest"),
 					),
 				},
 			},
