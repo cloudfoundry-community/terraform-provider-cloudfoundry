@@ -389,8 +389,8 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		app.DockerImage = &vv
 
 		// Activate Diego for Docker
-		app.Diego = new(bool)
-		*app.Diego = true
+		onDiego := true
+		app.Diego = &onDiego
 	}
 	if v, ok = d.GetOk("docker_credentials"); ok {
 		vv := v.(map[string]interface{})
@@ -575,7 +575,15 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	app.Buildpack = getChangedValueString("buildpack", &restage, d)
 	app.Environment = getChangedValueMap("environment", &restage, d)
 
-	if d.HasChange("name") || d.HasChange("service_binding") || d.HasChange("stopped") || d.HasChange("route") || d.HasChange("url") || d.HasChange("docker_image") || d.HasChange("git") || d.HasChange("github_release") || d.HasChange("add_content") {
+	if d.HasChange("name") ||
+		d.HasChange("service_binding") ||
+		d.HasChange("stopped") ||
+		d.HasChange("route") ||
+		d.HasChange("url") ||
+		d.HasChange("docker_image") ||
+		d.HasChange("git") ||
+		d.HasChange("github_release") ||
+		d.HasChange("add_content") {
 		if app, err = am.UpdateApp(app); err != nil {
 			return err
 		}
