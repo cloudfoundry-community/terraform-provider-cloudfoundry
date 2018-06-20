@@ -36,7 +36,7 @@ func init() {
 
 	testAccProvider = Provider().(*schema.Provider)
 	testAccProviders = map[string]terraform.ResourceProvider{
-		"cf": testAccProvider,
+		"cloudfoundry": testAccProvider,
 	}
 }
 

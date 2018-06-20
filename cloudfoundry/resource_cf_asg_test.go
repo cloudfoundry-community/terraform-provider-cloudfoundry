@@ -13,7 +13,7 @@ import (
 )
 
 const securityGroup = `
-resource "cf_asg" "rmq" {
+resource "cloudfoundry_asg" "rmq" {
 
 	name = "rmq-dev"
 	
@@ -32,7 +32,7 @@ resource "cf_asg" "rmq" {
 `
 
 const securityGroupUpdate = `
-resource "cf_asg" "rmq" {
+resource "cloudfoundry_asg" "rmq" {
 
 	name = "rmq-dev"
 	
@@ -56,7 +56,7 @@ resource "cf_asg" "rmq" {
 
 func TestAccAsg_normal(t *testing.T) {
 
-	ref := "cf_asg.rmq"
+	ref := "cloudfoundry_asg.rmq"
 	asgname := "rmq-dev"
 
 	resource.Test(t,

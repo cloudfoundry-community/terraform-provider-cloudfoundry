@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_service_instance"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_service_instance"
 sidebar_current: "docs-cf-datasource-service-instance"
 description: |-
   Get information on a Cloud Foundry Service.
@@ -15,9 +15,9 @@ Gets information on a Cloud Foundry service instance.
 The following example looks up a service instance named 'mydb' within the given space reference. 
 
 ```
-data "cf_service_instance" "mydb" {
+data "cloudfoundry_service_instance" "mydb" {
     name = "mydb"
-    space = "${data.cf_space.dev.id}
+    space = "${data.cloudfoundry_space.dev.id}
 }
 ```
 

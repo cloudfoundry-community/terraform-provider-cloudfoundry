@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_org"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_org"
 sidebar_current: "docs-cf-datasource-org"
 description: |-
   Get information on a Cloud Foundry Organization.
@@ -15,7 +15,7 @@ Gets information on a Cloud Foundry organization.
 The following example looks up an organization named 'myorg'. 
 
 ```
-data "cf_org" "o" {
+data "cloudfoundry_org" "o" {
     name = "myorg"    
 }
 ```

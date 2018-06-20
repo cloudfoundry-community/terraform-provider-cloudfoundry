@@ -382,7 +382,7 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"cf": &bintree{nil, map[string]*bintree{
+	"cloudfoundry": &bintree{nil, map[string]*bintree{
 		"i18n": &bintree{nil, map[string]*bintree{
 			"resources": &bintree{nil, map[string]*bintree{
 				"de-de.all.json":   &bintree{cfI18nResourcesDeDeAllJson, map[string]*bintree{}},

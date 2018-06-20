@@ -2,7 +2,7 @@
 # CF Provider
 #
 
-provider "cf" {
+provider "cloudfoundry" {
   api_url             = "https://api.local.pcfdev.io"
   user                = "admin"
   password            = "admin"
