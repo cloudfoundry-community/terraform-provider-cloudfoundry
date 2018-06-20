@@ -14,7 +14,7 @@ import (
 
 const ldapUserResource = `
 
-resource "cf_user" "manager1" {
+resource "cloudfoundry_user" "manager1" {
     name = "manager1@acme.com"
     origin = "ldap"
 }
@@ -22,7 +22,7 @@ resource "cf_user" "manager1" {
 
 const userResourceWithGroups = `
 
-resource "cf_user" "admin-service-user" {
+resource "cloudfoundry_user" "admin-service-user" {
     name = "cf-admin"
 	password = "qwerty"
 	given_name = "Build"
@@ -33,7 +33,7 @@ resource "cf_user" "admin-service-user" {
 
 const userResourceWithGroupsUpdate = `
 
-resource "cf_user" "admin-service-user" {
+resource "cloudfoundry_user" "admin-service-user" {
     name = "cf-admin"
 	password = "asdfg"
 	email = "cf-admin@acme.com"
@@ -43,7 +43,7 @@ resource "cf_user" "admin-service-user" {
 
 const userResourceWithEmptyGroup = `
 
-resource "cf_user" "empty-group" {
+resource "cloudfoundry_user" "empty-group" {
 	name = "jdoe"
 	password = "password"
 	origin = "uaa"
@@ -55,7 +55,7 @@ resource "cf_user" "empty-group" {
 `
 const userResourceWithEmptyGroupUpdate = `
 
-resource "cf_user" "empty-group" {
+resource "cloudfoundry_user" "empty-group" {
 	name = "jdoe"
 	password = "password"
 	origin = "uaa"
@@ -68,7 +68,7 @@ resource "cf_user" "empty-group" {
 
 func TestAccUser_LdapOrigin_normal(t *testing.T) {
 
-	ref := "cf_user.manager1"
+	ref := "cloudfoundry_user.manager1"
 	username := "manager1@acme.com"
 
 	resource.Test(t,
@@ -96,7 +96,7 @@ func TestAccUser_LdapOrigin_normal(t *testing.T) {
 
 func TestAccUser_WithGroups_normal(t *testing.T) {
 
-	ref := "cf_user.admin-service-user"
+	ref := "cloudfoundry_user.admin-service-user"
 	username := "cf-admin"
 
 	resource.Test(t,
@@ -162,7 +162,7 @@ func TestAccUser_WithGroups_normal(t *testing.T) {
 
 func TestAccUser_EmptyGroups_normal(t *testing.T) {
 
-	ref := "cf_user.empty-group"
+	ref := "cloudfoundry_user.empty-group"
 	username := "jdoe"
 
 	resource.Test(t,

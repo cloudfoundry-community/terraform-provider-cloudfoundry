@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_quota"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_quota"
 sidebar_current: "docs-cf-resource-quota"
 description: |-
   Provides a Cloud Foundry Quota resource.
@@ -18,7 +18,7 @@ Provides a Cloud Foundry resource to manage org or space [quotas](https://docs.c
 The following example creates a quota that can be applied to an Org.
 
 ```
-resource "cf_quota" "large" {
+resource "cloudfoundry_quota" "large" {
     name = "large"
     allow_paid_service_plans = false
     instance_memory = 2048
@@ -30,10 +30,10 @@ resource "cf_quota" "large" {
 }
 ```
 
-The following example creates a quota within an Org referenced by `cf_org.myorg.id` that can be applied to any space within that Org.
+The following example creates a quota within an Org referenced by `cloudfoundry_org.myorg.id` that can be applied to any space within that Org.
 
 ```
-resource "cf_quota" "10g" {
+resource "cloudfoundry_quota" "10g" {
     name = "10g"
     allow_paid_service_plans = false
     instance_memory = 512
@@ -41,7 +41,7 @@ resource "cf_quota" "10g" {
     total_app_instances = 10
     total_routes = 5
     total_services = 20
-    org = "${cf_org.myorg.id}"
+    org = "${cloudfoundry_org.myorg.id}"
 }
 ```
 
@@ -71,5 +71,5 @@ The following attributes are exported:
 The current Quota can be imported using the `quota`, e.g.
 
 ```
-$ terraform import cf_quota.10g a-guid
+$ terraform import cloudfoundry_quota.10g a-guid
 ```

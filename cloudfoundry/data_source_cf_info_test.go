@@ -8,12 +8,12 @@ import (
 
 const infoDataResource = `
 
-data "cf_info" "info" {}
+data "cloudfoundry_info" "info" {}
 `
 
 func TestAccDataSourceInfo_normal(t *testing.T) {
 
-	ref := "data.cf_info.info"
+	ref := "data.cloudfoundry_info.info"
 
 	resource.Test(t,
 		resource.TestCase{

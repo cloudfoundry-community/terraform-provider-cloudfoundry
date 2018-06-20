@@ -13,41 +13,41 @@ import (
 
 const appResourceSpringMusic = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
-data "cf_service" "mysql" {
+data "cloudfoundry_service" "mysql" {
     name = "p-mysql"
 }
-data "cf_service" "rmq" {
+data "cloudfoundry_service" "rmq" {
     name = "p-rabbitmq"
 }
 
-resource "cf_route" "spring-music" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "spring-music" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "spring-music"
 }
-resource "cf_service_instance" "db" {
+resource "cloudfoundry_service_instance" "db" {
 	name = "db"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans.512mb}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.mysql.service_plans.512mb}"
 }
-resource "cf_service_instance" "fs1" {
+resource "cloudfoundry_service_instance" "fs1" {
 	name = "fs1"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.rmq.service_plans.standard}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
-resource "cf_app" "spring-music" {
+resource "cloudfoundry_app" "spring-music" {
 	name = "spring-music"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	memory = "768"
 	disk_quota = "512"
 	timeout = 1800
@@ -55,14 +55,14 @@ resource "cf_app" "spring-music" {
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
-		service_instance = "${cf_service_instance.db.id}"
+		service_instance = "${cloudfoundry_service_instance.db.id}"
 	}
 	service_binding {
-		service_instance = "${cf_service_instance.fs1.id}"
+		service_instance = "${cloudfoundry_service_instance.fs1.id}"
 	}
 
 	route {
-		default_route = "${cf_route.spring-music.id}"
+		default_route = "${cloudfoundry_route.spring-music.id}"
 	}
 
 	environment {
@@ -74,46 +74,46 @@ resource "cf_app" "spring-music" {
 
 const appResourceSpringMusicUpdate = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
-data "cf_service" "mysql" {
+data "cloudfoundry_service" "mysql" {
     name = "p-mysql"
 }
-data "cf_service" "rmq" {
+data "cloudfoundry_service" "rmq" {
     name = "p-rabbitmq"
 }
 
-resource "cf_route" "spring-music" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "spring-music" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "spring-music"
 }
-resource "cf_service_instance" "db" {
+resource "cloudfoundry_service_instance" "db" {
 	name = "db"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans.512mb}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.mysql.service_plans.512mb}"
 }
-resource "cf_service_instance" "fs1" {
+resource "cloudfoundry_service_instance" "fs1" {
 	name = "fs1"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.rmq.service_plans.standard}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
-resource "cf_service_instance" "fs2" {
+resource "cloudfoundry_service_instance" "fs2" {
 	name = "fs2"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.rmq.service_plans.standard}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
-resource "cf_app" "spring-music" {
+resource "cloudfoundry_app" "spring-music" {
 	name = "spring-music-updated"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	instances ="2"
 	memory = "1024"
 	disk_quota = "1024"
@@ -122,17 +122,17 @@ resource "cf_app" "spring-music" {
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
-		service_instance = "${cf_service_instance.db.id}"
+		service_instance = "${cloudfoundry_service_instance.db.id}"
 	}
 	service_binding {
-		service_instance = "${cf_service_instance.fs2.id}"
+		service_instance = "${cloudfoundry_service_instance.fs2.id}"
 	}
 	service_binding {
-		service_instance = "${cf_service_instance.fs1.id}"
+		service_instance = "${cloudfoundry_service_instance.fs1.id}"
 	}
 
 	route {
-		default_route = "${cf_route.spring-music.id}"
+		default_route = "${cloudfoundry_route.spring-music.id}"
 	}
 
 	environment {
@@ -144,20 +144,20 @@ resource "cf_app" "spring-music" {
 
 const appResourceWithMultiplePorts = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
 
-resource "cf_app" "test-app" {
+resource "cloudfoundry_app" "test-app" {
 	name = "test-app"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	timeout = 1800
 	ports = [ 8888, 9999 ]
 	buildpack = "binary_buildpack"
@@ -171,31 +171,62 @@ resource "cf_app" "test-app" {
 		version = "v0.0.1"
 	}
 }
-resource "cf_route" "test-app-8888" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "test-app-8888" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "test-app-8888"
 
 	target {
-		app = "${cf_app.test-app.id}"
+		app = "${cloudfoundry_app.test-app.id}"
 		port = 8888
 	}
 }
-resource "cf_route" "test-app-9999" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "test-app-9999" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "test-app-9999"
 
 	target {
-		app = "${cf_app.test-app.id}"
+		app = "${cloudfoundry_app.test-app.id}"
 		port = 9999
 	}
 }
 `
 
+const appResourceDocker = `
+
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+
+resource "cloudfoundry_route" "test-docker-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "test-docker-app"
+	target {
+		app = "${cloudfoundry_app.test-docker-app.id}"
+		port = 8080
+	}
+}
+resource "cloudfoundry_app" "test-docker-app" {
+	name = "test-docker-app"
+	space = "${data.cloudfoundry_space.space.id}"
+	docker_image = "cloudfoundry/diego-docker-app:latest"
+	timeout = 900
+}
+
+`
+
 func TestAccApp_app1(t *testing.T) {
 
-	refApp := "cf_app.spring-music"
+	refApp := "cloudfoundry_app.spring-music"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -290,7 +321,7 @@ func TestAccApp_app1(t *testing.T) {
 }
 func TestAccApp_app2(t *testing.T) {
 
-	refApp := "cf_app.test-app"
+	refApp := "cloudfoundry_app.test-app"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -323,6 +354,50 @@ func TestAccApp_app2(t *testing.T) {
 							refApp, "ports.8888", "8888"),
 						resource.TestCheckResourceAttr(
 							refApp, "ports.9999", "9999"),
+					),
+				},
+			},
+		})
+}
+
+func TestAccApp_dockerApp(t *testing.T) {
+	refApp := "cloudfoundry_app.test-docker-app"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"test-docker-app"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceDocker, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-docker-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						resource.TestCheckResourceAttr(
+							refApp, "name", "test-docker-app"),
+						resource.TestCheckResourceAttr(
+							refApp, "space", defaultPcfDevSpaceID()),
+						resource.TestCheckResourceAttr(
+							refApp, "ports.#", "1"),
+						resource.TestCheckResourceAttr(
+							refApp, "ports.8080", "8080"),
+						resource.TestCheckResourceAttr(
+							refApp, "instances", "1"),
+						resource.TestCheckResourceAttrSet(
+							refApp, "stack"),
+						resource.TestCheckResourceAttr(
+							refApp, "environment.%", "0"),
+						resource.TestCheckResourceAttr(
+							refApp, "enable_ssh", "true"),
+						resource.TestCheckResourceAttr(
+							refApp, "docker_image", "cloudfoundry/diego-docker-app:latest"),
 					),
 				},
 			},

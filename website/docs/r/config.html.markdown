@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_org"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_org"
 sidebar_current: "docs-cf-resource-config"
 description: |-
   Provides a Cloud Foundry configuration resource.
@@ -18,7 +18,7 @@ Provides a Cloud Foundry configuration resource for managing Cloud Foundry [feat
 The following is an example updates Cloud Foundry feature flags. Each of the flags will also be computed from current settings and exported if not changed.
 
 ```
-resource "cf_config" "config" {
+resource "cloudfoundry_config" "config" {
 
   feature_flags {
     user_org_creation                    = false
@@ -62,5 +62,5 @@ The following arguments are supported:
 The current Config can be imported using the `config` constant, e.g.
 
 ```
-$ terraform import cf_config.config config
+$ terraform import cloudfoundry_config.config config
 ```

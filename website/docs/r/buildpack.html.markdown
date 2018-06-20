@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_buildpack"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_buildpack"
 sidebar_current: "docs-cf-resource-buildpack"
 description: |-
   Provides a Cloud Foundry Buildpack resource.
@@ -17,7 +17,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry admin [buildpacks](
 The following example creates a Cloud Foundry buildpack .
 
 ```
-resource "cf_buildpack" "tomee" {
+resource "cloudfoundry_buildpack" "tomee" {
     name = "tomcat-enterprise-edition"
     path = "https://github.com/cloudfoundry-community/tomee-buildpack"
     position = "12"
@@ -69,5 +69,5 @@ The following attributes are exported:
 The current buildpack can be imported using the `buildpack` guid, e.g.
 
 ```
-$ terraform import cf_buildpack.tomee a-guid
+$ terraform import cloudfoundry_buildpack.tomee a-guid
 ```
