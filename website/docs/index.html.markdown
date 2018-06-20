@@ -1,5 +1,5 @@
 ---
-layout: "cf"
+layout: "cloudfoundry"
 page_title: "Provider: Cloud Foundry"
 sidebar_current: "docs-cf-index"
 description: |-
@@ -26,7 +26,7 @@ variable "uaa_admin_client_secret" {}
 
 # Configure the CloudFoundry Provider
 
-provider "cf" {
+provider "cloudfoundry" {
     api_url = "${var.api_url}"
     user = "admin"
     password = "${var.admin_password}"

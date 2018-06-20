@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_app"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_app"
 sidebar_current: "docs-cf-resource-app"
 description: |-
   Provides a Cloud Foundry Application resource.
@@ -15,7 +15,7 @@ Provides a Cloud Foundry [application](https://docs.cloudfoundry.org/devguide/de
 The following example creates an application.
 
 ```
-resource "cf_app" "spring-music" {
+resource "cloudfoundry_app" "spring-music" {
     name = "spring-music"
     url = "file:///Work/cloudfoundry/apps/spring-music/build/libs/spring-music.war"
 }
@@ -30,7 +30,7 @@ The following arguments are supported:
 * `instances` - (Optional, Number) The number of app instances to start.
 * `memory` - (Optional, Number) The memory limit for each application instance in megabytes.
 * `disk_quota` - (Optional, Number) The disk space to be allocated for each application instance in megabytes.
-* `stack` - (Optional) The GUID of the stack the application will be deployed to. Use the [`cf_stack`](/docs/providers/cf/d/stack.html) data resource to lookup the stack GUID to overriding the default.
+* `stack` - (Optional) The GUID of the stack the application will be deployed to. Use the [`cloudfoundry_stack`](/docs/providers/cf/d/stack.html) data resource to lookup the stack GUID to overriding the default.
 * `buildpack` - (Optional, String) The buildpack used to stage the application. There are multiple options to choose from:
    * a Git URL (e.g. https://github.com/cloudfoundry/java-buildpack.git) or a Git URL with a branch or tag (e.g. https://github.com/cloudfoundry/java-buildpack.git#v3.3.0 for v3.3.0 tag) 
    * an installed admin buildpack name (e.g. my-buildpack)
@@ -46,6 +46,11 @@ One of the following arguments must be declared to locate application source or 
 
 * `url` - (Optional, String) The URL for the application binary. A local path may be referenced via "`file://...`".
 
+* `docker_image` - (Optional, String) The URL to the docker image with tag e.g registry.example.com:5000/user/repository/tag or docker image name from the public repo e.g. redis:4.0 
+* `docker_credentials` - (Optional) Defines login credentials for private docker repositories 
+  - `username` - (Required, String) Username for the private docker repo 
+  - `password` - (Required, String) Password for the private docker repo 
+ 
 * `git` - (Optional, String) The git repository where to pull the application source from.
 
   - `url` - (Required, String) The git URL for the application repository.
@@ -107,6 +112,6 @@ The following attributes are exported along with any defaults for the inputs att
 The current App can be imported using the `app` GUID, e.g.
 
 ```
-$ terraform import cf_app.spring-music a-guid
+$ terraform import cloudfoundry_app.spring-music a-guid
 ```
 

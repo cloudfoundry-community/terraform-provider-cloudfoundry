@@ -13,7 +13,7 @@ import (
 
 const domainResourceShared = `
 
-resource "cf_domain" "shared" {
+resource "cloudfoundry_domain" "shared" {
     sub_domain = "dev"
 	domain = "%s"
 }
@@ -21,20 +21,20 @@ resource "cf_domain" "shared" {
 
 const domainResourceSharedTCP = `
 
-data "cf_router_group" "tcp" {
+data "cloudfoundry_router_group" "tcp" {
     name = "default-tcp"
 }
 
-resource "cf_domain" "shared-tcp" {
+resource "cloudfoundry_domain" "shared-tcp" {
     sub_domain = "tcp-test"
 	domain = "%s"
-	router_group = "${data.cf_router_group.tcp.id}"
+	router_group = "${data.cloudfoundry_router_group.tcp.id}"
 }
 `
 
 const domainResourcePrivate = `
 
-resource "cf_domain" "private" {
+resource "cloudfoundry_domain" "private" {
     name = "pcfdev-org.io"
 	org = "%s"
 }
@@ -42,7 +42,7 @@ resource "cf_domain" "private" {
 
 func TestAccSharedDomain_normal(t *testing.T) {
 
-	ref := "cf_domain.shared"
+	ref := "cloudfoundry_domain.shared"
 	domainname := "dev." + defaultAppDomain()
 
 	resource.Test(t,
@@ -70,7 +70,7 @@ func TestAccSharedDomain_normal(t *testing.T) {
 
 func TestAccSharedTCPDomain_normal(t *testing.T) {
 
-	ref := "cf_domain.shared-tcp"
+	ref := "cloudfoundry_domain.shared-tcp"
 	domainname := "tcp-test." + defaultAppDomain()
 
 	resource.Test(t,
@@ -100,7 +100,7 @@ func TestAccSharedTCPDomain_normal(t *testing.T) {
 
 func TestAccPrivateDomain_normal(t *testing.T) {
 
-	ref := "cf_domain.private"
+	ref := "cloudfoundry_domain.private"
 	domainname := "pcfdev-org.io"
 	orgID := defaultPcfDevOrgID()
 

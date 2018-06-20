@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_user"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_user"
 sidebar_current: "docs-cf-resource-user"
 description: |-
   Provides a Cloud Foundry User resource.
@@ -18,7 +18,7 @@ functionality to attach additional UAA roles to the user.
 The following example creates a user and attaches additional UAA roles to grant administrator rights to that user.
 
 ```
-resource "cf_user" "admin-service-user" {
+resource "cloudfoundry_user" "admin-service-user" {
     
     name = "cf-admin"
     password = "Passw0rd"
@@ -54,5 +54,5 @@ The following attributes are exported:
 An existing User can be imported using its guid, e.g.
 
 ```
-$ terraform import cf_user.admin-service-user a-guid
+$ terraform import cloudfoundry_user.admin-service-user a-guid
 ```

@@ -17,7 +17,7 @@ variable "tomee_buildpack_ver" {
 	default="v4.1"
 }
 
-resource "cf_buildpack" "tomee" {
+resource "cloudfoundry_buildpack" "tomee" {
 	
 	name = "tomee-buildpack"
 
@@ -36,7 +36,7 @@ variable "tomee_buildpack_ver" {
 	default="v4.1"
 }
 
-resource "cf_buildpack" "tomee" {
+resource "cloudfoundry_buildpack" "tomee" {
 	
 	name = "tomee-buildpack"
 	position = 5
@@ -54,7 +54,7 @@ resource "cf_buildpack" "tomee" {
 
 const buildpackResourceUpdate2 = `
 
-resource "cf_buildpack" "tomee" {
+resource "cloudfoundry_buildpack" "tomee" {
 	
 	name = "tomee-buildpack"
 	position = 5
@@ -69,7 +69,7 @@ resource "cf_buildpack" "tomee" {
 
 func TestAccBuildpack_normal(t *testing.T) {
 
-	refBuildpack := "cf_buildpack.tomee"
+	refBuildpack := "cloudfoundry_buildpack.tomee"
 
 	resource.Test(t,
 		resource.TestCase{
