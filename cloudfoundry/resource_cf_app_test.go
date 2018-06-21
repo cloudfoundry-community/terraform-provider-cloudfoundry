@@ -224,6 +224,107 @@ resource "cloudfoundry_app" "test-docker-app" {
 
 `
 
+const multipleVersion = `
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+resource "cloudfoundry_route" "test-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "test-app" 
+    target = {app = "${cloudfoundry_app.test-app.id}"}
+}
+resource "cloudfoundry_app" "test-app" {
+	name = "test-app"
+	space = "${data.cloudfoundry_space.space.id}"
+	command = "test-app --ports=8080"
+	timeout = 1800
+    memory = "512"
+	git {
+		url = "https://github.com/mevansam/test-app.git"
+	}
+}
+`
+
+const multipleVersionUpdate = `
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+
+resource "cloudfoundry_route" "test-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "test-app"
+    target = {app = "${cloudfoundry_app.test-app.id}"}
+}
+resource "cloudfoundry_app" "test-app" {
+	name = "test-app"
+	space = "${data.cloudfoundry_space.space.id}"
+	command = "test-app --ports=8080"
+	timeout = 1800
+    memory = "1024"
+	git {
+		url = "https://github.com/janosbinder/test-app.git"
+	}
+}
+`
+
+func TestAccAppVersions_app1(t *testing.T) {
+
+	refRoute := "cloudfoundry_route.test-app"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"test-app"}),
+			Steps: []resource.TestStep{
+
+
+				resource.TestStep{
+					Config: fmt.Sprintf(multipleVersion, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckRouteExists(refRoute, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+				},
+
+				resource.TestStep{
+					Config: fmt.Sprintf(multipleVersionUpdate, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckRouteExists(refRoute, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+				},
+			},
+		})
+}
+
+
 func TestAccApp_app1(t *testing.T) {
 
 	refApp := "cloudfoundry_app.spring-music"
