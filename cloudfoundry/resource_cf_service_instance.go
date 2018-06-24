@@ -97,7 +97,8 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 		Target:       resourceServiceInstanceSucceesStates,
 		Refresh:      resourceServiceInstanceStateFunc(id, "create", meta),
 		Timeout:      d.Timeout(schema.TimeoutCreate),
-		PollInterval: 5 * time.Second,
+		PollInterval: 30 * time.Second,
+		Delay:        5 * time.Second,
 	}
 
 	// Wait, catching any errors
@@ -187,7 +188,8 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 		Target:       resourceServiceInstanceSucceesStates,
 		Refresh:      resourceServiceInstanceStateFunc(id, "update", meta),
 		Timeout:      d.Timeout(schema.TimeoutUpdate),
-		PollInterval: 5 * time.Second,
+		PollInterval: 30 * time.Second,
+		Delay:        5 * time.Second,
 	}
 	// Wait, catching any errors
 	if _, err = stateConf.WaitForState(); err != nil {
@@ -217,7 +219,8 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 		Target:       resourceServiceInstanceSucceesStates,
 		Refresh:      resourceServiceInstanceStateFunc(id, "delete", meta),
 		Timeout:      d.Timeout(schema.TimeoutDelete),
-		PollInterval: 5 * time.Second,
+		PollInterval: 30 * time.Second,
+		Delay:        5 * time.Second,
 	}
 	// Wait, catching any errors
 	if _, err = stateConf.WaitForState(); err != nil {
