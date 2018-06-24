@@ -679,6 +679,13 @@
 			"revisionTime": "2017-06-23T21:34:39Z"
 		},
 		{
+			"checksumSHA1": "tNY0Oqo54zx3KjnuJfrQjhN560Y=",
+			"path": "github.com/cloudfoundry/cf-acceptance-tests/assets/service_broker",
+			"revision": "ec3a2cf58dbc29ad2abe027420facfe7cc832361",
+			"revisionTime": "2018-05-30T14:18:03Z",
+			"tree": true
+		},
+		{
 			"checksumSHA1": "VmXOTc6jNWYiINtOImSEoJMjQaw=",
 			"path": "github.com/cloudfoundry/noaa",
 			"revision": "a1d4a94e2be6711111893c59538976d07ef7ea98",
