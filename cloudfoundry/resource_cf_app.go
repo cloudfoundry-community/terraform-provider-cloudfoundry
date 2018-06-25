@@ -510,7 +510,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 	var stateRouteList = d.Get("route").([]interface{})
 	var stateRouteMappings map[string]interface{}
-	if len(stateRouteList) == 1 {
+	if len(stateRouteList) == 1 && stateRouteList[0] != nil {
 		stateRouteMappings = stateRouteList[0].(map[string]interface{})
 	} else {
 		stateRouteMappings = make(map[string]interface{})
