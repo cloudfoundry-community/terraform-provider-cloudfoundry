@@ -1083,6 +1083,12 @@
 			"revisionTime": "2018-01-11T18:50:06Z"
 		},
 		{
+			"checksumSHA1": "X0wSca2bKWRpjSBC6mPFSR1mvJc=",
+			"path": "github.com/hashicorp/terraform/helper/validation",
+			"revision": "664391c254eaa867f2c653d5bb5c54cec1785609",
+			"revisionTime": "2018-03-02T17:16:01Z"
+		},
+		{
 			"checksumSHA1": "yFWmdS6yEJZpRJzUqd/mULqCYGk=",
 			"path": "github.com/hashicorp/terraform/moduledeps",
 			"revision": "a6008b8a48a749c7c167453b9cf55ffd572b9a5d",

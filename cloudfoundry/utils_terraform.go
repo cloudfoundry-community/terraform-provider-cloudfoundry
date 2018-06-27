@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -191,4 +192,15 @@ func parseID(id string) (first string, second string, err error) {
 		second = parts[1]
 	}
 	return first, second, err
+}
+
+func hashRouteMappingSet(v interface{}) int {
+	elem := v.(map[string]interface{})
+	var target string
+	if v, ok := elem["route"]; ok {
+		target = v.(string)
+	} else if v, ok := elem["app"]; ok {
+		target = v.(string)
+	}
+	return hashcode.String(fmt.Sprintf("%s", target))
 }
