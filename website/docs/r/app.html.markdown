@@ -81,8 +81,11 @@ One of the following arguments must be declared to locate application source or 
 
 ### Routing
 
-* `route` - (Optional) Configures how the application will be accessed externally to cloudfoundry. 
-  - `default_route` - (Optional, String) The ID of the route where the application will be reachable from once deployed.
+* `routes` - (Optional, Array) Configures how the application will be accessed externally to cloudfoundry. 
+
+  - `route` - (Required, String) The route GUID.
+  - `port` - (Optional, Number) The port of the application that the route mapping is to bind to (NOT YET IMPLEMENTED!)
+  - `exclusive` - (Option, Default: true) When true, terraform will enforce that the route is not to have any other mappings not controlled by this resource (Note: "false" value NOT YET IMPLEMENTED!)
 
 ### Environment Variables
 
