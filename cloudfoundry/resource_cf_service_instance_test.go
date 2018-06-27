@@ -80,7 +80,7 @@ resource "cloudfoundry_route" "fake-service-broker-route" {
 
 resource "cloudfoundry_app" "fake-service-broker" {
     name = "fake-service-broker"
-	url = "file://../vendor/github.com/cf-acceptance-tests/assets/service_broker/"
+	url = "file://../tests/cf-acceptance-tests/assets/service_broker/"
 	space = "${data.cloudfoundry_space.space.id}"
 	timeout = 700
 
