@@ -41,21 +41,30 @@ type CCRouteResource struct {
 	Entity   CCRoute            `json:"entity"`
 }
 
+type ccRouteMapping struct {
+	ID string
+
+	AppPort  float64 `json:"app_port"`
+	AppID    string  `json:"app_guid"`
+	RouteID  string  `json:"route_guid"`
+	AppURL   string  `json:"app_url"`
+	RouteURL string  `json:"route_url"`
+}
+
 // CCRouteMapping -
 type CCRouteMapping struct {
 	ID string
 
-	AppPort  string `json:"app_port"`
-	AppID    string `json:"app_guid"`
-	RouteID  string `json:"route_guid"`
-	AppURL   string `json:"app_url"`
-	RouteURL string `json:"route_url"`
+	AppPort  int
+	AppID    string
+	RouteID  string
+	AppURL   string
+	RouteURL string
 }
 
-// CCRouteMappingResource -
-type CCRouteMappingResource struct {
+type ccRouteMappingResource struct {
 	Metadata resources.Metadata `json:"metadata"`
-	Entity   CCRouteMapping     `json:"entity"`
+	Entity   ccRouteMapping     `json:"entity"`
 }
 
 // newRouteManager -
@@ -214,15 +223,20 @@ func (rm *RouteManager) CreateRouteMapping(routeID, appID string, port *int) (ma
 
 // ReadRouteMapping -
 func (rm *RouteManager) ReadRouteMapping(mappingID string) (CCRouteMapping, error) {
-	resource := CCRouteMappingResource{}
-	path := fmt.Sprintf("/v2/route_mappings/%s", mappingID)
-	if err := rm.ccGateway.GetResource(path, &resource); err != nil {
+	internalResource := ccRouteMappingResource{}
+	path := fmt.Sprintf("%s/v2/route_mappings/%s", rm.apiEndpoint, mappingID)
+	if err := rm.ccGateway.GetResource(path, &internalResource); err != nil {
 		return CCRouteMapping{}, err
 	}
-	routeMapping := resource.Entity
-	routeMapping.ID = resource.Metadata.GUID
+	routeMapping := CCRouteMapping{
+		ID:       internalResource.Metadata.GUID,
+		AppPort:  int(internalResource.Entity.AppPort),
+		AppID:    internalResource.Entity.AppID,
+		RouteID:  internalResource.Entity.RouteID,
+		AppURL:   internalResource.Entity.AppURL,
+		RouteURL: internalResource.Entity.RouteURL,
+	}
 	return routeMapping, nil
-
 }
 
 // ReadRouteMappingsByRoute -

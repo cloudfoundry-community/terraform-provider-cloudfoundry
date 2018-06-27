@@ -697,6 +697,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("route") {
 		if !d.HasChange("routes") {
 			// still using the old "route" block
+			session.Log.DebugMessage("Updating based on old style 'route' block (app=%s)", app.ID)
 			old, new := d.GetChange("route")
 
 			var (
@@ -732,6 +733,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 		} else {
 			// this means a new style "routes" block replaced the old "route" block
+			session.Log.DebugMessage("Migrating from 'route' block to 'routes' block (app=%s)", app.ID)
 			oldRoute, _ := d.GetChange("route")
 			_, newRoutes := d.GetChange("routes")
 
@@ -785,6 +787,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 	} else if d.HasChange("routes") {
 		// handle updates for a new style "routes" block only
+		session.Log.DebugMessage("Updating routes based on new style 'routes' block (app=%s)", app.ID)
 
 		o, n := d.GetChange("routes")
 		if o == nil {
