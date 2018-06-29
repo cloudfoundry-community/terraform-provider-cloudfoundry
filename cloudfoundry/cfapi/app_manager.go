@@ -321,6 +321,7 @@ func (am *AppManager) StartDockerApp(appID string, timeout time.Duration) (err e
 	if app.State != nil && *app.State == AppStopped {
 
 		startApp.ID = app.ID
+		startApp.Name = app.Name
 		startApp.State = &AppStarted
 
 		if app, err = am.UpdateApp(startApp); err != nil {

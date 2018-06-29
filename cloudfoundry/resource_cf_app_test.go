@@ -294,7 +294,6 @@ func TestAccAppVersions_app1(t *testing.T) {
 			CheckDestroy: testAccCheckAppDestroyed([]string{"test-app"}),
 			Steps: []resource.TestStep{
 
-
 				resource.TestStep{
 					Config: fmt.Sprintf(multipleVersion, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
@@ -323,7 +322,6 @@ func TestAccAppVersions_app1(t *testing.T) {
 			},
 		})
 }
-
 
 func TestAccApp_app1(t *testing.T) {
 

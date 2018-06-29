@@ -557,21 +557,23 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	app := cfapi.CCApp{
 		ID: d.Id(),
 	}
-	update := false
-	restage := false
 
+	update := false // for changes where no restart is required
 	app.Name = *getChangedValueString("name", &update, d)
 	app.SpaceGUID = *getChangedValueString("space", &update, d)
-	app.Ports = getChangedValueIntList("ports", &update, d)
 	app.Instances = getChangedValueInt("instances", &update, d)
-	app.Memory = getChangedValueInt("memory", &update, d)
-	app.DiskQuota = getChangedValueInt("disk_quota", &update, d)
-	app.Command = getChangedValueString("command", &update, d)
 	app.EnableSSH = getChangedValueBool("enable_ssh", &update, d)
 	app.HealthCheckHTTPEndpoint = getChangedValueString("health_check_http_endpoint", &update, d)
 	app.HealthCheckType = getChangedValueString("health_check_type", &update, d)
 	app.HealthCheckTimeout = getChangedValueInt("health_check_timeout", &update, d)
 
+	restart := false // for changes where just a restart is required
+	app.Ports = getChangedValueIntList("ports", &restart, d)
+	app.Memory = getChangedValueInt("memory", &restart, d)
+	app.DiskQuota = getChangedValueInt("disk_quota", &restart, d)
+	app.Command = getChangedValueString("command", &restart, d)
+
+	restage := false // for changes where a full restage is required
 	app.Buildpack = getChangedValueString("buildpack", &restage, d)
 	app.Environment = getChangedValueMap("environment", &restage, d)
 
@@ -590,6 +592,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		setAppArguments(app, d)
 	}
 
+	// update the application's service bindings (the necessary restage is dealt with later)
 	if d.HasChange("service_binding") {
 
 		old, new := d.GetChange("service_binding")
@@ -600,15 +603,13 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		session.Log.DebugMessage("Service bindings to be deleted: %# v", bindingsToDelete)
 		session.Log.DebugMessage("Service bindings to be added: %# v", bindingsToAdd)
 
-		if err = removeServiceBindings(bindingsToDelete, am, session.Log); err != nil {
+		if err := removeServiceBindings(bindingsToDelete, am, session.Log); err != nil {
 			return err
 		}
 
-		var added []map[string]interface{}
-		if added, err = addServiceBindings(app.ID, bindingsToAdd, am, session.Log); err != nil {
+		if added, err := addServiceBindings(app.ID, bindingsToAdd, am, session.Log); err != nil {
 			return err
-		}
-		if len(added) > 0 {
+		} else if len(added) > 0 {
 			if new != nil {
 				for _, b := range new.([]interface{}) {
 					bb := b.(map[string]interface{})
@@ -632,7 +633,6 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 		var (
 			oldRouteConfig, newRouteConfig map[string]interface{}
-			mappingID                      string
 		)
 
 		oldA := old.([]interface{})
@@ -653,18 +653,18 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			"stage_route",
 			"live_route",
 		} {
-			if _, err = validateRoute(newRouteConfig, r, rm); err != nil {
+			if _, err := validateRoute(newRouteConfig, r, rm); err != nil {
 				return err
 			}
-			if mappingID, err = updateMapping(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
+			if mappingID, err := updateMapping(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
 				return err
-			}
-			if len(mappingID) > 0 {
+			} else if len(mappingID) > 0 {
 				newRouteConfig[r+"_mapping_id"] = mappingID
 			}
 		}
 	}
 
+	binaryUpdated := false // check if we need to update the application's binary
 	if d.HasChange("url") || d.HasChange("git") || d.HasChange("github_release") || d.HasChange("add_content") {
 
 		var (
@@ -676,40 +676,82 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			addContent []map[string]interface{}
 		)
 
-		if appPath, err = prepareApp(app, d, session.Log); err != nil {
+		if appPathCalc, err := prepareApp(app, d, session.Log); err != nil {
 			return err
+		} else {
+			appPath = appPathCalc
 		}
+
 		if v, ok = d.GetOk("add_content"); ok {
 			addContent = getListOfStructs(v)
 		}
-		if err = am.UploadApp(app, appPath, addContent); err != nil {
+
+		if err := am.UploadApp(app, appPath, addContent); err != nil {
 			return err
 		}
-		restage = true
+		binaryUpdated = true
 	}
 
+	// now that all of the reconfiguration is done, we can deal doing a restage or restart, as required
 	timeout := time.Second * time.Duration(d.Get("timeout").(int))
 
+	// check the package state of the application after binary upload
+	var curApp cfapi.CCApp
+	var readErr error
+	if curApp, readErr = am.ReadApp(app.ID); readErr != nil {
+		return readErr
+	}
+	if binaryUpdated || restage {
+		// There seem to be more types of updates that can automagically put an app's package_stage into "PENDING"
+		// for right now, I have observed this after a service binding update as well, but I have no idea what other
+		// optierations might cause this.  For now, we'll just do a blanket check since calling restage when the app
+		// is in this state causes the API to throw an error.
+		time.Sleep(time.Second * time.Duration(5)) // pause for a few seconds here to ensure the CF API has caught up
+		if *curApp.PackageState != "PENDING" {
+			// if it's not already pending, we need to restage
+			restage = true
+		} else {
+			// uploading the binary flagged the app for restaging,
+			// but we need to restart in order to force that to happen now
+			// (this is how the CF CLI does this)
+			restage = false
+			restart = true
+		}
+	}
+
 	if restage {
-		if err = am.RestageApp(app.ID, timeout); err != nil {
+		if err := am.RestageApp(app.ID, timeout); err != nil {
+			return err
+		}
+		if *curApp.State == "STARTED" {
+			// if the app was running before the restage when wait for it to start again
+			if err := am.WaitForAppToStart(app, timeout); err != nil {
+				return err
+			}
+		}
+	} else if restart && !d.Get("stopped").(bool) { // only run restart if the final state is running
+		if err := am.StopApp(app.ID, timeout); err != nil {
+			return err
+		}
+		if err := am.StartApp(app.ID, timeout); err != nil {
 			return err
 		}
 	}
-	if d.HasChange("stopped") {
 
+	// now set the final started/stopped state, whatever it is
+	if d.HasChange("stopped") {
 		if d.Get("stopped").(bool) {
-			if err = am.StopApp(app.ID, timeout); err != nil {
+			if err := am.StopApp(app.ID, timeout); err != nil {
 				return err
 			}
 		} else {
-			if err = am.StartApp(app.ID, timeout); err != nil {
+			if err := am.StartApp(app.ID, timeout); err != nil {
 				return err
 			}
 		}
-	} else if restage {
-		err = am.WaitForAppToStart(app, timeout)
 	}
-	return err
+
+	return nil
 }
 
 func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -749,7 +791,6 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 			}
 		}
 	}
-	err = am.DeleteApp(d.Id(), false)
 	if err = am.DeleteApp(d.Id(), false); err != nil {
 		if strings.Contains(err.Error(), "status code: 404") {
 			session.Log.DebugMessage(
@@ -928,9 +969,8 @@ func addServiceBindings(
 	var (
 		serviceInstanceID, bindingID string
 		params                       *map[string]interface{}
-
-		credentials        map[string]interface{}
-		bindingCredentials map[string]interface{}
+		credentials                  map[string]interface{}
+		bindingCredentials           map[string]interface{}
 	)
 
 	for _, b := range add {
