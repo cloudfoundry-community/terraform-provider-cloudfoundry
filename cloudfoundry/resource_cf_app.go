@@ -387,7 +387,6 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	if v, ok = d.GetOk("docker_image"); ok {
 		vv := v.(string)
 		app.DockerImage = &vv
-
 		// Activate Diego for Docker
 		onDiego := true
 		app.Diego = &onDiego

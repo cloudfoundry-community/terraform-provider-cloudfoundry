@@ -458,6 +458,11 @@ func (am *AppManager) StopApp(appID string, timeout time.Duration) (err error) {
 	if app, err = am.ReadApp(appID); err != nil {
 		return err
 	}
+	// set to DockerCredentials = nil if this is not a docker image
+	if app.DockerImage == nil {
+		app.DockerCredentials = nil
+	}
+
 	if app.State != nil && *app.State == AppStarted {
 		app.State = &AppStopped
 		if app, err = am.UpdateApp(app); err != nil {
