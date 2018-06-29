@@ -471,7 +471,7 @@ func TestAccApp_dockerApp(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(appResourceDocker, defaultAppDomain()),
-					Check: resource.ComposeTestCheckFunc(
+					Check: resource.ComposeAggregateTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
 							if err = assertHTTPResponse("https://test-docker-app."+defaultAppDomain(), 200, nil); err != nil {
