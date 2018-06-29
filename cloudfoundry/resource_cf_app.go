@@ -110,6 +110,7 @@ func resourceApp() *schema.Resource {
 			"docker_credentials": &schema.Schema{
 				Type:          schema.TypeMap,
 				Optional:      true,
+				Sensitive:     true,
 				ConflictsWith: []string{"git", "github_release", "url"},
 			},
 			"git": &schema.Schema{
@@ -180,8 +181,9 @@ func resourceApp() *schema.Resource {
 				},
 			},
 			"add_content": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
+				Type:          schema.TypeList,
+				Optional:      true,
+				ConflictsWith: []string{"docker_image", "docker_credentials"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"source": &schema.Schema{
@@ -282,6 +284,21 @@ func resourceApp() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+		},
+
+		// TODO: find a way to test that this is correctly forcing a new resource
+		//       when you try to change an app to/from a docker container
+		CustomizeDiff: func(diff *schema.ResourceDiff, v interface{}) error {
+			if (diff.HasChange("docker_image") || diff.HasChange("docker_credentials")) &&
+				(diff.HasChange("git") || diff.HasChange("github_release") || diff.HasChange("url")) {
+
+				for _, v := range []string{"docker_image", "docker_credentials", "git", "github_release", "url"} {
+					if diff.HasChange(v) {
+						diff.ForceNew(v)
+					}
+				}
+			}
+			return nil
 		},
 	}
 }
@@ -474,9 +491,8 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		routeConfig["default_route_mapping_id"] = mappingID
 	}
 
+	// Skip if Docker repo is given
 	if _, ok := d.GetOk("docker_image"); !ok {
-		// Start application if not stopped
-		// state once upload has completed
 		if err = <-upload; err != nil {
 			return err
 		}
@@ -492,6 +508,8 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 			}
 		}
 	} else if !stopped {
+		// Start application if not stopped
+		// state once upload has completed
 		if err = am.StartApp(app.ID, timeout); err != nil {
 			return err
 		}
@@ -543,7 +561,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 	return err
 }
 
-func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	session := meta.(*cfapi.Session)
 	if session == nil {
@@ -576,15 +594,19 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	app.Buildpack = getChangedValueString("buildpack", &restage, d)
 	app.Environment = getChangedValueMap("environment", &restage, d)
 
-	if d.HasChange("name") ||
-		d.HasChange("service_binding") ||
-		d.HasChange("stopped") ||
-		d.HasChange("route") ||
-		d.HasChange("url") ||
-		d.HasChange("docker_image") ||
-		d.HasChange("git") ||
-		d.HasChange("github_release") ||
-		d.HasChange("add_content") {
+	// Notes about docker images
+	// Diego appears to restart applications by itself when only the docker_image
+	// parameter is updated, so for now we're going to simply push the updated image
+	// details to the CF API and let it take care of it.
+	// TODO: test what happens with diego when other attributes are changed and update
+	//       code appropriately (for example, does it restage/restart on its own when
+	//       service bindings are updates?)
+	app.DockerImage = getChangedValueString("docker_image", &update, d)
+	app.DockerCredentials = getChangedValueMap("docker_credentials", &update, d)
+
+	if update || restart || restage {
+		// push any updates to CF, we'll do any restage/restart later
+		var err error
 		if app, err = am.UpdateApp(app); err != nil {
 			return err
 		}
