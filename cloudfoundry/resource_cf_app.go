@@ -515,14 +515,16 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 		stateBindingData["service_instance"] = binding["service_instance"].(string)
 		stateBindingData["binding_id"] = binding["binding_id"].(string)
 		credentials := binding["credentials"].(map[string]interface{})
-		for k, v := range credentials {
+		for k, v := range normalizeMap(credentials, make(map[string]interface{}), "", "_") {
 			credentials[k] = fmt.Sprintf("%v", v)
 		}
 		stateBindingData["credentials"] = credentials
 		newStateServiceBindings = append(newStateServiceBindings, stateBindingData)
 	}
-	if err := d.Set("service_binding", newStateServiceBindings); err != nil {
-		log.Printf("[WARN] Error setting service_binding to cf_app (%s): %s", d.Id(), err)
+	if len(newStateServiceBindings) > 0 {
+		if err := d.Set("service_binding", newStateServiceBindings); err != nil {
+			log.Printf("[WARN] Error setting service_binding to cf_app (%s): %s", d.Id(), err)
+		}
 	}
 
 	var routeMappings []map[string]interface{}
