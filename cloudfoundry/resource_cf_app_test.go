@@ -215,11 +215,63 @@ resource "cloudfoundry_route" "test-docker-app" {
 		port = 8080
 	}
 }
+
 resource "cloudfoundry_app" "test-docker-app" {
 	name = "test-docker-app"
 	space = "${data.cloudfoundry_space.space.id}"
 	docker_image = "cloudfoundry/diego-docker-app:latest"
 	timeout = 900
+}
+
+
+`
+
+const appResourceDockerDiego = `
+
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+data "cloudfoundry_service" "mysql" {
+    name = "p-mysql"
+}
+
+resource "cloudfoundry_route" "test-docker-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "test-docker-app"
+	target {
+		app = "${cloudfoundry_app.test-docker-app.id}"
+		port = 8080
+	}
+}
+
+resource "cloudfoundry_service_instance" "db" {
+	name = "db"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.mysql.service_plans.512mb}"
+}
+
+resource "cloudfoundry_app" "test-docker-app" {
+	name = "test-docker-app"
+	space = "${data.cloudfoundry_space.space.id}"
+	docker_image = "cloudfoundry/diego-docker-app:latest"
+	timeout = 900
+
+    environment {
+        TEST_VAR_1 = "testval1"
+        TEST_VAR_2 = "testval2"
+    }
+
+	service_binding {
+		service_instance = "${cloudfoundry_service_instance.db.id}"
+	}
 }
 
 `
@@ -281,6 +333,35 @@ resource "cloudfoundry_app" "test-app" {
 		url = "https://github.com/janosbinder/test-app.git"
 	}
 }
+`
+
+const multipleVersionUpdateToDocker = `
+
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+
+resource "cloudfoundry_route" "test-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "test-app"
+    target = {app = "${cloudfoundry_app.test-app.id}"}
+}
+
+resource "cloudfoundry_app" "test-app" {
+	name = "test-app"
+	space = "${data.cloudfoundry_space.space.id}"
+	docker_image = "cloudfoundry/diego-docker-app:latest"
+	timeout = 900
+}
+
 `
 
 func TestAccAppVersions_app1(t *testing.T) {
@@ -459,7 +540,7 @@ func TestAccApp_app2(t *testing.T) {
 		})
 }
 
-func TestAccApp_dockerApp(t *testing.T) {
+func TestAccApp_dockerApp1(t *testing.T) {
 	refApp := "cloudfoundry_app.test-docker-app"
 
 	resource.Test(t,
@@ -499,6 +580,112 @@ func TestAccApp_dockerApp(t *testing.T) {
 							refApp, "docker_image", "cloudfoundry/diego-docker-app:latest"),
 					),
 				},
+			},
+		})
+}
+
+func TestAccApp_dockerApp2(t *testing.T) {
+	refRoute := "cloudfoundry_route.test-app"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"test-app"}),
+			Steps: []resource.TestStep{
+
+				//resource.TestStep{
+				//	Config: fmt.Sprintf(multipleVersion, defaultAppDomain()),
+				//	Check: resource.ComposeTestCheckFunc(
+				//		testAccCheckRouteExists(refRoute, func() (err error) {
+				//
+				//			if err = assertHTTPResponse("https://test-app."+defaultAppDomain(), 200, nil); err != nil {
+				//				return err
+				//			}
+				//			return
+				//		}),
+				//	),
+				//},
+
+				resource.TestStep{
+					Config: fmt.Sprintf(multipleVersionUpdateToDocker, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckRouteExists(refRoute, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+				},
+
+				resource.TestStep{
+					Config: fmt.Sprintf(multipleVersionUpdate, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckRouteExists(refRoute, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+				},
+			},
+		})
+}
+
+func TestAccApp_dockerApp3(t *testing.T) {
+	refApp := "cloudfoundry_route.test-docker-app"
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"test-docker-app"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceDocker, defaultAppDomain()),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-docker-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						//resource.TestCheckResourceAttr(
+						//	refApp, "name", "test-docker-app"),
+						//resource.TestCheckResourceAttr(
+						//	refApp, "space", defaultPcfDevSpaceID()),
+						//resource.TestCheckResourceAttr(
+						//	refApp, "ports.#", "1"),
+						//resource.TestCheckResourceAttr(
+						//	refApp, "ports.8080", "8080"),
+						//resource.TestCheckResourceAttr(
+						//	refApp, "instances", "1"),
+						//resource.TestCheckResourceAttrSet(
+						//	refApp, "stack"),
+						//resource.TestCheckResourceAttr(
+						//	refApp, "environment.%", "0"),
+						//resource.TestCheckResourceAttr(
+						//	refApp, "enable_ssh", "true"),
+						//resource.TestCheckResourceAttr(
+						//	refApp, "docker_image", "cloudfoundry/diego-docker-app:latest"),
+					),
+				},
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceDockerDiego, defaultAppDomain()),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-docker-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					)},
 			},
 		})
 }
@@ -689,3 +876,4 @@ func testAccCheckAppDestroyed(apps []string) resource.TestCheckFunc {
 		return nil
 	}
 }
+

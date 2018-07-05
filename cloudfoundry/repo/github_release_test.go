@@ -27,7 +27,9 @@ func testReleaseFileDownload(workspace string, t *testing.T) {
 	fmt.Println("Test: release file download")
 
 	repoManager := repo.NewManager(workspace)
-	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "test_release_file.zip", nil)
+	testUser := os.Getenv("GITHUB_USER")
+	testPassword := os.Getenv("GITHUB_PASSWORD")
+	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "test_release_file.zip", &testUser, &testPassword)
 	checkError(t, err)
 
 	err = ghRelease.SetVersion("v0.0.1", repo.DefaultVersionType)
@@ -51,7 +53,10 @@ func testSourceZipFileDownload(workspace string, t *testing.T) {
 	fmt.Println("Test: source zip file download")
 
 	repoManager := repo.NewManager(workspace)
-	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "zipball", nil)
+	testUser := os.Getenv("GITHUB_USER")
+	testPassword := os.Getenv("GITHUB_PASSWORD")
+	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "zipball", &testUser, &testPassword)
+
 	checkError(t, err)
 
 	err = ghRelease.SetVersion("v0.0.1", repo.DefaultVersionType)
@@ -64,7 +69,10 @@ func testSourceTarFileDownload(workspace string, t *testing.T) {
 	fmt.Println("Test: source tar file download")
 
 	repoManager := repo.NewManager(workspace)
-	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "tarball", nil)
+	testUser := os.Getenv("GITHUB_USER")
+	testPassword := os.Getenv("GITHUB_PASSWORD")
+	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "tarball", &testUser, &testPassword)
+
 	checkError(t, err)
 
 	err = ghRelease.SetVersion("v0.0.1", repo.DefaultVersionType)
@@ -109,6 +117,7 @@ func validateSourceZip(path string, t *testing.T) {
 	checkError(t, err)
 
 	for _, f := range r.File {
+
 		if f.Name == "README.md" {
 			rc, err := f.Open()
 			checkError(t, err)

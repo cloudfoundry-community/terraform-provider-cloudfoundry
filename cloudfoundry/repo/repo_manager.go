@@ -9,9 +9,7 @@ import (
 	"sync"
 
 	"github.com/google/go-github/github"
-	"golang.org/x/oauth2"
-
-	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
@@ -119,19 +117,18 @@ func (rm *Manager) GetGitRepository(repoURL string, user, password, privateKey *
 }
 
 // GetGithubRelease -
-func (rm *Manager) GetGithubRelease(ghOwner, ghRepoName, archiveName string, token *string) (repo Repository, err error) {
-
+func (rm *Manager) GetGithubRelease(ghOwner, ghRepoName, archiveName string, user *string, password *string) (repo Repository, err error) {
 	var ghClient *github.Client
 	ctx := context.Background()
 
-	if token == nil {
+	if user == nil || password == nil{
 		ghClient = github.NewClient(nil)
 	} else {
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: *token},
-		)
-		tc := oauth2.NewClient(ctx, ts)
-		ghClient = github.NewClient(tc)
+		tp := github.BasicAuthTransport{
+			Username: *user,
+			Password: *password,
+		}
+		ghClient = github.NewClient(tp.Client())
 	}
 
 	if _, _, err = ghClient.Repositories.Get(ctx, ghOwner, ghRepoName); err != nil {

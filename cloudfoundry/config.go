@@ -1,6 +1,8 @@
 package cloudfoundry
 
-import "github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+import (
+	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+)
 
 // Config -
 type Config struct {
@@ -11,6 +13,8 @@ type Config struct {
 	UaaClientSecret   string
 	CACert            string
 	SkipSslValidation bool
+	GithubUser		  string
+	GithubPassword	  string
 }
 
 // Client - Terraform providor client initialization

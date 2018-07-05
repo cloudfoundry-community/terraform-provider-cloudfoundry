@@ -45,6 +45,16 @@ func Provider() terraform.ResourceProvider {
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CF_SKIP_SSL_VALIDATION", "true"),
 			},
+			"github_user": &schema.Schema{
+				Type:        schema.TypeString,
+				Required:    true,
+				DefaultFunc: schema.EnvDefaultFunc("GITHUB_USER", ""),
+			},
+			"github_password": &schema.Schema{
+				Type:        schema.TypeString,
+				Required:    true,
+				DefaultFunc: schema.EnvDefaultFunc("GITHUB_PASSWORD", ""),
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -100,6 +110,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		UaaClientSecret:   d.Get("uaa_client_secret").(string),
 		CACert:            d.Get("ca_cert").(string),
 		SkipSslValidation: d.Get("skip_ssl_validation").(bool),
+		GithubUser: 	   d.Get("github_user").(string),
+		GithubPassword:	   d.Get("github_password").(string),
 	}
 	return config.Client()
 }
