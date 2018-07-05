@@ -101,6 +101,7 @@ func resourceApp() *schema.Resource {
 				Type:          schema.TypeString,
 				Optional:      true,
 				ConflictsWith: []string{"git", "github_release"},
+				ValidateFunc:  validation.NoZeroValues,
 			},
 			"git": &schema.Schema{
 				Type:          schema.TypeList,
