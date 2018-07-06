@@ -66,7 +66,8 @@ One of the following arguments must be declared to locate application source or 
 
   - `owner` - (Required, String) The github owner or organization name
   - `repo` - (Required, String) The repository containing the release
-  - `token` - (Optional, String) Github API token to use to access Github
+  - `user` - (Optional, String) Github user to use to access Github
+  - `password` - (Optional, String) Github password/personal token to use to access Github
   - `version` - (Optional, String) The version or tag of the release.
   - `filename` - (Required, String) The name of the published file. The values `zipball` or `tarball` will download the published
 

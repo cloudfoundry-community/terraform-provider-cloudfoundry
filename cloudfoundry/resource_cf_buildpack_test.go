@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"os"
 )
 
 const buildpackResource = `
@@ -16,6 +17,9 @@ const buildpackResource = `
 variable "tomee_buildpack_ver" {
 	default="v4.1"
 }
+
+variable "github_user" {}
+variable "github_password" {}
 
 resource "cloudfoundry_buildpack" "tomee" {
 	
@@ -26,6 +30,8 @@ resource "cloudfoundry_buildpack" "tomee" {
 		repo = "tomee-buildpack"
 		version = "${var.tomee_buildpack_ver}"
 		filename = "tomee-buildpack-v4.1.zip"
+		user = "%s"
+		password = "%s"
 	}
 }
 `
@@ -48,6 +54,8 @@ resource "cloudfoundry_buildpack" "tomee" {
 		repo = "tomee-buildpack"
 		version = "${var.tomee_buildpack_ver}"
 		filename = "tomee-buildpack-v4.1.zip"
+		user = "%s"
+		password = "%s"
 	}
 }
 `
@@ -79,7 +87,7 @@ func TestAccBuildpack_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: buildpackResource,
+					Config: fmt.Sprintf(buildpackResource, os.Getenv("GITHUB_USER"), os.Getenv("GITHUB_PASSWORD")),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckBuildpackExists(refBuildpack, "tomee-buildpack-v4.1.zip"),
 						resource.TestCheckResourceAttr(
@@ -94,7 +102,7 @@ func TestAccBuildpack_normal(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: buildpackResourceUpdate1,
+					Config: fmt.Sprintf(buildpackResourceUpdate1, os.Getenv("GITHUB_USER"), os.Getenv("GITHUB_PASSWORD")),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckBuildpackExists(refBuildpack, "tomee-buildpack-v4.1.zip"),
 						resource.TestCheckResourceAttr(
