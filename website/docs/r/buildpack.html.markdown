@@ -54,8 +54,8 @@ One of the following arguments must be declared to locate buildpack source or ar
 * `github_release` - (Optional, String) The Buildpack archive published as a github release.
   - `owner` - (Required, String) The github owner or organization name.
   - `repo` - (Required, String) The repository containing the release.
-  - `user` - (Optional, String) Git user to use to access Github.
-  - `password` - (Optional, String) Git password to use to access Github.
+  - `user` - (Optional, String) Github user to use to access Github.
+  - `password` - (Optional, String) Github password/personal token to use to access Github.
   - `version` - (Optional, String) The version or tag of the release.
   - `filename` - (Required, String) The name of the published file. The values `zipball` or `tarball` will download the published  source archive.
 
