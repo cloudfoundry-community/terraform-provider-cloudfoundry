@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"os"
 )
 
 const appResourceSpringMusic = `
@@ -169,6 +170,8 @@ resource "cloudfoundry_app" "test-app" {
 		repo = "test-app"
 		filename = "test-app"
 		version = "v0.0.1"
+		user = "%s"
+		password = "%s"
 	}
 }
 resource "cloudfoundry_route" "test-app-8888" {
@@ -331,7 +334,7 @@ func TestAccApp_app2(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceWithMultiplePorts, defaultAppDomain()),
+					Config: fmt.Sprintf(appResourceWithMultiplePorts, defaultAppDomain(), os.Getenv("GITHUB_USER"), os.Getenv("GITHUB_TOKEN")),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 							responses := []string{"8888"}

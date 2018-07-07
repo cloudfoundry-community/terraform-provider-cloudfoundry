@@ -8,6 +8,7 @@ if [[ "$TRAVIS_PULL_REQUEST" == "false" && -z "$TRAVIS_TAG" ]] ; then
     exit 0
 fi
 
+tests/clean.sh
 make testacc
 make release
 

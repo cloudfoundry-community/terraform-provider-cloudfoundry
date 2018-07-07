@@ -85,7 +85,7 @@ func getRepositoryFromConfig(d *schema.ResourceData) (repository repo.Repository
 
 		var (
 			arg, ghOwner, ghRepo, archiveName string
-			token                             *string
+			user, password                    *string
 		)
 
 		ghOwner = githubArgs["owner"].(string)
@@ -94,13 +94,18 @@ func getRepositoryFromConfig(d *schema.ResourceData) (repository repo.Repository
 		version = githubArgs["version"].(string)
 		versionType = repo.DefaultVersionType
 
-		if arg = githubArgs["token"].(string); len(arg) > 0 {
-			token = &arg
+		if arg = githubArgs["user"].(string); len(arg) > 0 {
+			user = &arg
 		}
 
-		if repository, err = repoManager.GetGithubRelease(ghOwner, ghRepo, archiveName, token); err != nil {
+		if arg = githubArgs["password"].(string); len(arg) > 0 {
+			password = &arg
+		}
+
+		if repository, err = repoManager.GetGithubRelease(ghOwner, ghRepo, archiveName, user, password); err != nil {
 			return repository, err
 		}
+
 	}
 	if err = repository.SetVersion(version, versionType); err != nil {
 		return repository, err

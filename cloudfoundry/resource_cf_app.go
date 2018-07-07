@@ -164,7 +164,11 @@ func resourceApp() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"token": &schema.Schema{
+						"user": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"password": &schema.Schema{
 							Type:     schema.TypeString,
 							Optional: true,
 						},
