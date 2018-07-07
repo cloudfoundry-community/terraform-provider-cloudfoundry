@@ -1,5 +1,6 @@
 #!/bin/bash
 
+cf api $CF_API_URL --skip-ssl-validation
 cf login -u $CF_USER -p $CF_PASSWORD -o pcfdev-org -s pcfdev-space
 
 # Please add any further resources do not get destroyed
