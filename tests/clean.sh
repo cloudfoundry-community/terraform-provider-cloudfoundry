@@ -16,6 +16,7 @@ cf delete -f test-docker-app
 # Delete org and security gorups
 
 cf delete-org -f organization-one
+cf delete-org -f myorg
 cf delete-security-group -f app-services1
 cf delete-security-group -f app-services2
 cf delete-security-group -f app-services3
