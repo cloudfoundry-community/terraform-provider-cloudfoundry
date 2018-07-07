@@ -54,3 +54,4 @@ cf delete-user cf-admin -f
 #     cf curl -X DELETE ${url}
 # fi
 
+exit 0
