@@ -49,7 +49,7 @@ func (rm *RepoManager) GetGitRepository(repoURL string, user, password, privateK
 
 	var r *git.Repository
 
-	p, err := ioutil.TempDir("", "terraform-provider-cf")
+	p, err := ioutil.TempDir("", "terraform-provider-cloudfoundry")
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (rm *RepoManager) GetGithubRelease(ghOwner, ghRepoName, archiveName string,
 		return nil, err
 	}
 
-	path, err := ioutil.TempDir("", "terraform-provider-cf")
+	path, err := ioutil.TempDir("", "terraform-provider-cloudfoundry")
 	if err != nil {
 		return nil, err
 	}
