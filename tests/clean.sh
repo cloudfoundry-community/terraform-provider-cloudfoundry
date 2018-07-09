@@ -1,7 +1,11 @@
 #!/bin/bash
 
+echo "Start cleaning up potentially leaking resources from previous test executions. Warnings about missing resources should be ignored"
+
+set -e # Exit if the login fails (not set or wrongly set!)
 cf api $CF_API_URL --skip-ssl-validation
 cf login -u $CF_USER -p $CF_PASSWORD -o pcfdev-org -s pcfdev-space
+set +e
 
 # Please add any further resources do not get destroyed
 
@@ -55,4 +59,5 @@ cf delete-user cf-admin -f
 #     cf curl -X DELETE ${url}
 # fi
 
+echo "Completed cleaning up potentially leaking resources from previous test executions."
 exit 0
