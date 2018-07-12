@@ -548,68 +548,68 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	} else {
 		setAppArguments(app, d)
-	}
 
-	if _, hasOldRoute := d.GetOk("route"); hasOldRoute {
-		var routeMappings []map[string]interface{}
-		if routeMappings, err = rm.ReadRouteMappingsByApp(app.ID); err != nil {
-			return
-		}
-		var stateRouteList = d.Get("route").([]interface{})
-		var stateRouteMappings map[string]interface{}
-		if len(stateRouteList) == 1 && stateRouteList[0] != nil {
-			stateRouteMappings = stateRouteList[0].(map[string]interface{})
-		} else {
-			stateRouteMappings = make(map[string]interface{})
-		}
-		currentRouteMappings := make(map[string]interface{})
-		for _, r := range []string{
-			"default_route",
-			"stage_route",
-			"live_route",
-		} {
-			currentRouteMappings[r] = ""
-			currentRouteMappings[r+"_mapping_id"] = ""
-			for _, mapping := range routeMappings {
-				var mappingID, route = mapping["mapping_id"], mapping["route"]
-				if route == stateRouteMappings[r] {
-					currentRouteMappings[r+"_mapping_id"] = mappingID
-					currentRouteMappings[r] = route
-					break
+		if _, hasOldRoute := d.GetOk("route"); hasOldRoute {
+			var routeMappings []map[string]interface{}
+			if routeMappings, err = rm.ReadRouteMappingsByApp(app.ID); err != nil {
+				return
+			}
+			var stateRouteList = d.Get("route").([]interface{})
+			var stateRouteMappings map[string]interface{}
+			if len(stateRouteList) == 1 && stateRouteList[0] != nil {
+				stateRouteMappings = stateRouteList[0].(map[string]interface{})
+			} else {
+				stateRouteMappings = make(map[string]interface{})
+			}
+			currentRouteMappings := make(map[string]interface{})
+			for _, r := range []string{
+				"default_route",
+				"stage_route",
+				"live_route",
+			} {
+				currentRouteMappings[r] = ""
+				currentRouteMappings[r+"_mapping_id"] = ""
+				for _, mapping := range routeMappings {
+					var mappingID, route = mapping["mapping_id"], mapping["route"]
+					if route == stateRouteMappings[r] {
+						currentRouteMappings[r+"_mapping_id"] = mappingID
+						currentRouteMappings[r] = route
+						break
+					}
 				}
 			}
-		}
-		d.Set("route", [...]interface{}{currentRouteMappings})
-	} else if routeState, hasNewRoutes := d.GetOk("routes"); hasNewRoutes {
-		routesList := routeState.(*schema.Set).List()
-		var updatedRoutes []interface{}
-		for _, r := range routesList {
-			stateData := r.(map[string]interface{})
-			if mappingID, ok := stateData["mapping_id"].(string); ok && len(mappingID) > 0 {
-				if mapping, err := rm.ReadRouteMapping(mappingID); err != nil {
-					return err
-				} else {
-					if mapping.AppID != appID {
-						// this should never happen!
-						return fmt.Errorf("route mapping %s does not point to the current app (%s)", mappingID, appID)
+			d.Set("route", [...]interface{}{currentRouteMappings})
+		} else if routeState, hasNewRoutes := d.GetOk("routes"); hasNewRoutes {
+			routesList := routeState.(*schema.Set).List()
+			var updatedRoutes []interface{}
+			for _, r := range routesList {
+				stateData := r.(map[string]interface{})
+				if mappingID, ok := stateData["mapping_id"].(string); ok && len(mappingID) > 0 {
+					if mapping, err := rm.ReadRouteMapping(mappingID); err != nil {
+						return err
+					} else {
+						if mapping.AppID != appID {
+							// this should never happen!
+							return fmt.Errorf("route mapping %s does not point to the current app (%s)", mappingID, appID)
+						}
+						refreshedData := map[string]interface{}{
+							"mapping_id": mapping.ID,
+							"port":       mapping.AppPort,
+							"route":      mapping.RouteID,
+						}
+						if stateRouteID, ok := stateData["route"].(string); ok && len(stateRouteID) > 0 {
+							refreshedData["exclusive"] = stateData["exclusive"]
+						}
+						updatedRoutes = append(updatedRoutes, refreshedData)
 					}
-					refreshedData := map[string]interface{}{
-						"mapping_id": mapping.ID,
-						"port":       mapping.AppPort,
-						"route":      mapping.RouteID,
-					}
-					if stateRouteID, ok := stateData["route"].(string); ok && len(stateRouteID) > 0 {
-						refreshedData["exclusive"] = stateData["exclusive"]
-					}
-					updatedRoutes = append(updatedRoutes, refreshedData)
+				} else if routeID, ok := stateData["route"].(string); ok && len(routeID) > 0 {
+					// route listed in state, but with no mappingID?!?
+					// this means we need to recreate it so we'll exclude it from the refreshed state
 				}
-			} else if routeID, ok := stateData["route"].(string); ok && len(routeID) > 0 {
-				// route listed in state, but with no mappingID?!?
-				// this means we need to recreate it so we'll exclude it from the refreshed state
 			}
-		}
-		if err := d.Set("routes", schema.NewSet(hashRouteMappingSet, updatedRoutes)); err != nil {
-			return err
+			if err := d.Set("routes", schema.NewSet(hashRouteMappingSet, updatedRoutes)); err != nil {
+				return err
+			}
 		}
 	}
 
