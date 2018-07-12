@@ -503,59 +503,59 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	} else {
 		setAppArguments(app, d)
-	}
 
-	var serviceBindings []map[string]interface{}
-	if serviceBindings, err = am.ReadServiceBindingsByApp(app.ID); err != nil {
-		return
-	}
-	var newStateServiceBindings []map[string]interface{}
-	for _, binding := range serviceBindings {
-		stateBindingData := make(map[string]interface{})
-		stateBindingData["service_instance"] = binding["service_instance"].(string)
-		stateBindingData["binding_id"] = binding["binding_id"].(string)
-		credentials := binding["credentials"].(map[string]interface{})
-		for k, v := range normalizeMap(credentials, make(map[string]interface{}), "", "_") {
-			credentials[k] = fmt.Sprintf("%v", v)
+		var serviceBindings []map[string]interface{}
+		if serviceBindings, err = am.ReadServiceBindingsByApp(app.ID); err != nil {
+			return
 		}
-		stateBindingData["credentials"] = credentials
-		newStateServiceBindings = append(newStateServiceBindings, stateBindingData)
-	}
-	if len(newStateServiceBindings) > 0 {
-		if err := d.Set("service_binding", newStateServiceBindings); err != nil {
-			log.Printf("[WARN] Error setting service_binding to cf_app (%s): %s", d.Id(), err)
+		var newStateServiceBindings []map[string]interface{}
+		for _, binding := range serviceBindings {
+			stateBindingData := make(map[string]interface{})
+			stateBindingData["service_instance"] = binding["service_instance"].(string)
+			stateBindingData["binding_id"] = binding["binding_id"].(string)
+			credentials := binding["credentials"].(map[string]interface{})
+			for k, v := range normalizeMap(credentials, make(map[string]interface{}), "", "_") {
+				credentials[k] = fmt.Sprintf("%v", v)
+			}
+			stateBindingData["credentials"] = credentials
+			newStateServiceBindings = append(newStateServiceBindings, stateBindingData)
 		}
-	}
-
-	var routeMappings []map[string]interface{}
-	if routeMappings, err = rm.ReadRouteMappingsByApp(app.ID); err != nil {
-		return
-	}
-	var stateRouteList = d.Get("route").([]interface{})
-	var stateRouteMappings map[string]interface{}
-	if len(stateRouteList) == 1 {
-		stateRouteMappings = stateRouteList[0].(map[string]interface{})
-	} else {
-		stateRouteMappings = make(map[string]interface{})
-	}
-	currentRouteMappings := make(map[string]interface{})
-	for _, r := range []string{
-		"default_route",
-		"stage_route",
-		"live_route",
-	} {
-		currentRouteMappings[r] = ""
-		currentRouteMappings[r+"_mapping_id"] = ""
-		for _, mapping := range routeMappings {
-			var mappingID, route = mapping["mapping_id"], mapping["route"]
-			if route == stateRouteMappings[r] {
-				currentRouteMappings[r+"_mapping_id"] = mappingID
-				currentRouteMappings[r] = route
-				break
+		if len(newStateServiceBindings) > 0 {
+			if err := d.Set("service_binding", newStateServiceBindings); err != nil {
+				log.Printf("[WARN] Error setting service_binding to cf_app (%s): %s", d.Id(), err)
 			}
 		}
+
+		var routeMappings []map[string]interface{}
+		if routeMappings, err = rm.ReadRouteMappingsByApp(app.ID); err != nil {
+			return
+		}
+		var stateRouteList = d.Get("route").([]interface{})
+		var stateRouteMappings map[string]interface{}
+		if len(stateRouteList) == 1 {
+			stateRouteMappings = stateRouteList[0].(map[string]interface{})
+		} else {
+			stateRouteMappings = make(map[string]interface{})
+		}
+		currentRouteMappings := make(map[string]interface{})
+		for _, r := range []string{
+			"default_route",
+			"stage_route",
+			"live_route",
+		} {
+			currentRouteMappings[r] = ""
+			currentRouteMappings[r+"_mapping_id"] = ""
+			for _, mapping := range routeMappings {
+				var mappingID, route = mapping["mapping_id"], mapping["route"]
+				if route == stateRouteMappings[r] {
+					currentRouteMappings[r+"_mapping_id"] = mappingID
+					currentRouteMappings[r] = route
+					break
+				}
+			}
+		}
+		d.Set("route", [...]interface{}{currentRouteMappings})
 	}
-	d.Set("route", [...]interface{}{currentRouteMappings})
 
 	return err
 }
