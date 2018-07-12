@@ -329,6 +329,105 @@ func TestAccApp_app2(t *testing.T) {
 		})
 }
 
+func TestAccApp_MissingServiceBinding(t *testing.T) {
+
+	refApp := "cf_app.spring-music"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"spring-music"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config:             fmt.Sprintf(appResourceSpringMusic, defaultAppDomain()),
+					ExpectNonEmptyPlan: true,
+					Check: resource.ComposeAggregateTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+
+							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
+						resource.TestCheckResourceAttr(refApp, "service_binding.#", "2"),
+						func(s *terraform.State) error {
+							// now delete one of the services
+							if rs, ok := s.RootModule().Resources[refApp]; !ok {
+								return fmt.Errorf("app '%s' not found in terraform state", refApp)
+							} else {
+								serviceBindingID := rs.Primary.Attributes["service_binding.1.binding_id"]
+								testAccProvider.Meta().(*cfapi.Session).Log.DebugMessage("Manually unbinding a service attached to %s ...", refApp)
+								session := testAccProvider.Meta().(*cfapi.Session)
+								am := session.AppManager()
+								if err := am.DeleteServiceBinding(serviceBindingID); err != nil {
+									return err
+								}
+							}
+							return nil
+						},
+					),
+				},
+
+				resource.TestStep{
+					Config:             fmt.Sprintf(appResourceSpringMusic, defaultAppDomain()),
+					ExpectNonEmptyPlan: true,
+					Check: resource.ComposeAggregateTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+
+							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
+						resource.TestCheckResourceAttr(refApp, "service_binding.#", "2"),
+						func(s *terraform.State) error {
+							// now delete one of the services
+							if rs, ok := s.RootModule().Resources[refApp]; !ok {
+								return fmt.Errorf("app '%s' not found in terraform state", refApp)
+							} else {
+								serviceInstanceID := rs.Primary.Attributes["service_binding.1.service_instance"]
+								serviceBindingID := rs.Primary.Attributes["service_binding.1.binding_id"]
+								testAccProvider.Meta().(*cfapi.Session).Log.DebugMessage("Manually deleting a service attached to %s ...", refApp)
+								session := testAccProvider.Meta().(*cfapi.Session)
+								am := session.AppManager()
+								if err := am.DeleteServiceBinding(serviceBindingID); err != nil {
+									return err
+								}
+								sm := session.ServiceManager()
+								if err := sm.DeleteServiceInstance(serviceInstanceID); err != nil {
+									return err
+								}
+							}
+							return nil
+						},
+					),
+				},
+
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceSpringMusic, defaultAppDomain()),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+
+							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
+						resource.TestCheckResourceAttr(refApp, "service_binding.#", "2"),
+					),
+				},
+			},
+		})
+}
+
 func testAccCheckAppExists(resApp string, validate func() error) resource.TestCheckFunc {
 
 	return func(s *terraform.State) (err error) {
