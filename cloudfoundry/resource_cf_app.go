@@ -502,37 +502,37 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	} else {
 		setAppArguments(app, d)
-	}
 
-	var routeMappings []map[string]interface{}
-	if routeMappings, err = rm.ReadRouteMappingsByApp(app.ID); err != nil {
-		return
-	}
-	var stateRouteList = d.Get("route").([]interface{})
-	var stateRouteMappings map[string]interface{}
-	if len(stateRouteList) == 1 && stateRouteList[0] != nil {
-		stateRouteMappings = stateRouteList[0].(map[string]interface{})
-	} else {
-		stateRouteMappings = make(map[string]interface{})
-	}
-	currentRouteMappings := make(map[string]interface{})
-	for _, r := range []string{
-		"default_route",
-		"stage_route",
-		"live_route",
-	} {
-		currentRouteMappings[r] = ""
-		currentRouteMappings[r+"_mapping_id"] = ""
-		for _, mapping := range routeMappings {
-			var mappingID, route = mapping["mapping_id"], mapping["route"]
-			if route == stateRouteMappings[r] {
-				currentRouteMappings[r+"_mapping_id"] = mappingID
-				currentRouteMappings[r] = route
-				break
+		var routeMappings []map[string]interface{}
+		if routeMappings, err = rm.ReadRouteMappingsByApp(app.ID); err != nil {
+			return
+		}
+		var stateRouteList = d.Get("route").([]interface{})
+		var stateRouteMappings map[string]interface{}
+		if len(stateRouteList) == 1 && stateRouteList[0] != nil {
+			stateRouteMappings = stateRouteList[0].(map[string]interface{})
+		} else {
+			stateRouteMappings = make(map[string]interface{})
+		}
+		currentRouteMappings := make(map[string]interface{})
+		for _, r := range []string{
+			"default_route",
+			"stage_route",
+			"live_route",
+		} {
+			currentRouteMappings[r] = ""
+			currentRouteMappings[r+"_mapping_id"] = ""
+			for _, mapping := range routeMappings {
+				var mappingID, route = mapping["mapping_id"], mapping["route"]
+				if route == stateRouteMappings[r] {
+					currentRouteMappings[r+"_mapping_id"] = mappingID
+					currentRouteMappings[r] = route
+					break
+				}
 			}
 		}
+		d.Set("route", [...]interface{}{currentRouteMappings})
 	}
-	d.Set("route", [...]interface{}{currentRouteMappings})
 
 	return err
 }
