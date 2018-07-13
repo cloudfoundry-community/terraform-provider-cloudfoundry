@@ -2,9 +2,12 @@
 
 echo "Start cleaning up potentially leaking resources from previous test executions. Warnings about missing resources should be ignored"
 
+CF_SPACE=pcfdev-space
+CF_ORG=pcfdev-org
+
 set -e # Exit if the login fails (not set or wrongly set!)
 cf api $CF_API_URL --skip-ssl-validation
-cf login -u $CF_USER -p $CF_PASSWORD -o pcfdev-org -s pcfdev-space
+cf login -u $CF_USER -p $CF_PASSWORD -o $CF_ORG -s $CF_SPACE
 set +e
 
 # Please add any further resources do not get destroyed
@@ -58,6 +61,26 @@ cf delete-user cf-admin -f
 #     echo deleting ${url}
 #     cf curl -X DELETE ${url}
 # fi
+
+# Sanity checks
+
+CF_SPACE_GUID=`cf space --guid $CF_SPACE`
+CF_ORG_GUID=`cf org --guid $CF_ORG`
+
+if [ `cf curl "/v2/apps?q=space_guid:$CF_SPACE_GUID" | jq ".total_results"` -ne "0" ]; then
+   echo "The acceptance environment contains some residual apps, run \"cf a\" - please clean them up";
+   exit 1;
+fi
+
+if [ `cf curl "/v2/routes?q=organization_guid:$CF_ORG_GUID" | jq ".total_results"` -ne "0" ]; then
+   echo "The acceptance environment contains some residual routes, run \"cf routes\" - please clean them up";
+   exit 1;
+fi
+
+if [ `cf curl "/v2/service_instances?q=organization_guid:$CF_ORG_GUID" | jq ".total_results"` -ne "0" ]; then
+   echo "The acceptance environment contains some residual service instances, run \"cf s\" - please clean them up";
+   exit 1;
+fi
 
 echo "Completed cleaning up potentially leaking resources from previous test executions."
 exit 0
