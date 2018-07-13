@@ -68,17 +68,17 @@ CF_SPACE_GUID=`cf space --guid $CF_SPACE`
 CF_ORG_GUID=`cf org --guid $CF_ORG`
 
 if [ `cf curl "/v2/apps?q=space_guid:$CF_SPACE_GUID" | jq ".total_results"` -ne "0" ]; then
-   echo "The acceptance environment contains some residual apps, run \"cf a\" - please clean them up";
+   echo "ERROR: The acceptance environment contains some residual apps, run \"cf a\" - please clean them up";
    exit 1;
 fi
 
 if [ `cf curl "/v2/routes?q=organization_guid:$CF_ORG_GUID" | jq ".total_results"` -ne "0" ]; then
-   echo "The acceptance environment contains some residual routes, run \"cf routes\" - please clean them up";
+   echo "ERROR: The acceptance environment contains some residual routes, run \"cf routes\" - please clean them up";
    exit 1;
 fi
 
 if [ `cf curl "/v2/service_instances?q=organization_guid:$CF_ORG_GUID" | jq ".total_results"` -ne "0" ]; then
-   echo "The acceptance environment contains some residual service instances, run \"cf s\" - please clean them up";
+   echo "ERROR: The acceptance environment contains some residual service instances, run \"cf s\" - please clean them up";
    exit 1;
 fi
 
