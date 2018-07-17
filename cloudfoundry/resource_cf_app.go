@@ -475,7 +475,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 				upload <- err
 				return
 			}
-			err = os.Remove(appPath)
+			err = os.RemoveAll(appPath)
 			upload <- err
 		}()
 	}
@@ -704,7 +704,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 			appPath = appPathCalc
 		}
 		defer func() {
-			os.Remove(appPath)
+			os.RemoveAll(appPath)
 		}()
 		if v, ok = d.GetOk("add_content"); ok {
 			addContent = getListOfStructs(v)

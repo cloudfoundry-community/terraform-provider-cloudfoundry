@@ -107,7 +107,7 @@ func testTaggedContent(t *testing.T) {
 
 func getGitRepo(t *testing.T) (gitRepo repo.Repository) {
 
-	repoManager := repo.NewManager()
+	repoManager := repo.NewRepoManager()
 	gitRepo, err := repoManager.GetGitRepository("https://github.com/mevansam/test-app.git", nil, nil, nil)
 	checkError(t, err)
 

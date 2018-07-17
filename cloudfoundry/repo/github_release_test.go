@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
+	"os"
 )
 
 func TestGithubReleaseRepo(t *testing.T) {
@@ -21,7 +22,7 @@ func TestGithubReleaseRepo(t *testing.T) {
 func testReleaseFileDownload(t *testing.T) {
 	fmt.Println("Test: release file download")
 
-	repoManager := repo.NewManager(workspace)
+	repoManager := repo.NewRepoManager()
 	testUser := os.Getenv("GITHUB_USER")
 	testPassword := os.Getenv("GITHUB_TOKEN")
 	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "test_release_file.zip", &testUser, &testPassword)
@@ -48,7 +49,7 @@ func testReleaseFileDownload(t *testing.T) {
 func testSourceZipFileDownload(t *testing.T) {
 	fmt.Println("Test: source zip file download")
 
-	repoManager := repo.NewManager(workspace)
+	repoManager := repo.NewRepoManager()
 	testUser := os.Getenv("GITHUB_USER")
 	testPassword := os.Getenv("GITHUB_TOKEN")
 	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "zipball", &testUser, &testPassword)
@@ -65,7 +66,7 @@ func testSourceZipFileDownload(t *testing.T) {
 func testSourceTarFileDownload(t *testing.T) {
 	fmt.Println("Test: source tar file download")
 
-	repoManager := repo.NewManager(workspace)
+	repoManager := repo.NewRepoManager()
 	testUser := os.Getenv("GITHUB_USER")
 	testPassword := os.Getenv("GITHUB_TOKEN")
 	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "tarball", &testUser, &testPassword)

@@ -145,13 +145,13 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	}()
 
 	if err = setRouteArguments(session, route, d); err != nil {
-		return
+		return err
 	}
 
 	if v, ok := d.GetOk("target"); ok {
 		var t interface{}
 		if t, err = addTargets(route.ID, getListOfStructs(v.(*schema.Set).List()), rm, session.Log); err != nil {
-			return
+			return err
 		}
 		d.Set("target", t)
 		session.Log.DebugMessage("Mapped route targets: %# v", d.Get("target"))

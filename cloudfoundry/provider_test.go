@@ -373,7 +373,7 @@ func assertMapEquals(key string, attributes map[string]string, actual map[string
 
 			l := len(keyParts)
 			m := expected
-			for _, kk := range keyParts[1: l-1] {
+			for _, kk := range keyParts[1 : l-1] {
 				if _, ok := m[kk]; !ok {
 					m[kk] = make(map[string]interface{})
 				}
