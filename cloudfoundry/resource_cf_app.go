@@ -532,7 +532,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 		var stateRouteList = d.Get("route").([]interface{})
 		var stateRouteMappings map[string]interface{}
-		if len(stateRouteList) == 1 {
+		if len(stateRouteList) == 1 && stateRouteList[0] != nil {
 			stateRouteMappings = stateRouteList[0].(map[string]interface{})
 		} else {
 			stateRouteMappings = make(map[string]interface{})
@@ -665,7 +665,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			if _, err = validateRoute(newRouteConfig, r, rm); err != nil {
 				return
 			}
-			if mappingID, err = updateMapping(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
+			if mappingID, err = updateAppRouteMappings(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
 				return
 			}
 			if len(mappingID) > 0 {
@@ -895,7 +895,7 @@ func validateRoute(routeConfig map[string]interface{}, route string, rm *cfapi.R
 	return routeID, err
 }
 
-func updateMapping(
+func updateAppRouteMappings(
 	old map[string]interface{},
 	new map[string]interface{},
 	route, appID string, rm *cfapi.RouteManager) (mappingID string, err error) {
@@ -912,6 +912,11 @@ func updateMapping(
 	}
 
 	if oldRouteID != newRouteID {
+		if len(newRouteID) > 0 {
+			if mappingID, err = rm.CreateRouteMapping(newRouteID, appID, nil); err != nil {
+				return "", err
+			}
+		}
 		if len(oldRouteID) > 0 {
 			if v, ok := old[route+"_mapping_id"]; ok {
 				if err = rm.DeleteRouteMapping(v.(string)); err != nil {
@@ -923,10 +928,9 @@ func updateMapping(
 				}
 			}
 		}
-		if len(newRouteID) > 0 {
-			if mappingID, err = rm.CreateRouteMapping(newRouteID, appID, nil); err != nil {
-				return "", err
-			}
+		if err != nil {
+			// this means we failed to delete the old route mapping!
+			// TODO: is there anything we can do about this here?
 		}
 	}
 	return mappingID, err
