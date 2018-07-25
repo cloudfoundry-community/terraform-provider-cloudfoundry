@@ -11,9 +11,13 @@ var repoManager *repo.RepoManager = repo.NewRepoManager()
 func getRepositoryFromConfig(d *schema.ResourceData) (repository repo.Repository, err error) {
 
 	var (
-		version     string
-		versionType repo.VersionType
+		version, name string
+		versionType   repo.VersionType
 	)
+
+	if v, ok := d.Get("name").(string); ok {
+		name = v
+	}
 
 	if v, ok := d.Get("git").([]interface{}); ok && len(v) > 0 {
 		gitArgs := v[0].(map[string]interface{})
@@ -46,7 +50,7 @@ func getRepositoryFromConfig(d *schema.ResourceData) (repository repo.Repository
 			privateKey = &s
 		}
 
-		if repository, err = repoManager.GetGitRepository(repoURL, user, password, privateKey); err != nil {
+		if repository, err = repoManager.GetGitRepository(name, repoURL, user, password, privateKey); err != nil {
 			return repository, err
 		}
 

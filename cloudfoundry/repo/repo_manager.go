@@ -42,7 +42,7 @@ func NewRepoManager() *RepoManager {
 }
 
 // GetGitRepository -
-func (rm *RepoManager) GetGitRepository(repoURL string, user, password, privateKey *string) (repo Repository, err error) {
+func (rm *RepoManager) GetGitRepository(name string, repoURL string, user, password, privateKey *string) (repo Repository, err error) {
 
 	rm.gitMutex.Lock()
 	defer rm.gitMutex.Unlock()
@@ -53,6 +53,8 @@ func (rm *RepoManager) GetGitRepository(repoURL string, user, password, privateK
 	if err != nil {
 		return nil, err
 	}
+
+	p = p + "/" + name
 
 	if user != nil {
 
