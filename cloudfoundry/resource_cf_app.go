@@ -475,7 +475,18 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 				upload <- err
 				return
 			}
-			err = os.RemoveAll(appPath)
+
+			// Do not remove files from the local file system
+			if v, ok := d.GetOk("url"); ok {
+				url := v.(string)
+
+				if !strings.HasPrefix(url, "file://") {
+					err = os.RemoveAll(appPath)
+				}
+			} else {
+				err = os.RemoveAll(appPath)
+			}
+
 			upload <- err
 		}()
 	}
