@@ -5,32 +5,29 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"regexp"
 	"testing"
 
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
+	"os"
 )
 
 func TestGithubReleaseRepo(t *testing.T) {
 
-	workspace := getGithubReleaseWorkspace()
-	defer os.RemoveAll(workspace)
-
-	testReleaseFileDownload(workspace, t)
-	testSourceZipFileDownload(workspace, t)
-	testSourceTarFileDownload(workspace, t)
+	testReleaseFileDownload(t)
+	testSourceZipFileDownload(t)
+	testSourceTarFileDownload(t)
 }
 
-func testReleaseFileDownload(workspace string, t *testing.T) {
+func testReleaseFileDownload(t *testing.T) {
 	fmt.Println("Test: release file download")
 
-	repoManager := repo.NewManager(workspace)
+	repoManager := repo.NewRepoManager()
 	testUser := os.Getenv("GITHUB_USER")
 	testPassword := os.Getenv("GITHUB_TOKEN")
 	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "test_release_file.zip", &testUser, &testPassword)
 	checkError(t, err)
+	defer ghRelease.Clean()
 
 	err = ghRelease.SetVersion("v0.0.1", repo.DefaultVersionType)
 	checkError(t, err)
@@ -49,15 +46,16 @@ func testReleaseFileDownload(workspace string, t *testing.T) {
 	}
 }
 
-func testSourceZipFileDownload(workspace string, t *testing.T) {
+func testSourceZipFileDownload(t *testing.T) {
 	fmt.Println("Test: source zip file download")
 
-	repoManager := repo.NewManager(workspace)
+	repoManager := repo.NewRepoManager()
 	testUser := os.Getenv("GITHUB_USER")
 	testPassword := os.Getenv("GITHUB_TOKEN")
 	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "zipball", &testUser, &testPassword)
 
 	checkError(t, err)
+	defer ghRelease.Clean()
 
 	err = ghRelease.SetVersion("v0.0.1", repo.DefaultVersionType)
 	checkError(t, err)
@@ -65,15 +63,16 @@ func testSourceZipFileDownload(workspace string, t *testing.T) {
 	validateSourceZip(ghRelease.GetPath(), t)
 }
 
-func testSourceTarFileDownload(workspace string, t *testing.T) {
+func testSourceTarFileDownload(t *testing.T) {
 	fmt.Println("Test: source tar file download")
 
-	repoManager := repo.NewManager(workspace)
+	repoManager := repo.NewRepoManager()
 	testUser := os.Getenv("GITHUB_USER")
 	testPassword := os.Getenv("GITHUB_TOKEN")
 	ghRelease, err := repoManager.GetGithubRelease("mevansam", "test-app", "tarball", &testUser, &testPassword)
 
 	checkError(t, err)
+	defer ghRelease.Clean()
 
 	err = ghRelease.SetVersion("v0.0.1", repo.DefaultVersionType)
 	checkError(t, err)
@@ -136,20 +135,4 @@ func validateSourceZip(path string, t *testing.T) {
 	}
 
 	t.Fatalf("'README.md' was not found in source archive")
-}
-
-func getGithubReleaseWorkspace() (dir string) {
-
-	var err error
-
-	if dir, err = filepath.Abs(filepath.Dir(os.Args[0])); err == nil {
-
-		dir += "/.test_github_release"
-		if err = os.RemoveAll(dir); err == nil {
-			if err = os.Mkdir(dir, os.ModePerm); err == nil {
-				return
-			}
-		}
-	}
-	panic(err.Error())
 }

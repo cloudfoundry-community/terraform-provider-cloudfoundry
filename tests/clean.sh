@@ -17,6 +17,7 @@ set +e
 cf delete -f php-app
 cf delete -f basic-auth-router
 cf delete -f basic-auth-broker
+cf delete -f fake-service-broker
 cf delete -f test-app
 cf delete -f test-docker-app
 
@@ -44,6 +45,7 @@ cf delete-route -f $CF_TEST_APP_DOMAIN --hostname basic-auth-router
 cf delete-route -f $CF_TEST_APP_DOMAIN --hostname basic-auth-broker
 cf delete-route -f $CF_TEST_APP_DOMAIN --hostname test-app
 cf delete-route -f $CF_TEST_APP_DOMAIN --hostname test-docker-app
+cf delete-route -f $CF_TEST_APP_DOMAIN --hostname fake-service-broker
 cf unbind-route-service -f $CF_TEST_APP_DOMAIN basic-auth --hostname php-app
 
 # Delete users

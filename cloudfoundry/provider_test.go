@@ -30,10 +30,6 @@ var pcfDevSpaceID string
 
 func init() {
 
-	if err := initRepoManager(); err != nil {
-		panic(err)
-	}
-
 	testAccProvider = Provider().(*schema.Provider)
 	testAccProviders = map[string]terraform.ResourceProvider{
 		"cloudfoundry": testAccProvider,

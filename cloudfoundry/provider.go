@@ -88,10 +88,6 @@ func Provider() terraform.ResourceProvider {
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
-	if err := initRepoManager(); err != nil {
-		return nil, err
-	}
-
 	config := Config{
 		endpoint:          d.Get("api_url").(string),
 		User:              d.Get("user").(string),
