@@ -14,7 +14,6 @@ set +e
 
 # Delete apps
 
-
 cf delete -f php-app &> /dev/null
 cf delete -f basic-auth-router &> /dev/null
 cf delete -f basic-auth-broker &> /dev/null
