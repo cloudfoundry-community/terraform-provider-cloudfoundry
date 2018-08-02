@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -x
 
 GIT_BRANCH=`git symbolic-ref -q --short HEAD 2> /dev/null`
 
