@@ -3,6 +3,9 @@
 set -e
 set -x
 
+git symbolic-ref -q --short HEAD 2> /dev/null
+echo `git symbolic-ref -q --short HEAD 2> /dev/null`
+
 # GIT_BRANCH=`git symbolic-ref -q --short HEAD 2> /dev/null`
 GIT_BRANCH="blablabla"
 
