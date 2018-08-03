@@ -8,6 +8,8 @@ function makeRelease {
     make release
 }
 
+echo "Travis/git branch is $TRAVIS_BRANCH"
+
 if [[ "$TRAVIS_BRANCH" == "dev" || "$TRAVIS_BRANCH" == "master" ]] ; then
     echo "Git commit is on dev or master branch - building and running the acceptance tests"
     makeRelease
