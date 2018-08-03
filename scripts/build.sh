@@ -8,13 +8,6 @@ function makeRelease {
     make release
 }
 
-echo "Travis/git branch is $TRAVIS_BRANCH"
-
-if [[ "$TRAVIS_BRANCH" == "dev" || "$TRAVIS_BRANCH" == "master" ]] ; then
-    echo "Git commit is on dev or master branch - building and running the acceptance tests"
-    makeRelease
-    exit 0
-fi
 
 if [[ "$TRAVIS_PULL_REQUEST" == "true" ]] ; then
     echo "Git commit is a pull request - building and running the acceptance tests"
@@ -24,6 +17,12 @@ fi
 
 if [[ -n "$TRAVIS_TAG" ]] ; then
     echo "Git commit has a release tag - building and running the acceptance tests"
+    makeRelease
+    exit 0
+fi
+
+if [[ "$TRAVIS_BRANCH" == "dev" || "$TRAVIS_BRANCH" == "master" ]] ; then
+    echo "Git commit is on dev or master branch - building and running the acceptance tests"
     makeRelease
     exit 0
 fi
