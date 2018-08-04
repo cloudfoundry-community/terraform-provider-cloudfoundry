@@ -269,3 +269,43 @@ func (sm *SpaceManager) ListASGs(spaceID string) (asgIDs []interface{}, err erro
 	}
 	return asgIDs, nil
 }
+
+// SetSpaceSegment -
+func (sm *SpaceManager) SetSpaceSegment(spaceID string, segmentID string) (err error) {
+	payload := struct {
+		Data *map[string]string `json:"data"`
+	}{}
+	if segmentID != "" {
+		payload.Data = new(map[string]string)
+		*(payload.Data) = map[string]string{"guid": segmentID}
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("/v3/spaces/%s/relationships/isolation_segment", spaceID)
+	return sm.ccGateway.PatchResource(sm.apiEndpoint, path, bytes.NewReader(body))
+}
+
+// GetSpaceSegment -
+func (sm *SpaceManager) GetSpaceSegment(spaceID string) (segID string, err error) {
+
+	resource := struct {
+		Data *struct {
+			GUID string `json:"guid"`
+		} `json:"data"`
+	}{}
+
+	path := fmt.Sprintf("%s/v3/spaces/%s/relationships/isolation_segment", sm.apiEndpoint, spaceID)
+	err = sm.ccGateway.GetResource(path, &resource)
+	if err != nil {
+		return "", err
+	}
+
+	if nil == resource.Data {
+		return "", nil
+	}
+	return resource.Data.GUID, nil
+}

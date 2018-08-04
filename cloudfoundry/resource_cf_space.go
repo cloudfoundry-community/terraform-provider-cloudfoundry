@@ -39,6 +39,10 @@ func resourceSpace() *schema.Resource {
 				Optional: true,
 				Default:  true,
 			},
+			"isolation_segment": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"asgs": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -108,11 +112,15 @@ func resourceSpaceCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		return err
 	}
 	d.SetId(id)
-	return resourceSpaceUpdate(d, NewResourceMeta{meta})
+
+	err = resourceSpaceUpdate(d, NewResourceMeta{meta})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func resourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
-
 	session := meta.(*cfapi.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
@@ -157,11 +165,15 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 	d.Set("asgs", schema.NewSet(resourceStringHash, asgs))
 
-	return err
+	segment, err := sm.GetSpaceSegment(id)
+	if err != nil {
+		return err
+	}
+	d.Set("isolation_segment", segment)
+	return nil
 }
 
 func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
-
 	var (
 		newResource bool
 		session     *cfapi.Session
@@ -185,15 +197,11 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	sm := session.SpaceManager()
 
 	if !newResource {
-
 		var asgs []interface{}
-
 		space := cfapi.CCSpace{
-			ID:   spaceID,
-			Name: d.Get("name").(string),
-
-			OrgGUID: orgID,
-
+			ID:       spaceID,
+			Name:     d.Get("name").(string),
+			OrgGUID:  orgID,
 			AllowSSH: d.Get("allow_ssh").(bool),
 		}
 		if v, ok := d.GetOk("quota"); ok {
@@ -212,12 +220,12 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	remove, add := getListChanges(old, new)
 	for _, asgID := range remove {
 		if err = sm.RemoveStagingASG(spaceID, asgID); err != nil {
-			return
+			return err
 		}
 	}
 	for _, asgID := range add {
 		if err = sm.AddStagingASG(spaceID, asgID); err != nil {
-			return
+			return err
 		}
 	}
 
@@ -227,23 +235,21 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	for t, r := range typeToSpaceRoleMap {
 		old, new := d.GetChange(t)
 		remove, add := getListChanges(old, new)
-
 		for _, uid := range remove {
 			session.Log.DebugMessage("Removing user '%s' from space '%s' with role '%s'.", uid, spaceID, r)
 			if err = sm.RemoveUser(spaceID, uid, r); err != nil {
-				return
+				return err
 			}
 		}
 		for _, uid := range add {
 			session.Log.DebugMessage("Adding user '%s' to space '%s' with role '%s'.", uid, spaceID, r)
 			if err = om.AddUser(orgID, uid, cfapi.OrgRoleMember); err != nil {
-				return
+				return err
 			}
 			if err = sm.AddUser(spaceID, uid, r); err != nil {
-				return
+				return err
 			}
 		}
-
 		for _, r := range remove {
 			usersRemoved[r] = true
 		}
@@ -253,46 +259,43 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	orgUsers := make(map[string]bool)
-	for _, r := range []cfapi.OrgRole{
-		cfapi.OrgRoleManager,
-		cfapi.OrgRoleBillingManager,
-		cfapi.OrgRoleAuditor} {
-
+	for _, r := range []cfapi.OrgRole{cfapi.OrgRoleManager, cfapi.OrgRoleBillingManager, cfapi.OrgRoleAuditor} {
 		var uu []interface{}
 		if uu, err = om.ListUsers(orgID, r); err != nil {
-			return
+			return err
 		}
 		for _, u := range uu {
 			orgUsers[u.(string)] = true
 		}
 	}
-	for u := range usersRemoved {
 
+	for u := range usersRemoved {
 		_, isOrgUser := orgUsers[u]
 		_, isSpaceUser := usersAdded[u]
-
 		if !isOrgUser && !isSpaceUser {
-
 			session.Log.DebugMessage(
 				"Removing user '%s' from org '%s' as he/she no longer has an assigned role within the org.",
 				u, orgID)
-
 			if err = om.RemoveUser(orgID, u, cfapi.OrgRoleMember); err != nil {
-				return
+				return err
 			}
 		}
 	}
 
-	return err
+	segID := d.Get("isolation_segment").(string)
+	err = sm.SetSpaceSegment(spaceID, segID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func resourceSpaceDelete(d *schema.ResourceData, meta interface{}) (err error) {
-
 	session := meta.(*cfapi.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
-
 	err = session.SpaceManager().DeleteSpace(d.Id())
 	return err
 }

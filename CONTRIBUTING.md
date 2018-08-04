@@ -1,3 +1,4 @@
+## Governance
 
 The backlog is kept as github issues annotated with labels and milestones, and progress is tracked in the [backlog project](https://github.com/mevansam/terraform-provider-cf/projects/1).
 
@@ -9,26 +10,60 @@ You may reach core contributors in the [cloudfoundry slack, within the terraform
 
 Linters are run as part of the travis build. Detected flaws will prevent the merge of the PR.
 
-Contributors can run the same checks locally by following the procedure:
+Contributors can run the same checks locally using the procedure:
 
-1. install dependencies 
+1. Install dependencies
 
-  ```bash
-  # install gometalinter tool
-  go get gopkg.in/alecthomas/gometalinter.v2
-  # install gometalinter internal dependencies
-  gometalinter.v2 --install
-  ```
+- gometalinter tool: ```go get gopkg.in/alecthomas/gometalinter.v2```
+- gometalinter internal dependencies: ```gometalinter.v2 --install```
 
-2. Run the linters
+2. Run the linters on code: ```make check```
 
-  ```bash
-  make check
-  ```
-  
 Fine tuning of the linters configuration can be done in the [.gometalinter.json](.gometalinter.json) file according to the tool [specification](https://github.com/alecthomas/gometalinter#configuration-file)
 
-## Creating a release 
+## Running local acceptance tests
+
+Local tests relies on pcf-dev, which is a local version of cloudfoundry components running is a VirtualBox machine.
+
+1. Install dependencies
+
+  - cf cli : follow [official procedure](https://docs.cloudfoundry.org/cf-cli/install-go-cli.html)
+
+  - pcfdev plugin:
+    - download plugin: [on pivotal website](https://network.pivotal.io/products/pcfdev). You must register to access downloads.
+    - install plugin: ```cf install-plugin pcfdev-v0.30.0+PCF1.11.0-linux```
+    - run plugin: ```cf dev start```
+
+  The last command will actually download a virtual machine template (this will take some time) then start the machine. Starting process is also quite long.
+
+
+2. Run tests
+
+  - export environment variables
+    ```
+    export CF_API_URL=https://api.local.pcfdev.io
+    export CF_USER=admin
+    export CF_PASSWORD=admin
+    export CF_UAA_CLIENT_ID=admin
+    export CF_UAA_CLIENT_SECRET=admin-client-secret
+    export CF_CA_CERT=""
+    export CF_SKIP_SSL_VALIDATION=true
+    ```
+
+  - (optionnal) activate logs
+    ```
+    export CF_DEBUG=true
+    export CF_TRACE=debug.log
+    ```
+
+  - run tests
+    ```
+    cd cloudfoundry
+    TF_ACC=1 go test -v -timeout 120m .
+    ```
+
+
+## Creating a release
 
 * Open up an issue "cutting release 0.9.9" to gather contributors concensus on when to cut the release
 * On your clone, checkout the `dev` branch, and execute `scripts/create-release.sh 0.9.9`

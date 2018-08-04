@@ -48,16 +48,17 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"cloudfoundry_info":         dataSourceInfo(),
-			"cloudfoundry_stack":        dataSourceStack(),
-			"cloudfoundry_router_group": dataSourceRouterGroup(),
-			"cloudfoundry_user":         dataSourceUser(),
-			"cloudfoundry_domain":       dataSourceDomain(),
-			"cloudfoundry_asg":          dataSourceAsg(),
-			"cloudfoundry_quota":        dataSourceQuota(),
-			"cloudfoundry_org":          dataSourceOrg(),
-			"cloudfoundry_space":        dataSourceSpace(),
-			"cloudfoundry_service":      dataSourceService(),
+			"cloudfoundry_info":              dataSourceInfo(),
+			"cloudfoundry_stack":             dataSourceStack(),
+			"cloudfoundry_router_group":      dataSourceRouterGroup(),
+			"cloudfoundry_user":              dataSourceUser(),
+			"cloudfoundry_domain":            dataSourceDomain(),
+			"cloudfoundry_asg":               dataSourceAsg(),
+			"cloudfoundry_quota":             dataSourceQuota(),
+			"cloudfoundry_org":               dataSourceOrg(),
+			"cloudfoundry_space":             dataSourceSpace(),
+			"cloudfoundry_service":           dataSourceService(),
+			"cloudfoundry_isolation_segment": dataSourceSegment(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
@@ -80,6 +81,7 @@ func Provider() terraform.ResourceProvider {
 			"cloudfoundry_route":                 resourceRoute(),
 			"cloudfoundry_route_service_binding": resourceRouteServiceBinding(),
 			"cloudfoundry_app":                   resourceApp(),
+			"cloudfoundry_isolation_segment":     resourceIsolationSegment(),
 		},
 
 		ConfigureFunc: providerConfigure,

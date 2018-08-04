@@ -1,6 +1,6 @@
 ---
 layout: "cloudfoundry"
-page_title: "Cloud Foundry: cloudfoundry_org"
+page_title: "Cloud Foundry: cloudfoundry_space"
 sidebar_current: "docs-cf-datasource-space"
 description: |-
   Get information on a Cloud Foundry Space.
@@ -12,12 +12,12 @@ Gets information on a Cloud Foundry space.
 
 ## Example Usage
 
-The following example looks up a space named 'myspace' within an organization 'myorg' which has been previously provisioned thru Terraform. 
+The following example looks up a space named 'myspace' within an organization 'myorg' which has been previously provisioned thru Terraform.
 
 ```
 data "cloudfoundry_space" "s" {
     name = "myspace"
-    org = "${cloudfoundry_org.myorg.id}"    
+    org = "${cloudfoundry_org.myorg.id}"
 }
 ```
 
