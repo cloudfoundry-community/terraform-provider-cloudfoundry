@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"code.cloudfoundry.org/cli/cf/configuration/coreconfig"
+	cferrors "code.cloudfoundry.org/cli/cf/errors"
 	"code.cloudfoundry.org/cli/cf/net"
 )
 
@@ -105,7 +106,7 @@ func (sm *SegmentManager) FindSegment(name string) (CCSegmentResource, error) {
 	}
 
 	if len(resource.Resources) == 0 {
-		return CCSegmentResource{}, fmt.Errorf("isolation_segment '%s' not found", name)
+		return CCSegmentResource{}, cferrors.NewModelNotFoundError("CCSegmentResource", name)
 	}
 
 	return resource.Resources[0], nil
@@ -119,10 +120,6 @@ func (sm *SegmentManager) DeleteSegment(id string) (err error) {
 
 // SetSegmentOrgs -
 func (sm *SegmentManager) SetSegmentOrgs(id string, orgs []interface{}) (err error) {
-	if len(orgs) == 0 {
-		return nil
-	}
-
 	payload := CCSegmentOrgs{}
 	for _, org := range orgs {
 		payload.Orgs = append(payload.Orgs, CCSegmentOrg{org.(string)})
@@ -131,10 +128,23 @@ func (sm *SegmentManager) SetSegmentOrgs(id string, orgs []interface{}) (err err
 	if err != nil {
 		return err
 	}
+
 	path := fmt.Sprintf("/v3/isolation_segments/%s/relationships/organizations", id)
 	err = sm.ccGateway.CreateResource(sm.apiEndpoint, path, bytes.NewReader(body))
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+// DeleteSegmentOrgs -
+func (sm *SegmentManager) DeleteSegmentOrgs(id string, orgs []interface{}) (err error) {
+	for _, org := range orgs {
+		path := fmt.Sprintf("/v3/isolation_segments/%s/relationships/organizations/%s", id, org)
+		err = sm.ccGateway.DeleteResourceSynchronously(sm.apiEndpoint, path)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

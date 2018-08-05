@@ -48,6 +48,8 @@ Local tests relies on pcf-dev, which is a local version of cloudfoundry componen
     export CF_UAA_CLIENT_SECRET=admin-client-secret
     export CF_CA_CERT=""
     export CF_SKIP_SSL_VALIDATION=true
+    export GITHUB_USER=valid-github-user
+    export GITHUB_TOKEN=valid-github-password
     ```
 
   - (optionnal) activate logs
