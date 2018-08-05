@@ -1,9 +1,9 @@
 ---
 layout: "cloudfoundry"
-page_title: "Cloud Foundry: cloudfoundry_isolation_segment_entitlement (Experimental)"
+page_title: "Cloud Foundry: cloudfoundry_isolation_segment_entitlement"
 sidebar_current: "docs-cf-resource-isolation-segment-entitlement"
 description: |-
-  Provides a Cloud Foundry relationship resource between organizations and a isolation_segment (Experimental).
+  Provides a Cloud Foundry relationship resource between organizations and a isolation_segment.
 ---
 
 # cloudfoundry\_isolation\_segment\_entitlement
@@ -13,6 +13,7 @@ description: |-
 and an organization.
 
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
+
 ~> **NOTE:** This resource is experimental and subject to breaking changes.
 
 ## Example Usage

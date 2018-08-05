@@ -1,9 +1,9 @@
 ---
 layout: "cloudfoundry"
-page_title: "Cloud Foundry: cloudfoundry_isolation_segment (Experimental)"
+page_title: "Cloud Foundry: cloudfoundry_isolation_segment"
 sidebar_current: "docs-cf-resource-isolation-segment"
 description: |-
-  Provides a Cloud Foundry Isolation segment resource (Experimental).
+  Provides a Cloud Foundry Isolation segment resource.
 ---
 
 # cloudfoundry\_isolation\_segment
@@ -12,6 +12,8 @@ description: |-
 [isolation segment](http://v3-apidocs.cloudfoundry.org/version/3.53.0/index.html#isolation-segments).
 
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
+
+~> **NOTE:** This resource is experimental and subject to breaking changes.
 
 See `cloudfoundry_isolation_segment_entitlement` resource to assign the segment to one-or-more
 origanizations.
