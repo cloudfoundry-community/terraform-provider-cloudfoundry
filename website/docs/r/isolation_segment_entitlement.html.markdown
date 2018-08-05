@@ -21,7 +21,7 @@ and an organization.
 The following example entitles the segment `public` to organizations `org1` and `org2`
 
 ```
-data "cloudfoundry_isolation_segment_entitlement" "public" {
+data "cloudfoundry_isolation_segment" "public" {
   name = "public"
 }
 data "cloudfoundry_org" "org1" {
