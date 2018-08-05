@@ -38,4 +38,8 @@ test-compile:
 	fi
 	go test -c $(TEST) $(TESTARGS)
 
+local-install:
+	go build
+	cp terraform-provider-cf ~/.terraform.d/plugins/linux_amd64/terraform-provider-cloudfoundry
+
 .PHONY: build test testacc fmt check vendor-status test-compile
