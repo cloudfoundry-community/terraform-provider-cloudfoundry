@@ -57,6 +57,15 @@ cf delete-user developer1@acme.com -f
 cf delete-user developer2@acme.com -f
 cf delete-user developer3@acme.com -f
 cf delete-user cf-admin -f
+cf delete-user test-user1@acme.com -f
+cf delete-user test-user2@acme.com -f
+cf delete-user test-user3@acme.com -f
+cf delete-user test-user4@acme.com -f
+cf delete-user test-user5@acme.com -f
+
+# Delete quotas
+
+cf delete-quota runaway_test -f
 
 # url=$(cf curl /v2/service_brokers | jq -r '.resources[] | select(.entity.name | contains("basic-auth")) | .metadata.url')
 # if [ ! -z "${url}" ]; then
