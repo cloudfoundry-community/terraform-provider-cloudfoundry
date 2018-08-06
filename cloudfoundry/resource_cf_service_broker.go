@@ -32,11 +32,11 @@ func resourceServiceBroker() *schema.Resource {
 			},
 			"username": &schema.Schema{
 				Type:     schema.TypeString,
-				Optional: true,
+				Required: true,
 			},
 			"password": &schema.Schema{
 				Type:      schema.TypeString,
-				Optional:  true,
+				Required:  true,
 				Sensitive: true,
 			},
 			"space": &schema.Schema{
@@ -144,12 +144,9 @@ func getSchemaAttributes(d *schema.ResourceData) (id, name, url, username, passw
 	id = d.Id()
 	name = d.Get("name").(string)
 	url = d.Get("url").(string)
-	if v, ok := d.GetOk("username"); ok {
-		username = v.(string)
-	}
-	if v, ok := d.GetOk("password"); ok {
-		password = v.(string)
-	}
+	username = d.Get("username").(string)
+	password = d.Get("password").(string)
+
 	if v, ok := d.GetOk("space"); ok {
 		space = v.(string)
 	}
