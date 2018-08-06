@@ -39,7 +39,7 @@ The following arguments are supported:
 * `origin` - (Optional) The user authentcation origin. By default this will be `UAA`. For users authenticated by LDAP this should be `ldap`
 * `given_name` - (Optional) The given name of the user
 * `family_name` - (Optional) The family name of the user
-* `email` - (Optional) The email address of the user
+* `email` - (Optional) The email address of the user. When not provided, name is used as email.
 * `groups` - (Optional) Any UAA `groups` / `roles` to associated the user with
 
 ## Attributes Reference

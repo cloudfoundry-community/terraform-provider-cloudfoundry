@@ -23,17 +23,17 @@ resource "cloudfoundry_space" "s1" {
     org = "${cloudfoundry_org.o1.id}"
     quota = "${cloudfoundry_quota.dev.id}"
     asgs = [ "${cloudfoundry_asg.svc.id}" ]
-    managers = [ 
-        "${cloudfoundry_user_org_role.tl.user}" 
+    managers = [
+        "${cloudfoundry_user_org_role.tl.user}"
     ]
-    developers = [ 
+    developers = [
         "${cloudfoundry_user_org_role.tl.user}",
         "${cloudfoundry_user_org_role.dev1.user}",
-        "${cloudfoundry_user_org_role.dev2.user}" 
+        "${cloudfoundry_user_org_role.dev2.user}"
     ]
-    auditors = [ 
+    auditors = [
         "${cloudfoundry_user_org_role.adr.user}",
-        "${cloudfoundry_user_org_role.dev3.user}" 
+        "${cloudfoundry_user_org_role.dev3.user}"
     ]
     allow_ssh = true
 }
@@ -45,13 +45,13 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the Space in Cloud Foundry.
 * `org` - (Required) The ID of the [Org](/docs/providers/cloudfoundry/r/org.html) within which to create the space.
-* `quota` - (Optional) The ID of the Space [quota](/docs/providers/cloudfoundry/r/quota.html) or plan defined for the owning Org. By default, no space quota is assigned to the space. 
-* `allow_ssh` - (Optional) Allows SSH to application containers via the [CF CLI](https://github.com/cloudfoundry/cli)
-* `asgs` - (Optional) List of running [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications running within this space.
-* `staging_asgs` - (Optional) List of staging [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications being staged for this space.
-* `managers` - (Optional) List of users to assign [SpaceManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to.
-* `developers` - (Optional) List of users to assign [SpaceDeveloper](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to.
-* `auditors` - (Optional) List of users to assign [SpaceAuditor](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to.
+* `quota` - (Optional) The ID of the Space [quota](/docs/providers/cloudfoundry/r/quota.html) or plan defined for the owning Org. Specifying an empty string requests unassigns any space quota from the space. Defaults to empty string.
+* `allow_ssh` - (Optional) Allows SSH to application containers via the [CF CLI](https://github.com/cloudfoundry/cli). Defaults to true.
+* `asgs` - (Optional) List of running [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications running within this space. Defaults to empty list.
+* `staging_asgs` - (Optional) List of staging [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications being staged for this space. Defaults to empty list.
+* `managers` - (Optional) List of users to assign [SpaceManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to. Defaults to empty list.
+* `developers` - (Optional) List of users to assign [SpaceDeveloper](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to. Defaults to empty list.
+* `auditors` - (Optional) List of users to assign [SpaceAuditor](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to. Defaults to empty list.
 
 ## Attributes Reference
 

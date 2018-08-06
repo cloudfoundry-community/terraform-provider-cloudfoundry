@@ -30,7 +30,7 @@ resource "cloudfoundry_buildpack" "tomee" {
 The following arguments are supported:
 
 * `name` - (Required) The name of the Buildpack.
-* `position` - (Optional, Number) Specifies where to place the buildpack in the detection priority list. For more information, see the [Buildpack Detection](https://docs.cloudfoundry.org/buildpacks/detection.html) topic.
+* `position` - (Optional, Number) Specifies where to place the buildpack in the detection priority list. For more information, see the [Buildpack Detection](https://docs.cloudfoundry.org/buildpacks/detection.html) topic. When not provided, cloudfoundry assigns a default buildpack position.
 * `enabled` - (Optional, Boolean) Specifies whether to allow apps to be pushed with the buildpack, and defaults to true.
 * `locked` - (Optional, Boolean) Specifies whether buildpack is locked to prevent further updates, and defaults to false.
 
@@ -48,7 +48,7 @@ One of the following arguments must be declared to locate buildpack source or ar
   - `user` - (Optional, String) Git user for accessing a private repo.
   - `password` - (Optional, String) Git password for accessing a private repo.
   - `key` - (Optional, String) The git private key to access a private repo via SSH.
-  
+
       > Arguments "`tag`" and "`branch`" are mutually exclusive. If a git SSH "`key`" is provided and it is protected the "`password`" argument should be used as the key's password.
 
 * `github_release` - (Optional, String) The Buildpack archive published as a github release.

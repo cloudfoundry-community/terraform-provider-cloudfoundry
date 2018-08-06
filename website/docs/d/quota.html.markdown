@@ -26,7 +26,7 @@ data "cloudfoundry_quota" "q" {
 The following arguments are supported:
 
 * `name` - (Required) The name of the quota to look up
-* `org` - (Optional) The organization within which the quota is defined
+* `org` - (Optional) Specify an ID of an organization to lookup a space quota with specified name within this org. Default to empty string to lookup an org quota with the specified name.
 
 ## Attributes Reference
 

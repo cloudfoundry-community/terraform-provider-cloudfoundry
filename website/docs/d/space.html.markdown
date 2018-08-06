@@ -12,12 +12,12 @@ Gets information on a Cloud Foundry space.
 
 ## Example Usage
 
-The following example looks up a space named 'myspace' within an organization 'myorg' which has been previously provisioned thru Terraform. 
+The following example looks up a space named 'myspace' within an organization 'myorg' which has been previously provisioned thru Terraform.
 
 ```
 data "cloudfoundry_space" "s" {
     name = "myspace"
-    org = "${cloudfoundry_org.myorg.id}"    
+    org = "${cloudfoundry_org.myorg.id}"
 }
 ```
 
@@ -29,8 +29,8 @@ The following arguments are supported:
 
 One of the following arguments must be provided.
 
-* `org` - (Optional) GUID of the organization the space belongs to.
-* `org_name` - (Optional) Name of the organization the space belongs to.
+* `org` - (Optional) GUID of the organization the space belongs to. Conflicts with `org_name`.
+* `org_name` - (Optional) Name of the organization the space belongs to. Conflicts with `org`.
 
 ## Attributes Reference
 

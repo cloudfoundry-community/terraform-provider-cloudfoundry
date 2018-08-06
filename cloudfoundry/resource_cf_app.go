@@ -213,10 +213,6 @@ func resourceApp() *schema.Resource {
 							Type:     schema.TypeMap,
 							Optional: true,
 						},
-						"credentials": &schema.Schema{
-							Type:     schema.TypeMap,
-							Computed: true,
-						},
 						"binding_id": &schema.Schema{
 							Type:     schema.TypeString,
 							Computed: true,
@@ -650,7 +646,6 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 					for _, a := range added {
 						if bb["service_instance"] == a["service_instance"] {
 							bb["binding_id"] = a["binding_id"]
-							bb["credentials"] = a["credentials"]
 							break
 						}
 					}

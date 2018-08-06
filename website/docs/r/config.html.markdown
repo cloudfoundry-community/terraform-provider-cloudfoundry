@@ -57,6 +57,8 @@ The following arguments are supported:
   - `space_scoped_private_broker_creation` - (Optional) Space Developers can create space-scoped private service brokers. Minimum CC API version: 2.58.
   - `space_developer_env_var_visibility` - (Optional) Space Developers can view their v2 environment variables. Org Managers and Space Managers can view their v3 environment variables. Minimum CC API version: 2.58.
 
+When not provided, optional fields are filled with their actual value in Cloud Foundry.
+
 ## Import
 
 The current Config can be imported using the `config` constant, e.g.

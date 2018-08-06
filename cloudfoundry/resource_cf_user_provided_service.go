@@ -35,19 +35,23 @@ func resourceUserProvidedService() *schema.Resource {
 			"syslog_drain_url": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Default:  "",
 			},
 			"syslogDrainURL": &schema.Schema{
 				Type:       schema.TypeString,
 				Optional:   true,
+				Default:    "",
 				Deprecated: "Use syslog_drain_url, Terraform complain about field name may only contain lowercase alphanumeric characters & underscores",
 			},
 			"route_service_url": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Default:  "",
 			},
 			"routeServiceURL": &schema.Schema{
 				Type:       schema.TypeString,
 				Optional:   true,
+				Default:    "",
 				Deprecated: "Use route_service_url, Terraform complain about field name may only contain lowercase alphanumeric characters & underscores",
 			},
 			"credentials": &schema.Schema{
