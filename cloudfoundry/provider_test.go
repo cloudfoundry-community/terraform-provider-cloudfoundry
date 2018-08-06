@@ -365,11 +365,12 @@ func assertSetEquals(
 	return err
 }
 
-func makeMap(key string, attributes map[string]string) map[string]interface{} {
+func assertMapEquals(key string, attributes map[string]string, actual map[string]interface{}) error {
 	expected := make(map[string]interface{})
 	for k, v := range attributes {
 		keyParts := strings.Split(k, ".")
 		if keyParts[0] == key && keyParts[1] != "%" {
+
 			l := len(keyParts)
 			m := expected
 			for _, kk := range keyParts[1 : l-1] {
