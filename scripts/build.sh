@@ -3,6 +3,7 @@
 set -e
 
 function makeRelease {
+    echo "No need for this build ? As a reminder, commits can be instructed to not trigger a travis build by setting the [skip ci keyword](https://docs.travis-ci.com/user/customizing-the-build/#skipping-a-build) in their commit message."
     tests/clean.sh
     make testacc
     make release
@@ -27,6 +28,6 @@ if [[ "$TRAVIS_BRANCH" == "dev" || "$TRAVIS_BRANCH" == "master" ]] ; then
     exit 0
 fi
 
-echo "Git commit is not on dev or master branch or it is not a pull request or it does not have a release tag so acceptance tests will not run."
+echo "Git commit is likely to be preparation work for an upcoming PR so acceptance tests will not run (not on dev or master branch, nor it is not a pull request, nor it does not have a release tag)"
 make build
 
