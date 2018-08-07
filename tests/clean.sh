@@ -14,58 +14,58 @@ set +e
 
 # Delete apps
 
-cf delete -f php-app
-cf delete -f basic-auth-router
-cf delete -f basic-auth-broker
-cf delete -f fake-service-broker
-cf delete -f test-app
-cf delete -f test-docker-app
+cf delete -f php-app &> /dev/null
+cf delete -f basic-auth-router &> /dev/null
+cf delete -f basic-auth-broker &> /dev/null
+cf delete -f fake-service-broker &> /dev/null
+cf delete -f test-app &> /dev/null
+cf delete -f test-docker-app &> /dev/null
 
 # Delete org and security gorups
 
-cf delete-org -f organization-one
-cf delete-org -f myorg
-cf delete-security-group -f app-services1
-cf delete-security-group -f app-services2
-cf delete-security-group -f app-services3
-cf delete-security-group -f app-services
+cf delete-org -f organization-one &> /dev/null
+cf delete-org -f myorg &> /dev/null
+cf delete-security-group -f app-services1 &> /dev/null
+cf delete-security-group -f app-services2 &> /dev/null
+cf delete-security-group -f app-services3 &> /dev/null
+cf delete-security-group -f app-services &> /dev/null
 
 # Delete services and service instances
 
-cf delete-service -f basic-auth
-cf delete-service -f rabbitmq
-cf purge-service-offering -f p-basic-auth
-cf delete-service-broker -f basic-auth
+cf delete-service -f basic-auth &> /dev/null
+cf delete-service -f rabbitmq &> /dev/null
+cf purge-service-offering -f p-basic-auth &> /dev/null
+cf delete-service-broker -f basic-auth &> /dev/null
 
 # Delete routes
 
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname php-app
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname php-app-other
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname basic-auth-router
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname basic-auth-broker
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname test-app
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname test-docker-app
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname fake-service-broker
-cf unbind-route-service -f $CF_TEST_APP_DOMAIN basic-auth --hostname php-app
+cf delete-route -f $CF_TEST_APP_DOMAIN --hostname php-app &> /dev/null
+cf delete-route -f $CF_TEST_APP_DOMAIN --hostname php-app-other &> /dev/null
+cf delete-route -f $CF_TEST_APP_DOMAIN --hostname basic-auth-router &> /dev/null
+cf delete-route -f $CF_TEST_APP_DOMAIN --hostname basic-auth-broker &> /dev/null
+cf delete-route -f $CF_TEST_APP_DOMAIN --hostname test-app &> /dev/null
+cf delete-route -f $CF_TEST_APP_DOMAIN --hostname test-docker-app &> /dev/null
+cf delete-route -f $CF_TEST_APP_DOMAIN --hostname fake-service-broker &> /dev/null
+cf unbind-route-service -f $CF_TEST_APP_DOMAIN basic-auth --hostname php-app &> /dev/null
 
 # Delete users
 
-cf delete-user manager1@acme.com -f
-cf delete-user auditor@acme.com -f
-cf delete-user teamlead@acme.com -f
-cf delete-user developer1@acme.com -f
-cf delete-user developer2@acme.com -f
-cf delete-user developer3@acme.com -f
-cf delete-user cf-admin -f
-cf delete-user test-user1@acme.com -f
-cf delete-user test-user2@acme.com -f
-cf delete-user test-user3@acme.com -f
-cf delete-user test-user4@acme.com -f
-cf delete-user test-user5@acme.com -f
+cf delete-user manager1@acme.com -f &> /dev/null
+cf delete-user auditor@acme.com -f &> /dev/null
+cf delete-user teamlead@acme.com -f &> /dev/null
+cf delete-user developer1@acme.com -f &> /dev/null
+cf delete-user developer2@acme.com -f &> /dev/null
+cf delete-user developer3@acme.com -f &> /dev/null
+cf delete-user cf-admin -f &> /dev/null
+cf delete-user test-user1@acme.com -f &> /dev/null
+cf delete-user test-user2@acme.com -f &> /dev/null
+cf delete-user test-user3@acme.com -f &> /dev/null
+cf delete-user test-user4@acme.com -f &> /dev/null
+cf delete-user test-user5@acme.com -f &> /dev/null
 
-# Delete quotas
+ # Delete quotas
 
-cf delete-quota runaway_test -f
+ cf delete-quota runaway_test -f &> /dev/null
 
 # url=$(cf curl /v2/service_brokers | jq -r '.resources[] | select(.entity.name | contains("basic-auth")) | .metadata.url')
 # if [ ! -z "${url}" ]; then
