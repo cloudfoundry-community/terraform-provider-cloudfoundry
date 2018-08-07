@@ -4,7 +4,6 @@ set -e
 
 function makeRelease {
     echo "No need for this build ? As a reminder, commits can be instructed to not trigger a travis build by setting the [skip ci keyword](https://docs.travis-ci.com/user/customizing-the-build/#skipping-a-build) in their commit message."
-    tests/clean.sh
     make testacc
     make release
 }
