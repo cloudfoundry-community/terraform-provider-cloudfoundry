@@ -15,6 +15,7 @@ install:
 - go get gopkg.in/alecthomas/gometalinter.v2
 - gometalinter.v2 --install
 script:
+- travis_wait 360 tests/clean.sh
 - travis_wait 360 scripts/build.sh
 deploy:
   provider: releases
