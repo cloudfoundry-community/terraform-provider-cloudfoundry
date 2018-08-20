@@ -13,7 +13,6 @@ set +e
 # Please add any further resources do not get destroyed
 
 # Delete apps
-
 cf delete -f php-app &> /dev/null
 cf delete -f basic-auth-router &> /dev/null
 cf delete -f basic-auth-broker &> /dev/null
@@ -25,10 +24,16 @@ cf delete -f test-docker-app &> /dev/null
 
 cf delete-org -f organization-one &> /dev/null
 cf delete-org -f myorg &> /dev/null
+cf delete-org -f quota-org &> /dev/null
 cf delete-security-group -f app-services1 &> /dev/null
 cf delete-security-group -f app-services2 &> /dev/null
 cf delete-security-group -f app-services3 &> /dev/null
 cf delete-security-group -f app-services &> /dev/null
+
+# Delete quotas
+cf delete-space-quota -f 10g-space &> /dev/null
+cf delete-quota       -f 100g-org &> /dev/null
+cf delete-quota       -f 50g-org &> /dev/null
 
 # Delete services and service instances
 

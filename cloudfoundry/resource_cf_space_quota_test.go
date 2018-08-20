@@ -13,17 +13,33 @@ import (
 )
 
 const spaceQuotaResource = `
+resource "cloudfoundry_org_quota" "100g-org" {
+  name                     = "100g-org"
+  allow_paid_service_plans = false
+  instance_memory          = 1024
+  total_memory             = 102400
+  total_app_instances      = 20
+  total_routes             = 10
+  total_services           = 20
+  total_route_ports        = 10
+	org                      = "%s"
+}
+
+resource "cloudfoundry_org" "quota-org" {
+  name  = "quota-org"
+  quota = ${cloudfoundry_org_quota.100g-org.id}
+}
 
 resource "cloudfoundry_space_quota" "10g-space" {
-  name = "10g-space"
+  name                     = "10g-space"
   allow_paid_service_plans = false
-  instance_memory = 512
-  total_memory = 10240
-  total_app_instances = 10
-  total_routes = 5
-  total_services = 20
-  total_route_ports = 1
-	org = "%s"
+  instance_memory          = 512
+  total_memory             = 10240
+  total_app_instances      = 10
+  total_routes             = 5
+  total_services           = 10
+  total_route_ports        = 5
+	org                      = "quota-org"
 }
 `
 
@@ -57,9 +73,9 @@ func TestAccSpaceQuota_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "total_routes", "5"),
 						resource.TestCheckResourceAttr(
-							ref, "total_services", "20"),
+							ref, "total_services", "10"),
 						resource.TestCheckResourceAttr(
-							ref, "total_route_ports", "1"),
+							ref, "total_route_ports", "5"),
 						resource.TestCheckResourceAttr(
 							ref, "org", orgID),
 					),
