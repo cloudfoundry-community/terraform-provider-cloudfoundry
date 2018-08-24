@@ -524,15 +524,15 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	app.SpaceGUID = *getChangedValueString("space", &update, d)
 	app.Instances = getChangedValueInt("instances", &update, d)
 	app.EnableSSH = getChangedValueBool("enable_ssh", &update, d)
-	app.HealthCheckHTTPEndpoint = getChangedValueString("health_check_http_endpoint", &update, d)
-	app.HealthCheckType = getChangedValueString("health_check_type", &update, d)
-	app.HealthCheckTimeout = getChangedValueInt("health_check_timeout", &update, d)
 
 	restart := false // for changes where just a restart is required
 	app.Ports = getChangedValueIntList("ports", &restart, d)
 	app.Memory = getChangedValueInt("memory", &restart, d)
 	app.DiskQuota = getChangedValueInt("disk_quota", &restart, d)
 	app.Command = getChangedValueString("command", &restart, d)
+	app.HealthCheckHTTPEndpoint = getChangedValueString("health_check_http_endpoint", &restart, d)
+	app.HealthCheckType = getChangedValueString("health_check_type", &restart, d)
+	app.HealthCheckTimeout = getChangedValueInt("health_check_timeout", &restart, d)
 
 	restage := false // for changes where a full restage is required
 	app.Buildpack = getChangedValueString("buildpack", &restage, d)
