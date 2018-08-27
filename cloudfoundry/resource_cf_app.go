@@ -276,6 +276,7 @@ func resourceApp() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
+				Default:      "port",
 				ValidateFunc: validateAppHealthCheckType,
 			},
 			"health_check_timeout": &schema.Schema{
