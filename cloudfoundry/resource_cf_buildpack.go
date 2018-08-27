@@ -2,14 +2,16 @@ package cloudfoundry
 
 import (
 	"fmt"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
+	"sync"
 )
 
-func resourceBuildpack() *schema.Resource {
+var mut *sync.Mutex
 
+func resourceBuildpack() *schema.Resource {
+	mut = &sync.Mutex{}
 	return &schema.Resource{
 
 		Create: resourceBuildpackCreate,
@@ -124,6 +126,8 @@ func resourceBuildpack() *schema.Resource {
 }
 
 func resourceBuildpackCreate(d *schema.ResourceData, meta interface{}) (err error) {
+	mut.Lock()
+	defer mut.Unlock()
 
 	session := meta.(*cfapi.Session)
 	if session == nil {
@@ -176,6 +180,8 @@ func resourceBuildpackCreate(d *schema.ResourceData, meta interface{}) (err erro
 }
 
 func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) (err error) {
+	mut.Lock()
+	defer mut.Unlock()
 
 	session := meta.(*cfapi.Session)
 	if session == nil {
@@ -199,6 +205,8 @@ func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) (err error)
 }
 
 func resourceBuildpackUpdate(d *schema.ResourceData, meta interface{}) (err error) {
+	mut.Lock()
+	defer mut.Unlock()
 
 	session := meta.(*cfapi.Session)
 	if session == nil {
@@ -258,6 +266,8 @@ func resourceBuildpackUpdate(d *schema.ResourceData, meta interface{}) (err erro
 }
 
 func resourceBuildpackDelete(d *schema.ResourceData, meta interface{}) (err error) {
+	mut.Lock()
+	defer mut.Unlock()
 
 	session := meta.(*cfapi.Session)
 	if session == nil {

@@ -5,12 +5,14 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"context"
+	"fmt"
+	"github.com/google/go-github/github"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
-
-	"github.com/google/go-github/github"
+	"sync"
 )
 
 // GithubRelease -
@@ -23,6 +25,7 @@ type GithubRelease struct {
 	repoName string
 
 	archiveName string
+	mutex       *sync.Mutex
 }
 
 // GetPath -
@@ -32,6 +35,8 @@ func (r *GithubRelease) GetPath() string {
 
 // SetVersion -
 func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
 	var (
 		release *github.RepositoryRelease
@@ -59,14 +64,16 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 	}
 
 	if r.archiveName == string(github.Zipball) {
-
+		fmt.Printf("[DEBUG] HERE       1\n")
+		log.Printf("[DEBUG] HERE       1")
 		if resp, err = http.Get(*release.ZipballURL); err != nil {
 			return err
 		}
 		in = resp.Body
 
 	} else if r.archiveName == string(github.Tarball) {
-
+		fmt.Printf("[DEBUG] HERE       2\n")
+		log.Printf("[DEBUG] HERE       2")
 		if resp, err = http.Get(*release.TarballURL); err != nil {
 			return err
 		}
@@ -76,10 +83,14 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 		for _, asset := range release.Assets {
 
 			if r.archiveName == *asset.Name {
+				fmt.Printf("[DEBUG] HERE       3\n")
+				log.Printf("[DEBUG] HERE       3")
 				if in, url, err = r.client.Repositories.DownloadReleaseAsset(ctx, r.owner, r.repoName, *asset.ID); err != nil {
 					return err
 				}
 				if len(url) > 0 {
+					fmt.Printf("[DEBUG] HERE       4\n")
+					log.Printf("[DEBUG] HERE       4")
 					if resp, err = http.Get(url); err != nil {
 						return err
 					}
@@ -202,8 +213,8 @@ func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err
 
 func (r *GithubRelease) createArchive(in io.ReadCloser) (err error) {
 	out, err := os.Create(r.archivePath)
-	defer in.Close()
-	defer out.Close()
+	// defer in.Close()
+	// defer out.Close()
 
 	if err == nil {
 		_, err = io.Copy(out, in)

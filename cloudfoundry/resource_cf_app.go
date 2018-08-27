@@ -411,15 +411,18 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		app.DockerCredentials = &vv
 	}
 
-	prepare := make(chan error)
+	// prepare := make(chan error)
 	// Skip if Docker repo is given
 	if _, ok := d.GetOk("docker_image"); !ok {
 
 		// Download application binary / source asynchronously
-		go func() {
-			appPath, err = prepareApp(app, d, session.Log)
-			prepare <- err
-		}()
+		// go func() {
+		appPath, err = prepareApp(app, d, session.Log)
+		if err != nil {
+			return err
+		}
+		// 	prepare <- err
+		// }()
 	}
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
 
@@ -459,36 +462,39 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}()
 
-	upload := make(chan error)
+	// upload := make(chan error)
 	// Skip if Docker repo is given
 	if _, ok := d.GetOk("docker_image"); !ok {
 
 		// Upload application binary / source
 		// asynchronously once download has completed
-		if err = <-prepare; err != nil {
+		// if err = <-prepare; err != nil {
+		// 	return err
+		// }
+
+		// go func() {
+		err = am.UploadApp(app, appPath, addContent)
+		if err != nil {
 			return err
+			// upload <- err
+			// return
 		}
 
-		go func() {
-			err = am.UploadApp(app, appPath, addContent)
-			if err != nil {
-				upload <- err
-				return
-			}
+		// Do not remove files from the local file system
+		if v, ok := d.GetOk("url"); ok {
+			url := v.(string)
 
-			// Do not remove files from the local file system
-			if v, ok := d.GetOk("url"); ok {
-				url := v.(string)
-
-				if !strings.HasPrefix(url, "file://") {
-					err = os.RemoveAll(appPath)
-				}
-			} else {
+			if !strings.HasPrefix(url, "file://") {
 				err = os.RemoveAll(appPath)
 			}
-
-			upload <- err
-		}()
+		} else {
+			err = os.RemoveAll(appPath)
+		}
+		if err != nil {
+			return err
+		}
+		// 	upload <- err
+		// }()
 	}
 
 	// Bind services
@@ -507,12 +513,12 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		routeConfig["default_route_mapping_id"] = mappingID
 	}
 
-	// Skip if Docker repo is given
-	if _, ok := d.GetOk("docker_image"); !ok {
-		if err = <-upload; err != nil {
-			return err
-		}
-	}
+	// // Skip if Docker repo is given
+	// if _, ok := d.GetOk("docker_image"); !ok {
+	// 	if err = <-upload; err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	timeout := time.Second * time.Duration(d.Get("timeout").(int))
 	stopped := d.Get("stopped").(bool)

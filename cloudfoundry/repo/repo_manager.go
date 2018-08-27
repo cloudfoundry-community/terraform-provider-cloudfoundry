@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 
@@ -21,6 +22,10 @@ const (
 	// DefaultVersionType -
 	DefaultVersionType = 0
 )
+
+// var (
+// 	gMutex *sync.Mutex
+// )
 
 // Repository -
 type Repository interface {
@@ -107,6 +112,9 @@ func (rm *RepoManager) GetGitRepository(name string, repoURL string, user, passw
 
 // GetGithubRelease -
 func (rm *RepoManager) GetGithubRelease(ghOwner, ghRepoName, archiveName string, user *string, password *string) (repo Repository, err error) {
+	rm.gitMutex.Lock()
+	defer rm.gitMutex.Unlock()
+
 	var ghClient *github.Client
 	ctx := context.Background()
 
@@ -125,6 +133,8 @@ func (rm *RepoManager) GetGithubRelease(ghOwner, ghRepoName, archiveName string,
 	}
 
 	path, err := ioutil.TempDir("", "terraform-provider-cloudfoundry")
+	fmt.Printf("[DEBUG] HERE       10\n")
+	log.Printf("[DEBUG] HERE save path: %s", path+"/"+archiveName)
 	if err != nil {
 		return nil, err
 	}
@@ -135,5 +145,6 @@ func (rm *RepoManager) GetGithubRelease(ghOwner, ghRepoName, archiveName string,
 		owner:       ghOwner,
 		repoName:    ghRepoName,
 		archiveName: archiveName,
+		mutex:       rm.gitMutex,
 	}, nil
 }
