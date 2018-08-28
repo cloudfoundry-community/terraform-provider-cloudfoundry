@@ -600,12 +600,6 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 				}
 
 				if binding != nil && values["binding_id"] == binding["binding_id"] {
-					if err2 := assertMapEquals("credentials", values, binding["credentials"].(map[string]interface{})); err2 != nil {
-						session.Log.LogMessage(
-							"Credentials for service instance %s do not match: %s",
-							serviceInstanceID, err2.Error())
-						return false
-					}
 					return true
 				}
 				return false

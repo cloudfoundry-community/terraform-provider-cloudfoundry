@@ -999,8 +999,6 @@ func addServiceBindings(
 	var (
 		serviceInstanceID, bindingID string
 		params                       *map[string]interface{}
-		credentials                  map[string]interface{}
-		bindingCredentials           map[string]interface{}
 	)
 
 	for _, b := range add {
@@ -1010,15 +1008,10 @@ func addServiceBindings(
 			vv := v.(map[string]interface{})
 			params = &vv
 		}
-		if bindingID, bindingCredentials, err = am.CreateServiceBinding(id, serviceInstanceID, params); err != nil {
+		if bindingID, _, err = am.CreateServiceBinding(id, serviceInstanceID, params); err != nil {
 			return bindings, err
 		}
 		b["binding_id"] = bindingID
-
-		credentials = b["credentials"].(map[string]interface{})
-		for k, v := range normalizeMap(bindingCredentials, make(map[string]interface{}), "", "_") {
-			credentials[k] = v
-		}
 
 		bindings = append(bindings, b)
 		log.DebugMessage("Created binding with id '%s' for service instance '%s'.", bindingID, serviceInstanceID)
