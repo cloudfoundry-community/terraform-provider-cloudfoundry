@@ -13,10 +13,7 @@ import (
 
 const orgResource = `
 
-data "cloudfoundry_quota" "default" {
-    name = "default"
-}
-resource "cloudfoundry_quota" "runaway" {
+resource "cloudfoundry_org_quota" "runaway" {
 	name = "runaway_test"
     allow_paid_service_plans = true
     instance_memory = -1
@@ -49,21 +46,21 @@ resource "cloudfoundry_user" "u5" {
 
 resource "cloudfoundry_org" "org1" {
 
-	name = "organization-one"
-    quota = "${cloudfoundry_quota.runaway.id}"
-
-	managers = [ "${cloudfoundry_user.u1.id}", "${cloudfoundry_user.u2.id}" ]
-	billing_managers = [ "${cloudfoundry_user.u3.id}", "${cloudfoundry_user.u4.id}" ]
-	auditors = [ "${cloudfoundry_user.u5.id}" ]
+    name = "organization-one"
+    quota = "${cloudfoundry_org_quota.runaway.id}"
+    managers = [ "${cloudfoundry_user.u1.id}", "${cloudfoundry_user.u2.id}" ]
+    billing_managers = [ "${cloudfoundry_user.u3.id}", "${cloudfoundry_user.u4.id}" ]
+    auditors = [ "${cloudfoundry_user.u5.id}" ]
 }
 `
 
 const orgResourceUpdate = `
 
-data "cloudfoundry_quota" "default" {
-    name = "default"
+data "cloudfoundry_org_quota" "default" {
+  name = "default"
 }
-resource "cloudfoundry_quota" "runaway" {
+
+resource "cloudfoundry_org_quota" "runaway" {
 	name = "runaway_test"
     allow_paid_service_plans = true
     instance_memory = -1
@@ -95,10 +92,8 @@ resource "cloudfoundry_user" "u5" {
 }
 
 resource "cloudfoundry_org" "org1" {
-
 	name = "organization-one-updated"
-    quota = "${data.cloudfoundry_quota.default.id}"
-
+  quota = "${data.cloudfoundry_org_quota.default.id}"
 	managers = [ "${cloudfoundry_user.u1.id}" ]
 	billing_managers = [ "${cloudfoundry_user.u2.id}", "${cloudfoundry_user.u3.id}" ]
 	auditors = [ "${cloudfoundry_user.u5.id}" ]
@@ -108,8 +103,8 @@ resource "cloudfoundry_org" "org1" {
 func TestAccOrg_normal(t *testing.T) {
 
 	refOrg := "cloudfoundry_org.org1"
-	refQuotaRunway := "cloudfoundry_quota.runaway"
-	refQuotaDefault := "data.cloudfoundry_quota.default"
+	refQuotaRunway := "cloudfoundry_org_quota.runaway"
+	refQuotaDefault := "data.cloudfoundry_org_quota.default"
 	refUserRemoved := "cloudfoundry_user.u4"
 
 	resource.Test(t,

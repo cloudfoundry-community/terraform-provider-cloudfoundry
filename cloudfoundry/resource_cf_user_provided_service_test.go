@@ -16,7 +16,7 @@ resource "cloudfoundry_org" "org1" {
 	name = "organization-one"
 }
 
-resource "cloudfoundry_quota" "dev" {
+resource "cloudfoundry_space_quota" "dev" {
 	name = "50g"
 	org = "${cloudfoundry_org.org1.id}"
   allow_paid_service_plans = true
@@ -30,7 +30,7 @@ resource "cloudfoundry_quota" "dev" {
 resource "cloudfoundry_space" "space1" {
 	name = "space-one"
 	org = "${cloudfoundry_org.org1.id}"
-	quota = "${cloudfoundry_quota.dev.id}"
+	quota = "${cloudfoundry_space_quota.dev.id}"
 	allow_ssh = true
 }
 
@@ -68,7 +68,7 @@ resource "cloudfoundry_org" "org1" {
   name = "organization-one"
 }
 
-resource "cloudfoundry_quota" "dev" {
+resource "cloudfoundry_space_quota" "dev" {
   name = "50g"
   org = "${cloudfoundry_org.org1.id}"
   allow_paid_service_plans = true
@@ -82,7 +82,7 @@ resource "cloudfoundry_quota" "dev" {
 resource "cloudfoundry_space" "space1" {
   name = "space-one"
   org = "${cloudfoundry_org.org1.id}"
-  quota = "${cloudfoundry_quota.dev.id}"
+  quota = "${cloudfoundry_space_quota.dev.id}"
   allow_ssh = true
 }
 
