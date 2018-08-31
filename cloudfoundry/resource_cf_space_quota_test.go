@@ -27,7 +27,7 @@ resource "cloudfoundry_org_quota" "100g-org" {
 
 resource "cloudfoundry_org" "quota-org" {
   name  = "quota-org"
-  quota = ${cloudfoundry_org_quota.100g-org.id}
+  quota = "${cloudfoundry_org_quota.100g-org.id}"
 }
 
 resource "cloudfoundry_space_quota" "10g-space" {
