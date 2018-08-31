@@ -22,7 +22,6 @@ resource "cloudfoundry_org_quota" "100g-org" {
   total_routes             = 10
   total_services           = 20
   total_route_ports        = 10
-	org                      = "%s"
 }
 
 resource "cloudfoundry_org" "quota-org" {
