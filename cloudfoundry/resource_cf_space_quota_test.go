@@ -38,7 +38,7 @@ resource "cloudfoundry_space_quota" "10g-space" {
   total_routes             = 5
   total_services           = 10
   total_route_ports        = 5
-	org                      = "quota-org"
+	org                      = "${cloudfoundry_org.quota-org.id}"
 }
 `
 
@@ -46,7 +46,6 @@ func TestAccSpaceQuota_normal(t *testing.T) {
 
 	ref := "cloudfoundry_space_quota.10g-space"
 	quotaname := "10g-space"
-	orgID := defaultPcfDevOrgID()
 
 	resource.Test(t,
 		resource.TestCase{
@@ -56,7 +55,7 @@ func TestAccSpaceQuota_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(spaceQuotaResource, orgID),
+					Config: spaceQuotaResource,
 					Check: resource.ComposeTestCheckFunc(
 						checkSpaceQuotaExists(ref),
 						resource.TestCheckResourceAttr(
@@ -75,8 +74,6 @@ func TestAccSpaceQuota_normal(t *testing.T) {
 							ref, "total_services", "10"),
 						resource.TestCheckResourceAttr(
 							ref, "total_route_ports", "5"),
-						resource.TestCheckResourceAttr(
-							ref, "org", orgID),
 					),
 				},
 			},
