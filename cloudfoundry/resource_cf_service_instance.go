@@ -93,12 +93,13 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 		return err
 	}
 	stateConf := &resource.StateChangeConf{
-		Pending:      resourceServiceInstancePendingStates,
-		Target:       resourceServiceInstanceSucceesStates,
-		Refresh:      resourceServiceInstanceStateFunc(id, "create", meta),
-		Timeout:      d.Timeout(schema.TimeoutCreate),
-		PollInterval: 30 * time.Second,
-		Delay:        5 * time.Second,
+		Pending:        resourceServiceInstancePendingStates,
+		Target:         resourceServiceInstanceSuccessStates,
+		Refresh:        resourceServiceInstanceStateFunc(id, "create", meta),
+		Timeout:        d.Timeout(schema.TimeoutCreate),
+		PollInterval:   30 * time.Second,
+		Delay:          5 * time.Second,
+		NotFoundChecks: 6, // if the CF object for the instance isn't at least present after 3 minutes, it's probably not coming
 	}
 
 	// Wait, catching any errors
@@ -184,12 +185,13 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 	}
 
 	stateConf := &resource.StateChangeConf{
-		Pending:      resourceServiceInstancePendingStates,
-		Target:       resourceServiceInstanceSucceesStates,
-		Refresh:      resourceServiceInstanceStateFunc(id, "update", meta),
-		Timeout:      d.Timeout(schema.TimeoutUpdate),
-		PollInterval: 30 * time.Second,
-		Delay:        5 * time.Second,
+		Pending:        resourceServiceInstancePendingStates,
+		Target:         resourceServiceInstanceSuccessStates,
+		Refresh:        resourceServiceInstanceStateFunc(id, "update", meta),
+		Timeout:        d.Timeout(schema.TimeoutUpdate),
+		PollInterval:   30 * time.Second,
+		Delay:          5 * time.Second,
+		NotFoundChecks: 3, // if we don't find the service instance in CF during an update, something is definately wrong
 	}
 	// Wait, catching any errors
 	if _, err = stateConf.WaitForState(); err != nil {
@@ -216,7 +218,7 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 	}
 	stateConf := &resource.StateChangeConf{
 		Pending:      resourceServiceInstancePendingStates,
-		Target:       resourceServiceInstanceSucceesStates,
+		Target:       []string{}, // in case of deletion, the state manager checks for nil object result and a 0 length list of target states
 		Refresh:      resourceServiceInstanceStateFunc(id, "delete", meta),
 		Timeout:      d.Timeout(schema.TimeoutDelete),
 		PollInterval: 30 * time.Second,
@@ -265,30 +267,29 @@ func resourceServiceInstanceStateFunc(serviceInstanceID string, operationType st
 		var err error
 		var serviceInstance cfapi.CCServiceInstance
 		if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
-			// if the service instance is gone the error message should contain error code 60004 ("ServiceInstanceNotFound")
-			// which is the correct behavour if the service instance has been deleted
-			// e.g. CLI output: cf_service_instance.redis: Server error, status code: 404, error code: 60004, message: The service instance could not be found: babababa-d977-4e9c-9bd0-4903d146d822
-			if strings.Contains(err.Error(), "error code: 60004") && operationType == "delete" {
-				return serviceInstance, "succeeded", nil
+			// We should get a 404 if the resource doesn't exist (eg. it has been deleted)
+			// In this case, the refresh code is expecting a nil object
+			if strings.Contains(err.Error(), "status code: 404") {
+				return nil, "", nil
 			} else {
 				session.Log.DebugMessage("Error on retrieving the serviceInstance %s", serviceInstanceID)
-				return nil, "", err
 			}
 			return nil, "", err
 		}
 
 		if serviceInstance.LastOperation["type"] == operationType {
-			state := serviceInstance.LastOperation["state"]
+			state := fmt.Sprintf("%s", serviceInstance.LastOperation["state"])
 			switch state {
 			case "succeeded":
-				return serviceInstance, "succeeded", nil
+				return serviceInstance, state, nil
 			case "failed":
 				session.Log.DebugMessage("service instance with guid=%s async provisioning has failed", serviceInstanceID)
-				return nil, "", err
+				return nil, state, fmt.Errorf("%s", serviceInstance.LastOperation["description"])
 			}
+			return serviceInstance, state, nil
 		}
 
-		return serviceInstance, "in progress", nil
+		return serviceInstance, "wrong operation", nil
 	}
 }
 
@@ -296,6 +297,6 @@ var resourceServiceInstancePendingStates = []string{
 	"in progress",
 }
 
-var resourceServiceInstanceSucceesStates = []string{
+var resourceServiceInstanceSuccessStates = []string{
 	"succeeded",
 }
