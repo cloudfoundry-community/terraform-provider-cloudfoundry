@@ -70,6 +70,9 @@ type CCApp struct {
 	HealthCheckType         *string                 `json:"health_check_type,omitempty"`
 	HealthCheckTimeout      *int                    `json:"health_check_timeout,omitempty"`
 	Environment             *map[string]interface{} `json:"environment_json,omitempty"`
+	DockerImage             *string                 `json:"docker_image,omitempty"`
+	DockerCredentials       *map[string]interface{} `json:"docker_credentials,omitempty"`
+	Diego                   *bool                   `json:"diego,omitempty"`
 }
 
 // CCAppResource -
@@ -114,8 +117,8 @@ func (am *AppManager) FindApp(appName string) (app CCApp, err error) {
 			app.ID = appResource.Metadata.GUID
 			return false
 		}); err != nil {
-		return CCApp{}, err
-	}
+			return CCApp{}, err
+		}
 	if len(app.ID) == 0 {
 		return CCApp{}, errors.NewModelNotFoundError("Application", appName)
 	}
@@ -292,6 +295,8 @@ func (am *AppManager) StartApp(appID string, timeout time.Duration) (err error) 
 	}
 	if app.State != nil && *app.State == AppStopped {
 		app.State = &AppStarted
+		// Maps are not set nit, set nil manually
+		app.DockerCredentials = nil
 		if app, err = am.UpdateApp(app); err != nil {
 			return err
 		}
@@ -299,6 +304,31 @@ func (am *AppManager) StartApp(appID string, timeout time.Duration) (err error) 
 		if err = am.WaitForAppToStart(app, timeout); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// StartDockerApp -
+func (am *AppManager) StartDockerApp(appID string, timeout time.Duration) (err error) {
+
+	var app CCApp
+	var startApp CCApp
+
+	if app, err = am.ReadApp(appID); err != nil {
+		return err
+	}
+
+	if app.State != nil && *app.State == AppStopped {
+
+		startApp.ID = app.ID
+		startApp.Name = app.Name
+		startApp.State = &AppStarted
+
+		if app, err = am.UpdateApp(startApp); err != nil {
+			return err
+		}
+
+		err = am.WaitForAppToStart(startApp, timeout)
 	}
 	return nil
 }
@@ -428,6 +458,11 @@ func (am *AppManager) StopApp(appID string, timeout time.Duration) (err error) {
 	if app, err = am.ReadApp(appID); err != nil {
 		return err
 	}
+	// set to DockerCredentials = nil if this is not a docker image
+	if app.DockerImage == nil {
+		app.DockerCredentials = nil
+	}
+
 	if app.State != nil && *app.State == AppStarted {
 		app.State = &AppStopped
 		if app, err = am.UpdateApp(app); err != nil {

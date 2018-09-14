@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_buildpack"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_buildpack"
 sidebar_current: "docs-cf-resource-buildpack"
 description: |-
   Provides a Cloud Foundry Buildpack resource.
@@ -17,7 +17,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry admin [buildpacks](
 The following example creates a Cloud Foundry buildpack .
 
 ```
-resource "cf_buildpack" "tomee" {
+resource "cloudfoundry_buildpack" "tomee" {
     name = "tomcat-enterprise-edition"
     path = "https://github.com/cloudfoundry-community/tomee-buildpack"
     position = "12"
@@ -30,7 +30,7 @@ resource "cf_buildpack" "tomee" {
 The following arguments are supported:
 
 * `name` - (Required) The name of the Buildpack.
-* `position` - (Optional, Number) Specifies where to place the buildpack in the detection priority list. For more information, see the [Buildpack Detection](https://docs.cloudfoundry.org/buildpacks/detection.html) topic.
+* `position` - (Optional, Number) Specifies where to place the buildpack in the detection priority list. For more information, see the [Buildpack Detection](https://docs.cloudfoundry.org/buildpacks/detection.html) topic. When not provided, cloudfoundry assigns a default buildpack position.
 * `enabled` - (Optional, Boolean) Specifies whether to allow apps to be pushed with the buildpack, and defaults to true.
 * `locked` - (Optional, Boolean) Specifies whether buildpack is locked to prevent further updates, and defaults to false.
 
@@ -48,13 +48,14 @@ One of the following arguments must be declared to locate buildpack source or ar
   - `user` - (Optional, String) Git user for accessing a private repo.
   - `password` - (Optional, String) Git password for accessing a private repo.
   - `key` - (Optional, String) The git private key to access a private repo via SSH.
-  
+
       > Arguments "`tag`" and "`branch`" are mutually exclusive. If a git SSH "`key`" is provided and it is protected the "`password`" argument should be used as the key's password.
 
 * `github_release` - (Optional, String) The Buildpack archive published as a github release.
   - `owner` - (Required, String) The github owner or organization name.
   - `repo` - (Required, String) The repository containing the release.
-  - `token` - (Optional, String) Github API token to use to access Github.
+  - `user` - (Optional, String) Github user to use to access Github.
+  - `password` - (Optional, String) Github password/personal token to use to access Github.
   - `version` - (Optional, String) The version or tag of the release.
   - `filename` - (Required, String) The name of the published file. The values `zipball` or `tarball` will download the published  source archive.
 
@@ -69,5 +70,5 @@ The following attributes are exported:
 The current buildpack can be imported using the `buildpack` guid, e.g.
 
 ```
-$ terraform import cf_buildpack.tomee a-guid
+$ terraform import cloudfoundry_buildpack.tomee a-guid
 ```

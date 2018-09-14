@@ -11,14 +11,14 @@ import (
 
 const routerGroupDataResource = `
 
-data "cf_router_group" "rg" {
+data "cloudfoundry_router_group" "rg" {
     name = "default-tcp"
 }
 `
 
 func TestAccDataSourceRouterGroup_normal(t *testing.T) {
 
-	ref := "data.cf_router_group.rg"
+	ref := "data.cloudfoundry_router_group.rg"
 
 	resource.Test(t,
 		resource.TestCase{

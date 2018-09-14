@@ -13,10 +13,7 @@ import (
 
 const orgResource = `
 
-data "cf_quota" "default" {
-    name = "default"
-}
-resource "cf_quota" "runaway" {
+resource "cloudfoundry_org_quota" "runaway" {
 	name = "runaway_test"
     allow_paid_service_plans = true
     instance_memory = -1
@@ -26,44 +23,44 @@ resource "cf_quota" "runaway" {
     total_services = -1
     total_route_ports = 0
 }
-resource "cf_user" "u1" {
+resource "cloudfoundry_user" "u1" {
     name = "test-user1@acme.com"
 	password = "password"
 }
-resource "cf_user" "u2" {
+resource "cloudfoundry_user" "u2" {
     name = "test-user2@acme.com"
 	password = "password"
 }
-resource "cf_user" "u3" {
+resource "cloudfoundry_user" "u3" {
     name = "test-user3@acme.com"
 	password = "password"
 }
-resource "cf_user" "u4" {
+resource "cloudfoundry_user" "u4" {
     name = "test-user4@acme.com"
 	password = "password"
 }
-resource "cf_user" "u5" {
+resource "cloudfoundry_user" "u5" {
     name = "test-user5@acme.com"
 	password = "password"
 }
 
-resource "cf_org" "org1" {
+resource "cloudfoundry_org" "org1" {
 
-	name = "organization-one"
-    quota = "${cf_quota.runaway.id}"
-
-	managers = [ "${cf_user.u1.id}", "${cf_user.u2.id}" ]
-	billing_managers = [ "${cf_user.u3.id}", "${cf_user.u4.id}" ]
-	auditors = [ "${cf_user.u5.id}" ]
+    name = "organization-one"
+    quota = "${cloudfoundry_org_quota.runaway.id}"
+    managers = [ "${cloudfoundry_user.u1.id}", "${cloudfoundry_user.u2.id}" ]
+    billing_managers = [ "${cloudfoundry_user.u3.id}", "${cloudfoundry_user.u4.id}" ]
+    auditors = [ "${cloudfoundry_user.u5.id}" ]
 }
 `
 
 const orgResourceUpdate = `
 
-data "cf_quota" "default" {
-    name = "default"
+data "cloudfoundry_org_quota" "default" {
+  name = "default"
 }
-resource "cf_quota" "runaway" {
+
+resource "cloudfoundry_org_quota" "runaway" {
 	name = "runaway_test"
     allow_paid_service_plans = true
     instance_memory = -1
@@ -73,44 +70,42 @@ resource "cf_quota" "runaway" {
     total_services = -1
     total_route_ports = 0
 }
-resource "cf_user" "u1" {
+resource "cloudfoundry_user" "u1" {
     name = "test-user1@acme.com"
 	password = "password"
 }
-resource "cf_user" "u2" {
+resource "cloudfoundry_user" "u2" {
     name = "test-user2@acme.com"
 	password = "password"
 }
-resource "cf_user" "u3" {
+resource "cloudfoundry_user" "u3" {
     name = "test-user3@acme.com"
 	password = "password"
 }
-resource "cf_user" "u4" {
+resource "cloudfoundry_user" "u4" {
     name = "test-user4@acme.com"
 	password = "password"
 }
-resource "cf_user" "u5" {
+resource "cloudfoundry_user" "u5" {
     name = "test-user5@acme.com"
 	password = "password"
 }
 
-resource "cf_org" "org1" {
-
+resource "cloudfoundry_org" "org1" {
 	name = "organization-one-updated"
-    quota = "${data.cf_quota.default.id}"
-
-	managers = [ "${cf_user.u1.id}" ]
-	billing_managers = [ "${cf_user.u2.id}", "${cf_user.u3.id}" ]
-	auditors = [ "${cf_user.u5.id}" ]
+  quota = "${data.cloudfoundry_org_quota.default.id}"
+	managers = [ "${cloudfoundry_user.u1.id}" ]
+	billing_managers = [ "${cloudfoundry_user.u2.id}", "${cloudfoundry_user.u3.id}" ]
+	auditors = [ "${cloudfoundry_user.u5.id}" ]
 }
 `
 
 func TestAccOrg_normal(t *testing.T) {
 
-	refOrg := "cf_org.org1"
-	refQuotaRunway := "cf_quota.runaway"
-	refQuotaDefault := "data.cf_quota.default"
-	refUserRemoved := "cf_user.u4"
+	refOrg := "cloudfoundry_org.org1"
+	refQuotaRunway := "cloudfoundry_org_quota.runaway"
+	refQuotaDefault := "data.cloudfoundry_org_quota.default"
+	refUserRemoved := "cloudfoundry_user.u4"
 
 	resource.Test(t,
 		resource.TestCase{

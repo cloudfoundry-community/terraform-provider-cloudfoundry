@@ -1,39 +1,24 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_quota"
-sidebar_current: "docs-cf-resource-quota"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_space_quota"
+sidebar_current: "docs-cf-resource-space-quota"
 description: |-
-  Provides a Cloud Foundry Quota resource.
+  Provides a Cloud Foundry space Quota resource.
 ---
 
-# cf\_quota
+# cloudfoundry\_space\_quota
 
-Provides a Cloud Foundry resource to manage org or space [quotas](https://docs.cloudfoundry.org/adminguide/quota-plans.html) definitions.
+Provides a Cloud Foundry resource to manage space [quotas](https://docs.cloudfoundry.org/adminguide/quota-plans.html) definitions.
 
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
 
 
 ## Example Usage
 
-The following example creates a quota that can be applied to an Org.
+The following example creates a space quota that can be then applied to one or more space.
 
 ```
-resource "cf_quota" "large" {
-    name = "large"
-    allow_paid_service_plans = false
-    instance_memory = 2048
-    total_memory = 51200
-    total_app_instances = 100
-    total_routes = 50
-    total_services = 200
-    total_route_ports = 5
-}
-```
-
-The following example creates a quota within an Org referenced by `cf_org.myorg.id` that can be applied to any space within that Org.
-
-```
-resource "cf_quota" "10g" {
+resource "cloudfoundry_space_quota" "10g" {
     name = "10g"
     allow_paid_service_plans = false
     instance_memory = 512
@@ -41,7 +26,7 @@ resource "cf_quota" "10g" {
     total_app_instances = 10
     total_routes = 5
     total_services = 20
-    org = "${cf_org.myorg.id}"
+    org = "${cloudfoundry_org.myorg.id}"
 }
 ```
 
@@ -58,7 +43,6 @@ The following arguments are supported:
 * `total_services` - (Required) Maximum services allowed
 * `total_route_ports` - (Optional) Maximum routes with reserved ports
 * `total_private_domains` - (Optional) Maximum number of private domains allowed to be created within the Org
-* `org` - (Optional) The Org within which this quota will be defined so it can be applied to spaces within that Org
 
 ## Attributes Reference
 
@@ -68,8 +52,8 @@ The following attributes are exported:
 
 ## Import
 
-The current Quota can be imported using the `quota`, e.g.
+An existing space Quota can be imported using its guid, e.g.
 
 ```
-$ terraform import cf_quota.10g a-guid
+$ terraform import cloudfoundry_space_quota.10g a-guid
 ```

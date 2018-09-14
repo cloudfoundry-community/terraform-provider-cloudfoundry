@@ -14,63 +14,60 @@ import (
 
 const spaceResource = `
 
-data "cf_quota" "default" {
-    name = "default"
-}
-resource "cf_asg" "svc" {
+resource "cloudfoundry_asg" "svc" {
 	name = "app-services"
     rule {
         protocol = "all"
         destination = "192.168.100.0/24"
     }
 }
-resource "cf_asg" "stg1" {
+resource "cloudfoundry_asg" "stg1" {
 	name = "app-services1"
     rule {
         protocol = "all"
         destination = "192.168.101.0/24"
     }
 }
-resource "cf_asg" "stg2" {
+resource "cloudfoundry_asg" "stg2" {
 	name = "app-services2"
     rule {
         protocol = "all"
         destination = "192.168.102.0/24"
     }
 }
-resource "cf_asg" "stg3" {
+resource "cloudfoundry_asg" "stg3" {
 	name = "app-services3"
     rule {
         protocol = "all"
         destination = "192.168.103.0/24"
     }
 }
-resource "cf_user" "tl" {
+resource "cloudfoundry_user" "tl" {
 	name = "teamlead@acme.com"
 	password = "password"
 }
-resource "cf_user" "dev1" {
+resource "cloudfoundry_user" "dev1" {
     name = "developer1@acme.com"
 	password = "password"
 }
-resource "cf_user" "dev2" {
+resource "cloudfoundry_user" "dev2" {
     name = "developer2@acme.com"
 	password = "password"
 }
-resource "cf_user" "dev3" {
+resource "cloudfoundry_user" "dev3" {
     name = "developer3@acme.com"
 	password = "password"
 }
-resource "cf_user" "adr" {
+resource "cloudfoundry_user" "adr" {
     name = "auditor@acme.com"
 	password = "password"
 }
-resource "cf_org" "org1" {
+resource "cloudfoundry_org" "org1" {
 	name = "organization-one"
 }
-resource "cf_quota" "dev" {
+resource "cloudfoundry_space_quota" "dev" {
 	name = "50g"
-	org = "${cf_org.org1.id}"
+	org = "${cloudfoundry_org.org1.id}"
     allow_paid_service_plans = true
     instance_memory = 1024
     total_memory = 51200
@@ -79,23 +76,23 @@ resource "cf_quota" "dev" {
     total_services = 150
 }
 
-resource "cf_space" "space1" {
+resource "cloudfoundry_space" "space1" {
 	name = "space-one"
-	org = "${cf_org.org1.id}"
-	quota = "${cf_quota.dev.id}"
-	asgs = [ "${cf_asg.svc.id}" ]
-	staging_asgs = [ "${cf_asg.stg1.id}", "${cf_asg.stg2.id}" ]
+	org = "${cloudfoundry_org.org1.id}"
+	quota = "${cloudfoundry_space_quota.dev.id}"
+	asgs = [ "${cloudfoundry_asg.svc.id}" ]
+	staging_asgs = [ "${cloudfoundry_asg.stg1.id}", "${cloudfoundry_asg.stg2.id}" ]
     managers = [
-        "${cf_user.tl.id}"
+        "${cloudfoundry_user.tl.id}"
     ]
     developers = [
-        "${cf_user.tl.id}",
-        "${cf_user.dev1.id}",
-		"${cf_user.dev2.id}"
+        "${cloudfoundry_user.tl.id}",
+        "${cloudfoundry_user.dev1.id}",
+		"${cloudfoundry_user.dev2.id}"
     ]
     auditors = [
-        "${cf_user.adr.id}",
-		"${cf_user.dev3.id}"
+        "${cloudfoundry_user.adr.id}",
+		"${cloudfoundry_user.dev3.id}"
     ]
 	allow_ssh = true
 }
@@ -103,63 +100,60 @@ resource "cf_space" "space1" {
 
 const spaceResourceUpdate = `
 
-data "cf_quota" "default" {
-    name = "default"
-}
-resource "cf_asg" "svc" {
+resource "cloudfoundry_asg" "svc" {
 	name = "app-services"
     rule {
         protocol = "all"
         destination = "192.168.100.0/24"
     }
 }
-resource "cf_asg" "stg1" {
+resource "cloudfoundry_asg" "stg1" {
 	name = "app-services1"
     rule {
         protocol = "all"
         destination = "192.168.101.0/24"
     }
 }
-resource "cf_asg" "stg2" {
+resource "cloudfoundry_asg" "stg2" {
 	name = "app-services2"
     rule {
         protocol = "all"
         destination = "192.168.102.0/24"
     }
 }
-resource "cf_asg" "stg3" {
+resource "cloudfoundry_asg" "stg3" {
 	name = "app-services3"
     rule {
         protocol = "all"
         destination = "192.168.103.0/24"
     }
 }
-resource "cf_user" "tl" {
+resource "cloudfoundry_user" "tl" {
     name = "teamlead@acme.com"
 	password = "password"
 }
-resource "cf_user" "dev1" {
+resource "cloudfoundry_user" "dev1" {
     name = "developer1@acme.com"
 	password = "password"
 }
-resource "cf_user" "dev2" {
+resource "cloudfoundry_user" "dev2" {
     name = "developer2@acme.com"
 	password = "password"
 }
-resource "cf_user" "dev3" {
+resource "cloudfoundry_user" "dev3" {
     name = "developer3@acme.com"
 	password = "password"
 }
-resource "cf_user" "adr" {
+resource "cloudfoundry_user" "adr" {
     name = "auditor@acme.com"
 	password = "password"
 }
-resource "cf_org" "org1" {
+resource "cloudfoundry_org" "org1" {
 	name = "organization-one"
 }
-resource "cf_quota" "dev" {
+resource "cloudfoundry_space_quota" "dev" {
 	name = "50g"
-	org = "${cf_org.org1.id}"
+	org = "${cloudfoundry_org.org1.id}"
     allow_paid_service_plans = true
     instance_memory = 1024
     total_memory = 51200
@@ -168,22 +162,22 @@ resource "cf_quota" "dev" {
     total_services = 150
 }
 
-resource "cf_space" "space1" {
+resource "cloudfoundry_space" "space1" {
 	name = "space-one-updated"
-	org = "${cf_org.org1.id}"
-	quota = "${cf_quota.dev.id}"
-	asgs = [ "${cf_asg.svc.id}" ]
-	staging_asgs = [ "${cf_asg.stg2.id}", "${cf_asg.stg3.id}" ]
+	org = "${cloudfoundry_org.org1.id}"
+	quota = "${cloudfoundry_space_quota.dev.id}"
+	asgs = [ "${cloudfoundry_asg.svc.id}" ]
+	staging_asgs = [ "${cloudfoundry_asg.stg2.id}", "${cloudfoundry_asg.stg3.id}" ]
     managers = [
-        "${cf_user.tl.id}"
+        "${cloudfoundry_user.tl.id}"
     ]
     developers = [
-        "${cf_user.tl.id}",
-        "${cf_user.dev1.id}",
+        "${cloudfoundry_user.tl.id}",
+        "${cloudfoundry_user.dev1.id}",
     ]
     auditors = [
-        "${cf_user.adr.id}",
-		"${cf_user.dev2.id}"
+        "${cloudfoundry_user.adr.id}",
+		"${cloudfoundry_user.dev2.id}"
     ]
 	allow_ssh = true
 }
@@ -191,8 +185,8 @@ resource "cf_space" "space1" {
 
 func TestAccSpace_normal(t *testing.T) {
 
-	ref := "cf_space.space1"
-	refUserRemoved := "cf_user.dev3"
+	ref := "cloudfoundry_space.space1"
+	refUserRemoved := "cloudfoundry_user.dev3"
 
 	resource.Test(t,
 		resource.TestCase{

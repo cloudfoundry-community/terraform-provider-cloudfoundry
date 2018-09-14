@@ -7,7 +7,7 @@ import (
 )
 
 func TestAccConfig_importBasic(t *testing.T) {
-	resourceName := "cf_config.ff"
+	resourceName := "cloudfoundry_feature_flags.ff"
 
 	resource.Test(t,
 		resource.TestCase{
