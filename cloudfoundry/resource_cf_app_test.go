@@ -3,12 +3,11 @@ package cloudfoundry
 import (
 	"fmt"
 	"testing"
-
 	"code.cloudfoundry.org/cli/cf/errors"
-
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"os"
 )
 
 const appResourceSpringMusic = `
@@ -169,6 +168,8 @@ resource "cloudfoundry_app" "test-app" {
 		repo = "test-app"
 		filename = "test-app"
 		version = "v0.0.1"
+		user = "%s"
+		password = "%s"
 	}
 }
 resource "cloudfoundry_route" "test-app-8888" {
@@ -223,6 +224,105 @@ resource "cloudfoundry_app" "test-docker-app" {
 }
 
 `
+
+const multipleVersion = `
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+resource "cloudfoundry_route" "test-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "test-app" 
+    target = {app = "${cloudfoundry_app.test-app.id}"}
+}
+resource "cloudfoundry_app" "test-app" {
+	name = "test-app"
+	space = "${data.cloudfoundry_space.space.id}"
+	command = "test-app --ports=8080"
+	timeout = 1800
+    memory = "512"
+	git {
+		url = "https://github.com/mevansam/test-app.git"
+	}
+}
+`
+
+const multipleVersionUpdate = `
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+
+resource "cloudfoundry_route" "test-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "test-app"
+    target = {app = "${cloudfoundry_app.test-app.id}"}
+}
+resource "cloudfoundry_app" "test-app" {
+	name = "test-app"
+	space = "${data.cloudfoundry_space.space.id}"
+	command = "test-app --ports=8080"
+	timeout = 1800
+    memory = "1024"
+	git {
+		url = "https://github.com/janosbinder/test-app.git"
+	}
+}
+`
+
+func TestAccAppVersions_app1(t *testing.T) {
+
+	refRoute := "cloudfoundry_route.test-app"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"test-app"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(multipleVersion, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckRouteExists(refRoute, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+				},
+
+				resource.TestStep{
+					Config: fmt.Sprintf(multipleVersionUpdate, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckRouteExists(refRoute, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+				},
+			},
+		})
+}
 
 func TestAccApp_app1(t *testing.T) {
 
@@ -331,7 +431,7 @@ func TestAccApp_app2(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceWithMultiplePorts, defaultAppDomain()),
+					Config: fmt.Sprintf(appResourceWithMultiplePorts, defaultAppDomain(), os.Getenv("GITHUB_USER"), os.Getenv("GITHUB_TOKEN")),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 							responses := []string{"8888"}
@@ -372,7 +472,7 @@ func TestAccApp_dockerApp(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(appResourceDocker, defaultAppDomain()),
-					Check: resource.ComposeTestCheckFunc(
+					Check: resource.ComposeAggregateTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
 							if err = assertHTTPResponse("https://test-docker-app."+defaultAppDomain(), 200, nil); err != nil {
@@ -487,7 +587,6 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 
 		if err = assertListEquals(attributes, "service_binding", len(serviceBindings),
 			func(values map[string]string, i int) (match bool) {
-
 				var binding map[string]interface{}
 
 				serviceInstanceID := values["service_instance"]
@@ -501,12 +600,6 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 				}
 
 				if binding != nil && values["binding_id"] == binding["binding_id"] {
-					if err2 := assertMapEquals("credentials", values, binding["credentials"].(map[string]interface{})); err2 != nil {
-						session.Log.LogMessage(
-							"Credentials for service instance %s do not match: %s",
-							serviceInstanceID, err2.Error())
-						return false
-					}
 					return true
 				}
 				return false

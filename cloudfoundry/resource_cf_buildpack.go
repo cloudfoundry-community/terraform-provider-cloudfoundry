@@ -100,7 +100,11 @@ func resourceBuildpack() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"token": &schema.Schema{
+						"user": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"password": &schema.Schema{
 							Type:     schema.TypeString,
 							Optional: true,
 						},
@@ -157,6 +161,7 @@ func resourceBuildpackCreate(d *schema.ResourceData, meta interface{}) (err erro
 			return err
 		}
 		path = repository.GetPath()
+		defer repository.Clean()
 	}
 	if bp, err = session.BuildpackManager().CreateBuildpack(name, position, enabled, locked, path); err != nil {
 		return err
@@ -243,6 +248,7 @@ func resourceBuildpackUpdate(d *schema.ResourceData, meta interface{}) (err erro
 				return err
 			}
 			path = repository.GetPath()
+			defer repository.Clean()
 		}
 		if bp, err = session.BuildpackManager().UploadBuildpackBits(bp, path); err != nil {
 			return err

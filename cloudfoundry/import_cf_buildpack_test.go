@@ -3,7 +3,9 @@ package cloudfoundry
 import (
 	"testing"
 
+	"fmt"
 	"github.com/hashicorp/terraform/helper/resource"
+	"os"
 )
 
 func TestAccBuildpack_importBasic(t *testing.T) {
@@ -17,7 +19,7 @@ func TestAccBuildpack_importBasic(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: buildpackResource,
+					Config: fmt.Sprintf(buildpackResource, os.Getenv("GITHUB_USER"), os.Getenv("GITHUB_TOKEN")),
 				},
 
 				resource.TestStep{
