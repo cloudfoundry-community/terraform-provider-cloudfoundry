@@ -13,14 +13,14 @@ import (
 
 const serviceDataResource = `
 
-data "cf_service" "mysql" {
+data "cloudfoundry_service" "mysql" {
     name = "p-mysql"
 }
 `
 
 func TestAccDataSourceService_normal(t *testing.T) {
 
-	ref := "data.cf_service.mysql"
+	ref := "data.cloudfoundry_service.mysql"
 
 	resource.Test(t,
 		resource.TestCase{

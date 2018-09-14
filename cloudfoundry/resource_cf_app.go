@@ -12,7 +12,6 @@ import (
 
 	"code.cloudfoundry.org/cli/cf/terminal"
 
-	// "github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
@@ -100,13 +99,24 @@ func resourceApp() *schema.Resource {
 			"url": &schema.Schema{
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"git", "github_release"},
+				ConflictsWith: []string{"git", "github_release", "docker_image", "docker_credentials"},
+			},
+			"docker_image": &schema.Schema{
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"git", "github_release", "url"},
+			},
+			"docker_credentials": &schema.Schema{
+				Type:          schema.TypeMap,
+				Optional:      true,
+				Sensitive:     true,
+				ConflictsWith: []string{"git", "github_release", "url"},
 			},
 			"git": &schema.Schema{
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"url", "github_release"},
+				ConflictsWith: []string{"url", "github_release", "docker_image", "docker_credentials"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"url": &schema.Schema{
@@ -143,7 +153,7 @@ func resourceApp() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				MaxItems:      1,
-				ConflictsWith: []string{"url", "git"},
+				ConflictsWith: []string{"url", "git", "docker_image", "docker_credentials"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"owner": &schema.Schema{
@@ -154,7 +164,11 @@ func resourceApp() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"token": &schema.Schema{
+						"user": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"password": &schema.Schema{
 							Type:     schema.TypeString,
 							Optional: true,
 						},
@@ -170,8 +184,9 @@ func resourceApp() *schema.Resource {
 				},
 			},
 			"add_content": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
+				Type:          schema.TypeList,
+				Optional:      true,
+				ConflictsWith: []string{"docker_image", "docker_credentials"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"source": &schema.Schema{
@@ -197,10 +212,6 @@ func resourceApp() *schema.Resource {
 						"params": &schema.Schema{
 							Type:     schema.TypeMap,
 							Optional: true,
-						},
-						"credentials": &schema.Schema{
-							Type:     schema.TypeMap,
-							Computed: true,
 						},
 						"binding_id": &schema.Schema{
 							Type:     schema.TypeString,
@@ -273,12 +284,23 @@ func resourceApp() *schema.Resource {
 				Computed: true,
 			},
 		},
+
+		// TODO: find a way to test that this is correctly forcing a new resource
+		//       when you try to change an app to/from a docker container
+		CustomizeDiff: func(diff *schema.ResourceDiff, v interface{}) error {
+			if (diff.HasChange("docker_image") || diff.HasChange("docker_credentials")) &&
+				(diff.HasChange("git") || diff.HasChange("github_release") || diff.HasChange("url")) {
+
+				for _, v := range []string{"docker_image", "docker_credentials", "git", "github_release", "url"} {
+					if diff.HasChange(v) {
+						diff.ForceNew(v)
+					}
+				}
+			}
+			return nil
+		},
 	}
 }
-
-// func serviceBindingHash(d interface{}) int {
-// 	return hashcode.String(d.(map[string]interface{})["service_instance"].(string))
-// }
 
 func validateAppHealthCheckType(v interface{}, k string) (ws []string, errs []error) {
 	value := v.(string)
@@ -309,7 +331,6 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		addContent []map[string]interface{}
 
 		defaultRoute, stageRoute, liveRoute string
-		//isBlueGreen                         bool
 
 		serviceBindings    []map[string]interface{}
 		hasServiceBindings bool
@@ -374,17 +395,31 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		vv := v.(map[string]interface{})
 		app.Environment = &vv
 	}
+	if v, ok = d.GetOk("docker_image"); ok {
+		vv := v.(string)
+		app.DockerImage = &vv
+		// Activate Diego for Docker
+		onDiego := true
+		app.Diego = &onDiego
+	}
+	if v, ok = d.GetOk("docker_credentials"); ok {
+		vv := v.(map[string]interface{})
+		app.DockerCredentials = &vv
+	}
 
-	// Download application binary
-	appPath, err = prepareApp(app, d, session.Log)
-	if err != nil {
-		return err
+	// Skip if Docker repo is given
+	if _, ok := d.GetOk("docker_image"); !ok {
+
+		// Download application binary / source asynchronously
+		appPath, err = prepareApp(app, d, session.Log)
+		if err != nil {
+			return err
+		}
 	}
 
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
 
 		routeConfig = v.([]interface{})[0].(map[string]interface{})
-		//isBlueGreen = false
 
 		if defaultRoute, err = validateRoute(routeConfig, "default_route", rm); err != nil {
 			return err
@@ -397,7 +432,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 
 		if len(stageRoute) > 0 && len(liveRoute) > 0 {
-			//isBlueGreen = true
+
 		} else if len(stageRoute) > 0 || len(liveRoute) > 0 {
 			err = fmt.Errorf("both 'stage_route' and 'live_route' need to be provided to deploy the app using blue-green routing")
 			return err
@@ -408,20 +443,46 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	if app, err = am.CreateApp(app); err != nil {
 		return err
 	}
+
 	// Delete application if an error occurs
-	defer func() error {
+	defer func() {
 		e := &err
-		if *e != nil {
-			return am.DeleteApp(app.ID, true)
+		if *e == nil {
+			return
 		}
-		return nil
+		err2 := am.DeleteApp(app.ID, true)
+		fmt.Printf("Error while creating app %s (%s), the application has been deleted\n", app.Name, app.ID)
+		if err2 != nil {
+			err = err2
+		}
 	}()
 
 	upload := make(chan error)
-	go func() {
-		err = am.UploadApp(app, appPath, addContent)
-		upload <- err
-	}()
+	// Skip if Docker repo is given
+	if _, ok := d.GetOk("docker_image"); !ok {
+
+		// Upload application binary / source asynchronously
+		go func() {
+			err = am.UploadApp(app, appPath, addContent)
+			if err != nil {
+				upload <- err
+				return
+			}
+
+			// Do not remove files from the local file system
+			if v, ok := d.GetOk("url"); ok {
+				url := v.(string)
+
+				if !strings.HasPrefix(url, "file://") {
+					err = os.RemoveAll(appPath)
+				}
+			} else {
+				err = os.RemoveAll(appPath)
+			}
+
+			upload <- err
+		}()
+	}
 
 	// Bind services
 	if v, hasServiceBindings = d.GetOk("service_binding"); hasServiceBindings {
@@ -439,22 +500,28 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		routeConfig["default_route_mapping_id"] = mappingID
 	}
 
+	// Skip if Docker repo is given
+	if _, ok := d.GetOk("docker_image"); !ok {
+		if err = <-upload; err != nil {
+			return err
+		}
+	}
+
 	timeout := time.Second * time.Duration(d.Get("timeout").(int))
 	stopped := d.Get("stopped").(bool)
 
-	// Start application if not stopped
-	// state once upload has completed
-	if err = <-upload; err != nil {
-		return err
-	}
-	if !stopped {
+	if _, ok := d.GetOk("docker_image"); ok {
+		if !stopped {
+			if err = am.StartDockerApp(app.ID, timeout); err != nil {
+				return err
+			}
+		}
+	} else if !stopped {
+		// Start application if not stopped
+		// state once upload has completed
 		if err = am.StartApp(app.ID, timeout); err != nil {
 			return err
 		}
-
-		// Execute blue-green validation
-		// if isBlueGreen {
-		// }
 	}
 
 	if app, err = am.ReadApp(app.ID); err != nil {
@@ -499,7 +566,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 	return err
 }
 
-func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	session := meta.(*cfapi.Session)
 	if session == nil {
@@ -512,32 +579,46 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	app := cfapi.CCApp{
 		ID: d.Id(),
 	}
-	update := false
-	restage := false
-	restart := false
 
+	update := false // for changes where no restart is required
 	app.Name = *getChangedValueString("name", &update, d)
 	app.SpaceGUID = *getChangedValueString("space", &update, d)
-	app.Ports = getChangedValueIntList("ports", &update, d)
 	app.Instances = getChangedValueInt("instances", &update, d)
-	app.Memory = getChangedValueInt("memory", &update, d)
-	app.DiskQuota = getChangedValueInt("disk_quota", &update, d)
-	app.Command = getChangedValueString("command", &update, d)
 	app.EnableSSH = getChangedValueBool("enable_ssh", &update, d)
 	app.HealthCheckHTTPEndpoint = getChangedValueString("health_check_http_endpoint", &update, d)
 	app.HealthCheckType = getChangedValueString("health_check_type", &update, d)
 	app.HealthCheckTimeout = getChangedValueInt("health_check_timeout", &update, d)
 
+	restart := false // for changes where just a restart is required
+	app.Ports = getChangedValueIntList("ports", &restart, d)
+	app.Memory = getChangedValueInt("memory", &restart, d)
+	app.DiskQuota = getChangedValueInt("disk_quota", &restart, d)
+	app.Command = getChangedValueString("command", &restart, d)
+
+	restage := false // for changes where a full restage is required
 	app.Buildpack = getChangedValueString("buildpack", &restage, d)
 	app.Environment = getChangedValueMap("environment", &restage, d)
 
+	// Notes about docker images
+	// Diego appears to restart applications by itself when only the docker_image
+	// parameter is updated, so for now we're going to simply push the updated image
+	// details to the CF API and let it take care of it.
+	// TODO: test what happens with diego when other attributes are changed and update
+	//       code appropriately (for example, does it restage/restart on its own when
+	//       service bindings are updates?)
+	app.DockerImage = getChangedValueString("docker_image", &update, d)
+	app.DockerCredentials = getChangedValueMap("docker_credentials", &update, d)
+
 	if update || restart || restage {
+		// push any updates to CF, we'll do any restage/restart later
+		var err error
 		if app, err = am.UpdateApp(app); err != nil {
 			return err
 		}
 		setAppArguments(app, d)
 	}
 
+	// update the application's service bindings (the necessary restage is dealt with later)
 	if d.HasChange("service_binding") {
 
 		old, new := d.GetChange("service_binding")
@@ -548,15 +629,13 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		session.Log.DebugMessage("Service bindings to be deleted: %# v", bindingsToDelete)
 		session.Log.DebugMessage("Service bindings to be added: %# v", bindingsToAdd)
 
-		if err = removeServiceBindings(bindingsToDelete, am, session.Log); err != nil {
+		if err := removeServiceBindings(bindingsToDelete, am, session.Log); err != nil {
 			return err
 		}
 
-		var added []map[string]interface{}
-		if added, err = addServiceBindings(app.ID, bindingsToAdd, am, session.Log); err != nil {
+		if added, err := addServiceBindings(app.ID, bindingsToAdd, am, session.Log); err != nil {
 			return err
-		}
-		if len(added) > 0 {
+		} else if len(added) > 0 {
 			if new != nil {
 				for _, b := range new.([]interface{}) {
 					bb := b.(map[string]interface{})
@@ -564,7 +643,6 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 					for _, a := range added {
 						if bb["service_instance"] == a["service_instance"] {
 							bb["binding_id"] = a["binding_id"]
-							bb["credentials"] = a["credentials"]
 							break
 						}
 					}
@@ -580,7 +658,6 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 		var (
 			oldRouteConfig, newRouteConfig map[string]interface{}
-			mappingID                      string
 		)
 
 		oldA := old.([]interface{})
@@ -601,18 +678,18 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			"stage_route",
 			"live_route",
 		} {
-			if _, err = validateRoute(newRouteConfig, r, rm); err != nil {
-				return
+			if _, err := validateRoute(newRouteConfig, r, rm); err != nil {
+				return err
 			}
-			if mappingID, err = updateMapping(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
-				return
-			}
-			if len(mappingID) > 0 {
+			if mappingID, err := updateMapping(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
+				return err
+			} else if len(mappingID) > 0 {
 				newRouteConfig[r+"_mapping_id"] = mappingID
 			}
 		}
 	}
 
+	binaryUpdated := false // check if we need to update the application's binary
 	if d.HasChange("url") || d.HasChange("git") || d.HasChange("github_release") || d.HasChange("add_content") {
 
 		var (
@@ -624,40 +701,84 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			addContent []map[string]interface{}
 		)
 
-		if appPath, err = prepareApp(app, d, session.Log); err != nil {
+		if appPathCalc, err := prepareApp(app, d, session.Log); err != nil {
 			return err
+		} else {
+			appPath = appPathCalc
 		}
+		defer func() {
+			os.RemoveAll(appPath)
+		}()
 		if v, ok = d.GetOk("add_content"); ok {
 			addContent = getListOfStructs(v)
 		}
-		if err = am.UploadApp(app, appPath, addContent); err != nil {
+
+		if err := am.UploadApp(app, appPath, addContent); err != nil {
 			return err
 		}
-		restage = true
+		binaryUpdated = true
 	}
 
+	// now that all of the reconfiguration is done, we can deal doing a restage or restart, as required
 	timeout := time.Second * time.Duration(d.Get("timeout").(int))
 
+	// check the package state of the application after binary upload
+	var curApp cfapi.CCApp
+	var readErr error
+	if curApp, readErr = am.ReadApp(app.ID); readErr != nil {
+		return readErr
+	}
+	if binaryUpdated || restage {
+		// There seem to be more types of updates that can automagically put an app's package_stage into "PENDING"
+		// for right now, I have observed this after a service binding update as well, but I have no idea what other
+		// optierations might cause this.  For now, we'll just do a blanket check since calling restage when the app
+		// is in this state causes the API to throw an error.
+		time.Sleep(time.Second * time.Duration(5)) // pause for a few seconds here to ensure the CF API has caught up
+		if *curApp.PackageState != "PENDING" {
+			// if it's not already pending, we need to restage
+			restage = true
+		} else {
+			// uploading the binary flagged the app for restaging,
+			// but we need to restart in order to force that to happen now
+			// (this is how the CF CLI does this)
+			restage = false
+			restart = true
+		}
+	}
+
 	if restage {
-		if err = am.RestageApp(app.ID, timeout); err != nil {
+		if err := am.RestageApp(app.ID, timeout); err != nil {
+			return err
+		}
+		if *curApp.State == "STARTED" {
+			// if the app was running before the restage when wait for it to start again
+			if err := am.WaitForAppToStart(app, timeout); err != nil {
+				return err
+			}
+		}
+	} else if restart && !d.Get("stopped").(bool) { // only run restart if the final state is running
+		if err := am.StopApp(app.ID, timeout); err != nil {
+			return err
+		}
+		if err := am.StartApp(app.ID, timeout); err != nil {
 			return err
 		}
 	}
-	if d.HasChange("stopped") {
 
+	// now set the final started/stopped state, whatever it is
+	if d.HasChange("stopped") {
 		if d.Get("stopped").(bool) {
-			if err = am.StopApp(app.ID, timeout); err != nil {
+			if err := am.StopApp(app.ID, timeout); err != nil {
 				return err
 			}
 		} else {
-			if err = am.StartApp(app.ID, timeout); err != nil {
+			if err := am.StartApp(app.ID, timeout); err != nil {
 				return err
 			}
 		}
-	} else if restage {
-		err = am.WaitForAppToStart(app, timeout)
 	}
-	return err
+
+	return nil
 }
 
 func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -672,7 +793,7 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if v, ok := d.GetOk("service_binding"); ok {
 		if err = removeServiceBindings(getListOfStructs(v), am, session.Log); err != nil {
-			return
+			return err
 		}
 	}
 	if v, ok := d.GetOk("route"); ok {
@@ -689,7 +810,7 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 				if len(mappingID) > 0 {
 					if err = rm.DeleteRouteMapping(v.(string)); err != nil {
 						if !strings.Contains(err.Error(), "status code: 404") {
-							return
+							return err
 						}
 						err = nil
 					}
@@ -697,7 +818,6 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 			}
 		}
 	}
-	err = am.DeleteApp(d.Id(), false)
 	if err = am.DeleteApp(d.Id(), false); err != nil {
 		if strings.Contains(err.Error(), "status code: 404") {
 			session.Log.DebugMessage(
@@ -827,7 +947,7 @@ func validateRoute(routeConfig map[string]interface{}, route string, rm *cfapi.R
 		var mappings []map[string]interface{}
 		if mappings, err = rm.ReadRouteMappingsByRoute(routeID); err == nil && len(mappings) > 0 {
 			err = fmt.Errorf(
-				"route with id %s is already mapped. routes specificed in the 'route' argument can only be mapped to one 'cf_app' resource",
+				"route with id %s is already mapped. routes specificed in the 'route' argument can only be mapped to one 'cloudfoundry_app' resource",
 				routeID)
 		}
 	}
@@ -876,9 +996,6 @@ func addServiceBindings(
 	var (
 		serviceInstanceID, bindingID string
 		params                       *map[string]interface{}
-
-		credentials        map[string]interface{}
-		bindingCredentials map[string]interface{}
 	)
 
 	for _, b := range add {
@@ -888,15 +1005,10 @@ func addServiceBindings(
 			vv := v.(map[string]interface{})
 			params = &vv
 		}
-		if bindingID, bindingCredentials, err = am.CreateServiceBinding(id, serviceInstanceID, params); err != nil {
+		if bindingID, _, err = am.CreateServiceBinding(id, serviceInstanceID, params); err != nil {
 			return bindings, err
 		}
 		b["binding_id"] = bindingID
-
-		credentials = b["credentials"].(map[string]interface{})
-		for k, v := range normalizeMap(bindingCredentials, make(map[string]interface{}), "", "_") {
-			credentials[k] = v
-		}
 
 		bindings = append(bindings, b)
 		log.DebugMessage("Created binding with id '%s' for service instance '%s'.", bindingID, serviceInstanceID)

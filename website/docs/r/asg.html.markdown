@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_asg"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_asg"
 sidebar_current: "docs-cf-resource-asg"
 description: |-
   Provides a Cloud Foundry Application Security Group resource.
@@ -20,7 +20,7 @@ stage and run applications.
 Basic usage
 
 ```
-resource "cf_asg" "messaging" {
+resource "cloudfoundry_asg" "messaging" {
 
 	name = "rmq-service"
 	
@@ -50,8 +50,8 @@ The following arguments are supported:
   - `ports` - (Required, String) A single port, comma-separated ports or range of ports that can receive traffic.
   - `type` - (Optional, Integer) Allowed ICMP [type](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml#icmp-parameters-types). A value of -1 allows all types. Default is -1.
   - `code` - (Optional, Integer) Allowed ICMP [code](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml#icmp-parameters-codes). . A value of -1 allows all codes. Default is -1.
-  - `log` - (Optional, Boolean) Set to `true` to enable logging. For more information on how to configure system logs to be sent to a syslog drain, review the [ASG logging](http://docs.cloudfoundry.org/concepts/asg.html#logging) documentation.
-  - `description` - (Optional, String) Description of the rule.
+  - `log` - (Optional, Boolean) Set to `true` to enable logging. For more information on how to configure system logs to be sent to a syslog drain, review the [ASG logging](http://docs.cloudfoundry.org/concepts/asg.html#logging) documentation. Defaults to false.
+  - `description` - (Optional, String) Description of the rule. Defaults to empty.
 
 ## Attributes Reference
 
@@ -64,6 +64,6 @@ The following attributes are exported:
 The current Asg can be imported using the `asg` guid, e.g.
 
 ```
-$ terraform import cf_asg.messaging a-guid
+$ terraform import cloudfoundry_asg.messaging a-guid
 ```
 

@@ -30,13 +30,9 @@ var pcfDevSpaceID string
 
 func init() {
 
-	if err := initRepoManager(); err != nil {
-		panic(err)
-	}
-
 	testAccProvider = Provider().(*schema.Provider)
 	testAccProviders = map[string]terraform.ResourceProvider{
-		"cf": testAccProvider,
+		"cloudfoundry": testAccProvider,
 	}
 }
 
@@ -65,16 +61,20 @@ func testAccEnvironmentSet() bool {
 	uaaClientID := os.Getenv("CF_UAA_CLIENT_ID")
 	uaaClientSecret := os.Getenv("CF_UAA_CLIENT_SECRET")
 	skipSslValidation := strings.ToLower(os.Getenv("CF_SKIP_SSL_VALIDATION"))
+	githubUser := os.Getenv("GITHUB_USER")
+	githubPassword := os.Getenv("GITHUB_TOKEN")
 
 	if len(endpoint) == 0 ||
 		len(user) == 0 ||
 		len(password) == 0 ||
 		len(uaaClientID) == 0 ||
 		len(uaaClientSecret) == 0 ||
-		len(skipSslValidation) == 0 {
+		len(skipSslValidation) == 0 ||
+		len(githubUser) == 0 ||
+		len(githubPassword) == 0 {
 
 		fmt.Println("CF_API_URL, CF_USER, CF_PASSWORD, CF_UAA_CLIENT_ID, CF_UAA_CLIENT_SECRET " +
-			"and CF_SKIP_SSL_VALIDATION must be set for acceptance tests to work.")
+			"CF_SKIP_SSL_VALIDATION, GITHUB_USER and GITHUB_TOKEN must be set for acceptance tests to work.")
 		return false
 	}
 	return true
@@ -385,10 +385,6 @@ func assertMapEquals(key string, attributes map[string]string, actual map[string
 
 	normExpected := normalizeMap(expected, make(map[string]interface{}), "", "_")
 	normActual := normalizeMap(actual, make(map[string]interface{}), "", "_")
-
-	tstSession.Log.DebugMessage(
-		"Matching key '%s' expected value: %# v\n...with actual value: %# v",
-		key, normExpected, normActual)
 
 	if !reflect.DeepEqual(normExpected, normActual) {
 		return fmt.Errorf("map with key '%s' expected to be:\n%# v\nbut was:%# v", key, expected, actual)

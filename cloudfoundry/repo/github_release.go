@@ -210,3 +210,8 @@ func (r *GithubRelease) createArchive(in io.ReadCloser) (err error) {
 	}
 	return err
 }
+
+// Clean -
+func (r *GithubRelease) Clean() error {
+	return os.Remove(r.archivePath)
+}
