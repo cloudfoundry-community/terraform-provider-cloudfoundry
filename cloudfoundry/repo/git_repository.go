@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"os"
 )
 
 const (
@@ -79,4 +80,9 @@ func (r *GitRepository) String() string {
 		panic(err.Error())
 	}
 	return ref.Hash().String()
+}
+
+// Clean -
+func (r *GitRepository) Clean() error {
+	return os.RemoveAll(r.repoPath)
 }

@@ -10,7 +10,7 @@ data "ldap_query" "pcf-users" {
   index_attribute = "uid"
 }
 
-resource "cf_user" "pcf-users" {
+resource "cloudfoundry_user" "pcf-users" {
   count = "${length(data.ldap_query.pcf-users.results)}"
 
   name     = "${data.ldap_query.pcf-users.results[count.index]}"

@@ -7,13 +7,13 @@ import (
 )
 
 func TestAccUserProvidedService_importBasic(t *testing.T) {
-	resourceName := "cf_user_provided_service.mq"
+	resourceName := "cloudfoundry_user_provided_service.mq"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckUserProvidedServiceDestroyed("mq", "cf_space.space1"),
+			CheckDestroy: testAccCheckUserProvidedServiceDestroyed("mq", "cloudfoundry_space.space1"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

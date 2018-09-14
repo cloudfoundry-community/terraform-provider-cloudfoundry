@@ -11,7 +11,7 @@ import (
 
 const evgRunningResource = `
 
-resource "cf_evg" "running" {
+resource "cloudfoundry_evg" "running" {
 
 	name = "running"
 
@@ -26,7 +26,7 @@ resource "cf_evg" "running" {
 
 const evgRunningResourceUpdated = `
 
-resource "cf_evg" "running" {
+resource "cloudfoundry_evg" "running" {
 
 	name = "running"
 
@@ -41,7 +41,7 @@ resource "cf_evg" "running" {
 `
 
 const evgStagingResource = `
-resource "cf_evg" "staging" {
+resource "cloudfoundry_evg" "staging" {
 
 	name = "staging"
 
@@ -54,7 +54,7 @@ resource "cf_evg" "staging" {
 `
 
 const evgStagingResourceUpdated = `
-resource "cf_evg" "staging" {
+resource "cloudfoundry_evg" "staging" {
 
 	name = "staging"
 
@@ -67,7 +67,7 @@ resource "cf_evg" "staging" {
 
 func TestAccRunningEvg_normal(t *testing.T) {
 
-	ref := "cf_evg.running"
+	ref := "cloudfoundry_evg.running"
 	name := "running"
 
 	resource.Test(t,
@@ -121,7 +121,7 @@ func TestAccRunningEvg_normal(t *testing.T) {
 
 func TestAccStagingEvg_normal(t *testing.T) {
 
-	ref := "cf_evg.staging"
+	ref := "cloudfoundry_evg.staging"
 	name := "staging"
 
 	resource.Test(t,

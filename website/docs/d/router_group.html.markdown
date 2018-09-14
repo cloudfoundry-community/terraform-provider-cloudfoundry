@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_router_group"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_router_group"
 sidebar_current: "docs-cf-datasource-router-group"
 description: |-
   Get information on a Cloud Foundry router_group.
@@ -17,7 +17,7 @@ Gets information on a particular Cloud Foundry router group. Router groups are u
 The following example looks up a router group named 'my_custom_router_group'. 
 
 ```
-data "cf_router_group" "default-tcp" {
+data "cloudfoundry_router_group" "default-tcp" {
     name = "default-tcp"    
 }
 ```

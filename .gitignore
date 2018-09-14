@@ -25,6 +25,7 @@ website/node_modules
 *.test
 *.iml
 .env.json
+.*.env.json
 .envrc
 .tfacc_env
 

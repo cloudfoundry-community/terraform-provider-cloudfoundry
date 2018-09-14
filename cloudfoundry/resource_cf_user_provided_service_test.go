@@ -12,13 +12,13 @@ import (
 )
 
 const userProvidedServiceResourceCreate = `
-resource "cf_org" "org1" {
+resource "cloudfoundry_org" "org1" {
 	name = "organization-one"
 }
 
-resource "cf_quota" "dev" {
+resource "cloudfoundry_space_quota" "dev" {
 	name = "50g"
-	org = "${cf_org.org1.id}"
+	org = "${cloudfoundry_org.org1.id}"
   allow_paid_service_plans = true
   instance_memory = 1024
   total_memory = 51200
@@ -27,16 +27,16 @@ resource "cf_quota" "dev" {
   total_services = 150
 }
 
-resource "cf_space" "space1" {
+resource "cloudfoundry_space" "space1" {
 	name = "space-one"
-	org = "${cf_org.org1.id}"
-	quota = "${cf_quota.dev.id}"
+	org = "${cloudfoundry_org.org1.id}"
+	quota = "${cloudfoundry_space_quota.dev.id}"
 	allow_ssh = true
 }
 
-resource "cf_user_provided_service" "mq" {
+resource "cloudfoundry_user_provided_service" "mq" {
 	name = "mq"
-  space = "${cf_space.space1.id}"
+  space = "${cloudfoundry_space.space1.id}"
   credentials = {
 		"url" = "mq://localhost:9000"
 		"username" = "user"
@@ -46,31 +46,31 @@ resource "cf_user_provided_service" "mq" {
 `
 
 const userProvidedServiceComplexResourceCreate = `
-resource "cf_org" "org1" {
+resource "cloudfoundry_org" "org1" {
 	name = "organization-one"
 }
 
-resource "cf_space" "space1" {
+resource "cloudfoundry_space" "space1" {
 	name = "space-one"
-	org = "${cf_org.org1.id}"
+	org = "${cloudfoundry_org.org1.id}"
 	allow_ssh = true
 }
 
-resource "cf_user_provided_service" "complex" {
+resource "cloudfoundry_user_provided_service" "complex" {
 	name = "complex"
-  space = "${cf_space.space1.id}"
+  space = "${cloudfoundry_space.space1.id}"
   credentials_json = "{ \"cnx\": { \"host\": \"localhost\", \"ports\": [ 8080, 8081, 8082 ] } }"
 }
 `
 
 const userProvidedServiceResourceUpdate = `
-resource "cf_org" "org1" {
+resource "cloudfoundry_org" "org1" {
   name = "organization-one"
 }
 
-resource "cf_quota" "dev" {
+resource "cloudfoundry_space_quota" "dev" {
   name = "50g"
-  org = "${cf_org.org1.id}"
+  org = "${cloudfoundry_org.org1.id}"
   allow_paid_service_plans = true
   instance_memory = 1024
   total_memory = 51200
@@ -79,16 +79,16 @@ resource "cf_quota" "dev" {
   total_services = 150
 }
 
-resource "cf_space" "space1" {
+resource "cloudfoundry_space" "space1" {
   name = "space-one"
-  org = "${cf_org.org1.id}"
-  quota = "${cf_quota.dev.id}"
+  org = "${cloudfoundry_org.org1.id}"
+  quota = "${cloudfoundry_space_quota.dev.id}"
   allow_ssh = true
 }
 
-resource "cf_user_provided_service" "mq" {
+resource "cloudfoundry_user_provided_service" "mq" {
   name = "mq"
-  space = "${cf_space.space1.id}"
+  space = "${cloudfoundry_space.space1.id}"
   credentials = {
     "url" = "mq://localhost:9000"
     "username" = "new-user"
@@ -100,19 +100,19 @@ resource "cf_user_provided_service" "mq" {
 `
 
 const userProvidedServiceComplexResourceUpdate = `
-resource "cf_org" "org1" {
+resource "cloudfoundry_org" "org1" {
   name = "organization-one"
 }
 
-resource "cf_space" "space1" {
+resource "cloudfoundry_space" "space1" {
   name = "space-one"
-  org = "${cf_org.org1.id}"
+  org = "${cloudfoundry_org.org1.id}"
   allow_ssh = true
 }
 
-resource "cf_user_provided_service" "complex" {
+resource "cloudfoundry_user_provided_service" "complex" {
 	name = "complex"
-  space = "${cf_space.space1.id}"
+  space = "${cloudfoundry_space.space1.id}"
   credentials_json = "{ \"cnx\": { \"host\": \"127.0.0.1\", \"ports\": [ 8088 ] } }"
   syslog_drain_url = "http://localhost/syslog"
   route_service_url = "https://localhost/route"
@@ -121,13 +121,13 @@ resource "cf_user_provided_service" "complex" {
 
 func TestAccUserProvidedService_normal(t *testing.T) {
 
-	ref := "cf_user_provided_service.mq"
+	ref := "cloudfoundry_user_provided_service.mq"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckUserProvidedServiceDestroyed("mq", "cf_space.space1"),
+			CheckDestroy: testAccCheckUserProvidedServiceDestroyed("mq", "cloudfoundry_space.space1"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -162,12 +162,12 @@ func TestAccUserProvidedService_normal(t *testing.T) {
 }
 
 func TestAccUserProvidedService_complex(t *testing.T) {
-	ref := "cf_user_provided_service.complex"
+	ref := "cloudfoundry_user_provided_service.complex"
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckUserProvidedServiceDestroyed("complex", "cf_space.space1"),
+			CheckDestroy: testAccCheckUserProvidedServiceDestroyed("complex", "cloudfoundry_space.space1"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

@@ -7,7 +7,7 @@ import (
 )
 
 func TestAccDefaultRunningAsg_importBasic(t *testing.T) {
-	resourceName := "cf_default_asg.running"
+	resourceName := "cloudfoundry_default_asg.running"
 
 	resource.Test(t,
 		resource.TestCase{
