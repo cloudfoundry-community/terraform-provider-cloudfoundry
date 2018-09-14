@@ -12,66 +12,52 @@ import (
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
-const quotaResource = `
+const orgQuotaResource = `
 
-resource "cloudfoundry_quota" "50g" {
-	name = "50g"
-    allow_paid_service_plans = false
-    instance_memory = 2048
-    total_memory = 51200
-    total_app_instances = 100
-    total_routes = 50
-    total_services = 200
-    total_route_ports = 5
+resource "cloudfoundry_org_quota" "50g-org" {
+  name = "50g-org"
+  allow_paid_service_plans = false
+  instance_memory = 2048
+  total_memory = 51200
+  total_app_instances = 100
+  total_routes = 50
+  total_services = 200
+  total_route_ports = 5
 }
 `
 
-const quotaResourceUpdate = `
+const orgQuotaResourceUpdate = `
 
-resource "cloudfoundry_quota" "50g" {
-	name = "50g"
-    allow_paid_service_plans = true
-    instance_memory = 1024
-    total_memory = 51200
-    total_app_instances = 100
-    total_routes = 100
-    total_services = 150
-    total_route_ports = 10
+resource "cloudfoundry_org_quota" "50g-org" {
+  name = "50g-org"
+  allow_paid_service_plans = true
+  instance_memory = 1024
+  total_memory = 51200
+  total_app_instances = 100
+  total_routes = 100
+  total_services = 150
+  total_route_ports = 10
 }
 `
 
-const spaceQuotaResource = `
+func TestAccOrgQuota_normal(t *testing.T) {
 
-resource "cloudfoundry_quota" "10g" {
-	name = "10g"
-    allow_paid_service_plans = false
-    instance_memory = 512
-    total_memory = 10240
-    total_app_instances = 10
-    total_routes = 5
-    total_services = 20
-	org = "%s"
-}
-`
-
-func TestAccQuota_normal(t *testing.T) {
-
-	ref := "cloudfoundry_quota.50g"
-	quotaname := "50g"
+	ref := "cloudfoundry_org_quota.50g-org"
+	quotaname := "50g-org"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckQuotaResourceDestroy(quotaname),
+			CheckDestroy: testAccCheckOrgQuotaResourceDestroy(quotaname),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: quotaResource,
+					Config: orgQuotaResource,
 					Check: resource.ComposeTestCheckFunc(
-						checkQuotaExists(ref),
+						checkOrgQuotaExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "50g"),
+							ref, "name", "50g-org"),
 						resource.TestCheckResourceAttr(
 							ref, "allow_paid_service_plans", "false"),
 						resource.TestCheckResourceAttr(
@@ -90,11 +76,11 @@ func TestAccQuota_normal(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: quotaResourceUpdate,
+					Config: orgQuotaResourceUpdate,
 					Check: resource.ComposeTestCheckFunc(
-						checkQuotaExists(ref),
+						checkOrgQuotaExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "50g"),
+							ref, "name", "50g-org"),
 						resource.TestCheckResourceAttr(
 							ref, "allow_paid_service_plans", "true"),
 						resource.TestCheckResourceAttr(
@@ -115,51 +101,10 @@ func TestAccQuota_normal(t *testing.T) {
 		})
 }
 
-func TestAccSpaceQuota_normal(t *testing.T) {
-
-	ref := "cloudfoundry_quota.10g"
-	quotaname := "10g"
-	orgID := defaultPcfDevOrgID()
-
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckSpaceQuotaResourceDestroy(quotaname),
-			Steps: []resource.TestStep{
-
-				resource.TestStep{
-					Config: fmt.Sprintf(spaceQuotaResource, orgID),
-					Check: resource.ComposeTestCheckFunc(
-						checkQuotaExists(ref),
-						resource.TestCheckResourceAttr(
-							ref, "name", "10g"),
-						resource.TestCheckResourceAttr(
-							ref, "allow_paid_service_plans", "false"),
-						resource.TestCheckResourceAttr(
-							ref, "instance_memory", "512"),
-						resource.TestCheckResourceAttr(
-							ref, "total_memory", "10240"),
-						resource.TestCheckResourceAttr(
-							ref, "total_app_instances", "10"),
-						resource.TestCheckResourceAttr(
-							ref, "total_routes", "5"),
-						resource.TestCheckResourceAttr(
-							ref, "total_services", "20"),
-						resource.TestCheckResourceAttr(
-							ref, "org", orgID),
-					),
-				},
-			},
-		})
-}
-
-func checkQuotaExists(resource string) resource.TestCheckFunc {
+func checkOrgQuotaExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) (err error) {
-
 		session := testAccProvider.Meta().(*cfapi.Session)
-
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("quota '%s' not found in terraform state", resource)
@@ -173,7 +118,7 @@ func checkQuotaExists(resource string) resource.TestCheckFunc {
 		attributes := rs.Primary.Attributes
 
 		var quota cfapi.CCQuota
-		if quota, err = session.QuotaManager().ReadQuota(id); err != nil {
+		if quota, err = session.QuotaManager().ReadQuota(cfapi.OrgQuota, id); err != nil {
 			return
 		}
 
@@ -182,9 +127,6 @@ func checkQuotaExists(resource string) resource.TestCheckFunc {
 			resource, quota)
 
 		if err := assertEquals(attributes, "name", quota.Name); err != nil {
-			return err
-		}
-		if err := assertEquals(attributes, "org", quota.OrgGUID); err != nil {
 			return err
 		}
 		if err := assertEquals(attributes, "allow_paid_service_plans", strconv.FormatBool(quota.NonBasicServicesAllowed)); err != nil {
@@ -205,21 +147,17 @@ func checkQuotaExists(resource string) resource.TestCheckFunc {
 		if err := assertEquals(attributes, "total_routes", strconv.Itoa(quota.TotalRoutes)); err != nil {
 			return err
 		}
-		if len(quota.OrgGUID) == 0 {
-			if err := assertEquals(attributes, "total_route_ports", strconv.Itoa(quota.TotalReserveredPorts)); err != nil {
-				return err
-			}
+		if err := assertEquals(attributes, "total_route_ports", strconv.Itoa(quota.TotalReserveredPorts)); err != nil {
+			return err
 		}
 		return
 	}
 }
 
-func testAccCheckQuotaResourceDestroy(quotaname string) resource.TestCheckFunc {
-
+func testAccCheckOrgQuotaResourceDestroy(quotaname string) resource.TestCheckFunc {
 	return func(s *terraform.State) (err error) {
-
 		session := testAccProvider.Meta().(*cfapi.Session)
-		if _, err := session.QuotaManager().FindQuota(quotaname); err != nil {
+		if _, err := session.QuotaManager().FindQuotaByName(cfapi.OrgQuota, quotaname, nil); err != nil {
 			switch err.(type) {
 			case *errors.ModelNotFoundError:
 				return nil
@@ -228,22 +166,5 @@ func testAccCheckQuotaResourceDestroy(quotaname string) resource.TestCheckFunc {
 			}
 		}
 		return fmt.Errorf("quota with name '%s' still exists in cloud foundry", quotaname)
-	}
-}
-
-func testAccCheckSpaceQuotaResourceDestroy(quotaname string) resource.TestCheckFunc {
-
-	return func(s *terraform.State) (err error) {
-
-		session := testAccProvider.Meta().(*cfapi.Session)
-		if _, err := session.QuotaManager().FindSpaceQuota(quotaname, defaultPcfDevOrgID()); err != nil {
-			switch err.(type) {
-			case *errors.ModelNotFoundError:
-				return nil
-			default:
-				return err
-			}
-		}
-		return fmt.Errorf("space quota with name '%s' still exists in cloud foundry", quotaname)
 	}
 }

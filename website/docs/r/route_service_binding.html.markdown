@@ -27,7 +27,7 @@ The following arguments are supported:
 
 * `service_instance` - (Required, String) The ID the service instance to bind to the route.
 * `route` - (Required, String) The ID of the route to bind the service instance to.
-* `json_params` - (Optional, String) Arbitrary parameters in the form of stringified JSON object to pass to the service bind handler.
+* `json_params` - (Optional, String) Arbitrary parameters in the form of stringified JSON object to pass to the service bind handler. Defaults to empty map.
 
 ## Import
 
