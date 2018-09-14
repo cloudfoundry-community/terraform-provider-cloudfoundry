@@ -541,37 +541,41 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	} else {
 		setAppArguments(app, d)
-	}
 
-	var routeMappings []map[string]interface{}
-	if routeMappings, err = rm.ReadRouteMappingsByApp(app.ID); err != nil {
-		return
-	}
-	var stateRouteList = d.Get("route").([]interface{})
-	var stateRouteMappings map[string]interface{}
-	if len(stateRouteList) == 1 {
-		stateRouteMappings = stateRouteList[0].(map[string]interface{})
-	} else {
-		stateRouteMappings = make(map[string]interface{})
-	}
-	currentRouteMappings := make(map[string]interface{})
-	for _, r := range []string{
-		"default_route",
-		"stage_route",
-		"live_route",
-	} {
-		currentRouteMappings[r] = ""
-		currentRouteMappings[r+"_mapping_id"] = ""
-		for _, mapping := range routeMappings {
-			var mappingID, route = mapping["mapping_id"], mapping["route"]
-			if route == stateRouteMappings[r] {
-				currentRouteMappings[r+"_mapping_id"] = mappingID
-				currentRouteMappings[r] = route
-				break
+		var routeMappings []map[string]interface{}
+		if routeMappings, err = rm.ReadRouteMappingsByApp(app.ID); err != nil {
+			return
+		}
+		var stateRouteList = d.Get("route").([]interface{})
+		var stateRouteMappings map[string]interface{}
+		if len(stateRouteList) == 1 && stateRouteList[0] != nil {
+			stateRouteMappings = stateRouteList[0].(map[string]interface{})
+		} else {
+			stateRouteMappings = make(map[string]interface{})
+		}
+		currentRouteMappings := make(map[string]interface{})
+		mappingFound := false
+		for _, r := range []string{
+			"default_route",
+			"stage_route",
+			"live_route",
+		} {
+			currentRouteMappings[r] = ""
+			currentRouteMappings[r+"_mapping_id"] = ""
+			for _, mapping := range routeMappings {
+				var route, mappingID = mapping["route"], mapping["mapping_id"]
+				if route == stateRouteMappings[r] {
+					mappingFound = true
+					currentRouteMappings[r] = route
+					currentRouteMappings[r+"_mapping_id"] = mappingID
+					break
+				}
 			}
 		}
+		if mappingFound {
+			d.Set("route", []map[string]interface{}{currentRouteMappings})
+		}
 	}
-	d.Set("route", [...]interface{}{currentRouteMappings})
 
 	return err
 }
@@ -688,7 +692,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			if _, err = validateRoute(newRouteConfig, r, rm); err != nil {
 				return err
 			}
-			if mappingID, err = updateMapping(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
+			if mappingID, err = updateAppRouteMappings(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
 				return err
 			}
 			if len(mappingID) > 0 {
@@ -918,7 +922,7 @@ func validateRoute(routeConfig map[string]interface{}, route string, rm *cfapi.R
 	return routeID, err
 }
 
-func updateMapping(
+func updateAppRouteMappings(
 	old map[string]interface{},
 	new map[string]interface{},
 	route, appID string, rm *cfapi.RouteManager) (mappingID string, err error) {
@@ -935,6 +939,11 @@ func updateMapping(
 	}
 
 	if oldRouteID != newRouteID {
+		if len(newRouteID) > 0 {
+			if mappingID, err = rm.CreateRouteMapping(newRouteID, appID, nil); err != nil {
+				return "", err
+			}
+		}
 		if len(oldRouteID) > 0 {
 			if v, ok := old[route+"_mapping_id"]; ok {
 				if err = rm.DeleteRouteMapping(v.(string)); err != nil {
@@ -946,10 +955,9 @@ func updateMapping(
 				}
 			}
 		}
-		if len(newRouteID) > 0 {
-			if mappingID, err = rm.CreateRouteMapping(newRouteID, appID, nil); err != nil {
-				return "", err
-			}
+		if err != nil {
+			// this means we failed to delete the old route mapping!
+			// TODO: is there anything we can do about this here?
 		}
 	}
 	return mappingID, err
