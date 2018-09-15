@@ -117,8 +117,8 @@ func (am *AppManager) FindApp(appName string) (app CCApp, err error) {
 			app.ID = appResource.Metadata.GUID
 			return false
 		}); err != nil {
-		return CCApp{}, err
-	}
+			return CCApp{}, err
+		}
 	if len(app.ID) == 0 {
 		return CCApp{}, errors.NewModelNotFoundError("Application", appName)
 	}
@@ -321,6 +321,7 @@ func (am *AppManager) StartDockerApp(appID string, timeout time.Duration) (err e
 	if app.State != nil && *app.State == AppStopped {
 
 		startApp.ID = app.ID
+		startApp.Name = app.Name
 		startApp.State = &AppStarted
 
 		if app, err = am.UpdateApp(startApp); err != nil {
@@ -457,6 +458,11 @@ func (am *AppManager) StopApp(appID string, timeout time.Duration) (err error) {
 	if app, err = am.ReadApp(appID); err != nil {
 		return err
 	}
+	// set to DockerCredentials = nil if this is not a docker image
+	if app.DockerImage == nil {
+		app.DockerCredentials = nil
+	}
+
 	if app.State != nil && *app.State == AppStarted {
 		app.State = &AppStopped
 		if app, err = am.UpdateApp(app); err != nil {

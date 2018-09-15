@@ -49,3 +49,9 @@ An existing Service Instance can be imported using its guid, e.g.
 ```
 $ terraform import cloudfoundry_service.redis a-guid
 ```
+
+## Timeouts
+
+* `create` - Default: 15 mins. Terraform will return an error if the resource was not deployed in the given timeframe.
+* `delete` - Default: 15 mins. Terraform will return an error if the resource was not deleted in the given timeframe.
+* `update` - Default: 15 mins. Terraform will return an error if the resource was not dupdated in the given timeframe.

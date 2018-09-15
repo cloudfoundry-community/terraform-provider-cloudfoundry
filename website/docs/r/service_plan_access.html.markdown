@@ -42,6 +42,8 @@ The following arguments are supported:
 * `org` - (Optional) The ID of the Org which should have access to the plan. Conflicts with `public`.
 * `public` - (Optional) Boolean that controls the public state of the plan. Conflicts with `org`.
 
+When neither `org` and `public` are given, the resource sets plan's public visibility to false at global level.
+
 ## Import
 
 The current Service Access can be imported using an `id`.

@@ -29,6 +29,19 @@ func TestAccServiceInstance_importBasic(t *testing.T) {
 					ResourceName:      resourceName,
 					ImportState:       true,
 					ImportStateVerify: true,
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckServiceInstanceExists(resourceName),
+						resource.TestCheckResourceAttr(
+							resourceName, "name", "mysql"),
+						resource.TestCheckResourceAttr(
+							resourceName, "tags.#", "2"),
+						resource.TestCheckResourceAttr(
+							resourceName, "tags.0", "tag-1"),
+						resource.TestCheckResourceAttr(
+							resourceName, "tags.1", "tag-2"),
+						resource.TestCheckResourceAttr(
+							resourceName, "json_params", ""),
+					),
 				},
 			},
 		})
