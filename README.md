@@ -32,7 +32,7 @@ $ make build
 Using the provider
 ------------------
 
-Download the release binary and copy it to the `$HOME/terraform.d/plugins/<os>_<arch>/` folder. For example `/home/youruser/terraform.d/plugins/linux_amd64` for a Linux environment or `/Users/youruser/terraform.d/plugins/darwin_amd64` for a MacOS environment.
+Download the release binary and copy it to the `$HOME/terraform.d/plugins/<os>_<arch>/terraform-provider-cloudfoundry` folder. For example `/home/youruser/terraform.d/plugins/linux_amd64` for a Linux environment or `/Users/youruser/terraform.d/plugins/darwin_amd64` for a MacOS environment.
 
 Developing the Provider
 -----------------------
