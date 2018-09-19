@@ -8,7 +8,7 @@ before_install:
 - curl https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
 - echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
 - sudo apt-get update -q
-- sudo apt-get install cf-cli -y --allow-unauthenticated
+- sudo apt-get install cf-cli -y
 install:
 - bash scripts/gogetcookie.sh
 - go get github.com/kardianos/govendor
