@@ -8,12 +8,12 @@ description: |-
 
 # cf\_domain
 
-Provides a resource for managing shared or private 
+Provides a resource for managing shared or private
 [domains](https://docs.cloudfoundry.org/devguide/deploy-apps/routes-domains.html#domains) in Cloud Foundry.
 
 ## Example Usage
 
-The following is an example of a shared domain for a sub-domain of the default application domain 
+The following is an example of a shared domain for a sub-domain of the default application domain
 retrieved via a [domain data source](/docs/providers/cloudfoundry/d/domain.html).
 
 ```
@@ -32,20 +32,20 @@ resource "cloudfoundry_domain" "private" {
 }
 ```
 
-~> **NOTE:** To control sharing of a private domain, use the [cloudfoundry_private_domain](private_domain_access.html) resource. 
+~> **NOTE:** To control sharing of a private domain, use the [cloudfoundry_private_domain](private_domain_access.html) resource.
 
 
 ## Argument Reference
 
 The following arguments are supported:
 
-* `name` - (Optional, String) Full name of domain. If specified then the `sub_domain` and `domain` attributes will be computed from the `name` 
+* `name` - (Optional, String) Full name of domain. If specified then the `sub_domain` and `domain` attributes will be computed from the `name`
 * `sub_domain` - (Optional, String) Sub-domain part of full domain name. If specified the `domain` argument needs to be provided and the `name` will be computed.
 * `domain` - (Optional, String) Domain part of full domain name. If specified the `sub_domain` argument needs to be provided and the `name` will be computed.
 
 The following argument applies only to shared domains.
 
-* `router_group` - (Optional, String) The router group GUID, which can be retrieved via the [`cloudfoundry_router_group`](/docs/providers/cf/d/stack.html) data resource. You would need to provide this when creating a shared domain for TCP routes.
+* `router_group` - (Optional, String) The router group GUID, which can be retrieved via the [`cloudfoundry_router_group`](/docs/providers/cloudfoundry/d/stack.html) data resource. You would need to provide this when creating a shared domain for TCP routes.
 
 The following argument applies only to private domains.
 

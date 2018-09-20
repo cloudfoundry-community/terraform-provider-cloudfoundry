@@ -30,9 +30,9 @@ The following arguments are supported:
 * `instances` - (Optional, Number) The number of app instances that you want to start. Defaults to 1.
 * `memory` - (Optional, Number) The memory limit for each application instance in megabytes. If not provided, value is computed and retreived from Cloud Foundry.
 * `disk_quota` - (Optional, Number) The disk space to be allocated for each application instance in megabytes. If not provided, default disk quota is retrieved from Cloud Foundry and assigned.
-* `stack` - (Optional) The GUID of the stack the application will be deployed to. Use the [`cloudfoundry_stack`](/docs/providers/cf/d/stack.html) data resource to lookup the stack GUID to override Cloud Foundry default.
+* `stack` - (Optional) The GUID of the stack the application will be deployed to. Use the [`cloudfoundry_stack`](/docs/providers/cloudfoundry/d/stack.html) data resource to lookup the stack GUID to override Cloud Foundry default.
 * `buildpack` - (Optional, String) The buildpack used to stage the application. There are multiple options to choose from:
-   * a Git URL (e.g. https://github.com/cloudfoundry/java-buildpack.git) or a Git URL with a branch or tag (e.g. https://github.com/cloudfoundry/java-buildpack.git#v3.3.0 for v3.3.0 tag) 
+   * a Git URL (e.g. https://github.com/cloudfoundry/java-buildpack.git) or a Git URL with a branch or tag (e.g. https://github.com/cloudfoundry/java-buildpack.git#v3.3.0 for v3.3.0 tag)
    * an installed admin buildpack name (e.g. my-buildpack)
    * an empty blank string to use built-in buildpacks (i.e. autodetection)
 * `command` - (Optional, String) A custom start command for the application. This overrides the start command provided by the buildpack.
@@ -46,11 +46,11 @@ One of the following arguments must be declared to locate application source or 
 
 * `url` - (Optional, String) The URL for the application binary. A local path may be referenced via "`file://...`".
 
-* `docker_image` - (Optional, String) The URL to the docker image with tag e.g registry.example.com:5000/user/repository/tag or docker image name from the public repo e.g. redis:4.0 
-* `docker_credentials` - (Optional) Defines login credentials for private docker repositories 
-  - `username` - (Required, String) Username for the private docker repo 
-  - `password` - (Required, String) Password for the private docker repo 
- 
+* `docker_image` - (Optional, String) The URL to the docker image with tag e.g registry.example.com:5000/user/repository/tag or docker image name from the public repo e.g. redis:4.0
+* `docker_credentials` - (Optional) Defines login credentials for private docker repositories
+  - `username` - (Required, String) Username for the private docker repo
+  - `password` - (Required, String) Password for the private docker repo
+
 * `git` - (Optional, String) The git repository where to pull the application source from.
 
   - `url` - (Required, String) The git URL for the application repository.
@@ -87,12 +87,12 @@ One of the following arguments must be declared to locate application source or 
 
 ### Routing
 
-* `route` - (Optional) Configures how the application will be accessed externally to cloudfoundry. 
+* `route` - (Optional) Configures how the application will be accessed externally to cloudfoundry.
   - `default_route` - (Optional, String) The ID of the route where the application will be reachable from once deployed.
 
 ### Environment Variables
 
-* `environment` - (Optional, Map) Key/value pairs of custom environment variables to set in your app. Does not include any [system or service variables](http://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#app-system-env). 
+* `environment` - (Optional, Map) Key/value pairs of custom environment variables to set in your app. Does not include any [system or service variables](http://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#app-system-env).
 
 ~> **NOTE:** Modifying this argument will cause the application to be restaged.
 
@@ -115,4 +115,3 @@ The current App can be imported using the `app` GUID, e.g.
 ```
 $ terraform import cloudfoundry_app.spring-music a-guid
 ```
-
