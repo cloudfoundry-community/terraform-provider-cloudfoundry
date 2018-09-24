@@ -19,6 +19,7 @@ cf delete -f basic-auth-broker &> /dev/null
 cf delete -f fake-service-broker &> /dev/null
 cf delete -f test-app &> /dev/null
 cf delete -f test-docker-app &> /dev/null
+cf delete -f spring-music &> /dev/null
 
 # Delete org and security gorups
 
