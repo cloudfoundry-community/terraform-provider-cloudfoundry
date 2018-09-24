@@ -22,7 +22,6 @@ cf delete -f test-docker-app &> /dev/null
 
 # Delete org and security gorups
 
-cf delete-org -f organization-one &> /dev/null
 cf delete-org -f myorg &> /dev/null
 cf delete-org -f org1 &> /dev/null
 cf delete-org -f org2 &> /dev/null
