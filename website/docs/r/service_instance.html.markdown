@@ -31,7 +31,7 @@ resource "cloudfoundry_service_instance" "redis1" {
 The following arguments are supported:
 
 * `name` - (Required, String) The name of the Service Instance in Cloud Foundry
-* `service_plan` - (Required, String) The ID of the [service plan](/docs/providers/cloudfoundry/d/service_plan.html)
+* `service_plan` - (Required, String) The ID of the [service plan](/docs/providers/cloudfoundry/d/service.html)
 * `space` - (Required, String) The ID of the [space](/docs/providers/cloudfoundry/r/space.html) 
 * `json_params` - (Optional, String) Json string of arbitrary parameters. Some services support providing additional configuration parameters within the provision request. By default, no params are provided.
 * `tags` - (Optional, List) List of instance tags. Some services provide a list of tags that Cloud Foundry delivers in [VCAP_SERVICES Env variables](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#VCAP-SERVICES). By default, no tags are assigned.
