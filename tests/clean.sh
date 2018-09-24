@@ -27,6 +27,8 @@ cf delete-org -f myorg &> /dev/null
 cf delete-org -f org1 &> /dev/null
 cf delete-org -f org2 &> /dev/null
 cf delete-org -f org3 &> /dev/null
+cf delete-org -f organization-one &> /dev/null
+cf delete-org -f organization-one-updated &> /dev/null
 cf delete-org -f quota-org &> /dev/null
 cf delete-security-group -f app-services1 &> /dev/null
 cf delete-security-group -f app-services2 &> /dev/null
