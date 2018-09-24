@@ -19,11 +19,16 @@ cf delete -f basic-auth-broker &> /dev/null
 cf delete -f fake-service-broker &> /dev/null
 cf delete -f test-app &> /dev/null
 cf delete -f test-docker-app &> /dev/null
+cf delete -f spring-music &> /dev/null
 
 # Delete org and security gorups
 
-cf delete-org -f organization-one &> /dev/null
 cf delete-org -f myorg &> /dev/null
+cf delete-org -f org1 &> /dev/null
+cf delete-org -f org2 &> /dev/null
+cf delete-org -f org3 &> /dev/null
+cf delete-org -f organization-one &> /dev/null
+cf delete-org -f organization-one-updated &> /dev/null
 cf delete-org -f quota-org &> /dev/null
 cf delete-security-group -f app-services1 &> /dev/null
 cf delete-security-group -f app-services2 &> /dev/null
@@ -39,6 +44,8 @@ cf delete-quota       -f 50g-org &> /dev/null
 
 cf delete-service -f basic-auth &> /dev/null
 cf delete-service -f rabbitmq &> /dev/null
+cf delete-service -f db &> /dev/null
+cf delete-service -f fs1 &> /dev/null
 cf purge-service-offering -f p-basic-auth &> /dev/null
 cf delete-service-broker -f basic-auth &> /dev/null
 
@@ -51,7 +58,13 @@ cf delete-route -f $CF_TEST_APP_DOMAIN --hostname basic-auth-broker &> /dev/null
 cf delete-route -f $CF_TEST_APP_DOMAIN --hostname test-app &> /dev/null
 cf delete-route -f $CF_TEST_APP_DOMAIN --hostname test-docker-app &> /dev/null
 cf delete-route -f $CF_TEST_APP_DOMAIN --hostname fake-service-broker &> /dev/null
+cf delete-route -f $CF_TEST_APP_DOMAIN --hostname spring-music &> /dev/null
 cf unbind-route-service -f $CF_TEST_APP_DOMAIN basic-auth --hostname php-app &> /dev/null
+
+# Delete domains
+#
+# We don't need to delete owned domains by dynamically created orgs as they are recursively deleted when associated
+# org gets deleted
 
 # Delete users
 
@@ -84,17 +97,20 @@ CF_SPACE_GUID=`cf space --guid $CF_SPACE`
 CF_ORG_GUID=`cf org --guid $CF_ORG`
 
 if [ `cf curl "/v2/apps?q=space_guid:$CF_SPACE_GUID" | jq ".total_results"` -ne "0" ]; then
-   echo "ERROR: The acceptance environment contains some residual apps, run \"cf a\" - please clean them up";
+   echo "ERROR: The acceptance environment contains some residual apps, run \"cf a\" - please clean them up using a PR on clean.sh";
+   cf a
    exit 1;
 fi
 
 if [ `cf curl "/v2/routes?q=organization_guid:$CF_ORG_GUID" | jq ".total_results"` -ne "0" ]; then
-   echo "ERROR: The acceptance environment contains some residual routes, run \"cf routes\" - please clean them up";
+   echo "ERROR: The acceptance environment contains some residual routes, run \"cf routes\" - please clean them up using a PR on clean.sh";
+   cf routes
    exit 1;
 fi
 
 if [ `cf curl "/v2/service_instances?q=organization_guid:$CF_ORG_GUID" | jq ".total_results"` -ne "0" ]; then
-   echo "ERROR: The acceptance environment contains some residual service instances, run \"cf s\" - please clean them up";
+   echo "ERROR: The acceptance environment contains some residual service instances, run \"cf s\" - please clean them up using a PR on clean.sh";
+   cf s
    exit 1;
 fi
 
