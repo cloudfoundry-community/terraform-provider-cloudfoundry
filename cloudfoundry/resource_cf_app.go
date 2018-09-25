@@ -568,6 +568,11 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 
+	// Enable partial state mode
+	// We need to explicitly set state updates ourselves or
+	// tell terraform when a state change is applied and thus okay to persist
+	d.Partial(true)
+
 	session := meta.(*cfapi.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
@@ -616,6 +621,19 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 		setAppArguments(app, d)
+		d.SetPartial("name")
+		d.SetPartial("space")
+		d.SetPartial("ports")
+		d.SetPartial("instances")
+		d.SetPartial("memory")
+		d.SetPartial("disk_quota")
+		d.SetPartial("command")
+		d.SetPartial("enable_ssh")
+		d.SetPartial("health_check_http_endpoint")
+		d.SetPartial("health_check_type")
+		d.SetPartial("health_check_timeout")
+		d.SetPartial("buildpack")
+		d.SetPartial("environment")
 	}
 
 	// update the application's service bindings (the necessary restage is dealt with later)
@@ -650,6 +668,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 				d.Set("service_binding", new)
 			}
 		}
+		// the changes were applied, in CF even though they might not have taken effect
+		// in the application, we'll allow the state updates for this property to occur
+		d.SetPartial("service_binding")
 		restage = true
 	}
 
@@ -687,6 +708,8 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 				newRouteConfig[r+"_mapping_id"] = mappingID
 			}
 		}
+		d.Set("route", [...]interface{}{newRouteConfig})
+		d.SetPartial("route")
 	}
 
 	binaryUpdated := false // check if we need to update the application's binary
@@ -778,6 +801,8 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
+	// We succeeded, disable partial mode
+	d.Partial(false)
 	return nil
 }
 

@@ -158,6 +158,13 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 
 	session.Log.DebugMessage("begin resourceServiceInstanceUpdate")
 
+	// Enable partial state mode
+	// We need to explicitly set state updates ourselves or
+	// tell terraform when a state change is applied and thus okay to persist
+	// In particular this is necessary for params since we cannot query CF for
+	// the current value of this field
+	d.Partial(true)
+
 	var (
 		id, name string
 		tags     []string
@@ -196,6 +203,8 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 		return err
 	}
 
+	// We succeeded, disable partial mode
+	d.Partial(false)
 	return nil
 }
 
