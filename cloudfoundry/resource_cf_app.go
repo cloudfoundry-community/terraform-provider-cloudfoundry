@@ -407,15 +407,14 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		app.DockerCredentials = &vv
 	}
 
-	prepare := make(chan error)
 	// Skip if Docker repo is given
 	if _, ok := d.GetOk("docker_image"); !ok {
 
 		// Download application binary / source asynchronously
-		go func() {
-			appPath, err = prepareApp(app, d, session.Log)
-			prepare <- err
-		}()
+		appPath, err = prepareApp(app, d, session.Log)
+		if err != nil {
+			return err
+		}
 	}
 
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
@@ -462,12 +461,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	// Skip if Docker repo is given
 	if _, ok := d.GetOk("docker_image"); !ok {
 
-		// Upload application binary / source
-		// asynchronously once download has completed
-		if err = <-prepare; err != nil {
-			return err
-		}
-
+		// Upload application binary / source asynchronously
 		go func() {
 			err = am.UploadApp(app, appPath, addContent)
 			if err != nil {
