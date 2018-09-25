@@ -1,5 +1,5 @@
 ---
-layout: "cf"
+layout: "cloudfoundry"
 page_title: "Cloud Foundry: cloudfoundry_org_quota"
 sidebar_current: "docs-cf-resource-org-quota"
 description: |-

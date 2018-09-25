@@ -43,7 +43,7 @@ The following maps the route to an application.
 
 - `target` - (Optional) A route mapping that will map this route to an application
 
-  - `app` - (Required, String) The ID of the [application](/docs/providers/cf/r/app.html) to map this route to.
+  - `app` - (Required, String) The ID of the [application](/docs/providers/cloudfoundry/r/app.html) to map this route to.
   - `port` - (Optional, Int) A port that the application will be listening on. If this argument is not provided then the route will be associated with the application's default port.
 
 ## Attributes Reference

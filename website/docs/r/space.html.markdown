@@ -45,7 +45,7 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the Space in Cloud Foundry.
 * `org` - (Required) The ID of the [Org](/docs/providers/cloudfoundry/r/org.html) within which to create the space.
-* `quota` - (Optional) The ID of the Space [quota](/docs/providers/cloudfoundry/r/quota.html) or plan defined for the owning Org. Specifying an empty string requests unassigns any space quota from the space. Defaults to empty string.
+* `quota` - (Optional) The ID of the Space [quota](/docs/providers/cloudfoundry/r/space_quota.html) or plan defined for the owning Org. Specifying an empty string requests unassigns any space quota from the space. Defaults to empty string.
 * `allow_ssh` - (Optional) Allows SSH to application containers via the [CF CLI](https://github.com/cloudfoundry/cli). Defaults to true.
 * `asgs` - (Optional) List of running [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications running within this space. Defaults to empty list.
 * `staging_asgs` - (Optional) List of staging [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications being staged for this space. Defaults to empty list.

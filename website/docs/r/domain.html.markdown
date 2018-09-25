@@ -45,7 +45,7 @@ The following arguments are supported:
 
 The following argument applies only to shared domains.
 
-* `router_group` - (Optional, String) The router group GUID, which can be retrieved via the [`cloudfoundry_router_group`](/docs/providers/cf/d/stack.html) data resource. You would need to provide this when creating a shared domain for TCP routes.
+* `router_group` - (Optional, String) The router group GUID, which can be retrieved via the [`cloudfoundry_router_group`](/docs/providers/cloudfoundry/d/stack.html) data resource. You would need to provide this when creating a shared domain for TCP routes.
 
 The following argument applies only to private domains.
 

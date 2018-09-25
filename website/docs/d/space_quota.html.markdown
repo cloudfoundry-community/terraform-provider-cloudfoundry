@@ -1,5 +1,5 @@
 ---
-layout: "cf"
+layout: "cloudfoundry"
 page_title: "Cloud Foundry: cloudfoundry_space_quota"
 sidebar_current: "docs-cf-datasource-space-quota"
 description: |-
