@@ -3,6 +3,7 @@ package cloudfoundry
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -173,6 +174,10 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	var route cfapi.CCRoute
 	if route, err = rm.ReadRoute(id); err != nil {
+		if strings.Contains(err.Error(), "status code: 404") {
+			d.SetId("")
+			err = nil
+		}
 		return err
 	}
 	if err = setRouteArguments(session, route, d); err != nil {
