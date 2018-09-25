@@ -1,10 +1,10 @@
-Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/mevansam/terraform-provider-cf.svg?branch=master)](https://travis-ci.org/mevansam/terraform-provider-cf)
+Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/mevansam/terraform-provider-cloudfoundry.svg?branch=master)](https://travis-ci.org/mevansam/terraform-provider-cloudfoundry)
 ================================
 
 Overview
 --------
 
-This Terraform provider plugin allows you to configure a Cloud Foundry environment declaratively using [HCL](https://github.com/hashicorp/hcl). The online documentation for the Terraform Cloud Foundry resource is available on the [wiki](https://github.com/mevansam/terraform-provider-cf/wiki).
+This Terraform provider plugin allows you to configure a Cloud Foundry environment declaratively using [HCL](https://github.com/hashicorp/hcl). The online documentation for the Terraform Cloud Foundry resource is available on the [wiki](https://github.com/mevansam/terraform-provider-cloudfoundry/wiki).
 
 Requirements
 ------------
@@ -15,17 +15,17 @@ Requirements
 Building The Provider
 ---------------------
 
-Clone repository to: `$GOPATH/src/github.com/terraform-providers/terraform-provider-cf`
+Clone repository to: `$GOPATH/src/github.com/terraform-providers/terraform-provider-cloudfoundry`
 
 ```sh
 $ mkdir -p $GOPATH/src/github.com/terraform-providers; cd $GOPATH/src/github.com/terraform-providers
-$ git clone git@github.com:terraform-providers/terraform-provider-cf
+$ git clone git@github.com:terraform-providers/terraform-provider-cloudfoundry
 ```
 
 Enter the provider directory and build the provider
 
 ```sh
-$ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-cf
+$ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-cloudfoundry
 $ make build
 ```
 
@@ -39,7 +39,7 @@ Developing the Provider
 
 If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.8+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
 
-Clone this repository to `GOPATH/src/github.com/terraform-providers/terraform-provider-cf` as its packaging structure 
+Clone this repository to `GOPATH/src/github.com/terraform-providers/terraform-provider-cloudfoundry` as its packaging structure
 has been defined such that it will be compatible with the Terraform provider plugin framwork in 0.10.x.
 
 To compile the provider, run `make build`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
@@ -47,7 +47,7 @@ To compile the provider, run `make build`. This will build the provider and put 
 ```sh
 $ make build
 ...
-$ $GOPATH/bin/terraform-provider-cf
+$ $GOPATH/bin/terraform-provider-cloudfoundry
 ...
 ```
 
@@ -87,7 +87,7 @@ To run the tests in AWS first launch PCFDev in AWS via `scripts/pcfdev-up.sh`, a
 make testacc
 ```
 
->> Acceptance tests are run against a PCF Dev instance in AWS before a release is created. Any other testing should be done using a local PCF Dev instance. 
+>> Acceptance tests are run against a PCF Dev instance in AWS before a release is created. Any other testing should be done using a local PCF Dev instance.
 
 ```sh
 $ make testacc

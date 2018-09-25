@@ -2,7 +2,7 @@ package cloudfoundry
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/repo"
 )
 
 var repoManager *repo.RepoManager = repo.NewRepoManager()

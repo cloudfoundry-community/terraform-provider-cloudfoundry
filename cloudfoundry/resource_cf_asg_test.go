@@ -9,14 +9,14 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const securityGroup = `
 resource "cloudfoundry_asg" "rmq" {
 
 	name = "rmq-dev"
-	
+
     rule {
         protocol = "tcp"
         destination = "192.168.1.100"
@@ -35,7 +35,7 @@ const securityGroupUpdate = `
 resource "cloudfoundry_asg" "rmq" {
 
 	name = "rmq-dev"
-	
+
     rule {
         protocol = "tcp"
         destination = "192.168.1.100"
