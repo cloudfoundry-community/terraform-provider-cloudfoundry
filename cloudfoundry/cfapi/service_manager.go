@@ -549,11 +549,11 @@ func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string, recurs
 
 	if !recursive {
 		err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?accepts_incomplete=true", serviceInstanceID))
-		return
+		return err
 	}
 
 	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?recursive=true&accepts_incomplete=true", serviceInstanceID))
-	return
+	return err
 }
 
 // CreateUserProvidedService -
