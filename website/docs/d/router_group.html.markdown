@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_router_group"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_router_group"
 sidebar_current: "docs-cf-datasource-router-group"
 description: |-
   Get information on a Cloud Foundry router_group.
@@ -10,12 +10,14 @@ description: |-
 
 Gets information on a particular Cloud Foundry router group. Router groups are used to declare [TCP domains](https://docs.cloudfoundry.org/devguide/deploy-apps/router_groups.html) and need to be referenced when declaring [TCP routes](https://docs.cloudfoundry.org/adminguide/enabling-tcp-routing.html).
 
+~> **NOTE:** This data source requires the provider to be authenticated with an account granted admin permissions.
+
 ## Example Usage
 
 The following example looks up a router group named 'my_custom_router_group'. 
 
 ```
-data "cf_router_group" "default-tcp" {
+data "cloudfoundry_router_group" "default-tcp" {
     name = "default-tcp"    
 }
 ```

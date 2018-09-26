@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	"fmt"
+
 	"github.com/hashicorp/terraform/helper/resource"
 )
 
 func TestAccRoute_importBasic(t *testing.T) {
-	resourceName := "cf_route.test-app-route"
+	resourceName := "cloudfoundry_route.test-app-route"
 
 	resource.Test(t,
 		resource.TestCase{

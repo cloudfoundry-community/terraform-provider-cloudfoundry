@@ -2,12 +2,13 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform/helper/resource"
 	"testing"
+
+	"github.com/hashicorp/terraform/helper/resource"
 )
 
 func TestAccPrivateDomainAccess_importBasic(t *testing.T) {
-	resourceName := "cf_private_domain_access.access-to-org"
+	resourceName := "cloudfoundry_private_domain_access.access-to-org"
 
 	// toIgnore := []string{"staging_asgs.#"}
 	// session := testSession()

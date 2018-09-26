@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_evg"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_evg"
 sidebar_current: "docs-cf-resource-evg"
 description: |-
   Provides a Cloud Foundry Environment Variable Group resource.
@@ -8,14 +8,16 @@ description: |-
 
 # cf\_evg
 
-Provides a resource for modifying the running or staging [environment variable groups](https://docs.pivotal.io/pivotalcf/1-8/devguide/deploy-apps/environment-variable.html#evgroups) in Cloud Foundry.
+Provides a resource for modifying the running or staging [environment variable groups](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#evgroups) in Cloud Foundry.
+
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
 
 ## Example Usage
 
 The example below shows how to add environment variables to the running environment variable group.
 
 ```
-resource "cf_evg" "running" {
+resource "cloudfoundry_evg" "running" {
 
 	name = "running"
 
@@ -37,8 +39,8 @@ The following arguments are supported:
 
 ## Import
 
-The current Evg can be imported using the `evg`, e.g.
+The current Evg can be imported using the `evg` name (either `running` or `staging` constant) e.g.
 
 ```
-$ terraform import cf_evg.private <running/staging>
+$ terraform import cloudfoundry_evg.private <running/staging>
 ```

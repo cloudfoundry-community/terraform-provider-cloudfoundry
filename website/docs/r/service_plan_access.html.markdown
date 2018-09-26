@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_service_plan_access"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_service_plan_access"
 sidebar_current: "docs-cf-resource-service-access"
 description: |-
   Provides a Cloud Foundry Service Access resource.
@@ -11,20 +11,26 @@ description: |-
 Provides a Cloud Foundry resource for managing [access](https://docs.cloudfoundry.org/services/access-control.html)
 to service plans published by Cloud Foundry [service brokers](https://docs.cloudfoundry.org/services/).
 
+~> **NOTE:** Multiple instances of this resource can be used to share a given service plan with multiple orgs.
+
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
+
+
+
 ## Example Usage
 
 The first example enables access to a specific plan of a given service broker to all organizations.
 The second example gives access to a specific org.
 
 ```
-resource "cf_service_plan_access" "org1-mysql-512mb" {
-    plan = "${cf_service_broker.mysql.service_plans["p-mysql/512mb"]}"
+resource "cloudfoundry_service_plan_access" "org1-mysql-512mb" {
+    plan = "${cloudfoundry_service_broker.mysql.service_plans["p-mysql/512mb"]}"
     public = true
 }
 
-resource "cf_service_plan_access" "org1-mysql-512mb" {
-    plan = "${cf_service_broker.mysql.service_plans["p-mysql/1gb"]}"
-    org = "${cf_org.org1.id}"
+resource "cloudfoundry_service_plan_access" "org1-mysql-512mb" {
+    plan = "${cloudfoundry_service_broker.mysql.service_plans["p-mysql/1gb"]}"
+    org = "${cloudfoundry_org.org1.id}"
 }
 ```
 
@@ -35,6 +41,8 @@ The following arguments are supported:
 * `plan` - (Required) The ID of the service plan to grant access to
 * `org` - (Optional) The ID of the Org which should have access to the plan. Conflicts with `public`.
 * `public` - (Optional) Boolean that controls the public state of the plan. Conflicts with `org`.
+
+When neither `org` and `public` are given, the resource sets plan's public visibility to false at global level.
 
 ## Import
 
@@ -51,5 +59,5 @@ Otherwise, the import would fail.
 E.g.
 
 ```
-$ terraform import cf_service_plan_access.org1-mysql-512mb a-guid
+$ terraform import cloudfoundry_service_plan_access.org1-mysql-512mb a-guid
 ```

@@ -65,9 +65,9 @@ func dataSourceServiceRead(d *schema.ResourceData, meta interface{}) (err error)
 
 	servicePlans, err := sm.GetServicePlans(service.GUID)
 	if err != nil {
-		return
+		return err
 	}
 	d.Set("service_plans", servicePlans)
 
-	return
+	return nil
 }

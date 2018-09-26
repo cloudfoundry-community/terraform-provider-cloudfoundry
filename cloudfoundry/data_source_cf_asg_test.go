@@ -11,7 +11,7 @@ import (
 
 const asgDataResource = `
 
-data "cf_asg" "public" {
+data "cloudfoundry_asg" "public" {
     name = "%s"
 }
 `
@@ -19,7 +19,7 @@ data "cf_asg" "public" {
 func TestAccDataSourceAsg_normal(t *testing.T) {
 
 	defaultAsg := getDefaultSecurityGroup()
-	ref := "data.cf_asg.public"
+	ref := "data.cloudfoundry_asg.public"
 
 	resource.Test(t,
 		resource.TestCase{

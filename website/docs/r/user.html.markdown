@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_user"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_user"
 sidebar_current: "docs-cf-resource-user"
 description: |-
   Provides a Cloud Foundry User resource.
@@ -8,15 +8,17 @@ description: |-
 
 # cf\_user
 
-Provides a Cloud Foundry resource for managing users. This resource provides extended 
+Provides a Cloud Foundry resource for registering users. This resource provides extended 
 functionality to attach additional UAA roles to the user.
+
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions and UAA admin client. See related [uaa documentation](http://docs.cloudfoundry.org/uaa/uaa-user-management.html#creating-users) 
 
 ## Example Usage
 
 The following example creates a user and attaches additional UAA roles to grant administrator rights to that user.
 
 ```
-resource "cf_user" "admin-service-user" {
+resource "cloudfoundry_user" "admin-service-user" {
     
     name = "cf-admin"
     password = "Passw0rd"
@@ -37,7 +39,7 @@ The following arguments are supported:
 * `origin` - (Optional) The user authentcation origin. By default this will be `UAA`. For users authenticated by LDAP this should be `ldap`
 * `given_name` - (Optional) The given name of the user
 * `family_name` - (Optional) The family name of the user
-* `email` - (Optional) The email address of the user
+* `email` - (Optional) The email address of the user. When not provided, name is used as email.
 * `groups` - (Optional) Any UAA `groups` / `roles` to associated the user with
 
 ## Attributes Reference
@@ -49,8 +51,8 @@ The following attributes are exported:
 
 ## Import
 
-The current User can be imported using the `user`, e.g.
+An existing User can be imported using its guid, e.g.
 
 ```
-$ terraform import cf_user.admin-service-user a-guid
+$ terraform import cloudfoundry_user.admin-service-user a-guid
 ```

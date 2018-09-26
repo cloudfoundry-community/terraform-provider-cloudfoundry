@@ -7,7 +7,7 @@ import (
 )
 
 func TestAccEvg_importBasic(t *testing.T) {
-	resourceName := "cf_evg.running"
+	resourceName := "cloudfoundry_evg.running"
 	name := "running"
 
 	resource.Test(t,

@@ -1,9 +1,9 @@
 ---
-layout: "cf"
+layout: "cloudfoundry"
 page_title: "Cloud Foundry: cloudfoundry_asg"
 sidebar_current: "docs-cf-datasource-asg"
 description: |-
-  Get information on a Cloud Foundry Appliction Security Group.
+  Get information on a Cloud Foundry Application Security Group.
 ---
 
 # cf\_asg
@@ -13,7 +13,7 @@ Gets information on a Cloud Foundry application security group.
 ## Example Usage
 
 ```
-data "cf_asg" "public" {
+data "cloudfoundry_asg" "public" {
     name = "public_networks"
 }
 ```
@@ -28,4 +28,4 @@ The following arguments are supported:
 
 The following attributes are exported:
 
-* `id` - The GUID of the applicaiton security group
+* `id` - The GUID of the application security group

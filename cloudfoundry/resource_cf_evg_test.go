@@ -11,7 +11,7 @@ import (
 
 const evgRunningResource = `
 
-resource "cf_evg" "running" {
+resource "cloudfoundry_evg" "running" {
 
 	name = "running"
 
@@ -26,7 +26,7 @@ resource "cf_evg" "running" {
 
 const evgRunningResourceUpdated = `
 
-resource "cf_evg" "running" {
+resource "cloudfoundry_evg" "running" {
 
 	name = "running"
 
@@ -41,7 +41,7 @@ resource "cf_evg" "running" {
 `
 
 const evgStagingResource = `
-resource "cf_evg" "staging" {
+resource "cloudfoundry_evg" "staging" {
 
 	name = "staging"
 
@@ -49,25 +49,25 @@ resource "cf_evg" "staging" {
         name3 = "value3"
         name4 = "value4"
         name5 = "value5"
-    }    
+    }
 }
 `
 
 const evgStagingResourceUpdated = `
-resource "cf_evg" "staging" {
+resource "cloudfoundry_evg" "staging" {
 
 	name = "staging"
 
     variables = {
         name4 = "value4"
         name5 = "valueE"
-    }    
+    }
 }
 `
 
 func TestAccRunningEvg_normal(t *testing.T) {
 
-	ref := "cf_evg.running"
+	ref := "cloudfoundry_evg.running"
 	name := "running"
 
 	resource.Test(t,
@@ -121,7 +121,7 @@ func TestAccRunningEvg_normal(t *testing.T) {
 
 func TestAccStagingEvg_normal(t *testing.T) {
 
-	ref := "cf_evg.staging"
+	ref := "cloudfoundry_evg.staging"
 	name := "staging"
 
 	resource.Test(t,
@@ -188,6 +188,10 @@ func checkEvgExists(resource string) resource.TestCheckFunc {
 			resource, attributes)
 
 		variables, err := session.EVGManager().GetEVG(id)
+		if err != nil {
+			return err
+		}
+
 		if err := assertMapEquals("variables", attributes, variables); err != nil {
 			return err
 		}

@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	"fmt"
+
 	"github.com/hashicorp/terraform/helper/resource"
 )
 
 func TestAccServicePlanAccess_importBasic(t *testing.T) {
-	resourceName := "cf_service_plan_access.redis-access"
+	resourceName := "cloudfoundry_service_plan_access.redis-access"
 
 	user, password := getRedisBrokerCredentials()
 	deleteServiceBroker("p-redis")

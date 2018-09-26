@@ -48,37 +48,40 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"cf_info":         dataSourceInfo(),
-			"cf_stack":        dataSourceStack(),
-			"cf_router_group": dataSourceRouterGroup(),
-			"cf_user":         dataSourceUser(),
-			"cf_domain":       dataSourceDomain(),
-			"cf_asg":          dataSourceAsg(),
-			"cf_quota":        dataSourceQuota(),
-			"cf_org":          dataSourceOrg(),
-			"cf_space":        dataSourceSpace(),
-			"cf_service":      dataSourceService(),
+			"cloudfoundry_info":         dataSourceInfo(),
+			"cloudfoundry_stack":        dataSourceStack(),
+			"cloudfoundry_router_group": dataSourceRouterGroup(),
+			"cloudfoundry_user":         dataSourceUser(),
+			"cloudfoundry_domain":       dataSourceDomain(),
+			"cloudfoundry_asg":          dataSourceAsg(),
+			"cloudfoundry_org":          dataSourceOrg(),
+			"cloudfoundry_org_quota":    dataSourceOrgQuota(),
+			"cloudfoundry_space_quota":  dataSourceSpaceQuota(),
+			"cloudfoundry_space":        dataSourceSpace(),
+			"cloudfoundry_service":      dataSourceService(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"cf_config":                resourceConfig(),
-			"cf_user":                  resourceUser(),
-			"cf_domain":                resourceDomain(),
-			"cf_private_domain_access": resourcePrivateDomainAccess(),
-			"cf_quota":                 resourceQuota(),
-			"cf_asg":                   resourceAsg(),
-			"cf_default_asg":           resourceDefaultAsg(),
-			"cf_evg":                   resourceEvg(),
-			"cf_org":                   resourceOrg(),
-			"cf_space":                 resourceSpace(),
-			"cf_service_broker":        resourceServiceBroker(),
-			"cf_service_plan_access":   resourceServicePlanAccess(),
-			"cf_service_instance":      resourceServiceInstance(),
-			"cf_service_key":           resourceServiceKey(),
-			"cf_user_provided_service": resourceUserProvidedService(),
-			"cf_buildpack":             resourceBuildpack(),
-			"cf_route":                 resourceRoute(),
-			"cf_app":                   resourceApp(),
+			"cloudfoundry_feature_flags":         resourceConfig(),
+			"cloudfoundry_user":                  resourceUser(),
+			"cloudfoundry_domain":                resourceDomain(),
+			"cloudfoundry_private_domain_access": resourcePrivateDomainAccess(),
+			"cloudfoundry_asg":                   resourceAsg(),
+			"cloudfoundry_org_quota":             resourceOrgQuota(),
+			"cloudfoundry_space_quota":           resourceSpaceQuota(),
+			"cloudfoundry_default_asg":           resourceDefaultAsg(),
+			"cloudfoundry_evg":                   resourceEvg(),
+			"cloudfoundry_org":                   resourceOrg(),
+			"cloudfoundry_space":                 resourceSpace(),
+			"cloudfoundry_service_broker":        resourceServiceBroker(),
+			"cloudfoundry_service_plan_access":   resourceServicePlanAccess(),
+			"cloudfoundry_service_instance":      resourceServiceInstance(),
+			"cloudfoundry_service_key":           resourceServiceKey(),
+			"cloudfoundry_user_provided_service": resourceUserProvidedService(),
+			"cloudfoundry_buildpack":             resourceBuildpack(),
+			"cloudfoundry_route":                 resourceRoute(),
+			"cloudfoundry_route_service_binding": resourceRouteServiceBinding(),
+			"cloudfoundry_app":                   resourceApp(),
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -86,10 +89,6 @@ func Provider() terraform.ResourceProvider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-
-	if err := initRepoManager(); err != nil {
-		return nil, err
-	}
 
 	config := Config{
 		endpoint:          d.Get("api_url").(string),

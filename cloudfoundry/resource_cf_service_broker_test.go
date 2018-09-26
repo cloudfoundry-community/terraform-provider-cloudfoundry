@@ -13,7 +13,7 @@ import (
 
 const sbResource = `
 
-resource "cf_service_broker" "redis" {
+resource "cloudfoundry_service_broker" "redis" {
 	name = "test-redis"
 	url = "https://redis-broker.%s"
 	username = "%s"
@@ -23,7 +23,7 @@ resource "cf_service_broker" "redis" {
 
 const sbResourceUpdate = `
 
-resource "cf_service_broker" "redis" {
+resource "cloudfoundry_service_broker" "redis" {
 	name = "test-redis-renamed"
 	url = "https://redis-broker.%s"
 	username = "%s"
@@ -36,7 +36,7 @@ func TestAccServiceBroker_normal(t *testing.T) {
 	user, password := getRedisBrokerCredentials()
 	deleteServiceBroker("p-redis")
 
-	ref := "cf_service_broker.redis"
+	ref := "cloudfoundry_service_broker.redis"
 
 	resource.Test(t,
 		resource.TestCase{

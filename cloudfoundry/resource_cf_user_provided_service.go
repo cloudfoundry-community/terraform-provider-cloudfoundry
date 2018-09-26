@@ -3,6 +3,8 @@ package cloudfoundry
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/structure"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
@@ -34,19 +36,23 @@ func resourceUserProvidedService() *schema.Resource {
 			"syslog_drain_url": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Default:  "",
 			},
 			"syslogDrainURL": &schema.Schema{
 				Type:       schema.TypeString,
 				Optional:   true,
+				Default:    "",
 				Deprecated: "Use syslog_drain_url, Terraform complain about field name may only contain lowercase alphanumeric characters & underscores",
 			},
 			"route_service_url": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Default:  "",
 			},
 			"routeServiceURL": &schema.Schema{
 				Type:       schema.TypeString,
 				Optional:   true,
+				Default:    "",
 				Deprecated: "Use route_service_url, Terraform complain about field name may only contain lowercase alphanumeric characters & underscores",
 			},
 			"credentials": &schema.Schema{
@@ -90,8 +96,8 @@ func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{})
 	}
 
 	credentials = make(map[string]interface{})
-	if credsJson, hasJson := d.GetOk("credentials_json"); hasJson {
-		if err = json.Unmarshal([]byte(credsJson.(string)), &credentials); err != nil {
+	if credsJSON, hasJSON := d.GetOk("credentials_json"); hasJSON {
+		if err = json.Unmarshal([]byte(credsJSON.(string)), &credentials); err != nil {
 			return err
 		}
 	} else {
@@ -103,13 +109,13 @@ func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{})
 	sm := session.ServiceManager()
 
 	if id, err = sm.CreateUserProvidedService(name, space, credentials, syslogDrainURL, routeServiceURL); err != nil {
-		return
+		return err
 	}
 	session.Log.DebugMessage("New User Provided Service : %# v", id)
 
 	d.SetId(id)
 
-	return
+	return nil
 }
 
 func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) (err error) {
@@ -123,9 +129,12 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) (
 	sm := session.ServiceManager()
 	var ups cfapi.CCUserProvidedService
 
-	ups, err = sm.ReadUserProvidedService(d.Id())
-	if err != nil {
-		return
+	if ups, err = sm.ReadUserProvidedService(d.Id()); err != nil {
+		if strings.Contains(err.Error(), "status code: 404") {
+			d.SetId("")
+			err = nil
+		}
+		return err
 	}
 
 	d.Set("name", ups.Name)
@@ -145,7 +154,7 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) (
 		d.Set("route_service_url", ups.RouteServiceURL)
 	}
 
-	if _, hasJson := d.GetOk("credentials_json"); hasJson {
+	if _, hasJSON := d.GetOk("credentials_json"); hasJSON {
 		bytes, _ := json.Marshal(ups.Credentials)
 		d.Set("credentials_json", string(bytes))
 	} else {
@@ -154,7 +163,7 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) (
 
 	session.Log.DebugMessage("Read User Provided Service : %# v", ups)
 
-	return
+	return nil
 }
 
 func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -185,8 +194,8 @@ func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{})
 	}
 
 	credentials = make(map[string]interface{})
-	if credsJson, hasJson := d.GetOk("credentials_json"); hasJson {
-		if err = json.Unmarshal([]byte(credsJson.(string)), &credentials); err != nil {
+	if credsJSON, hasJSON := d.GetOk("credentials_json"); hasJSON {
+		if err = json.Unmarshal([]byte(credsJSON.(string)), &credentials); err != nil {
 			return err
 		}
 	} else {
@@ -196,13 +205,10 @@ func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{})
 	}
 
 	if _, err = sm.UpdateUserProvidedService(id, name, credentials, syslogDrainURL, routeServiceURL); err != nil {
-		return
-	}
-	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }
 
 func resourceUserProvidedServiceDelete(d *schema.ResourceData, meta interface{}) (err error) {
@@ -215,12 +221,11 @@ func resourceUserProvidedServiceDelete(d *schema.ResourceData, meta interface{})
 
 	sm := session.ServiceManager()
 
-	err = sm.DeleteServiceInstance(d.Id())
-	if err != nil {
-		return
+	if err = sm.DeleteServiceInstance(d.Id()); err != nil {
+		return err
 	}
 
 	session.Log.DebugMessage("Deleted Service Instance : %s", d.Id())
 
-	return
+	return nil
 }

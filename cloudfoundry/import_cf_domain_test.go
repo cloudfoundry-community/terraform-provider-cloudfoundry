@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	"fmt"
+
 	"github.com/hashicorp/terraform/helper/resource"
 )
 
 func TestAccDomain_importBasic(t *testing.T) {
-	resourceName := "cf_domain.shared"
+	resourceName := "cloudfoundry_domain.shared"
 	domainname := "dev." + defaultAppDomain()
 
 	resource.Test(t,

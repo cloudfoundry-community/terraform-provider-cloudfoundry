@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	"fmt"
+
 	"github.com/hashicorp/terraform/helper/resource"
 )
 
 func TestAccApp_importBasic(t *testing.T) {
-	resourceName := "cf_app.spring-music"
+	resourceName := "cloudfoundry_app.spring-music"
 
 	resource.Test(t,
 		resource.TestCase{

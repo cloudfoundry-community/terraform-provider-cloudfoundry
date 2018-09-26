@@ -46,7 +46,7 @@ type Data struct {
 func NewData() *Data {
 	data := new(Data)
 
-	data.UAAOAuthClient = "cf"
+	data.UAAOAuthClient = "cloudfoundry"
 	data.UAAOAuthClientSecret = ""
 
 	return data

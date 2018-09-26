@@ -42,8 +42,8 @@ func dataSourceOrgRead(d *schema.ResourceData, meta interface{}) (err error) {
 	org, err = om.FindOrg(name)
 
 	if err != nil {
-		return
+		return err
 	}
 	d.SetId(org.ID)
-	return
+	return err
 }

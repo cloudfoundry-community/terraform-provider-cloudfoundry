@@ -1,49 +1,23 @@
 package cloudfoundry
 
 import (
-	"os"
-	"os/user"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
 )
 
-var repoManager *repo.RepoManager
-
-// initRepoManager -
-func initRepoManager() error {
-
-	var (
-		usr     *user.User
-		rootDir string
-
-		err error
-	)
-
-	if usr, err = user.Current(); err != nil {
-		return err
-	}
-	if len(usr.HomeDir) == 0 {
-		rootDir = os.TempDir()
-	} else {
-		rootDir = usr.HomeDir
-	}
-
-	workspace := rootDir + "/.terraform.d/provider/cf/repo"
-	if err = os.MkdirAll(workspace, os.ModePerm); err != nil {
-		return err
-	}
-	repoManager = repo.NewRepoManager(workspace)
-	return nil
-}
+var repoManager *repo.RepoManager = repo.NewRepoManager()
 
 // getRepositoryFromConfig -
 func getRepositoryFromConfig(d *schema.ResourceData) (repository repo.Repository, err error) {
 
 	var (
-		version     string
-		versionType repo.VersionType
+		version, name string
+		versionType   repo.VersionType
 	)
+
+	if v, ok := d.Get("name").(string); ok {
+		name = v
+	}
 
 	if v, ok := d.Get("git").([]interface{}); ok && len(v) > 0 {
 		gitArgs := v[0].(map[string]interface{})
@@ -76,8 +50,8 @@ func getRepositoryFromConfig(d *schema.ResourceData) (repository repo.Repository
 			privateKey = &s
 		}
 
-		if repository, err = repoManager.GetGitRepository(repoURL, user, password, privateKey); err != nil {
-			return
+		if repository, err = repoManager.GetGitRepository(name, repoURL, user, password, privateKey); err != nil {
+			return repository, err
 		}
 
 	} else if v, ok := d.Get("github_release").([]interface{}); ok && len(v) > 0 {
@@ -85,7 +59,7 @@ func getRepositoryFromConfig(d *schema.ResourceData) (repository repo.Repository
 
 		var (
 			arg, ghOwner, ghRepo, archiveName string
-			token                             *string
+			user, password                    *string
 		)
 
 		ghOwner = githubArgs["owner"].(string)
@@ -94,14 +68,21 @@ func getRepositoryFromConfig(d *schema.ResourceData) (repository repo.Repository
 		version = githubArgs["version"].(string)
 		versionType = repo.DefaultVersionType
 
-		if arg = githubArgs["token"].(string); len(arg) > 0 {
-			token = &arg
+		if arg = githubArgs["user"].(string); len(arg) > 0 {
+			user = &arg
 		}
 
-		if repository, err = repoManager.GetGithubRelease(ghOwner, ghRepo, archiveName, token); err != nil {
-			return
+		if arg = githubArgs["password"].(string); len(arg) > 0 {
+			password = &arg
 		}
+
+		if repository, err = repoManager.GetGithubRelease(ghOwner, ghRepo, archiveName, user, password); err != nil {
+			return repository, err
+		}
+
 	}
-	err = repository.SetVersion(version, versionType)
-	return
+	if err = repository.SetVersion(version, versionType); err != nil {
+		return repository, err
+	}
+	return repository, nil
 }

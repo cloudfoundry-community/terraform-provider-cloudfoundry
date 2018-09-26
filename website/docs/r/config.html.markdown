@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_org"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_org"
 sidebar_current: "docs-cf-resource-config"
 description: |-
   Provides a Cloud Foundry configuration resource.
@@ -8,14 +8,17 @@ description: |-
 
 # cf\_config
 
-Provides a Cloud Foundry configuration resource for managing Cloud Foundry [feature](https://docs.cloudfoundry.org/adminguide/listing-feature-flags.html) flags. 
+Provides a Cloud Foundry configuration resource for managing Cloud Foundry [feature](https://docs.cloudfoundry.org/adminguide/listing-feature-flags.html) flags.
+
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
+ 
 
 ## Example Usage
 
 The following is an example updates Cloud Foundry feature flags. Each of the flags will also be computed from current settings and exported if not changed.
 
 ```
-resource "cf_config" "config" {
+resource "cloudfoundry_config" "config" {
 
   feature_flags {
     user_org_creation                    = false
@@ -54,10 +57,12 @@ The following arguments are supported:
   - `space_scoped_private_broker_creation` - (Optional) Space Developers can create space-scoped private service brokers. Minimum CC API version: 2.58.
   - `space_developer_env_var_visibility` - (Optional) Space Developers can view their v2 environment variables. Org Managers and Space Managers can view their v3 environment variables. Minimum CC API version: 2.58.
 
+When not provided, optional fields are filled with their actual value in Cloud Foundry.
+
 ## Import
 
-The current Config can be imported using the `config`, e.g.
+The current Config can be imported using the `config` constant, e.g.
 
 ```
-$ terraform import cf_config.config config
+$ terraform import cloudfoundry_config.config config
 ```

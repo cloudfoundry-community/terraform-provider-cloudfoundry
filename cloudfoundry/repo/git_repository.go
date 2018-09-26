@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"os"
 )
 
 const (
@@ -40,12 +41,11 @@ func (r *GitRepository) SetVersion(version string, versionType VersionType) (err
 	)
 
 	if w, err = r.gitRepo.Worktree(); err != nil {
-		return
+		return err
 	}
 
 	switch versionType {
 	case GitVersionTypeBranch:
-
 		refName = plumbing.ReferenceName("refs/heads/" + version)
 		if err = r.gitRepo.Pull(
 			&git.PullOptions{
@@ -53,27 +53,23 @@ func (r *GitRepository) SetVersion(version string, versionType VersionType) (err
 				SingleBranch:      true,
 				RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
 			}); err != nil && err != git.NoErrAlreadyUpToDate {
-			return
+			return err
 		}
-		err = nil
 
 	case GitVersionTypeTag:
-
 		refName = plumbing.ReferenceName("refs/tags/" + version)
 		if err = w.Checkout(&git.CheckoutOptions{
 			Branch: refName,
 			Force:  true,
 		}); err != nil && err != git.NoErrAlreadyUpToDate {
-			return
+			return err
 		}
-		err = nil
 
 	default:
-		err = fmt.Errorf("invalid git version type")
-		return
+		return fmt.Errorf("invalid git version type")
 	}
 
-	return
+	return nil
 }
 
 // String -
@@ -84,4 +80,9 @@ func (r *GitRepository) String() string {
 		panic(err.Error())
 	}
 	return ref.Hash().String()
+}
+
+// Clean -
+func (r *GitRepository) Clean() error {
+	return os.RemoveAll(r.repoPath)
 }
