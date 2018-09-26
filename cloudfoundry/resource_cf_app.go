@@ -555,6 +555,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 				stateRouteMappings = make(map[string]interface{})
 			}
 			currentRouteMappings := make(map[string]interface{})
+			mappingFound := false
 			for _, r := range []string{
 				"default_route",
 				"stage_route",
@@ -563,15 +564,18 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 				currentRouteMappings[r] = ""
 				currentRouteMappings[r+"_mapping_id"] = ""
 				for _, mapping := range routeMappings {
-					var mappingID, route = mapping["mapping_id"], mapping["route"]
+					var route, mappingID = mapping["route"], mapping["mapping_id"]
 					if route == stateRouteMappings[r] {
-						currentRouteMappings[r+"_mapping_id"] = mappingID
+						mappingFound = true
 						currentRouteMappings[r] = route
+						currentRouteMappings[r+"_mapping_id"] = mappingID
 						break
 					}
 				}
 			}
-			d.Set("route", [...]interface{}{currentRouteMappings})
+			if mappingFound {
+				d.Set("route", []map[string]interface{}{currentRouteMappings})
+			}
 		} else if srd, hasNewRoutes := d.GetOk("routes"); hasNewRoutes {
 			stateRoutes := srd.(*schema.Set)
 			if currentRouteMappings, err := rm.ReadRouteMappingsByApp(app.ID); err != nil {
