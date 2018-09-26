@@ -11,38 +11,38 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	git "gopkg.in/src-d/go-git.v4"
 )
 
 const routeBindingResourceCommon = `
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "{{ .Domain }}"
 }
 
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
   name = "pcfdev-org"
 }
 
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
   name = "pcfdev-space"
-  org = "${data.cf_org.org.id}"
+  org = "${data.cloudfoundry_org.org.id}"
 }
 
-resource "cf_route" "basic-auth-broker" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "basic-auth-broker" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "basic-auth-broker"
 }
 
-resource "cf_app" "basic-auth-broker" {
+resource "cloudfoundry_app" "basic-auth-broker" {
 	name = "basic-auth-broker"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	memory = "128"
 	disk_quota = "256"
   url = "file://{{ .CloneDir }}/servicebroker"
 	route {
-		default_route = "${cf_route.basic-auth-broker.id}"
+		default_route = "${cloudfoundry_route.basic-auth-broker.id}"
 	}
   environment {
     BROKER_CONFIG_PATH = "config.yml"
@@ -50,59 +50,59 @@ resource "cf_app" "basic-auth-broker" {
   timeout = 300
 }
 
-resource "cf_service_broker" "basic-auth" {
-  depends_on = [ "cf_app.basic-auth-broker" ]
+resource "cloudfoundry_service_broker" "basic-auth" {
+  depends_on = [ "cloudfoundry_app.basic-auth-broker" ]
 	name = "basic-auth"
   url = "https://basic-auth-broker.{{ .Domain }}"
 	username = "admin"
 	password = "letmein"
 }
 
-resource "cf_service_plan_access" "basic-auth-access" {
-	plan = "${cf_service_broker.basic-auth.service_plans["p-basic-auth/reverse-name"]}"
+resource "cloudfoundry_service_plan_access" "basic-auth-access" {
+	plan = "${cloudfoundry_service_broker.basic-auth.service_plans["p-basic-auth/reverse-name"]}"
 	public = true
 }
 
 
-resource "cf_route" "basic-auth-router" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "basic-auth-router" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "basic-auth-router"
 }
 
-resource "cf_app" "basic-auth-router" {
+resource "cloudfoundry_app" "basic-auth-router" {
 	name = "basic-auth-router"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	memory = "128"
 	disk_quota = "256"
   url = "file://{{ .CloneDir }}/routeserver"
 	route {
-		default_route = "${cf_route.basic-auth-router.id}"
+		default_route = "${cloudfoundry_route.basic-auth-router.id}"
 	}
   timeout = 300
 }
 
-resource "cf_service_instance" "basic-auth" {
-  depends_on = [ "cf_service_plan_access.basic-auth-access" ]
+resource "cloudfoundry_service_instance" "basic-auth" {
+  depends_on = [ "cloudfoundry_service_plan_access.basic-auth-access" ]
 	name = "basic-auth"
-  space = "${data.cf_space.space.id}"
-  service_plan = "${cf_service_broker.basic-auth.service_plans["p-basic-auth/reverse-name"]}"
+  space = "${data.cloudfoundry_space.space.id}"
+  service_plan = "${cloudfoundry_service_broker.basic-auth.service_plans["p-basic-auth/reverse-name"]}"
 }
 
-resource "cf_route" "php-app" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "php-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "php-app"
 }
 
-resource "cf_app" "php-app" {
+resource "cloudfoundry_app" "php-app" {
 	name = "php-app"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	memory = "128"
 	disk_quota = "256"
   url = "file://{{ .BaseDir }}/tests/phpapp"
 	route {
-		default_route = "${cf_route.php-app.id}"
+		default_route = "${cloudfoundry_route.php-app.id}"
 	}
   timeout = 300
 }
@@ -111,29 +111,29 @@ resource "cf_app" "php-app" {
 `
 
 const routeBindingResourceCreate = `
-resource "cf_route_service_binding" "route-bind" {
-  service_instance = "${cf_service_instance.basic-auth.id}"
-  route = "${cf_route.php-app.id}"
+resource "cloudfoundry_route_service_binding" "route-bind" {
+  service_instance = "${cloudfoundry_service_instance.basic-auth.id}"
+  route = "${cloudfoundry_route.php-app.id}"
 }
 `
 
 const routeBindingResourceUpdate = `
-resource "cf_route" "php-app-other" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "php-app-other" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "php-app-other"
 }
 
-resource "cf_route_service_binding" "route-bind" {
-  service_instance = "${cf_service_instance.basic-auth.id}"
-  route = "${cf_route.php-app-other.id}"
+resource "cloudfoundry_route_service_binding" "route-bind" {
+  service_instance = "${cloudfoundry_service_instance.basic-auth.id}"
+  route = "${cloudfoundry_route.php-app-other.id}"
 }
 `
 
 const routeBindingResourceDelete = `
-resource "cf_route" "php-app-other" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "php-app-other" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "php-app-other"
 }
 `
@@ -167,7 +167,7 @@ func TestAccRouteServiceBinding_normal(t *testing.T) {
 	})
 	err = ioutil.WriteFile(dir+"/servicebroker/config.yml", buf.Bytes(), 0666)
 
-	ref := "cf_route_service_binding.route-bind"
+	ref := "cloudfoundry_route_service_binding.route-bind"
 	tpl, _ = template.New("sql").Parse(routeBindingResourceCommon)
 	buf = &bytes.Buffer{}
 	tpl.Execute(buf, map[string]interface{}{
@@ -185,25 +185,25 @@ func TestAccRouteServiceBinding_normal(t *testing.T) {
 				resource.TestStep{
 					Config: buf.String() + routeBindingResourceCreate,
 					Check: resource.ComposeTestCheckFunc(
-						checkRouteServiceBindingResource(ref, "cf_service_instance.basic-auth", "cf_route.php-app"),
-						checkRouteServiceBinding("cf_service_instance.basic-auth", "cf_route.php-app", true),
+						checkRouteServiceBindingResource(ref, "cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app"),
+						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app", true),
 						checkAppResponse(appURL, 401),
 					),
 				},
 				resource.TestStep{
 					Config: buf.String() + routeBindingResourceUpdate,
 					Check: resource.ComposeTestCheckFunc(
-						checkRouteServiceBindingResource(ref, "cf_service_instance.basic-auth", "cf_route.php-app-other"),
-						checkRouteServiceBinding("cf_service_instance.basic-auth", "cf_route.php-app", false),
-						checkRouteServiceBinding("cf_service_instance.basic-auth", "cf_route.php-app-other", true),
+						checkRouteServiceBindingResource(ref, "cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app-other"),
+						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app", false),
+						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app-other", true),
 						checkAppResponse(appURL, 200),
 					),
 				},
 				resource.TestStep{
 					Config: buf.String() + routeBindingResourceDelete,
 					Check: resource.ComposeTestCheckFunc(
-						checkRouteServiceBinding("cf_service_instance.basic-auth", "cf_route.php-app", false),
-						checkRouteServiceBinding("cf_service_instance.basic-auth", "cf_route.php-app-other", false),
+						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app", false),
+						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app-other", false),
 						checkAppResponse(appURL, 200),
 					),
 				},

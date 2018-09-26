@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccApp_importBasic(t *testing.T) {
-	resourceName := "cf_app.spring-music"
+	resourceName := "cloudfoundry_app.spring-music"
 
 	resource.Test(t,
 		resource.TestCase{

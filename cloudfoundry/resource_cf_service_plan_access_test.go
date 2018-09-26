@@ -7,61 +7,61 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const saResource = `
-resource "cf_service_broker" "redis" {
+resource "cloudfoundry_service_broker" "redis" {
 	name = "test-redis"
 	url = "https://redis-broker.%s"
 	username = "%s"
 	password = "%s"
 }
 
-resource "cf_service_plan_access" "redis-access" {
-	plan = "${cf_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+resource "cloudfoundry_service_plan_access" "redis-access" {
+	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
 	org = "%s"
 }
 `
 
 const saResourceUpdateTrue = `
-resource "cf_service_broker" "redis" {
+resource "cloudfoundry_service_broker" "redis" {
 	name = "test-redis"
 	url = "https://redis-broker.%s"
 	username = "%s"
 	password = "%s"
 }
 
-resource "cf_service_plan_access" "redis-access" {
-	plan = "${cf_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+resource "cloudfoundry_service_plan_access" "redis-access" {
+	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
 	public = true
 }
 `
 
 const saResourceUpdateFalse = `
-resource "cf_service_broker" "redis" {
+resource "cloudfoundry_service_broker" "redis" {
 	name = "test-redis"
 	url = "https://redis-broker.%s"
 	username = "%s"
 	password = "%s"
 }
 
-resource "cf_service_plan_access" "redis-access" {
-	plan = "${cf_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+resource "cloudfoundry_service_plan_access" "redis-access" {
+	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
 	public = false
 }
 `
 
 const saResourceError = `
-resource "cf_service_broker" "redis" {
+resource "cloudfoundry_service_broker" "redis" {
 	name = "test-redis"
 	url = "https://redis-broker.%s"
 	username = "%s"
 	password = "%s"
 }
 
-resource "cf_service_plan_access" "redis-access" {
-	plan = "${cf_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+resource "cloudfoundry_service_plan_access" "redis-access" {
+	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
 	org = "%s"
 	public = true
 }
@@ -72,7 +72,7 @@ func TestAccServicePlanAccess_normal(t *testing.T) {
 	deleteServiceBroker("p-redis")
 
 	var servicePlanAccessGUID string
-	ref := "cf_service_plan_access.redis-access"
+	ref := "cloudfoundry_service_plan_access.redis-access"
 
 	resource.Test(t,
 		resource.TestCase{

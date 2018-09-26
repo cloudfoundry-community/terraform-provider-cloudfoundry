@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_service"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_service"
 sidebar_current: "docs-cf-datasource-service"
 description: |-
   Get information on a Cloud Foundry Service.
@@ -15,7 +15,7 @@ Gets information on a Cloud Foundry service definition.
 The following example looks up a service definition named 'p-redis', globally. 
 
 ```
-data "cf_service" "redis" {
+data "cloudfoundry_service" "redis" {
     name = "p-redis"    
 }
 ```
@@ -23,9 +23,9 @@ data "cf_service" "redis" {
 The following example looks up a service named 'p-redis', registered as a space-scoped service within the specified Space id
 
 ```
-data "cf_service" "redis" {
+data "cloudfoundry_service" "redis" {
     name = "p-redis"  
-    space = "${cf_space.dev.id}"  
+    space = "${cloudfoundry_space.dev.id}"  
 }
 ```
 

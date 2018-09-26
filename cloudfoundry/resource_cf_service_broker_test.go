@@ -8,12 +8,12 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const sbResource = `
 
-resource "cf_service_broker" "redis" {
+resource "cloudfoundry_service_broker" "redis" {
 	name = "test-redis"
 	url = "https://redis-broker.%s"
 	username = "%s"
@@ -23,7 +23,7 @@ resource "cf_service_broker" "redis" {
 
 const sbResourceUpdate = `
 
-resource "cf_service_broker" "redis" {
+resource "cloudfoundry_service_broker" "redis" {
 	name = "test-redis-renamed"
 	url = "https://redis-broker.%s"
 	username = "%s"
@@ -36,7 +36,7 @@ func TestAccServiceBroker_normal(t *testing.T) {
 	user, password := getRedisBrokerCredentials()
 	deleteServiceBroker("p-redis")
 
-	ref := "cf_service_broker.redis"
+	ref := "cloudfoundry_service_broker.redis"
 
 	resource.Test(t,
 		resource.TestCase{

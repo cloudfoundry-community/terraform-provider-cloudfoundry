@@ -6,28 +6,28 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const spaceDataResource1 = `
 
-resource "cf_org" "org1" {
+resource "cloudfoundry_org" "org1" {
 	name = "organization-one"
 }
-resource "cf_space" "space1" {
+resource "cloudfoundry_space" "space1" {
 	name = "space-one"
-	org = "${cf_org.org1.id}"
+	org = "${cloudfoundry_org.org1.id}"
 }
 
-data "cf_space" "myspace" {
-    name = "${cf_space.space1.name}"
-	org = "${cf_org.org1.id}"
+data "cloudfoundry_space" "myspace" {
+    name = "${cloudfoundry_space.space1.name}"
+	org = "${cloudfoundry_org.org1.id}"
 }
 `
 
 const spaceDataResource2 = `
 
-data "cf_space" "default" {
+data "cloudfoundry_space" "default" {
     name = "pcfdev-space"
 	org_name = "pcfdev-org"
 }
@@ -35,8 +35,8 @@ data "cf_space" "default" {
 
 func TestAccDataSourceSpace_normal(t *testing.T) {
 
-	ref1 := "data.cf_space.myspace"
-	ref2 := "data.cf_space.default"
+	ref1 := "data.cloudfoundry_space.myspace"
+	ref2 := "data.cloudfoundry_space.default"
 
 	resource.Test(t,
 		resource.TestCase{

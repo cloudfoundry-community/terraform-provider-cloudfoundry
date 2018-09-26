@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func resourceRoute() *schema.Resource {
@@ -134,22 +134,25 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		return err
 	}
 	// Delete route if an error occurs
-	defer func() error {
+	defer func() {
 		e := &err
-		if *e != nil {
-			return rm.DeleteRoute(route.ID)
+		if *e == nil {
+			return
 		}
-		return nil
+		err = rm.DeleteRoute(route.ID)
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	if err = setRouteArguments(session, route, d); err != nil {
-		return
+		return err
 	}
 
 	if v, ok := d.GetOk("target"); ok {
 		var t interface{}
 		if t, err = addTargets(route.ID, getListOfStructs(v.(*schema.Set).List()), rm, session.Log); err != nil {
-			return
+			return err
 		}
 		d.Set("target", t)
 		session.Log.DebugMessage("Mapped route targets: %# v", d.Get("target"))

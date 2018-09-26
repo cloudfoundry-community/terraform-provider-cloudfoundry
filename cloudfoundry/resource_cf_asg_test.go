@@ -9,14 +9,14 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const securityGroup = `
-resource "cf_asg" "rmq" {
+resource "cloudfoundry_asg" "rmq" {
 
 	name = "rmq-dev"
-	
+
     rule {
         protocol = "tcp"
         destination = "192.168.1.100"
@@ -32,10 +32,10 @@ resource "cf_asg" "rmq" {
 `
 
 const securityGroupUpdate = `
-resource "cf_asg" "rmq" {
+resource "cloudfoundry_asg" "rmq" {
 
 	name = "rmq-dev"
-	
+
     rule {
         protocol = "tcp"
         destination = "192.168.1.100"
@@ -56,7 +56,7 @@ resource "cf_asg" "rmq" {
 
 func TestAccAsg_normal(t *testing.T) {
 
-	ref := "cf_asg.rmq"
+	ref := "cloudfoundry_asg.rmq"
 	asgname := "rmq-dev"
 
 	resource.Test(t,

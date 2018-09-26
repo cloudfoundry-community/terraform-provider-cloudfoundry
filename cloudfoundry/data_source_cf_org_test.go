@@ -6,23 +6,23 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const orgDataResource = `
 
-resource "cf_org" "myorg" {
+resource "cloudfoundry_org" "myorg" {
 	name = "myorg"
 }
 
-data "cf_org" "dd" {
-    name = "${cf_org.myorg.name}"
+data "cloudfoundry_org" "dd" {
+    name = "${cloudfoundry_org.myorg.name}"
 }
 `
 
 func TestAccDataSourceOrg_normal(t *testing.T) {
 
-	ref := "data.cf_org.dd"
+	ref := "data.cloudfoundry_org.dd"
 
 	resource.Test(t,
 		resource.TestCase{

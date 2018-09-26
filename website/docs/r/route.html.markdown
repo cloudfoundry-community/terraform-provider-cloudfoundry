@@ -1,6 +1,6 @@
 ---
-layout: "cf"
-page_title: "Cloud Foundry: cf_route"
+layout: "cloudfoundry"
+page_title: "Cloud Foundry: cloudfoundry_route"
 sidebar_current: "docs-cf-resource-route"
 description: |-
   Provides a Cloud Foundry route resource.
@@ -15,9 +15,9 @@ Provides a Cloud Foundry resource for managing Cloud Foundry application [routes
 The following example creates an route for an application.
 
 ```
-resource "cf_route" "default" {
-    domain = "${data.cf_domain.apps.domain.id}"
-    space = "${data.cf_space.dev.id}"
+resource "cloudfoundry_route" "default" {
+    domain = "${data.cloudfoundry_domain.apps.domain.id}"
+    space = "${data.cloudfoundry_space.dev.id}"
     hostname = "myapp"
 }
 ```
@@ -32,8 +32,8 @@ The following arguments are supported:
 
 The following arguments apply only to TCP routes.
 
-- `port` - (Optional, Int) The port to associate with the route for a TCP route. 
-- `random_port` - (Optional, Bool) Set to 'true' to create a random port.
+- `port` - (Optional, Int) The port to associate with the route for a TCP route. Conflicts with `path` and `random_port`.
+- `random_port` - (Optional, Bool) Set to 'true' to create a random port. Conflicts with `path` and `port` and defaults to false.
 
 The following argument applies only to HTTP routes.
 
@@ -42,8 +42,8 @@ The following argument applies only to HTTP routes.
 The following maps the route to an application.
 
 - `target` - (Optional) A route mapping that will map this route to an application
-  
-  - `app` - (Required, String) The ID of the [application](/docs/providers/cf/r/app.html) to map this route to.
+
+  - `app` - (Required, String) The ID of the [application](/docs/providers/cloudfoundry/r/app.html) to map this route to.
   - `port` - (Optional, Int) A port that the application will be listening on. If this argument is not provided then the route will be associated with the application's default port.
 
 ## Attributes Reference
@@ -58,5 +58,5 @@ The following attributes are exported along with any defaults for the inputs att
 The current Route can be imported using the `route`, e.g.
 
 ```
-$ terraform import cf_route.default a-guid
+$ terraform import cloudfoundry_route.default a-guid
 ```

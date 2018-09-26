@@ -6,12 +6,12 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const defaultRunningSecurityGroupResource = `
 
-resource "cf_asg" "apps" {
+resource "cloudfoundry_asg" "apps" {
 
 	name = "pcf-apps"
 
@@ -21,7 +21,7 @@ resource "cf_asg" "apps" {
     }
 }
 
-resource "cf_asg" "services" {
+resource "cloudfoundry_asg" "services" {
 
 	name = "pcf-services"
 
@@ -31,19 +31,19 @@ resource "cf_asg" "services" {
     }
 }
 
-resource "cf_default_asg" "running" {
+resource "cloudfoundry_default_asg" "running" {
 	name = "running"
-    asgs = [ "${cf_asg.apps.id}", "${cf_asg.services.id}" ]
+    asgs = [ "${cloudfoundry_asg.apps.id}", "${cloudfoundry_asg.services.id}" ]
 }
 `
 
 const defaultRunningSecurityGroupResourceUpdate = `
 
-data "cf_asg" "public" {
+data "cloudfoundry_asg" "public" {
     name = "%s"
 }
 
-resource "cf_asg" "apps" {
+resource "cloudfoundry_asg" "apps" {
 
 	name = "pcf-apps"
 
@@ -53,7 +53,7 @@ resource "cf_asg" "apps" {
     }
 }
 
-resource "cf_asg" "services" {
+resource "cloudfoundry_asg" "services" {
 
 	name = "pcf-services"
 
@@ -63,15 +63,15 @@ resource "cf_asg" "services" {
     }
 }
 
-resource "cf_default_asg" "running" {
+resource "cloudfoundry_default_asg" "running" {
 	name = "running"
-    asgs = [ "${data.cf_asg.public.id}", "${cf_asg.apps.id}" ]
+    asgs = [ "${data.cloudfoundry_asg.public.id}", "${cloudfoundry_asg.apps.id}" ]
 }
 `
 
 const defaultStagingSecurityGroupResource = `
 
-resource "cf_asg" "apps" {
+resource "cloudfoundry_asg" "apps" {
 
 	name = "pcf-apps"
 
@@ -81,16 +81,16 @@ resource "cf_asg" "apps" {
     }
 }
 
-resource "cf_default_asg" "staging" {
+resource "cloudfoundry_default_asg" "staging" {
   name = "staging"
-  asgs = [ "${cf_asg.apps.id}" ]
+  asgs = [ "${cloudfoundry_asg.apps.id}" ]
 }
 `
 
 func TestAccDefaultRunningAsg_normal(t *testing.T) {
 
 	defaultAsg := getDefaultSecurityGroup()
-	ref := "cf_default_asg.running"
+	ref := "cloudfoundry_default_asg.running"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -125,7 +125,7 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 
 func TestAccDefaultStagingAsg_normal(t *testing.T) {
 
-	ref := "cf_default_asg.staging"
+	ref := "cloudfoundry_default_asg.staging"
 
 	resource.Test(t,
 		resource.TestCase{

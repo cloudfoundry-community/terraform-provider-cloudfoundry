@@ -8,25 +8,25 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const routeResource = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
 
-resource "cf_app" "test-app-8080" {
+resource "cloudfoundry_app" "test-app-8080" {
 	name = "test-app"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	command = "test-app --ports=8080"
 	timeout = 1800
 
@@ -34,33 +34,33 @@ resource "cf_app" "test-app-8080" {
 		url = "https://github.com/mevansam/test-app.git"
 	}
 }
-resource "cf_route" "test-app-route" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "test-app-route" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "test-app-single"
 
 	target {
-		app = "${cf_app.test-app-8080.id}"
+		app = "${cloudfoundry_app.test-app-8080.id}"
 	}
 }
 `
 
 const routeResourceUpdate = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
 
-resource "cf_app" "test-app-8080" {
+resource "cloudfoundry_app" "test-app-8080" {
 	name = "test-app-8080"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	command = "test-app --ports=8080"
 	timeout = 1800
 
@@ -68,9 +68,9 @@ resource "cf_app" "test-app-8080" {
 		url = "https://github.com/mevansam/test-app.git"
 	}
 }
-resource "cf_app" "test-app-8888" {
+resource "cloudfoundry_app" "test-app-8888" {
 	name = "test-app-8888"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	ports = [ 8888 ]
 	command = "test-app --ports=8888"
 	timeout = 1800
@@ -79,9 +79,9 @@ resource "cf_app" "test-app-8888" {
 		url = "https://github.com/mevansam/test-app.git"
 	}
 }
-resource "cf_app" "test-app-9999" {
+resource "cloudfoundry_app" "test-app-9999" {
 	name = "test-app-9999"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	ports = [ 9999 ]
 	command = "test-app --ports=9999"
 	timeout = 1800
@@ -90,28 +90,28 @@ resource "cf_app" "test-app-9999" {
 		url = "https://github.com/mevansam/test-app.git"
 	}
 }
-resource "cf_route" "test-app-route" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "test-app-route" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "test-app-multi"
 
 	target {
-		app = "${cf_app.test-app-9999.id}"
+		app = "${cloudfoundry_app.test-app-9999.id}"
 		port = 9999
 	}
 	target {
-		app = "${cf_app.test-app-8888.id}"
+		app = "${cloudfoundry_app.test-app-8888.id}"
 		port = 8888
 	}
 	target {
-		app = "${cf_app.test-app-8080.id}"
+		app = "${cloudfoundry_app.test-app-8080.id}"
 	}
 }
 `
 
 func TestAccRoute_normal(t *testing.T) {
 
-	refRoute := "cf_route.test-app-route"
+	refRoute := "cloudfoundry_route.test-app-route"
 
 	resource.Test(t,
 		resource.TestCase{

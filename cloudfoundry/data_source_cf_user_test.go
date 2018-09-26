@@ -8,19 +8,19 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const userDataResource = `
 
-data "cf_user" "admin-user" {
+data "cloudfoundry_user" "admin-user" {
     name = "admin"
 }
 `
 
 func TestAccDataSourceUser_normal(t *testing.T) {
 
-	ref := "data.cf_user.admin-user"
+	ref := "data.cloudfoundry_user.admin-user"
 
 	resource.Test(t,
 		resource.TestCase{

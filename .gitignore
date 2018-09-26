@@ -25,12 +25,13 @@ website/node_modules
 *.test
 *.iml
 .env.json
+.*.env.json
 .envrc
 .tfacc_env
 
 
 website/vendor
-/terraform-provider-cf
+/terraform-provider-cloudfoundry
 
 # Test exclusions
 !command/test-fixtures/**/*.tfstate

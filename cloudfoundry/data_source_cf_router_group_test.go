@@ -6,19 +6,19 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const routerGroupDataResource = `
 
-data "cf_router_group" "rg" {
+data "cloudfoundry_router_group" "rg" {
     name = "default-tcp"
 }
 `
 
 func TestAccDataSourceRouterGroup_normal(t *testing.T) {
 
-	ref := "data.cf_router_group.rg"
+	ref := "data.cloudfoundry_router_group.rg"
 
 	resource.Test(t,
 		resource.TestCase{

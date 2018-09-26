@@ -2,54 +2,54 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 
 	"code.cloudfoundry.org/cli/cf/errors"
-
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const appResourceSpringMusicTemplate = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
-data "cf_service" "mysql" {
+data "cloudfoundry_service" "mysql" {
     name = "p-mysql"
 }
-data "cf_service" "rmq" {
+data "cloudfoundry_service" "rmq" {
     name = "p-rabbitmq"
 }
 
-resource "cf_route" "spring-music" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "spring-music" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "spring-music"
 }
-resource "cf_service_instance" "db" {
+resource "cloudfoundry_service_instance" "db" {
 	name = "db"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans.512mb}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.mysql.service_plans.512mb}"
 }
-resource "cf_service_instance" "fs1" {
+resource "cloudfoundry_service_instance" "fs1" {
 	name = "fs1"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.rmq.service_plans.standard}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
 %%s
-resource "cf_app" "spring-music" {
+resource "cloudfoundry_app" "spring-music" {
 	name = "spring-music"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	memory = "768"
 	disk_quota = "512"
 	timeout = 1800
@@ -62,41 +62,41 @@ resource "cf_app" "spring-music" {
 
 const appResourceSpringMusic = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
-data "cf_service" "mysql" {
+data "cloudfoundry_service" "mysql" {
     name = "p-mysql"
 }
-data "cf_service" "rmq" {
+data "cloudfoundry_service" "rmq" {
     name = "p-rabbitmq"
 }
 
-resource "cf_route" "spring-music" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "spring-music" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "spring-music"
 }
-resource "cf_service_instance" "db" {
+resource "cloudfoundry_service_instance" "db" {
 	name = "db"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans.512mb}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.mysql.service_plans.512mb}"
 }
-resource "cf_service_instance" "fs1" {
+resource "cloudfoundry_service_instance" "fs1" {
 	name = "fs1"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.rmq.service_plans.standard}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
-resource "cf_app" "spring-music" {
+resource "cloudfoundry_app" "spring-music" {
 	name = "spring-music"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	memory = "768"
 	disk_quota = "512"
 	timeout = 1800
@@ -104,14 +104,14 @@ resource "cf_app" "spring-music" {
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
-		service_instance = "${cf_service_instance.db.id}"
+		service_instance = "${cloudfoundry_service_instance.db.id}"
 	}
 	service_binding {
-		service_instance = "${cf_service_instance.fs1.id}"
+		service_instance = "${cloudfoundry_service_instance.fs1.id}"
 	}
 
 	route {
-		default_route = "${cf_route.spring-music.id}"
+		default_route = "${cloudfoundry_route.spring-music.id}"
 	}
 
 	environment {
@@ -123,46 +123,46 @@ resource "cf_app" "spring-music" {
 
 const appResourceSpringMusicUpdate = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
-data "cf_service" "mysql" {
+data "cloudfoundry_service" "mysql" {
     name = "p-mysql"
 }
-data "cf_service" "rmq" {
+data "cloudfoundry_service" "rmq" {
     name = "p-rabbitmq"
 }
 
-resource "cf_route" "spring-music" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "spring-music" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "spring-music"
 }
-resource "cf_service_instance" "db" {
+resource "cloudfoundry_service_instance" "db" {
 	name = "db"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.mysql.service_plans.512mb}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.mysql.service_plans.512mb}"
 }
-resource "cf_service_instance" "fs1" {
+resource "cloudfoundry_service_instance" "fs1" {
 	name = "fs1"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.rmq.service_plans.standard}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
-resource "cf_service_instance" "fs2" {
+resource "cloudfoundry_service_instance" "fs2" {
 	name = "fs2"
-    space = "${data.cf_space.space.id}"
-    service_plan = "${data.cf_service.rmq.service_plans.standard}"
+    space = "${data.cloudfoundry_space.space.id}"
+    service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
-resource "cf_app" "spring-music" {
+resource "cloudfoundry_app" "spring-music" {
 	name = "spring-music-updated"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	instances ="2"
 	memory = "1024"
 	disk_quota = "1024"
@@ -171,17 +171,17 @@ resource "cf_app" "spring-music" {
 	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
 
 	service_binding {
-		service_instance = "${cf_service_instance.db.id}"
+		service_instance = "${cloudfoundry_service_instance.db.id}"
 	}
 	service_binding {
-		service_instance = "${cf_service_instance.fs2.id}"
+		service_instance = "${cloudfoundry_service_instance.fs2.id}"
 	}
 	service_binding {
-		service_instance = "${cf_service_instance.fs1.id}"
+		service_instance = "${cloudfoundry_service_instance.fs1.id}"
 	}
 
 	route {
-		default_route = "${cf_route.spring-music.id}"
+		default_route = "${cloudfoundry_route.spring-music.id}"
 	}
 
 	environment {
@@ -193,20 +193,20 @@ resource "cf_app" "spring-music" {
 
 const appResourceWithMultiplePorts = `
 
-data "cf_domain" "local" {
+data "cloudfoundry_domain" "local" {
     name = "%s"
 }
-data "cf_org" "org" {
+data "cloudfoundry_org" "org" {
     name = "pcfdev-org"
 }
-data "cf_space" "space" {
+data "cloudfoundry_space" "space" {
     name = "pcfdev-space"
-	org = "${data.cf_org.org.id}"
+	org = "${data.cloudfoundry_org.org.id}"
 }
 
-resource "cf_app" "test-app" {
+resource "cloudfoundry_app" "test-app" {
 	name = "test-app"
-	space = "${data.cf_space.space.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	timeout = 1800
 	ports = [ 8888, 9999 ]
 	buildpack = "binary_buildpack"
@@ -218,33 +218,363 @@ resource "cf_app" "test-app" {
 		repo = "test-app"
 		filename = "test-app"
 		version = "v0.0.1"
+		user = "%s"
+		password = "%s"
 	}
 }
-resource "cf_route" "test-app-8888" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "test-app-8888" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "test-app-8888"
 
 	target {
-		app = "${cf_app.test-app.id}"
+		app = "${cloudfoundry_app.test-app.id}"
 		port = 8888
 	}
 }
-resource "cf_route" "test-app-9999" {
-	domain = "${data.cf_domain.local.id}"
-	space = "${data.cf_space.space.id}"
+resource "cloudfoundry_route" "test-app-9999" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
 	hostname = "test-app-9999"
 
 	target {
-		app = "${cf_app.test-app.id}"
+		app = "${cloudfoundry_app.test-app.id}"
 		port = 9999
 	}
 }
 `
 
+const appResourceDocker = `
+
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+
+resource "cloudfoundry_route" "test-docker-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "test-docker-app"
+	target {
+		app = "${cloudfoundry_app.test-docker-app.id}"
+		port = 8080
+	}
+}
+resource "cloudfoundry_app" "test-docker-app" {
+	name = "test-docker-app"
+	space = "${data.cloudfoundry_space.space.id}"
+	docker_image = "cloudfoundry/diego-docker-app:latest"
+	timeout = 900
+}
+
+`
+
+const multipleVersion = `
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+resource "cloudfoundry_route" "test-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "test-app"
+    target = {app = "${cloudfoundry_app.test-app.id}"}
+}
+resource "cloudfoundry_app" "test-app" {
+	name = "test-app"
+	space = "${data.cloudfoundry_space.space.id}"
+	command = "test-app --ports=8080"
+	timeout = 1800
+    memory = "512"
+	git {
+		url = "https://github.com/mevansam/test-app.git"
+	}
+}
+`
+
+const multipleVersionUpdate = `
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+
+resource "cloudfoundry_route" "test-app" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "test-app"
+    target = {app = "${cloudfoundry_app.test-app.id}"}
+}
+resource "cloudfoundry_app" "test-app" {
+	name = "test-app"
+	space = "${data.cloudfoundry_space.space.id}"
+	command = "test-app --ports=8080"
+	timeout = 1800
+    memory = "1024"
+	git {
+		url = "https://github.com/janosbinder/test-app.git"
+	}
+}
+`
+
+const createManyJavaSpringApps = `
+
+data "cloudfoundry_domain" "java-spring-domain" {
+    name = "%s"
+}
+
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+
+resource "cloudfoundry_route" "java-spring-route-1" {
+	domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
+    space = "${data.cloudfoundry_space.space.id}"
+	hostname = "java-spring-1"
+	depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
+}
+
+resource "cloudfoundry_app" "java-spring-app-1" {
+    name = "java-spring-app-1"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
+	space = "${data.cloudfoundry_space.space.id}"
+	timeout = 700
+    memory = 512
+    buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
+
+	route {
+		default_route = "${cloudfoundry_route.java-spring-route-1.id}"
+	}
+
+	depends_on = ["cloudfoundry_route.java-spring-route-1"]
+}
+
+resource "cloudfoundry_route" "java-spring-route-2" {
+	domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
+    space = "${data.cloudfoundry_space.space.id}"
+	hostname = "java-spring-2"
+	depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
+}
+
+resource "cloudfoundry_app" "java-spring-app-2" {
+    name = "java-spring-app-2"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
+	space = "${data.cloudfoundry_space.space.id}"
+	timeout = 700
+    memory = 512
+    buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
+
+	route {
+		default_route = "${cloudfoundry_route.java-spring-route-2.id}"
+	}
+
+	depends_on = ["cloudfoundry_route.java-spring-route-2"]
+}
+
+resource "cloudfoundry_route" "java-spring-route-3" {
+	domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
+    space = "${data.cloudfoundry_space.space.id}"
+	hostname = "java-spring-3"
+	depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
+}
+
+resource "cloudfoundry_app" "java-spring-app-3" {
+    name = "java-spring-app-3"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
+	space = "${data.cloudfoundry_space.space.id}"
+	timeout = 700
+    memory = 512
+    buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
+
+	route {
+		default_route = "${cloudfoundry_route.java-spring-route-3.id}"
+	}
+
+	depends_on = ["cloudfoundry_route.java-spring-route-3"]
+}
+
+resource "cloudfoundry_route" "java-spring-route-4" {
+	domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
+    space = "${data.cloudfoundry_space.space.id}"
+	hostname = "java-spring-4"
+	depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
+}
+
+resource "cloudfoundry_app" "java-spring-app-4" {
+    name = "java-spring-app-4"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
+	space = "${data.cloudfoundry_space.space.id}"
+	timeout = 700
+    memory = 512
+    buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
+
+	route {
+		default_route = "${cloudfoundry_route.java-spring-route-4.id}"
+	}
+
+	depends_on = ["cloudfoundry_route.java-spring-route-4"]
+}
+
+resource "cloudfoundry_route" "java-spring-route-5" {
+	domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
+    space = "${data.cloudfoundry_space.space.id}"
+	hostname = "java-spring-5"
+	depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
+}
+
+resource "cloudfoundry_app" "java-spring-app-5" {
+    name = "java-spring-app-5"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
+	space = "${data.cloudfoundry_space.space.id}"
+	timeout = 700
+    memory = 512
+    buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
+
+	route {
+		default_route = "${cloudfoundry_route.java-spring-route-5.id}"
+	}
+
+	depends_on = ["cloudfoundry_route.java-spring-route-5"]
+}
+`
+
+// If the PR is not applied, after running this test many times, it should crash with this error
+// === RUN   TestAccApp_reproduceIssue88
+// Application downloaded to: ../tests/cf-acceptance-tests/assets/java-spring/
+// Application downloaded to: ../tests/cf-acceptance-tests/assets/java-spring/
+// fatal error: concurrent map read and map write
+//
+// goroutine 1542 [running]:
+// ...
+// created by github.com/terraform-providers/terraform-provider-cf/cloudfoundry.resourceAppCreate
+// .../golang/src/github.com/terraform-providers/terraform-provider-cf/cloudfoundry/resource_cf_app.go:421 +0x1ac4
+
+func TestAccApp_reproduceIssue88(t *testing.T) {
+	refApp1 := "cloudfoundry_app.java-spring-app-1"
+	refApp2 := "cloudfoundry_app.java-spring-app-2"
+	refApp3 := "cloudfoundry_app.java-spring-app-3"
+	refApp4 := "cloudfoundry_app.java-spring-app-4"
+	refApp5 := "cloudfoundry_app.java-spring-app-5"
+
+	failRegExp, _ := regexp.Compile("app java-spring-app-[0-9] failed to start")
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring-app-`", "java-spring-app-2", "java-spring-app-3", "java-spring-app-4", "java-spring-app-5"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(createManyJavaSpringApps, defaultAppDomain()),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						testAccCheckAppExists(refApp1, func() (err error) {
+
+							if err = assertHTTPResponse("https://java-spring-1."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						testAccCheckAppExists(refApp2, func() (err error) {
+
+							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						testAccCheckAppExists(refApp3, func() (err error) {
+
+							if err = assertHTTPResponse("https://java-spring-3."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						testAccCheckAppExists(refApp4, func() (err error) {
+
+							if err = assertHTTPResponse("https://java-spring-4."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						testAccCheckAppExists(refApp5, func() (err error) {
+
+							if err = assertHTTPResponse("https://java-spring-5."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+					// the jar in the test is enough big, and allows us to test for the failure
+					ExpectError: failRegExp,
+				},
+			},
+		})
+}
+
+func TestAccAppVersions_app1(t *testing.T) {
+
+	refRoute := "cloudfoundry_route.test-app"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"test-app"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(multipleVersion, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckRouteExists(refRoute, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+				},
+
+				resource.TestStep{
+					Config: fmt.Sprintf(multipleVersionUpdate, defaultAppDomain()),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckRouteExists(refRoute, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+				},
+			},
+		})
+}
+
 func TestAccApp_app1(t *testing.T) {
 
-	refApp := "cf_app.spring-music"
+	refApp := "cloudfoundry_app.spring-music"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -311,7 +641,7 @@ func TestAccApp_app1(t *testing.T) {
 }
 func TestAccApp_app2(t *testing.T) {
 
-	refApp := "cf_app.test-app"
+	refApp := "cloudfoundry_app.test-app"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -321,7 +651,7 @@ func TestAccApp_app2(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceWithMultiplePorts, defaultAppDomain()),
+					Config: fmt.Sprintf(appResourceWithMultiplePorts, defaultAppDomain(), os.Getenv("GITHUB_USER"), os.Getenv("GITHUB_TOKEN")),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 							responses := []string{"8888"}
@@ -361,7 +691,7 @@ func TestApp_OldStyleRoutes_failLiveStage(t *testing.T) {
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
 						``,
 						`route {
-							live_route = "${cf_route.spring-music.id}"
+							live_route = "${cloudfoundry_route.spring-music.id}"
 						}`,
 					),
 				},
@@ -372,7 +702,7 @@ func TestApp_OldStyleRoutes_failLiveStage(t *testing.T) {
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
 						``,
 						`route {
-							stage_route = "${cf_route.spring-music.id}"
+							stage_route = "${cloudfoundry_route.spring-music.id}"
 						}`,
 					),
 				},
@@ -382,7 +712,7 @@ func TestApp_OldStyleRoutes_failLiveStage(t *testing.T) {
 
 func TestAccApp_NewStyleRoutes_updateTo(t *testing.T) {
 
-	refApp := "cf_app.spring-music"
+	refApp := "cloudfoundry_app.spring-music"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -395,7 +725,7 @@ func TestAccApp_NewStyleRoutes_updateTo(t *testing.T) {
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
 						``,
 						`route {
-							default_route = "${cf_route.spring-music.id}"
+							default_route = "${cloudfoundry_route.spring-music.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
@@ -427,7 +757,7 @@ func TestAccApp_NewStyleRoutes_updateTo(t *testing.T) {
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
 						``,
 						`routes {
-							route = "${cf_route.spring-music.id}"
+							route = "${cloudfoundry_route.spring-music.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
@@ -460,7 +790,7 @@ func TestAccApp_NewStyleRoutes_updateTo(t *testing.T) {
 
 func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 
-	refApp := "cf_app.spring-music"
+	refApp := "cloudfoundry_app.spring-music"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -473,7 +803,7 @@ func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
 						``,
 						`route {
-							default_route = "${cf_route.spring-music.id}"
+							default_route = "${cloudfoundry_route.spring-music.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
@@ -503,16 +833,16 @@ func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
-						`resource "cf_route" "spring-music-2" {
-							domain = "${data.cf_domain.local.id}"
-							space = "${data.cf_space.space.id}"
+						`resource "cloudfoundry_route" "spring-music-2" {
+							domain = "${data.cloudfoundry_domain.local.id}"
+							space = "${data.cloudfoundry_space.space.id}"
 							hostname = "spring-music-2"
 						}`,
 						`routes {
-							route = "${cf_route.spring-music.id}"
+							route = "${cloudfoundry_route.spring-music.id}"
 						}
 						routes {
-							route = "${cf_route.spring-music-2.id}"
+							route = "${cloudfoundry_route.spring-music-2.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
@@ -545,13 +875,13 @@ func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
-						`resource "cf_route" "spring-music-2" {
-							domain = "${data.cf_domain.local.id}"
-							space = "${data.cf_space.space.id}"
+						`resource "cloudfoundry_route" "spring-music-2" {
+							domain = "${data.cloudfoundry_domain.local.id}"
+							space = "${data.cloudfoundry_space.space.id}"
 							hostname = "spring-music-2"
 						}`,
 						`routes {
-							route = "${cf_route.spring-music.id}"
+							route = "${cloudfoundry_route.spring-music.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
@@ -584,21 +914,21 @@ func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
-						`resource "cf_route" "spring-music-2" {
-							domain = "${data.cf_domain.local.id}"
-							space = "${data.cf_space.space.id}"
+						`resource "cloudfoundry_route" "spring-music-2" {
+							domain = "${data.cloudfoundry_domain.local.id}"
+							space = "${data.cloudfoundry_space.space.id}"
 							hostname = "spring-music-2"
 						}
-						resource "cf_route" "spring-music-3" {
-							domain = "${data.cf_domain.local.id}"
-							space = "${data.cf_space.space.id}"
+						resource "cloudfoundry_route" "spring-music-3" {
+							domain = "${data.cloudfoundry_domain.local.id}"
+							space = "${data.cloudfoundry_space.space.id}"
 							hostname = "spring-music-3"
 						}`,
 						`routes {
-							route = "${cf_route.spring-music-2.id}"
+							route = "${cloudfoundry_route.spring-music-2.id}"
 						}
 						routes {
-							route = "${cf_route.spring-music-3.id}"
+							route = "${cloudfoundry_route.spring-music-3.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
@@ -637,7 +967,7 @@ func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 
 func TestAccApp_NewStyleRoutes_Create(t *testing.T) {
 
-	refApp := "cf_app.spring-music"
+	refApp := "cloudfoundry_app.spring-music"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -650,7 +980,7 @@ func TestAccApp_NewStyleRoutes_Create(t *testing.T) {
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
 						``,
 						`routes {
-							route = "${cf_route.spring-music.id}"
+							route = "${cloudfoundry_route.spring-music.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
@@ -683,7 +1013,7 @@ func TestAccApp_NewStyleRoutes_Create(t *testing.T) {
 
 func TestAccApp_NewStyleRoutes_Change(t *testing.T) {
 
-	refApp := "cf_app.spring-music"
+	refApp := "cloudfoundry_app.spring-music"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -696,7 +1026,7 @@ func TestAccApp_NewStyleRoutes_Change(t *testing.T) {
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
 						``,
 						`routes {
-							route = "${cf_route.spring-music.id}"
+							route = "${cloudfoundry_route.spring-music.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
@@ -726,13 +1056,13 @@ func TestAccApp_NewStyleRoutes_Change(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
-						`resource "cf_route" "spring-music-2" {
-							domain = "${data.cf_domain.local.id}"
-							space = "${data.cf_space.space.id}"
+						`resource "cloudfoundry_route" "spring-music-2" {
+							domain = "${data.cloudfoundry_domain.local.id}"
+							space = "${data.cloudfoundry_space.space.id}"
 							hostname = "spring-music-2"
 						}`,
 						`routes {
-							route = "${cf_route.spring-music-2.id}"
+							route = "${cloudfoundry_route.spring-music-2.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
@@ -768,7 +1098,7 @@ func TestAccApp_NewStyleRoutes_Change(t *testing.T) {
 
 func TestAccApp_NewStyleRoutes_Add(t *testing.T) {
 
-	refApp := "cf_app.spring-music"
+	refApp := "cloudfoundry_app.spring-music"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -781,7 +1111,7 @@ func TestAccApp_NewStyleRoutes_Add(t *testing.T) {
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
 						``,
 						`routes {
-							route = "${cf_route.spring-music.id}"
+							route = "${cloudfoundry_route.spring-music.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
@@ -811,16 +1141,16 @@ func TestAccApp_NewStyleRoutes_Add(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
-						`resource "cf_route" "spring-music-2" {
-							domain = "${data.cf_domain.local.id}"
-							space = "${data.cf_space.space.id}"
+						`resource "cloudfoundry_route" "spring-music-2" {
+							domain = "${data.cloudfoundry_domain.local.id}"
+							space = "${data.cloudfoundry_space.space.id}"
 							hostname = "spring-music-2"
 						}`,
 						`routes {
-							route = "${cf_route.spring-music.id}"
+							route = "${cloudfoundry_route.spring-music.id}"
 						}
 						routes {
-							route = "${cf_route.spring-music-2.id}"
+							route = "${cloudfoundry_route.spring-music-2.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
@@ -848,6 +1178,50 @@ func TestAccApp_NewStyleRoutes_Add(t *testing.T) {
 						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
 						resource.TestCheckNoResourceAttr(refApp, "route.#"),
 						resource.TestCheckResourceAttr(refApp, "routes.#", "2"),
+					),
+				},
+			},
+		})
+}
+
+func TestAccApp_dockerApp(t *testing.T) {
+	refApp := "cloudfoundry_app.test-docker-app"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"test-docker-app"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceDocker, defaultAppDomain()),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+
+							if err = assertHTTPResponse("https://test-docker-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						resource.TestCheckResourceAttr(
+							refApp, "name", "test-docker-app"),
+						resource.TestCheckResourceAttr(
+							refApp, "space", defaultPcfDevSpaceID()),
+						resource.TestCheckResourceAttr(
+							refApp, "ports.#", "1"),
+						resource.TestCheckResourceAttr(
+							refApp, "ports.8080", "8080"),
+						resource.TestCheckResourceAttr(
+							refApp, "instances", "1"),
+						resource.TestCheckResourceAttrSet(
+							refApp, "stack"),
+						resource.TestCheckResourceAttr(
+							refApp, "environment.%", "0"),
+						resource.TestCheckResourceAttr(
+							refApp, "enable_ssh", "true"),
+						resource.TestCheckResourceAttr(
+							refApp, "docker_image", "cloudfoundry/diego-docker-app:latest"),
 					),
 				},
 			},
@@ -937,7 +1311,6 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 
 		if err = assertListEquals(attributes, "service_binding", len(serviceBindings),
 			func(values map[string]string, i int) (match bool) {
-
 				var binding map[string]interface{}
 
 				serviceInstanceID := values["service_instance"]
@@ -951,12 +1324,6 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 				}
 
 				if binding != nil && values["binding_id"] == binding["binding_id"] {
-					if err2 := assertMapEquals("credentials", values, binding["credentials"].(map[string]interface{})); err2 != nil {
-						session.Log.LogMessage(
-							"Credentials for service instance %s do not match: %s",
-							serviceInstanceID, err2.Error())
-						return false
-					}
 					return true
 				}
 				return false

@@ -3,10 +3,11 @@ package cloudfoundry
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/structure"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func resourceUserProvidedService() *schema.Resource {
@@ -35,19 +36,23 @@ func resourceUserProvidedService() *schema.Resource {
 			"syslog_drain_url": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Default:  "",
 			},
 			"syslogDrainURL": &schema.Schema{
 				Type:       schema.TypeString,
 				Optional:   true,
+				Default:    "",
 				Deprecated: "Use syslog_drain_url, Terraform complain about field name may only contain lowercase alphanumeric characters & underscores",
 			},
 			"route_service_url": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Default:  "",
 			},
 			"routeServiceURL": &schema.Schema{
 				Type:       schema.TypeString,
 				Optional:   true,
+				Default:    "",
 				Deprecated: "Use route_service_url, Terraform complain about field name may only contain lowercase alphanumeric characters & underscores",
 			},
 			"credentials": &schema.Schema{
@@ -125,6 +130,10 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) (
 	var ups cfapi.CCUserProvidedService
 
 	if ups, err = sm.ReadUserProvidedService(d.Id()); err != nil {
+		if strings.Contains(err.Error(), "status code: 404") {
+			d.SetId("")
+			err = nil
+		}
 		return err
 	}
 

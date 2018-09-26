@@ -7,7 +7,7 @@ import (
 )
 
 func TestAccUser_WithGroups_importBasic(t *testing.T) {
-	resourceName := "cf_user.admin-service-user"
+	resourceName := "cloudfoundry_user.admin-service-user"
 	username := "cf-admin"
 
 	resource.Test(t,

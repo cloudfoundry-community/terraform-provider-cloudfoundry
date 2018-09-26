@@ -6,81 +6,81 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const privateDomainAccessResourceCreate = `
-resource "cf_org" "org1" {
+resource "cloudfoundry_org" "org1" {
   name = "org1"
 }
 
-resource "cf_org" "org2" {
+resource "cloudfoundry_org" "org2" {
   name = "org2"
 }
 
-resource "cf_org" "org3" {
+resource "cloudfoundry_org" "org3" {
   name = "org3"
 }
 
-resource "cf_domain" "private" {
+resource "cloudfoundry_domain" "private" {
     sub_domain = "private"
     domain     = "%s"
-    org        = "${cf_org.org1.id}"
+    org        = "${cloudfoundry_org.org1.id}"
 }
 
-resource "cf_private_domain_access" "access-to-org" {
-    domain     = "${cf_domain.private.id}"
-    org        = "${cf_org.org2.id}"
+resource "cloudfoundry_private_domain_access" "access-to-org" {
+    domain     = "${cloudfoundry_domain.private.id}"
+    org        = "${cloudfoundry_org.org2.id}"
 }
 `
 
 const privateDomainAccessResourceUpdate = `
-resource "cf_org" "org1" {
+resource "cloudfoundry_org" "org1" {
   name = "org1"
 }
 
-resource "cf_org" "org2" {
+resource "cloudfoundry_org" "org2" {
   name = "org2"
 }
 
-resource "cf_org" "org3" {
+resource "cloudfoundry_org" "org3" {
   name = "org3"
 }
 
-resource "cf_domain" "private" {
+resource "cloudfoundry_domain" "private" {
     sub_domain = "private"
     domain     = "%s"
-    org        = "${cf_org.org1.id}"
+    org        = "${cloudfoundry_org.org1.id}"
 }
 
-resource "cf_private_domain_access" "access-to-org" {
-    domain     = "${cf_domain.private.id}"
-    org        = "${cf_org.org3.id}"
+resource "cloudfoundry_private_domain_access" "access-to-org" {
+    domain     = "${cloudfoundry_domain.private.id}"
+    org        = "${cloudfoundry_org.org3.id}"
 }
 `
 
 const privateDomainAccessResourceDelete = `
-resource "cf_org" "org1" {
+resource "cloudfoundry_org" "org1" {
   name = "org1"
 }
 
-resource "cf_org" "org2" {
+resource "cloudfoundry_org" "org2" {
   name = "org2"
 }
 
-resource "cf_org" "org3" {
+resource "cloudfoundry_org" "org3" {
   name = "org3"
 }
 
-resource "cf_domain" "private" {
+resource "cloudfoundry_domain" "private" {
     sub_domain = "private"
     domain     = "%s"
-    org        = "${cf_org.org1.id}"
+    org        = "${cloudfoundry_org.org1.id}"
 }
 `
 
 func TestAccPrivateDomainAccess_normal(t *testing.T) {
-	ref := "cf_private_domain_access.access-to-org"
+	ref := "cloudfoundry_private_domain_access.access-to-org"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -90,22 +90,22 @@ func TestAccPrivateDomainAccess_normal(t *testing.T) {
 				resource.TestStep{
 					Config: fmt.Sprintf(privateDomainAccessResourceCreate, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
-						checkPrivateDomainShare(ref, "cf_domain.private", "cf_org.org2", true),
-						checkPrivateDomainShare(ref, "cf_domain.private", "cf_org.org3", false),
+						checkPrivateDomainShare(ref, "cloudfoundry_domain.private", "cloudfoundry_org.org2", true),
+						checkPrivateDomainShare(ref, "cloudfoundry_domain.private", "cloudfoundry_org.org3", false),
 					),
 				},
 				resource.TestStep{
 					Config: fmt.Sprintf(privateDomainAccessResourceUpdate, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
-						checkPrivateDomainShare(ref, "cf_domain.private", "cf_org.org2", false),
-						checkPrivateDomainShare(ref, "cf_domain.private", "cf_org.org3", true),
+						checkPrivateDomainShare(ref, "cloudfoundry_domain.private", "cloudfoundry_org.org2", false),
+						checkPrivateDomainShare(ref, "cloudfoundry_domain.private", "cloudfoundry_org.org3", true),
 					),
 				},
 				resource.TestStep{
 					Config: fmt.Sprintf(privateDomainAccessResourceDelete, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
-						checkPrivateDomainShare("", "cf_domain.private", "cf_org.org2", false),
-						checkPrivateDomainShare("", "cf_domain.private", "cf_org.org3", false),
+						checkPrivateDomainShare("", "cloudfoundry_domain.private", "cloudfoundry_org.org2", false),
+						checkPrivateDomainShare("", "cloudfoundry_domain.private", "cloudfoundry_org.org3", false),
 					),
 				},
 			},

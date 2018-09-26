@@ -42,7 +42,7 @@ const (
 
 	// DefaultUAAOAuthClient is the default client ID for the CLI when
 	// communicating with the UAA.
-	DefaultUAAOAuthClient = "cf"
+	DefaultUAAOAuthClient = "cloudfoundry"
 
 	// DefaultCFOClientSecret is the default client secret for the CLI when
 	// communicating with the UAA.
