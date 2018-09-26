@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/cli/cf/terminal"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func resourceServiceInstance() *schema.Resource {

@@ -2139,5 +2139,5 @@
 			"revisionTime": "2017-04-07T17:21:22Z"
 		}
 	],
-	"rootPath": "github.com/terraform-providers/terraform-provider-cf"
+	"rootPath": "github.com/terraform-providers/terraform-provider-cloudfoundry"
 }

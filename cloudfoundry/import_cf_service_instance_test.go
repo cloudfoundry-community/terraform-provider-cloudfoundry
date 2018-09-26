@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/cli/cf/errors"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func TestAccServiceInstance_importBasic(t *testing.T) {

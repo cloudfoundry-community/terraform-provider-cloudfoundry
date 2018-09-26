@@ -31,7 +31,7 @@ website/node_modules
 
 
 website/vendor
-/terraform-provider-cf
+/terraform-provider-cloudfoundry
 
 # Test exclusions
 !command/test-fixtures/**/*.tfstate

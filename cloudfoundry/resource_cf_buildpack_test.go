@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 	"os"
 )
 
@@ -19,7 +19,7 @@ variable "tomee_buildpack_ver" {
 }
 
 resource "cloudfoundry_buildpack" "tomee" {
-	
+
 	name = "tomee-buildpack"
 
 	github_release {
@@ -40,7 +40,7 @@ variable "tomee_buildpack_ver" {
 }
 
 resource "cloudfoundry_buildpack" "tomee" {
-	
+
 	name = "tomee-buildpack"
 	position = 5
 	enabled = false
@@ -60,14 +60,14 @@ resource "cloudfoundry_buildpack" "tomee" {
 const buildpackResourceUpdate2 = `
 
 resource "cloudfoundry_buildpack" "tomee" {
-	
+
 	name = "tomee-buildpack"
 	position = 5
 	enabled = true
 	locked = false
 
 	git {
-		url = "https://github.com/cloudfoundry-community/tomee-buildpack"				
+		url = "https://github.com/cloudfoundry-community/tomee-buildpack"
 	}
 }
 `

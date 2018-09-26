@@ -1,5 +1,5 @@
 
-The backlog is kept as github issues annotated with labels and milestones, and progress is tracked in the [backlog project](https://github.com/mevansam/terraform-provider-cf/projects/1).
+The backlog is kept as github issues annotated with labels and milestones, and progress is tracked in the [backlog project](https://github.com/mevansam/terraform-provider-cloudfoundry/projects/1).
 
 Please send PR against the `dev` branches.
 
@@ -11,7 +11,7 @@ Linters are run as part of the travis build. Detected flaws will prevent the mer
 
 Contributors can run the same checks locally by following the procedure:
 
-1. install dependencies 
+1. install dependencies
 
   ```bash
   # install gometalinter tool
@@ -25,12 +25,12 @@ Contributors can run the same checks locally by following the procedure:
   ```bash
   make check
   ```
-  
+
 Fine tuning of the linters configuration can be done in the [.gometalinter.json](.gometalinter.json) file according to the tool [specification](https://github.com/alecthomas/gometalinter#configuration-file)
 
-## Creating a release 
+## Creating a release
 
 * Open up an issue "cutting release 0.9.9" to gather contributors concensus on when to cut the release
 * On your clone, checkout the `dev` branch, and execute `scripts/create-release.sh 0.9.9`
-* travis build kicks off for this tag, and tries to publish the artifacts github, check it on [travis the branch list](https://travis-ci.org/mevansam/terraform-provider-cf/branches)
-* edit the release notes in the [github release page](https://github.com/mevansam/terraform-provider-cf/releases)
+* travis build kicks off for this tag, and tries to publish the artifacts github, check it on [travis the branch list](https://travis-ci.org/mevansam/terraform-provider-cloudfoundry/branches)
+* edit the release notes in the [github release page](https://github.com/mevansam/terraform-provider-cloudfoundry/releases)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func dataSourceSpaceQuota() *schema.Resource {
@@ -30,9 +30,9 @@ func dataSourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) (err err
 	}
 
 	var (
-		org    *string
-		name   string
-		quota  cfapi.CCQuota
+		org   *string
+		name  string
+		quota cfapi.CCQuota
 	)
 
 	name = d.Get("name").(string)

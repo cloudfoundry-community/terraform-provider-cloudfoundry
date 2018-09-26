@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/structure"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func resourceUserProvidedService() *schema.Resource {

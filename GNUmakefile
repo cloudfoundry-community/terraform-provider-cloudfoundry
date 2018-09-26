@@ -8,9 +8,9 @@ default: build
 release:
 	rm -fr bin
 	mkdir -p bin
-	GOARCH=amd64 GOOS=windows go build -o bin/terraform-provider-cf_windows_amd64.exe
-	GOARCH=amd64 GOOS=linux go build -o bin/terraform-provider-cf_linux_amd64
-	GOARCH=amd64 GOOS=darwin go build -o bin/terraform-provider-cf_darwin_amd64
+	GOARCH=amd64 GOOS=windows go build -o bin/terraform-provider-cloudfoundry_windows_amd64.exe
+	GOARCH=amd64 GOOS=linux go build -o bin/terraform-provider-cloudfoundry_linux_amd64
+	GOARCH=amd64 GOOS=darwin go build -o bin/terraform-provider-cloudfoundry_darwin_amd64
 
 build: check
 	go install

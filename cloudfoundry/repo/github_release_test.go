@@ -8,8 +8,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
 	"os"
+
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/repo"
 )
 
 func TestGithubReleaseRepo(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/cli/cf/errors"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const appResourceSpringMusic = `
@@ -241,7 +241,7 @@ data "cloudfoundry_space" "space" {
 resource "cloudfoundry_route" "test-app" {
 	domain = "${data.cloudfoundry_domain.local.id}"
 	space = "${data.cloudfoundry_space.space.id}"
-	hostname = "test-app" 
+	hostname = "test-app"
     target = {app = "${cloudfoundry_app.test-app.id}"}
 }
 resource "cloudfoundry_app" "test-app" {
