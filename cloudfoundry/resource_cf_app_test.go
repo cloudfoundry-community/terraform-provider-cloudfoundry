@@ -2,12 +2,14 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"os"
+	"regexp"
 	"testing"
+
 	"code.cloudfoundry.org/cli/cf/errors"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
-	"os"
 )
 
 const appResourceSpringMusic = `
@@ -283,6 +285,204 @@ resource "cloudfoundry_app" "test-app" {
 	}
 }
 `
+
+const createManyJavaSpringApps = `
+
+data "cloudfoundry_domain" "java-spring-domain" {
+    name = "%s"
+}
+
+data "cloudfoundry_org" "org" {
+    name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+    name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+
+resource "cloudfoundry_route" "java-spring-route-1" {
+	domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
+    space = "${data.cloudfoundry_space.space.id}"
+	hostname = "java-spring-1"
+	depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
+}
+
+resource "cloudfoundry_app" "java-spring-app-1" {
+    name = "java-spring-app-1"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
+	space = "${data.cloudfoundry_space.space.id}"
+	timeout = 700
+    memory = 512
+    buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
+
+	route {
+		default_route = "${cloudfoundry_route.java-spring-route-1.id}"
+	}
+
+	depends_on = ["cloudfoundry_route.java-spring-route-1"]
+}
+
+resource "cloudfoundry_route" "java-spring-route-2" {
+	domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
+    space = "${data.cloudfoundry_space.space.id}"
+	hostname = "java-spring-2"
+	depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
+}
+
+resource "cloudfoundry_app" "java-spring-app-2" {
+    name = "java-spring-app-2"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
+	space = "${data.cloudfoundry_space.space.id}"
+	timeout = 700
+    memory = 512
+    buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
+
+	route {
+		default_route = "${cloudfoundry_route.java-spring-route-2.id}"
+	}
+
+	depends_on = ["cloudfoundry_route.java-spring-route-2"]
+}
+
+resource "cloudfoundry_route" "java-spring-route-3" {
+	domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
+    space = "${data.cloudfoundry_space.space.id}"
+	hostname = "java-spring-3"
+	depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
+}
+
+resource "cloudfoundry_app" "java-spring-app-3" {
+    name = "java-spring-app-3"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
+	space = "${data.cloudfoundry_space.space.id}"
+	timeout = 700
+    memory = 512
+    buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
+
+	route {
+		default_route = "${cloudfoundry_route.java-spring-route-3.id}"
+	}
+
+	depends_on = ["cloudfoundry_route.java-spring-route-3"]
+}
+
+resource "cloudfoundry_route" "java-spring-route-4" {
+	domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
+    space = "${data.cloudfoundry_space.space.id}"
+	hostname = "java-spring-4"
+	depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
+}
+
+resource "cloudfoundry_app" "java-spring-app-4" {
+    name = "java-spring-app-4"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
+	space = "${data.cloudfoundry_space.space.id}"
+	timeout = 700
+    memory = 512
+    buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
+
+	route {
+		default_route = "${cloudfoundry_route.java-spring-route-4.id}"
+	}
+
+	depends_on = ["cloudfoundry_route.java-spring-route-4"]
+}
+
+resource "cloudfoundry_route" "java-spring-route-5" {
+	domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
+    space = "${data.cloudfoundry_space.space.id}"
+	hostname = "java-spring-5"
+	depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
+}
+
+resource "cloudfoundry_app" "java-spring-app-5" {
+    name = "java-spring-app-5"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
+	space = "${data.cloudfoundry_space.space.id}"
+	timeout = 700
+    memory = 512
+    buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
+
+	route {
+		default_route = "${cloudfoundry_route.java-spring-route-5.id}"
+	}
+
+	depends_on = ["cloudfoundry_route.java-spring-route-5"]
+}
+`
+
+// If the PR is not applied, after running this test many times, it should crash with this error
+// === RUN   TestAccApp_reproduceIssue88
+// Application downloaded to: ../tests/cf-acceptance-tests/assets/java-spring/
+// Application downloaded to: ../tests/cf-acceptance-tests/assets/java-spring/
+// fatal error: concurrent map read and map write
+//
+// goroutine 1542 [running]:
+// ...
+// created by github.com/terraform-providers/terraform-provider-cf/cloudfoundry.resourceAppCreate
+// .../golang/src/github.com/terraform-providers/terraform-provider-cf/cloudfoundry/resource_cf_app.go:421 +0x1ac4
+
+func TestAccApp_reproduceIssue88(t *testing.T) {
+	refApp1 := "cloudfoundry_app.java-spring-app-1"
+	refApp2 := "cloudfoundry_app.java-spring-app-2"
+	refApp3 := "cloudfoundry_app.java-spring-app-3"
+	refApp4 := "cloudfoundry_app.java-spring-app-4"
+	refApp5 := "cloudfoundry_app.java-spring-app-5"
+
+	failRegExp, _ := regexp.Compile("app java-spring-app-[0-9] failed to start")
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring-app-`", "java-spring-app-2", "java-spring-app-3", "java-spring-app-4", "java-spring-app-5"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(createManyJavaSpringApps, defaultAppDomain()),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						testAccCheckAppExists(refApp1, func() (err error) {
+
+							if err = assertHTTPResponse("https://java-spring-1."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						testAccCheckAppExists(refApp2, func() (err error) {
+
+							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						testAccCheckAppExists(refApp3, func() (err error) {
+
+							if err = assertHTTPResponse("https://java-spring-3."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						testAccCheckAppExists(refApp4, func() (err error) {
+
+							if err = assertHTTPResponse("https://java-spring-4."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						testAccCheckAppExists(refApp5, func() (err error) {
+
+							if err = assertHTTPResponse("https://java-spring-5."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+					// the jar in the test is enough big, and allows us to test for the failure
+					ExpectError: failRegExp,
+				},
+			},
+		})
+}
 
 func TestAccAppVersions_app1(t *testing.T) {
 

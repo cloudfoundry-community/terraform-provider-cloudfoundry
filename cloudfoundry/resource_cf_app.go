@@ -407,15 +407,14 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		app.DockerCredentials = &vv
 	}
 
-	prepare := make(chan error)
 	// Skip if Docker repo is given
 	if _, ok := d.GetOk("docker_image"); !ok {
 
 		// Download application binary / source asynchronously
-		go func() {
-			appPath, err = prepareApp(app, d, session.Log)
-			prepare <- err
-		}()
+		appPath, err = prepareApp(app, d, session.Log)
+		if err != nil {
+			return err
+		}
 	}
 
 	if v, hasRouteConfig = d.GetOk("route"); hasRouteConfig {
@@ -462,12 +461,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	// Skip if Docker repo is given
 	if _, ok := d.GetOk("docker_image"); !ok {
 
-		// Upload application binary / source
-		// asynchronously once download has completed
-		if err = <-prepare; err != nil {
-			return err
-		}
-
+		// Upload application binary / source asynchronously
 		go func() {
 			err = am.UploadApp(app, appPath, addContent)
 			if err != nil {
@@ -559,20 +553,61 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 
 	id := d.Id()
 	am := session.AppManager()
+	rm := session.RouteManager()
 
 	var app cfapi.CCApp
 	if app, err = am.ReadApp(id); err != nil {
 		if strings.Contains(err.Error(), "status code: 404") {
-			d.MarkNewResource()
+			d.SetId("")
 			err = nil
 		}
 	} else {
 		setAppArguments(app, d)
+
+		var routeMappings []map[string]interface{}
+		if routeMappings, err = rm.ReadRouteMappingsByApp(app.ID); err != nil {
+			return
+		}
+		var stateRouteList = d.Get("route").([]interface{})
+		var stateRouteMappings map[string]interface{}
+		if len(stateRouteList) == 1 && stateRouteList[0] != nil {
+			stateRouteMappings = stateRouteList[0].(map[string]interface{})
+		} else {
+			stateRouteMappings = make(map[string]interface{})
+		}
+		currentRouteMappings := make(map[string]interface{})
+		mappingFound := false
+		for _, r := range []string{
+			"default_route",
+			"stage_route",
+			"live_route",
+		} {
+			currentRouteMappings[r] = ""
+			currentRouteMappings[r+"_mapping_id"] = ""
+			for _, mapping := range routeMappings {
+				var route, mappingID = mapping["route"], mapping["mapping_id"]
+				if route == stateRouteMappings[r] {
+					mappingFound = true
+					currentRouteMappings[r] = route
+					currentRouteMappings[r+"_mapping_id"] = mappingID
+					break
+				}
+			}
+		}
+		if mappingFound {
+			d.Set("route", []map[string]interface{}{currentRouteMappings})
+		}
 	}
+
 	return err
 }
 
 func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
+
+	// Enable partial state mode
+	// We need to explicitly set state updates ourselves or
+	// tell terraform when a state change is applied and thus okay to persist
+	d.Partial(true)
 
 	session := meta.(*cfapi.Session)
 	if session == nil {
@@ -622,6 +657,19 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 		setAppArguments(app, d)
+		d.SetPartial("name")
+		d.SetPartial("space")
+		d.SetPartial("ports")
+		d.SetPartial("instances")
+		d.SetPartial("memory")
+		d.SetPartial("disk_quota")
+		d.SetPartial("command")
+		d.SetPartial("enable_ssh")
+		d.SetPartial("health_check_http_endpoint")
+		d.SetPartial("health_check_type")
+		d.SetPartial("health_check_timeout")
+		d.SetPartial("buildpack")
+		d.SetPartial("environment")
 	}
 
 	// update the application's service bindings (the necessary restage is dealt with later)
@@ -656,6 +704,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 				d.Set("service_binding", new)
 			}
 		}
+		// the changes were applied, in CF even though they might not have taken effect
+		// in the application, we'll allow the state updates for this property to occur
+		d.SetPartial("service_binding")
 		restage = true
 	}
 
@@ -687,12 +738,14 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 			if _, err := validateRoute(newRouteConfig, r, rm); err != nil {
 				return err
 			}
-			if mappingID, err := updateMapping(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
+			if mappingID, err := updateAppRouteMappings(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
 				return err
 			} else if len(mappingID) > 0 {
 				newRouteConfig[r+"_mapping_id"] = mappingID
 			}
 		}
+		d.Set("route", [...]interface{}{newRouteConfig})
+		d.SetPartial("route")
 	}
 
 	binaryUpdated := false // check if we need to update the application's binary
@@ -784,6 +837,8 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
+	// We succeeded, disable partial mode
+	d.Partial(false)
 	return nil
 }
 
@@ -960,7 +1015,7 @@ func validateRoute(routeConfig map[string]interface{}, route string, rm *cfapi.R
 	return routeID, err
 }
 
-func updateMapping(
+func updateAppRouteMappings(
 	old map[string]interface{},
 	new map[string]interface{},
 	route, appID string, rm *cfapi.RouteManager) (mappingID string, err error) {
@@ -977,17 +1032,25 @@ func updateMapping(
 	}
 
 	if oldRouteID != newRouteID {
-		if len(oldRouteID) > 0 {
-			if v, ok := old[route+"_mapping_id"]; ok {
-				if err = rm.DeleteRouteMapping(v.(string)); err != nil {
-					return "", err
-				}
-			}
-		}
 		if len(newRouteID) > 0 {
 			if mappingID, err = rm.CreateRouteMapping(newRouteID, appID, nil); err != nil {
 				return "", err
 			}
+		}
+		if len(oldRouteID) > 0 {
+			if v, ok := old[route+"_mapping_id"]; ok {
+				if err = rm.DeleteRouteMapping(v.(string)); err != nil {
+					if strings.Contains(err.Error(), "status code: 404") {
+						err = nil
+					} else {
+						return "", err
+					}
+				}
+			}
+		}
+		if err != nil {
+			// this means we failed to delete the old route mapping!
+			// TODO: is there anything we can do about this here?
 		}
 	}
 	return mappingID, err

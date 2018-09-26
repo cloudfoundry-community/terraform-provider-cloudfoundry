@@ -41,6 +41,23 @@ type CCRouteResource struct {
 	Entity   CCRoute            `json:"entity"`
 }
 
+// CCRouteMapping -
+type CCRouteMapping struct {
+	ID string
+
+	AppPort  string `json:"app_port"`
+	AppID    string `json:"app_guid"`
+	RouteID  string `json:"route_guid"`
+	AppURL   string `json:"app_url"`
+	RouteURL string `json:"route_url"`
+}
+
+// CCRouteMappingResource -
+type CCRouteMappingResource struct {
+	Metadata resources.Metadata `json:"metadata"`
+	Entity   CCRouteMapping     `json:"entity"`
+}
+
 // newRouteManager -
 func newRouteManager(config coreconfig.Reader, ccGateway net.Gateway, logger *Logger) (rm *RouteManager, err error) {
 	rm = &RouteManager{
@@ -193,6 +210,19 @@ func (rm *RouteManager) CreateRouteMapping(routeID, appID string, port *int) (ma
 
 	mappingID = response["metadata"].(map[string]interface{})["guid"].(string)
 	return mappingID, nil
+}
+
+// ReadRouteMapping -
+func (rm *RouteManager) ReadRouteMapping(mappingID string) (CCRouteMapping, error) {
+	resource := CCRouteMappingResource{}
+	path := fmt.Sprintf("/v2/route_mappings/%s", mappingID)
+	if err := rm.ccGateway.GetResource(path, &resource); err != nil {
+		return CCRouteMapping{}, err
+	}
+	routeMapping := resource.Entity
+	routeMapping.ID = resource.Metadata.GUID
+	return routeMapping, nil
+
 }
 
 // ReadRouteMappingsByRoute -
