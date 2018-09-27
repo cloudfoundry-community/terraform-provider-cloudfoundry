@@ -42,7 +42,7 @@ test-compile:
 
 local-install:
 	go build
-	cp terraform-provider-cf ~/.terraform.d/plugins/linux_amd64/terraform-provider-cloudfoundry
+	cp terraform-provider-cloudfoundry ~/.terraform.d/plugins/linux_amd64/terraform-provider-cloudfoundry
 
 website:
 ifeq (,$(wildcard $(GOPATH)/src/$(WEBSITE_REPO)))
