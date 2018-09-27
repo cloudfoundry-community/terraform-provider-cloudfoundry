@@ -47,6 +47,7 @@ The following arguments are supported:
 * `org` - (Required) The ID of the [Org](/docs/providers/cloudfoundry/r/org.html) within which to create the space.
 * `quota` - (Optional) The ID of the Space [quota](/docs/providers/cloudfoundry/r/space_quota.html) or plan defined for the owning Org. Specifying an empty string requests unassigns any space quota from the space. Defaults to empty string.
 * `allow_ssh` - (Optional) Allows SSH to application containers via the [CF CLI](https://github.com/cloudfoundry/cli). Defaults to true.
+* `isolation_segment` - (`Experimental`,Optional) The ID of the isolation segment to assign to the space. The segment must be entitled to the space's parent organization. If the isolation segment id is unspecified, then Cloud Foundry assigns the space to the org’s default isolation segment if any. Note that existing apps in the space will not run in a newly assigned isolation segment until they are restarted.
 * `asgs` - (Optional) List of running [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications running within this space. Defaults to empty list.
 * `staging_asgs` - (Optional) List of staging [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications being staged for this space. Defaults to empty list.
 * `managers` - (Optional) List of users to assign [SpaceManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to. Defaults to empty list.
