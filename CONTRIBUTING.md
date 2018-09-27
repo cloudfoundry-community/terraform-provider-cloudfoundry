@@ -35,7 +35,7 @@ Local tests relies on pcf-dev, which is a local version of cloudfoundry componen
 
 1. Install dependencies
 
-  - cf cli : follow [official procedure](https://docs.cloudfoundry.org/cf-cli/install-go-cli.html)
+  - cf cli: follow [official procedure](https://docs.cloudfoundry.org/cf-cli/install-go-cli.html)
 
   - pcfdev plugin:
     - download plugin: [on pivotal website](https://network.pivotal.io/products/pcfdev). You must register to access downloads.
