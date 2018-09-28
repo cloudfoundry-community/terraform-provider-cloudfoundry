@@ -36,6 +36,7 @@ type Session struct {
 	spaceManager     *SpaceManager
 	serviceManager   *ServiceManager
 	buildpackManager *BuildpackManager
+	segmentManager   *SegmentManager
 	appManager       *AppManager
 	routeManager     *RouteManager
 
@@ -221,6 +222,10 @@ func (s *Session) initCliConnection(
 	if err != nil {
 		return err
 	}
+	s.segmentManager, err = newSegmentManager(s.config, s.ccGateway, s.Log)
+	if err != nil {
+		return err
+	}
 
 	s.appManager, err = newAppManager(s.config, s.ccGateway, s.domainManager.repo, s.routeManager.repo, s.Log)
 	return err
@@ -289,6 +294,11 @@ func (s *Session) RouteManager() *RouteManager {
 // AppManager -
 func (s *Session) AppManager() *AppManager {
 	return s.appManager
+}
+
+// SegmentManager -
+func (s *Session) SegmentManager() *SegmentManager {
+	return s.segmentManager
 }
 
 // GetFeatureFlags -

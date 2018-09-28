@@ -107,6 +107,9 @@ func (rm *RepoManager) GetGitRepository(name string, repoURL string, user, passw
 
 // GetGithubRelease -
 func (rm *RepoManager) GetGithubRelease(ghOwner, ghRepoName, archiveName string, user *string, password *string) (repo Repository, err error) {
+	rm.gitMutex.Lock()
+	defer rm.gitMutex.Unlock()
+
 	var ghClient *github.Client
 	ctx := context.Background()
 
@@ -135,5 +138,6 @@ func (rm *RepoManager) GetGithubRelease(ghOwner, ghRepoName, archiveName string,
 		owner:       ghOwner,
 		repoName:    ghRepoName,
 		archiveName: archiveName,
+		mutex:       rm.gitMutex,
 	}, nil
 }

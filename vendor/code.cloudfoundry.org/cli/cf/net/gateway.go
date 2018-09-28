@@ -120,6 +120,10 @@ func (gateway Gateway) UpdateResource(endpoint, apiURL string, body io.ReadSeeke
 	return gateway.createUpdateOrDeleteResource("PUT", endpoint, apiURL, body, false, resource...)
 }
 
+func (gateway Gateway) PatchResource(endpoint, apiURL string, body io.ReadSeeker, resource ...interface{}) error {
+	return gateway.createUpdateOrDeleteResource("PATCH", endpoint, apiURL, body, false, resource...)
+}
+
 func (gateway Gateway) UpdateResourceSync(endpoint, apiURL string, body io.ReadSeeker, resource ...interface{}) error {
 	return gateway.createUpdateOrDeleteResource("PUT", endpoint, apiURL, body, true, resource...)
 }

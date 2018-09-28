@@ -419,8 +419,8 @@ resource "cloudfoundry_app" "java-spring-app-5" {
 //
 // goroutine 1542 [running]:
 // ...
-// created by github.com/terraform-providers/terraform-provider-cf/cloudfoundry.resourceAppCreate
-// .../golang/src/github.com/terraform-providers/terraform-provider-cf/cloudfoundry/resource_cf_app.go:421 +0x1ac4
+// created by github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry.resourceAppCreate
+// .../golang/src/github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/resource_cf_app.go:421 +0x1ac4
 
 func TestAccApp_reproduceIssue88(t *testing.T) {
 	refApp1 := "cloudfoundry_app.java-spring-app-1"

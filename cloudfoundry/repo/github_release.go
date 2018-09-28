@@ -5,12 +5,12 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"context"
+	"github.com/google/go-github/github"
 	"io"
 	"net/http"
 	"os"
 	"strings"
-
-	"github.com/google/go-github/github"
+	"sync"
 )
 
 // GithubRelease -
@@ -23,6 +23,7 @@ type GithubRelease struct {
 	repoName string
 
 	archiveName string
+	mutex       *sync.Mutex
 }
 
 // GetPath -
@@ -32,6 +33,8 @@ func (r *GithubRelease) GetPath() string {
 
 // SetVersion -
 func (r *GithubRelease) SetVersion(version string, versionType VersionType) (err error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
 	var (
 		release *github.RepositoryRelease
