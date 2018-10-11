@@ -38,7 +38,7 @@ IMPROVEMENTS:
 * backend/s3: Allow fallback to session-derived credentials (e.g. session via `AWS_PROFILE` environment variable and shared configuration) ([#17901](https://github.com/hashicorp/terraform/issues/17901))
 * backend/s3: Allow usage of `AWS_EC2_METADATA_DISABLED` environment variable ([#17901](https://github.com/hashicorp/terraform/issues/17901))
 
-NEW FEATURES:
+FEATURES:
 
 * cloudfoundry_route_service_bindingsupport (#16 thanks @psycofdj )
 * All resources can now be imported (#6 thanks @ArthurHlt )
@@ -53,7 +53,7 @@ BUG FIXES:
 * Crash during cloudfoundry_app async app downloading (#88 thanks @jcarrothers-sap and @janosbinder) and app restage wait
 * Many reliability w.r.t. missing resources on routes, service_instances, service_key (#131 #138 #137 #133 #135 #134 #132 thanks @jcarrothers-sap)
 
-CHORES:
+NOTES:
 
 * CI improvements,
     * including cleanups of leaked resource (thanks @janosbinder)
