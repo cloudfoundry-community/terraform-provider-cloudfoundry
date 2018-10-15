@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry User resource.
 ---
 
-# cf\_user
+# cloudfoundry\_user
 
 Provides a Cloud Foundry resource for registering users. This resource provides extended 
 functionality to attach additional UAA roles to the user.

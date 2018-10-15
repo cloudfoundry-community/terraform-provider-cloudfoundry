@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry User.
 ---
 
-# cf\_user
+# cloudfoundry\_user
 
 Gets information on a Cloud Foundry user.
 

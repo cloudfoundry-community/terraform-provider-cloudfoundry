@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Application resource.
 ---
 
-# cf\_app
+# cloudfoundry\_app
 
 Provides a Cloud Foundry [application](https://docs.cloudfoundry.org/devguide/deploy-apps/deploy-app.html) resource.
 

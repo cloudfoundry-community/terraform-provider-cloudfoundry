@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Environment Variable Group resource.
 ---
 
-# cf\_evg
+# cloudfoundry\_evg
 
 Provides a resource for modifying the running or staging [environment variable groups](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#evgroups) in Cloud Foundry.
 

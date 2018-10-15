@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry private domain access resource.
 ---
 
-# cf\_private\_domain\_access
+# cloudfoundry\_private\_domain\_access
 
 Provides a resource for sharing access to [private domains](https://docs.cloudfoundry.org/devguide/deploy-apps/routes-domains.html#domains) with other Cloud Foundry Organizations.
 

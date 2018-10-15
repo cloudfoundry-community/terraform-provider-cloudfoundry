@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Service Instance.
 ---
 
-# cf\_service\_instance
+# cloudfoundry\_service\_instance
 
 Provides a Cloud Foundry resource for managing Cloud Foundry [Service Instances](https://docs.cloudfoundry.org/devguide/services/) within spaces.
 

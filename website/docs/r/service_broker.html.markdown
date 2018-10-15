@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Service Broker resource.
 ---
 
-# cf\_service\_broker
+# cloudfoundry\_service\_broker
 
 Provides a Cloud Foundry resource for managing [service brokers](https://docs.cloudfoundry.org/services/) definitions. 
 

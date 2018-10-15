@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Service Access resource.
 ---
 
-# cf\_service\_access
+# cloudfoundry\_service\_access
 
 Provides a Cloud Foundry resource for managing [access](https://docs.cloudfoundry.org/services/access-control.html)
 to service plans published by Cloud Foundry [service brokers](https://docs.cloudfoundry.org/services/).

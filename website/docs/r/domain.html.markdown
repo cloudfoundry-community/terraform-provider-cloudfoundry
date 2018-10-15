@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Domain resource.
 ---
 
-# cf\_domain
+# cloudfoundry\_domain
 
 Provides a resource for managing shared or private 
 [domains](https://docs.cloudfoundry.org/devguide/deploy-apps/routes-domains.html#domains) in Cloud Foundry.

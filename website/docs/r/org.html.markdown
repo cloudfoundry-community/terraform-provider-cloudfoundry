@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Org resource.
 ---
 
-# cf\_org
+# cloudfoundry\_org
 
 Provides a Cloud Foundry resource for managing Cloud Foundry [organizations](https://docs.cloudfoundry.org/concepts/roles.html), assigning quota definitions, and members. 
 

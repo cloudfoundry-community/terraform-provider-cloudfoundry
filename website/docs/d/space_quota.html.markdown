@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry space Quota.
 ---
 
-# cf\_space\_quota
+# cloudfoundry\_space\_quota
 
 Gets information on a Cloud Foundry space quota.
 

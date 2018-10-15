@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Space resource.
 ---
 
-# cf\_space
+# cloudfoundry\_space
 
 Provides a Cloud Foundry resource for managing Cloud Foundry [spaces](https://docs.cloudfoundry.org/concepts/roles.html) within organizations.
 

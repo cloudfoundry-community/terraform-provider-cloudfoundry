@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Application Security Group resource.
 ---
 
-# cf\_asg
+# cloudfoundry\_asg
 
 Provides an [application security group](https://docs.cloudfoundry.org/adminguide/app-sec-groups.html) 
 resource for Cloud Foundry. This resource defines egress rules that can be applied to containers that 

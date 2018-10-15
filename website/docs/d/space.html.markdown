@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry Space.
 ---
 
-# cf\_space
+# cloudfoundry\_space
 
 Gets information on a Cloud Foundry space.
 

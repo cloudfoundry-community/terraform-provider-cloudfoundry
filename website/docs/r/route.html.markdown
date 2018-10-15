@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry route resource.
 ---
 
-# cf\_route
+# cloudfoundry\_route
 
 Provides a Cloud Foundry resource for managing Cloud Foundry application [routes](https://docs.cloudfoundry.org/devguide/deploy-apps/routes-domains.html).
 
