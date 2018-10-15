@@ -7,6 +7,7 @@ function makeRelease {
     tests/clean.sh
     make testacc
     make release
+    make website-test
 }
 
 
@@ -30,4 +31,3 @@ fi
 
 echo "Git commit is likely to be preparation work for an upcoming PR so acceptance tests will not run (not on dev or master branch, nor it is not a pull request, nor it does not have a release tag)"
 make build
-
