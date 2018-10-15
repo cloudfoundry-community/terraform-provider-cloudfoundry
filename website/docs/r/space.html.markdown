@@ -15,7 +15,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [spaces](https://do
 
 ## Example Usage
 
-The following is a Space created within the referenced Org. All referenced users must have been added as a member to the owning Org.
+The following is a Space created within the referenced Org. All referenced users must have been added as a member to the owning Org (see [related CF doc](https://docs.cloudfoundry.org/concepts/roles.html#users) for additional context)
 
 ```
 resource "cloudfoundry_space" "s1" {
@@ -24,16 +24,16 @@ resource "cloudfoundry_space" "s1" {
     quota = "${cloudfoundry_quota.dev.id}"
     asgs = [ "${cloudfoundry_asg.svc.id}" ]
     managers = [
-        "${cloudfoundry_user_org_role.tl.user}"
+        "${data.cloudfoundry_user.tl.id}"
     ]
     developers = [
-        "${cloudfoundry_user_org_role.tl.user}",
-        "${cloudfoundry_user_org_role.dev1.user}",
-        "${cloudfoundry_user_org_role.dev2.user}"
+        "${data.cloudfoundry_user.tl.id}",
+        "${data.cloudfoundry_user.dev1.id}",
+        "${data.cloudfoundry_user.dev2.id}"
     ]
     auditors = [
-        "${cloudfoundry_user_org_role.adr.user}",
-        "${cloudfoundry_user_org_role.dev3.user}"
+        "${data.cloudfoundry_user.adr.id}",
+        "${data.cloudfoundry_user.dev3.id}"
     ]
     allow_ssh = true
 }
