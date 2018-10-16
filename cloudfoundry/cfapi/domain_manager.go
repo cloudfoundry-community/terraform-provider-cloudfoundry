@@ -154,7 +154,7 @@ func (dm *DomainManager) GetPrivateDomains() (domains []CCDomain, err error) {
 func (dm *DomainManager) CreatePrivateDomain(name string, orgGUID string) (domain CCDomain, err error) {
 
 	body, err := json.Marshal(map[string]string{
-		"name": name,
+		"name":                     name,
 		"owning_organization_guid": orgGUID,
 	})
 	if err != nil {
