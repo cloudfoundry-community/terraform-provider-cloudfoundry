@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"code.cloudfoundry.org/cli/cf/api/resources"
@@ -286,7 +287,19 @@ func (sm *SpaceManager) SetSpaceSegment(spaceID string, segmentID string) (err e
 	}
 
 	path := fmt.Sprintf("/v3/spaces/%s/relationships/isolation_segment", spaceID)
-	return sm.ccGateway.PatchResource(sm.apiEndpoint, path, bytes.NewReader(body))
+	return sm.patchResource(sm.apiEndpoint, path, bytes.NewReader(body))
+}
+
+// This one should belong to gateway.go, but that API is deprecated
+func (sm *SpaceManager) patchResource(endpoint, apiURL string, body io.ReadSeeker) error {
+	request, err := sm.ccGateway.NewRequest("PATCH", endpoint+apiURL, sm.config.AccessToken(), body)
+	if err != nil {
+		return err
+	}
+
+	_, err = sm.ccGateway.PerformRequest(request)
+
+	return err
 }
 
 // GetSpaceSegment -

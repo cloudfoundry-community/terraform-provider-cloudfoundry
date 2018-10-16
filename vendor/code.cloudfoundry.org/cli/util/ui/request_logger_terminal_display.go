@@ -25,7 +25,7 @@ func newRequestLoggerTerminalDisplay(ui *UI, lock *sync.Mutex) *RequestLoggerTer
 	}
 }
 
-func (display *RequestLoggerTerminalDisplay) DisplayBody(_ []byte) error {
+func (display *RequestLoggerTerminalDisplay) DisplayBody([]byte) error {
 	fmt.Fprintf(display.ui.Out, "%s\n", RedactedValue)
 	return nil
 }
@@ -54,6 +54,7 @@ func (display *RequestLoggerTerminalDisplay) DisplayJSONBody(body []byte) error 
 	sanitized, err := SanitizeJSON(body)
 	if err != nil {
 		fmt.Fprintf(display.ui.Out, "%s\n", string(body))
+		return nil
 	}
 
 	buff := new(bytes.Buffer)

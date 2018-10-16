@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 
 	"code.cloudfoundry.org/cli/cf/configuration/coreconfig"
 	cferrors "code.cloudfoundry.org/cli/cf/errors"
@@ -88,11 +89,42 @@ func (sm *SegmentManager) UpdateSegment(id string, name string) (seg CCSegmentRe
 		return CCSegmentResource{}, err
 	}
 	path := fmt.Sprintf("/v3/isolation_segments/%s", id)
-	err = sm.ccGateway.PatchResource(sm.apiEndpoint, path, bytes.NewReader(body), &seg)
+	err = sm.patchResource(sm.apiEndpoint, path, bytes.NewReader(body), &seg)
 	if err != nil {
 		return CCSegmentResource{}, err
 	}
 	return seg, nil
+}
+
+// This one should belong to gateway.go, but that API is deprecated
+func (sm *SegmentManager) patchResource(endpoint, apiURL string, body io.ReadSeeker, optionalResource ...interface{}) error {
+	var resource interface{}
+	if len(optionalResource) > 0 {
+		resource = optionalResource[0]
+	}
+
+	request, err := sm.ccGateway.NewRequest("PATCH", endpoint+apiURL, sm.config.AccessToken(), body)
+	if err != nil {
+		return err
+	}
+
+	if resource == nil {
+		_, err = sm.ccGateway.PerformRequest(request)
+		return err
+	}
+
+	// as sync is false - we removed this from the if
+	if sm.ccGateway.PollingEnabled {
+		_, err = sm.ccGateway.PerformPollingRequestForJSONResponse(endpoint, request, resource, sm.ccGateway.AsyncTimeout())
+		return err
+	}
+
+	_, err = sm.ccGateway.PerformRequestForJSONResponse(request, resource)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // FindSegment -

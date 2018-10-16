@@ -29,7 +29,7 @@ func newRequestLoggerFileWriter(ui *UI, lock *sync.Mutex, filePaths []string) *R
 	}
 }
 
-func (display *RequestLoggerFileWriter) DisplayBody(_ []byte) error {
+func (display *RequestLoggerFileWriter) DisplayBody([]byte) error {
 	for _, logFile := range display.logFiles {
 		_, err := logFile.WriteString(RedactedValue)
 		if err != nil {
@@ -65,7 +65,7 @@ func (display *RequestLoggerFileWriter) DisplayJSONBody(body []byte) error {
 
 	sanitized, err := SanitizeJSON(body)
 	if err != nil {
-		return err
+		return display.DisplayMessage(string(body))
 	}
 
 	buff := new(bytes.Buffer)

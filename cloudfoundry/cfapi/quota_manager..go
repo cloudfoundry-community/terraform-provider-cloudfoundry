@@ -138,8 +138,8 @@ func (qm *QuotaManager) FindQuotaByName(t QuotaType, name string, org *string) (
 			}
 			return true
 		}); err != nil {
-			return CCQuota{}, err
-		}
+		return CCQuota{}, err
+	}
 	if !found {
 		return CCQuota{}, errors.NewModelNotFoundError("Quota", name)
 	}

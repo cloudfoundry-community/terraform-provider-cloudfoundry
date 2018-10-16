@@ -139,7 +139,7 @@ func resourceOrgQuotaDelete(d *schema.ResourceData, meta interface{}) (err error
 
 func readOrgQuotaResource(d *schema.ResourceData) cfapi.CCQuota {
 	quota := cfapi.CCQuota{
-		Name: d.Get("name").(string),
+		Name:                    d.Get("name").(string),
 		NonBasicServicesAllowed: d.Get("allow_paid_service_plans").(bool),
 		TotalServices:           d.Get("total_services").(int),
 		TotalServiceKeys:        d.Get("total_service_keys").(int),
