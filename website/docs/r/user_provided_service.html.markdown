@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry User Provided Service.
 ---
 
-# cf\_user_provided_service
+# cloudfoundry\_user_provided_service
 
 Provides a Cloud Foundry resource for managing Cloud Foundry [User Provided Services](https://docs.cloudfoundry.org/devguide/services/user-provided.html) within spaces.
 

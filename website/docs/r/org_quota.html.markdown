@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Org Quota resource.
 ---
 
-# cf\_org\_quota
+# cloudfoundry\_org\_quota
 
 Provides a Cloud Foundry resource to manage org [quotas](https://docs.cloudfoundry.org/adminguide/quota-plans.html) definitions.
 

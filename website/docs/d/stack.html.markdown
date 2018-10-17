@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry stack.
 ---
 
-# cf\_stack
+# cloudfoundry\_stack
 
 Gets information on a particular Cloud Foundry [stack](https://docs.cloudfoundry.org/devguide/deploy-apps/stacks.html).
 

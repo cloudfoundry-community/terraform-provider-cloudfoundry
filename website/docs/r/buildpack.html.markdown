@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Buildpack resource.
 ---
 
-# cf\_buildpack
+# cloudfoundry\_buildpack
 
 Provides a Cloud Foundry resource for managing Cloud Foundry admin [buildpacks](https://docs.cloudfoundry.org/adminguide/buildpacks.html).
 

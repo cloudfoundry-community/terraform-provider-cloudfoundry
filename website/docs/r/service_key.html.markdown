@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Service Key.
 ---
 
-# cf\_service\_key
+# cloudfoundry\_service\_key
 
 Provides a Cloud Foundry resource for managing Cloud Foundry [Service Keys](https://docs.cloudfoundry.org/devguide/services/#service-keys).
 

@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry Organization.
 ---
 
-# cf\_org
+# cloudfoundry\_org
 
 Gets information on a Cloud Foundry organization.
 

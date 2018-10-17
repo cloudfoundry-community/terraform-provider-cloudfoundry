@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Default Application Security Group resource.
 ---
 
-# cf\_default\_asg
+# cloudfoundry\_default\_asg
 
 Provides a resource for modifying the default staging or running
 [application security groups](https://docs.cloudfoundry.org/adminguide/app-sec-groups.html).

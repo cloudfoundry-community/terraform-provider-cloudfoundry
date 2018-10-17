@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry Domain.
 ---
 
-# cf\_domain
+# cloudfoundry\_domain
 
 Gets information on a Cloud Foundry domain.
 

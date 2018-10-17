@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry configuration resource.
 ---
 
-# cf\_config
+# cloudfoundry\_config
 
 Provides a Cloud Foundry configuration resource for managing Cloud Foundry [feature](https://docs.cloudfoundry.org/adminguide/listing-feature-flags.html) flags.
 

@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry Application Security Group.
 ---
 
-# cf\_asg
+# cloudfoundry\_asg
 
 Gets information on a Cloud Foundry application security group.
 
