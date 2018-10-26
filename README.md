@@ -93,6 +93,16 @@ make testacc
 $ make testacc
 ```
 
+Migration
+---------
+
+See the script in `scripts/migration` to migrate from versions below 0.9.9
+
+Support
+-------
+
+You can reach us over [Slack](https://cloudfoundry.slack.com/messages/C7JRBR8CV/)
+
 Terraform Links
 ---------------
 
