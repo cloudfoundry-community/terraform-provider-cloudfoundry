@@ -12,7 +12,7 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
-const appResourceSpringMusicTemplate = `
+const appResourceJavaSpringTemplate = `
 
 data "cloudfoundry_domain" "local" {
     name = "%s"
@@ -31,10 +31,10 @@ data "cloudfoundry_service" "rmq" {
     name = "p-rabbitmq"
 }
 
-resource "cloudfoundry_route" "spring-music" {
+resource "cloudfoundry_route" "java-spring" {
 	domain = "${data.cloudfoundry_domain.local.id}"
 	space = "${data.cloudfoundry_space.space.id}"
-	hostname = "spring-music"
+	hostname = "java-spring"
 }
 resource "cloudfoundry_service_instance" "db" {
 	name = "db"
@@ -47,20 +47,20 @@ resource "cloudfoundry_service_instance" "fs1" {
     service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
 %%s
-resource "cloudfoundry_app" "spring-music" {
-	name = "spring-music"
+resource "cloudfoundry_app" "java-spring" {
+	name = "java-spring"
 	space = "${data.cloudfoundry_space.space.id}"
 	memory = "768"
 	disk_quota = "512"
 	timeout = 1800
 
-	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/java-spring.jar"
 
 %%s
 }
 `
 
-const appResourceSpringMusic = `
+const appResourceJavaSpring = `
 
 data "cloudfoundry_domain" "local" {
     name = "%s"
@@ -79,10 +79,10 @@ data "cloudfoundry_service" "rmq" {
     name = "p-rabbitmq"
 }
 
-resource "cloudfoundry_route" "spring-music" {
+resource "cloudfoundry_route" "java-spring" {
 	domain = "${data.cloudfoundry_domain.local.id}"
 	space = "${data.cloudfoundry_space.space.id}"
-	hostname = "spring-music"
+	hostname = "java-spring"
 }
 resource "cloudfoundry_service_instance" "db" {
 	name = "db"
@@ -94,14 +94,14 @@ resource "cloudfoundry_service_instance" "fs1" {
     space = "${data.cloudfoundry_space.space.id}"
     service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
-resource "cloudfoundry_app" "spring-music" {
-	name = "spring-music"
+resource "cloudfoundry_app" "java-spring" {
+	name = "java-spring"
 	space = "${data.cloudfoundry_space.space.id}"
 	memory = "768"
 	disk_quota = "512"
 	timeout = 1800
 
-	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/java-spring.jar"
 
 	service_binding {
 		service_instance = "${cloudfoundry_service_instance.db.id}"
@@ -111,7 +111,7 @@ resource "cloudfoundry_app" "spring-music" {
 	}
 
 	route {
-		default_route = "${cloudfoundry_route.spring-music.id}"
+		default_route = "${cloudfoundry_route.java-spring.id}"
 	}
 
 	environment {
@@ -121,7 +121,7 @@ resource "cloudfoundry_app" "spring-music" {
 }
 `
 
-const appResourceSpringMusicUpdate = `
+const appResourceJavaSpringUpdate = `
 
 data "cloudfoundry_domain" "local" {
     name = "%s"
@@ -140,10 +140,10 @@ data "cloudfoundry_service" "rmq" {
     name = "p-rabbitmq"
 }
 
-resource "cloudfoundry_route" "spring-music" {
+resource "cloudfoundry_route" "java-spring" {
 	domain = "${data.cloudfoundry_domain.local.id}"
 	space = "${data.cloudfoundry_space.space.id}"
-	hostname = "spring-music"
+	hostname = "java-spring"
 }
 resource "cloudfoundry_service_instance" "db" {
 	name = "db"
@@ -160,15 +160,15 @@ resource "cloudfoundry_service_instance" "fs2" {
     space = "${data.cloudfoundry_space.space.id}"
     service_plan = "${data.cloudfoundry_service.rmq.service_plans.standard}"
 }
-resource "cloudfoundry_app" "spring-music" {
-	name = "spring-music-updated"
+resource "cloudfoundry_app" "java-spring" {
+	name = "java-spring-updated"
 	space = "${data.cloudfoundry_space.space.id}"
 	instances ="2"
 	memory = "1024"
 	disk_quota = "1024"
 	timeout = 1800
 
-	url = "https://github.com/mevansam/spring-music/releases/download/v1.0/spring-music.war"
+	url = "file://../tests/cf-acceptance-tests/assets/java-spring/java-spring.jar"
 
 	service_binding {
 		service_instance = "${cloudfoundry_service_instance.db.id}"
@@ -181,7 +181,7 @@ resource "cloudfoundry_app" "spring-music" {
 	}
 
 	route {
-		default_route = "${cloudfoundry_route.spring-music.id}"
+		default_route = "${cloudfoundry_route.java-spring.id}"
 	}
 
 	environment {
@@ -574,26 +574,26 @@ func TestAccAppVersions_app1(t *testing.T) {
 
 func TestAccApp_app1(t *testing.T) {
 
-	refApp := "cloudfoundry_app.spring-music"
+	refApp := "cloudfoundry_app.java-spring"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"spring-music"}),
+			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceSpringMusic, defaultAppDomain()),
+					Config: fmt.Sprintf(appResourceJavaSpring, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -611,16 +611,16 @@ func TestAccApp_app1(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceSpringMusicUpdate, defaultAppDomain()),
+					Config: fmt.Sprintf(appResourceJavaSpringUpdate, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music-updated"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring-updated"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -682,16 +682,16 @@ func TestApp_OldStyleRoutes_failLiveStage(t *testing.T) {
 			IsUnitTest:   true,
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"spring-music"}),
+			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
 					PlanOnly:    true,
 					ExpectError: regexp.MustCompile("\\[REMOVED\\] Support for the non-default route has been removed."),
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
 						``,
 						`route {
-							live_route = "${cloudfoundry_route.spring-music.id}"
+							live_route = "${cloudfoundry_route.java-spring.id}"
 						}`,
 					),
 				},
@@ -699,10 +699,10 @@ func TestApp_OldStyleRoutes_failLiveStage(t *testing.T) {
 				resource.TestStep{
 					PlanOnly:    true,
 					ExpectError: regexp.MustCompile("\\[REMOVED\\] Support for the non-default route has been removed."),
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
 						``,
 						`route {
-							stage_route = "${cloudfoundry_route.spring-music.id}"
+							stage_route = "${cloudfoundry_route.java-spring.id}"
 						}`,
 					),
 				},
@@ -712,31 +712,31 @@ func TestApp_OldStyleRoutes_failLiveStage(t *testing.T) {
 
 func TestAccApp_NewStyleRoutes_updateTo(t *testing.T) {
 
-	refApp := "cloudfoundry_app.spring-music"
+	refApp := "cloudfoundry_app.java-spring"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"spring-music"}),
+			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
 						``,
 						`route {
-							default_route = "${cloudfoundry_route.spring-music.id}"
+							default_route = "${cloudfoundry_route.java-spring.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -754,21 +754,21 @@ func TestAccApp_NewStyleRoutes_updateTo(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
 						``,
 						`routes {
-							route = "${cloudfoundry_route.spring-music.id}"
+							route = "${cloudfoundry_route.java-spring.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -790,31 +790,31 @@ func TestAccApp_NewStyleRoutes_updateTo(t *testing.T) {
 
 func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 
-	refApp := "cloudfoundry_app.spring-music"
+	refApp := "cloudfoundry_app.java-spring"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"spring-music"}),
+			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
 						``,
 						`route {
-							default_route = "${cloudfoundry_route.spring-music.id}"
+							default_route = "${cloudfoundry_route.java-spring.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -832,31 +832,31 @@ func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
-						`resource "cloudfoundry_route" "spring-music-2" {
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
+						`resource "cloudfoundry_route" "java-spring-2" {
 							domain = "${data.cloudfoundry_domain.local.id}"
 							space = "${data.cloudfoundry_space.space.id}"
-							hostname = "spring-music-2"
+							hostname = "java-spring-2"
 						}`,
 						`routes {
-							route = "${cloudfoundry_route.spring-music.id}"
+							route = "${cloudfoundry_route.java-spring.id}"
 						}
 						routes {
-							route = "${cloudfoundry_route.spring-music-2.id}"
+							route = "${cloudfoundry_route.java-spring-2.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
-							if err = assertHTTPResponse("https://spring-music-2."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -874,28 +874,28 @@ func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
-						`resource "cloudfoundry_route" "spring-music-2" {
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
+						`resource "cloudfoundry_route" "java-spring-2" {
 							domain = "${data.cloudfoundry_domain.local.id}"
 							space = "${data.cloudfoundry_space.space.id}"
-							hostname = "spring-music-2"
+							hostname = "java-spring-2"
 						}`,
 						`routes {
-							route = "${cloudfoundry_route.spring-music.id}"
+							route = "${cloudfoundry_route.java-spring.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
-							if err = assertHTTPResponse("https://spring-music-2."+defaultAppDomain(), 404, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 404, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -913,39 +913,39 @@ func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
-						`resource "cloudfoundry_route" "spring-music-2" {
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
+						`resource "cloudfoundry_route" "java-spring-2" {
 							domain = "${data.cloudfoundry_domain.local.id}"
 							space = "${data.cloudfoundry_space.space.id}"
-							hostname = "spring-music-2"
+							hostname = "java-spring-2"
 						}
-						resource "cloudfoundry_route" "spring-music-3" {
+						resource "cloudfoundry_route" "java-spring-3" {
 							domain = "${data.cloudfoundry_domain.local.id}"
 							space = "${data.cloudfoundry_space.space.id}"
-							hostname = "spring-music-3"
+							hostname = "java-spring-3"
 						}`,
 						`routes {
-							route = "${cloudfoundry_route.spring-music-2.id}"
+							route = "${cloudfoundry_route.java-spring-2.id}"
 						}
 						routes {
-							route = "${cloudfoundry_route.spring-music-3.id}"
+							route = "${cloudfoundry_route.java-spring-3.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 404, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 404, nil); err != nil {
 								return err
 							}
-							if err = assertHTTPResponse("https://spring-music-2."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
-							if err = assertHTTPResponse("https://spring-music-3."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring-3."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -967,31 +967,31 @@ func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 
 func TestAccApp_NewStyleRoutes_Create(t *testing.T) {
 
-	refApp := "cloudfoundry_app.spring-music"
+	refApp := "cloudfoundry_app.java-spring"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"spring-music"}),
+			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
 						``,
 						`routes {
-							route = "${cloudfoundry_route.spring-music.id}"
+							route = "${cloudfoundry_route.java-spring.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -1013,31 +1013,31 @@ func TestAccApp_NewStyleRoutes_Create(t *testing.T) {
 
 func TestAccApp_NewStyleRoutes_Change(t *testing.T) {
 
-	refApp := "cloudfoundry_app.spring-music"
+	refApp := "cloudfoundry_app.java-spring"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"spring-music"}),
+			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
 						``,
 						`routes {
-							route = "${cloudfoundry_route.spring-music.id}"
+							route = "${cloudfoundry_route.java-spring.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -1055,28 +1055,28 @@ func TestAccApp_NewStyleRoutes_Change(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
-						`resource "cloudfoundry_route" "spring-music-2" {
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
+						`resource "cloudfoundry_route" "java-spring-2" {
 							domain = "${data.cloudfoundry_domain.local.id}"
 							space = "${data.cloudfoundry_space.space.id}"
-							hostname = "spring-music-2"
+							hostname = "java-spring-2"
 						}`,
 						`routes {
-							route = "${cloudfoundry_route.spring-music-2.id}"
+							route = "${cloudfoundry_route.java-spring-2.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 404, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 404, nil); err != nil {
 								return err
 							}
-							if err = assertHTTPResponse("https://spring-music-2."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -1098,31 +1098,31 @@ func TestAccApp_NewStyleRoutes_Change(t *testing.T) {
 
 func TestAccApp_NewStyleRoutes_Add(t *testing.T) {
 
-	refApp := "cloudfoundry_app.spring-music"
+	refApp := "cloudfoundry_app.java-spring"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"spring-music"}),
+			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
 						``,
 						`routes {
-							route = "${cloudfoundry_route.spring-music.id}"
+							route = "${cloudfoundry_route.java-spring.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
@@ -1140,31 +1140,31 @@ func TestAccApp_NewStyleRoutes_Add(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceSpringMusicTemplate, defaultAppDomain()),
-						`resource "cloudfoundry_route" "spring-music-2" {
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate, defaultAppDomain()),
+						`resource "cloudfoundry_route" "java-spring-2" {
 							domain = "${data.cloudfoundry_domain.local.id}"
 							space = "${data.cloudfoundry_space.space.id}"
-							hostname = "spring-music-2"
+							hostname = "java-spring-2"
 						}`,
 						`routes {
-							route = "${cloudfoundry_route.spring-music.id}"
+							route = "${cloudfoundry_route.java-spring.id}"
 						}
 						routes {
-							route = "${cloudfoundry_route.spring-music-2.id}"
+							route = "${cloudfoundry_route.java-spring-2.id}"
 						}`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://spring-music."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
-							if err = assertHTTPResponse("https://spring-music-2."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "spring-music"),
+						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
 						resource.TestCheckResourceAttr(refApp, "space", defaultPcfDevSpaceID()),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),

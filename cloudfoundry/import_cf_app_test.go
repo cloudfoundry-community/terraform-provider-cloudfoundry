@@ -9,17 +9,17 @@ import (
 )
 
 func TestAccApp_importBasic(t *testing.T) {
-	resourceName := "cloudfoundry_app.spring-music"
+	resourceName := "cloudfoundry_app.java-spring"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"spring-music"}),
+			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceSpringMusic, defaultAppDomain()),
+					Config: fmt.Sprintf(appResourceJavaSpring, defaultAppDomain()),
 				},
 
 				resource.TestStep{
