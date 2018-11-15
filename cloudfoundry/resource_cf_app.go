@@ -247,6 +247,7 @@ func resourceApp() *schema.Resource {
 						"validation_script": &schema.Schema{
 							Type:     schema.TypeString,
 							Optional: true,
+							Removed:  "The 'route' block has been deprecated.",
 						},
 					},
 				},
