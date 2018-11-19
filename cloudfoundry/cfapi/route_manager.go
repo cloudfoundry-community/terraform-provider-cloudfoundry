@@ -268,7 +268,9 @@ func (rm *RouteManager) readRouteMappings(id, key string) (mappings []map[string
 			mapping["route"] = routeResource["entity"].(map[string]interface{})["route_guid"].(string)
 		}
 		if v, ok := routeResource["entity"].(map[string]interface{})["app_port"]; ok {
-			mapping["port"] = int(v.(float64))
+			if port, ok := v.(float64); ok {
+				mapping["port"] = int(port)
+			}
 		}
 		mappings = append(mappings, mapping)
 		return true
