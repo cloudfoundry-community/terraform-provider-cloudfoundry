@@ -87,8 +87,12 @@ One of the following arguments must be declared to locate application source or 
 
 ### Routing
 
-* `route` - (Optional) Configures how the application will be accessed externally to cloudfoundry. 
-  - `default_route` - (Optional, String) The ID of the route where the application will be reachable from once deployed.
+* `routes` - (Optional, Set) Configures how the application will be accessed externally to cloudfoundry.
+  - Arguments
+    - `route` - (Required, String) The route GUID.
+  - Attributes
+    - `port` - (Number) The port of the application that the route mapping was bound to.
+    - `mapping_id` - (String) The Cloud Foundry mapping ID for this route binding.
 
 ### Environment Variables
 
