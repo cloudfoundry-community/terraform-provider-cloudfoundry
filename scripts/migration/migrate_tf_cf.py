@@ -51,7 +51,7 @@ class JSONConverter(Converter):
         provider_regex_replacement = r'provider.cloudfoundry'
         modules = state_dict['modules']
         for module in modules:
-            for key, value_dict in module['resources'].items():
+            for key, value_dict in list(module['resources'].items()):
                 # 1. change the stuff in the value dict
                 # 1a. change each moduel in depends_on
                 depending_modules = value_dict['depends_on']
