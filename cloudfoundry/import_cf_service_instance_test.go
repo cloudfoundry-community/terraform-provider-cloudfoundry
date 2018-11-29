@@ -26,9 +26,10 @@ func TestAccServiceInstance_importBasic(t *testing.T) {
 				},
 
 				resource.TestStep{
-					ResourceName:      resourceName,
-					ImportState:       true,
-					ImportStateVerify: true,
+					ResourceName:            resourceName,
+					ImportState:             true,
+					ImportStateVerify:       true,
+					ImportStateVerifyIgnore: []string{"recursive_delete"},
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(resourceName),
 						resource.TestCheckResourceAttr(
