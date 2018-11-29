@@ -66,11 +66,6 @@ func resourceUserProvidedService() *schema.Resource {
 				ConflictsWith:    []string{"credentials"},
 				DiffSuppressFunc: structure.SuppressJsonDiff,
 			},
-			"recursive_delete": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
 		},
 	}
 }
@@ -225,9 +220,8 @@ func resourceUserProvidedServiceDelete(d *schema.ResourceData, meta interface{})
 	session.Log.DebugMessage("begin resourceServiceInstanceDelete")
 
 	sm := session.ServiceManager()
-	recursiveDelete := d.Get("recursive_delete").(bool)
 
-	if err = sm.DeleteServiceInstance(d.Id(), recursiveDelete); err != nil {
+	if err = sm.DeleteUserProvidedService(d.Id()); err != nil {
 		return err
 	}
 
