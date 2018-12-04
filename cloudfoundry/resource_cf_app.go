@@ -314,21 +314,6 @@ func resourceApp() *schema.Resource {
 				Computed: true,
 			},
 		},
-
-		// TODO: find a way to test that this is correctly forcing a new resource
-		//       when you try to change an app to/from a docker container
-		CustomizeDiff: func(diff *schema.ResourceDiff, v interface{}) error {
-			if (diff.HasChange("docker_image") || diff.HasChange("docker_credentials")) &&
-				(diff.HasChange("git") || diff.HasChange("github_release") || diff.HasChange("url")) {
-
-				for _, v := range []string{"docker_image", "docker_credentials", "git", "github_release", "url"} {
-					if diff.HasChange(v) {
-						diff.ForceNew(v)
-					}
-				}
-			}
-			return nil
-		},
 	}
 }
 
@@ -713,6 +698,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	//       service bindings are updates?)
 	app.DockerImage = getChangedValueString("docker_image", &update, d)
 	app.DockerCredentials = getChangedValueMap("docker_credentials", &update, d)
+	if *app.DockerImage == "" {
+		app.DockerImage = nil
+	}
 
 	if update || restart || restage {
 		// push any updates to CF, we'll do any restage/restart later
