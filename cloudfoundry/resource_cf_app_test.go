@@ -12,6 +12,41 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
+const appResourceUrlDockerTemplate = `
+
+data "cloudfoundry_domain" "local" {
+	name = "%s"
+}
+data "cloudfoundry_org" "org" {
+	name = "pcfdev-org"
+}
+data "cloudfoundry_space" "space" {
+	name = "pcfdev-space"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+resource "cloudfoundry_route" "java-spring" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "java-spring"
+}
+resource "cloudfoundry_app" "java-spring" {
+	name = "java-spring"
+	space = "${data.cloudfoundry_space.space.id}"
+	memory = "768"
+	disk_quota = "512"
+	timeout = 1800
+	instances = 1
+	blue_green {
+		enable = true
+	}
+	routes {
+		route = "${cloudfoundry_route.java-spring.id}"
+	}
+
+%%s
+}
+`
+
 const appResourceJavaSpringTemplate = `
 
 data "cloudfoundry_domain" "local" {
