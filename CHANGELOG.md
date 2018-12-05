@@ -1,3 +1,7 @@
+## 0.X (future version)
+
+* We have created a migration script in `scripts/migration` to migrate from versions below 0.9.9, which helps to mitigate the breaking changes in the provider [#171](https://github.com/mevansam/terraform-provider-cf/pull/171) and [#165](https://github.com/mevansam/terraform-provider-cf/pull/165)
+
 ## 0.9.9 (September 27, 2018)
 
 BREAKING CHANGES:
