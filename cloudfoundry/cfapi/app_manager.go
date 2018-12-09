@@ -571,9 +571,17 @@ func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string
 				mapping["service_instance"] = routeResource["entity"].(map[string]interface{})["service_instance_guid"].(string)
 			}
 
-			if v, ok := routeResource["entity"].(map[string]interface{})["credentials"]; ok {
-				mapping["credentials"] = v.(map[string]interface{})
+			if v, ok := routeResource["entity"]; ok {
+				entity := v.(map[string]interface{})
+				// 1.
+				if c, ok2 := entity["credentials"]; ok2 && (c != nil) {
+					mapping["credentials"] = c.(map[string]interface{})
+				}
 			}
+
+			// if v, ok := routeResource["entity"].(map[string]interface{})["credentials"]; ok {
+			// 	mapping["credentials"] = v.(map[string]interface{})
+			// }
 
 			mappings = append(mappings, mapping)
 			return true
