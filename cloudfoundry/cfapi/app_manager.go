@@ -548,6 +548,8 @@ func (am *AppManager) ReadServiceBindingsByServiceInstance(serviceInstanceID str
 }
 
 // readServiceBindings -
+//
+// 1. Credentials can be null for syslog_drain services
 func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string]interface{}, err error) {
 
 	resource := make(map[string]interface{})
@@ -578,10 +580,6 @@ func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string
 					mapping["credentials"] = c.(map[string]interface{})
 				}
 			}
-
-			// if v, ok := routeResource["entity"].(map[string]interface{})["credentials"]; ok {
-			// 	mapping["credentials"] = v.(map[string]interface{})
-			// }
 
 			mappings = append(mappings, mapping)
 			return true
