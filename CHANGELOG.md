@@ -1,12 +1,13 @@
 ## 0.10.0  (Unreleased)
 
 ENHANCEMENTS:
- * `cloudfoundry_app.route.default_route` deprecated in favor or `cloudfoundry_app.routes` array [#150](https://github.com/mevansam/terraform-provider-cf/pull/150) following cleaned up of blue/green unimplemented support. Thanks [@jcarrothers-sap](https://github.com/jcarrothers-sap). 
+ * `cloudfoundry_app.route.default_route` deprecated in favor or `cloudfoundry_app.routes` array [#150](https://github.com/mevansam/terraform-provider-cf/pull/150) following cleaned up of blue/green unimplemented support. Thanks [@jcarrothers-sap](https://github.com/jcarrothers-sap).
  * Migration script to migrate from 0.9.8 to 0.9.9 syntax. [#165](https://github.com/mevansam/terraform-provider-cf/pull/165). Thanks [@janosbinder](https://github.com/janosbinder)
- 
-BUG FIXES: 
-  * changes to app health check required an app restart [#168](https://github.com/mevansam/terraform-provider-cf/pull/168)
-  * fix a crash when using `syslog_drain_url` services [#175](https://github.com/mevansam/terraform-provider-cf/pull/175). Thanks [@psycofdj]( psycofdj)
+
+BUG FIXES:
+  * changes to app health check required an app restart [#168](https://github.com/mevansam/terraform-provider-cf/pull/168). Thanks [@jcarrothers-sap](https://github.com/jcarrothers-sap)
+  * fix a crash when using `syslog_drain_url` services [#175](https://github.com/mevansam/terraform-provider-cf/pull/175). Thanks [@psycofdj](https://github.com/psycofdj)
+  * fix git http(s) authentication on cloudfoundry_app resource [#169](https://github.com/mevansam/terraform-provider-cf/pull/169). Thanks [@psycofdj](https://github.com/psycofdj)
   * fix edge case crash with null app port [#159](https://github.com/mevansam/terraform-provider-cf/pull/159). Thanks [@loafoe](https://github.com/loafoe)
 
 ## 0.9.9 (September 27, 2018)
@@ -37,7 +38,7 @@ BREAKING CHANGES:
 
 if there are no errors after calling terraform plan, and no changes are planned to be applied then the migration was successful.
 
-* `cloudfoundry_app.github_release` and `cloudfoundry_buildpack.github_release` now accept `user` and `password` attribute instead of Oauth access token attribute [#119](https://github.com/mevansam/terraform-provider-cf/issues/119) thanks  [@janosbinder](https://github.com/janosbinder) and 
+* `cloudfoundry_app.github_release` and `cloudfoundry_buildpack.github_release` now accept `user` and `password` attribute instead of Oauth access token attribute [#119](https://github.com/mevansam/terraform-provider-cf/issues/119) thanks  [@janosbinder](https://github.com/janosbinder) and
 [@SzucsAti](https://github.com/SzucsAti)
 * `cloudfoundry_config` was renamed into cloudfoundry_feature_flags [#6](https://github.com/mevansam/terraform-provider-cf/issues/#6) [#66](https://github.com/mevansam/terraform-provider-cf/issues/66) thanks [@SzucsAti](https://github.com/mevansam)
 * `cloudfoundry_quota` was split into `cloudfoundry_org_quota` and `cloudfoundry_space_quota` thanks [@psycofdj](https://github.com/psycofdj)
@@ -52,7 +53,7 @@ IMPROVEMENTS:
 
 FEATURES:
 
-* `cloudfoundry_route_service_binding` support [#16](https://github.com/mevansam/terraform-provider-cf/issues/16) thanks [@psycofdj](https://github.com/psycofdj) 
+* `cloudfoundry_route_service_binding` support [#16](https://github.com/mevansam/terraform-provider-cf/issues/16) thanks [@psycofdj](https://github.com/psycofdj)
 * All resources can now be imported [#6](https://github.com/mevansam/terraform-provider-cf/issues/#6) thanks [@ArthurHlt](https://github.com/ArthurHlt)
 * Asynchronous provisioning/deprovisioning and update of cf_service_instance ([#51](https://github.com/mevansam/terraform-provider-cf/issues/51) thanks [@samedguener](https://github.com/samedguener)
 * `cloudfoundry_app` docker support [#43](https://github.com/mevansam/terraform-provider-cf/issues/#43) [#84](https://github.com/mevansam/terraform-provider-cf/issues/#84) thanks [@samedguener](https://github.com/samedguener) [@doktorgibson](https://github.com/doktorgibson) and [@janosbinder](https://github.com/janosbinder)
@@ -77,3 +78,6 @@ NOTES:
     * run `goimports` on the code + prune unused vendor libs (#48 thanks [@ArthurHlt](https://github.com/ArthurHlt)
     * Missing error checks [#49](https://github.com/mevansam/terraform-provider-cf/issues/49) thanks [@ArthurHlt](https://github.com/ArthurHlt)
     * Clean ups: [#45](https://github.com/mevansam/terraform-provider-cf/issues/45), [#46](https://github.com/mevansam/terraform-provider-cf/issues/46)
+
+<!-- Local Variables: -->
+<!-- End: -->
