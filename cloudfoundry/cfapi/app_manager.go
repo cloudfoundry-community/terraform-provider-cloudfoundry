@@ -500,6 +500,8 @@ func (am *AppManager) StopApp(appID string, timeout time.Duration) (err error) {
 }
 
 // CreateServiceBinding -
+//
+// 1. Credentials can be null for syslog_drain services
 func (am *AppManager) CreateServiceBinding(
 	appID string,
 	serviceInstanceID string,
@@ -524,8 +526,13 @@ func (am *AppManager) CreateServiceBinding(
 	}
 
 	bindingID = response["metadata"].(map[string]interface{})["guid"].(string)
-	if v, ok := response["entity"].(map[string]interface{})["credentials"]; ok {
-		credentials = v.(map[string]interface{})
+
+	if v, ok := response["entity"]; ok {
+		entity := v.(map[string]interface{})
+		// 1.
+		if c, ok2 := entity["credentials"]; ok2 && (c != nil) {
+			credentials = c.(map[string]interface{})
+		}
 	}
 	return bindingID, credentials, nil
 }
@@ -541,6 +548,8 @@ func (am *AppManager) ReadServiceBindingsByServiceInstance(serviceInstanceID str
 }
 
 // readServiceBindings -
+//
+// 1. Credentials can be null for syslog_drain services
 func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string]interface{}, err error) {
 
 	resource := make(map[string]interface{})
@@ -564,8 +573,12 @@ func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string
 				mapping["service_instance"] = routeResource["entity"].(map[string]interface{})["service_instance_guid"].(string)
 			}
 
-			if v, ok := routeResource["entity"].(map[string]interface{})["credentials"]; ok {
-				mapping["credentials"] = v.(map[string]interface{})
+			if v, ok := routeResource["entity"]; ok {
+				entity := v.(map[string]interface{})
+				// 1.
+				if c, ok2 := entity["credentials"]; ok2 && (c != nil) {
+					mapping["credentials"] = c.(map[string]interface{})
+				}
 			}
 
 			mappings = append(mappings, mapping)
