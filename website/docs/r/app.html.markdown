@@ -62,8 +62,7 @@ One of the following arguments must be declared to locate application source or 
 
 ~> **NOTE:** Arguments "`tag`" and "`branch`" are mutually exclusive.
 
-~> **NOTE:** The "`user`" argument tells the provider that an authentication is requiered. Builtin
-   credentials like `https://user:password@host` or `ssh://git@host` is not supported.
+~> **NOTE:** Builtin credentials like `https://user:password@host` or `ssh://git@host` is not supported.
 
 ~> **NOTE:** If a git SSH "`key`" is provided and it is protected the "`password`" argument should be used as the key's password.
 
