@@ -47,7 +47,7 @@ resource "cloudfoundry_user" "u5" {
 resource "cloudfoundry_org" "org1" {
 
     name = "organization-one"
-    quota = "${cloudfoundry_org_quota.runaway.id}"
+    quota_id = "${cloudfoundry_org_quota.runaway.id}"
     managers = [ "${cloudfoundry_user.u1.id}", "${cloudfoundry_user.u2.id}" ]
     billing_managers = [ "${cloudfoundry_user.u3.id}", "${cloudfoundry_user.u4.id}" ]
     auditors = [ "${cloudfoundry_user.u5.id}" ]
@@ -93,7 +93,7 @@ resource "cloudfoundry_user" "u5" {
 
 resource "cloudfoundry_org" "org1" {
 	name = "organization-one-updated"
-  quota = "${data.cloudfoundry_org_quota.default.id}"
+  quota_id = "${data.cloudfoundry_org_quota.default.id}"
 	managers = [ "${cloudfoundry_user.u1.id}" ]
 	billing_managers = [ "${cloudfoundry_user.u2.id}", "${cloudfoundry_user.u3.id}" ]
 	auditors = [ "${cloudfoundry_user.u5.id}" ]
@@ -177,7 +177,7 @@ func testAccCheckOrgExists(resOrg, resQuota string, refUserRemoved *string) reso
 		if err = assertEquals(attributes, "name", org.Name); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "quota", org.QuotaGUID); err != nil {
+		if err = assertEquals(attributes, "quota_id", org.QuotaGUID); err != nil {
 			return err
 		}
 

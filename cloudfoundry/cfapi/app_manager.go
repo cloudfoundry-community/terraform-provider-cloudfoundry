@@ -556,12 +556,12 @@ func (am *AppManager) readServiceBindings(id, key string) (mappings []map[string
 
 			switch key {
 			case "service_instance_guid":
-				mapping["app"] = routeResource["entity"].(map[string]interface{})["app_guid"].(string)
+				mapping["app_id"] = routeResource["entity"].(map[string]interface{})["app_guid"].(string)
 			case "app_guid":
-				mapping["service_instance"] = routeResource["entity"].(map[string]interface{})["service_instance_guid"].(string)
+				mapping["service_instance_id"] = routeResource["entity"].(map[string]interface{})["service_instance_guid"].(string)
 			default:
-				mapping["app"] = routeResource["entity"].(map[string]interface{})["app_guid"].(string)
-				mapping["service_instance"] = routeResource["entity"].(map[string]interface{})["service_instance_guid"].(string)
+				mapping["app_id"] = routeResource["entity"].(map[string]interface{})["app_guid"].(string)
+				mapping["service_instance_id"] = routeResource["entity"].(map[string]interface{})["service_instance_guid"].(string)
 			}
 
 			if v, ok := routeResource["entity"].(map[string]interface{})["credentials"]; ok {

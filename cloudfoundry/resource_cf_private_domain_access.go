@@ -17,12 +17,12 @@ func resourcePrivateDomainAccess() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"domain": &schema.Schema{
+			"domain_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"org": &schema.Schema{
+			"org_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -67,15 +67,15 @@ func resourcePrivateDomainAccessCreate(d *schema.ResourceData, meta interface{})
 		return fmt.Errorf("client is nil")
 	}
 
-	domain := d.Get("domain").(string)
-	org := d.Get("org").(string)
+	domainID := d.Get("domain_id").(string)
+	orgID := d.Get("org_id").(string)
 
 	dm := session.DomainManager()
-	if err = dm.CreatePrivateDomainAccess(org, domain); err != nil {
+	if err = dm.CreatePrivateDomainAccess(orgID, domainID); err != nil {
 		return
 	}
 
-	d.SetId(computeID(org, domain))
+	d.SetId(computeID(orgID, domainID))
 	return nil
 }
 
@@ -87,18 +87,18 @@ func resourcePrivateDomainAccessRead(d *schema.ResourceData, meta interface{}) (
 
 	id := d.Id()
 	// id in read hook comes from create or import callback which ensure id's validity
-	var org, domain string
-	org, domain, _ = parseID(id)
+	var orgID, domainID string
+	orgID, domainID, _ = parseID(id)
 
 	dm := session.DomainManager()
 	var found bool
-	if found, err = dm.HasPrivateDomainAccess(org, domain); err != nil || !found {
+	if found, err = dm.HasPrivateDomainAccess(orgID, domainID); err != nil || !found {
 		d.SetId("")
 		return err
 	}
 
-	d.Set("org", org)
-	d.Set("domain", domain)
+	d.Set("org", orgID)
+	d.Set("domain", domainID)
 	return nil
 }
 
@@ -112,10 +112,10 @@ func resourcePrivateDomainAccessDelete(d *schema.ResourceData, meta interface{})
 	id := d.Id()
 
 	// id in read hook comes from create or import callback which ensure id's validity
-	var org, domain string
-	org, domain, _ = parseID(id)
+	var orgID, domainID string
+	orgID, domainID, _ = parseID(id)
 
-	return dm.DeletePrivateDomainAccess(org, domain)
+	return dm.DeletePrivateDomainAccess(orgID, domainID)
 }
 
 // Local Variables:

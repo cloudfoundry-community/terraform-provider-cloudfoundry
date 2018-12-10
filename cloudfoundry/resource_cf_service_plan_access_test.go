@@ -19,8 +19,8 @@ resource "cloudfoundry_service_broker" "redis" {
 }
 
 resource "cloudfoundry_service_plan_access" "redis-access" {
-	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
-	org = "%s"
+	plan_id = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+	org_id = "%s"
 }
 `
 
@@ -33,7 +33,7 @@ resource "cloudfoundry_service_broker" "redis" {
 }
 
 resource "cloudfoundry_service_plan_access" "redis-access" {
-	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+	plan_id = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
 	public = true
 }
 `
@@ -47,7 +47,7 @@ resource "cloudfoundry_service_broker" "redis" {
 }
 
 resource "cloudfoundry_service_plan_access" "redis-access" {
-	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+	plan_id = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
 	public = false
 }
 `
@@ -61,8 +61,8 @@ resource "cloudfoundry_service_broker" "redis" {
 }
 
 resource "cloudfoundry_service_plan_access" "redis-access" {
-	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
-	org = "%s"
+	plan_id = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+	org_id = "%s"
 	public = true
 }
 `
@@ -88,15 +88,15 @@ func TestAccServicePlanAccess_normal(t *testing.T) {
 							func(guid string) {
 								servicePlanAccessGUID = guid
 							}),
-						resource.TestCheckResourceAttrSet(ref, "plan"),
-						resource.TestCheckResourceAttr(ref, "org", defaultPcfDevOrgID()),
+						resource.TestCheckResourceAttrSet(ref, "plan_id"),
+						resource.TestCheckResourceAttr(ref, "org_id", defaultPcfDevOrgID()),
 					),
 				},
 				resource.TestStep{
 					Config: fmt.Sprintf(saResourceUpdateTrue, defaultSysDomain(), user, password),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServicePlan(ref),
-						resource.TestCheckResourceAttrSet(ref, "plan"),
+						resource.TestCheckResourceAttrSet(ref, "plan_id"),
 						resource.TestCheckResourceAttr(ref, "public", "true"),
 					),
 				},
@@ -104,7 +104,7 @@ func TestAccServicePlanAccess_normal(t *testing.T) {
 					Config: fmt.Sprintf(saResourceUpdateFalse, defaultSysDomain(), user, password),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServicePlan(ref),
-						resource.TestCheckResourceAttrSet(ref, "plan"),
+						resource.TestCheckResourceAttrSet(ref, "plan_id"),
 						resource.TestCheckResourceAttr(ref, "public", "false"),
 					),
 				},
@@ -126,7 +126,7 @@ func TestAccServicePlanAccess_error(t *testing.T) {
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config:      fmt.Sprintf(saResourceError, defaultSysDomain(), user, password, defaultPcfDevOrgID()),
-					ExpectError: regexp.MustCompile("\"org\": conflicts with public"),
+					ExpectError: regexp.MustCompile("\"org_id\": conflicts with public"),
 				},
 			},
 		})
@@ -150,14 +150,14 @@ func testAccCheckServicePlanAccessExists(resource string,
 
 		setServicePlanAccessGUID(id)
 
-		plan, org, err := sm.ReadServicePlanAccess(id)
+		planID, orgID, err := sm.ReadServicePlanAccess(id)
 		if err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "plan", plan); err != nil {
+		if err := assertEquals(attributes, "plan_id", planID); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "org", org); err != nil {
+		if err := assertEquals(attributes, "org_id", orgID); err != nil {
 			return err
 		}
 
@@ -181,7 +181,7 @@ func testAccCheckServicePlan(resource string) resource.TestCheckFunc {
 		if err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "plan", id); err != nil {
+		if err := assertEquals(attributes, "plan_id", id); err != nil {
 			return err
 		}
 		if err := assertEquals(attributes, "public", plan.Public); err != nil {

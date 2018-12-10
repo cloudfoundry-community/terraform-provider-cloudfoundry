@@ -18,7 +18,7 @@ resource "cloudfoundry_org" "org1" {
 
 resource "cloudfoundry_space_quota" "dev" {
 	name = "50g"
-	org = "${cloudfoundry_org.org1.id}"
+	org_id = "${cloudfoundry_org.org1.id}"
   allow_paid_service_plans = true
   instance_memory = 1024
   total_memory = 51200
@@ -29,14 +29,14 @@ resource "cloudfoundry_space_quota" "dev" {
 
 resource "cloudfoundry_space" "space1" {
 	name = "space-one"
-	org = "${cloudfoundry_org.org1.id}"
-	quota = "${cloudfoundry_space_quota.dev.id}"
+	org_id = "${cloudfoundry_org.org1.id}"
+	quota_id = "${cloudfoundry_space_quota.dev.id}"
 	allow_ssh = true
 }
 
 resource "cloudfoundry_user_provided_service" "mq" {
 	name = "mq"
-  space = "${cloudfoundry_space.space1.id}"
+  space_id = "${cloudfoundry_space.space1.id}"
   credentials = {
 		"url" = "mq://localhost:9000"
 		"username" = "user"
@@ -52,13 +52,13 @@ resource "cloudfoundry_org" "org1" {
 
 resource "cloudfoundry_space" "space1" {
 	name = "space-one"
-	org = "${cloudfoundry_org.org1.id}"
+	org_id = "${cloudfoundry_org.org1.id}"
 	allow_ssh = true
 }
 
 resource "cloudfoundry_user_provided_service" "complex" {
 	name = "complex"
-  space = "${cloudfoundry_space.space1.id}"
+  space_id = "${cloudfoundry_space.space1.id}"
   credentials_json = "{ \"cnx\": { \"host\": \"localhost\", \"ports\": [ 8080, 8081, 8082 ] } }"
 }
 `
@@ -70,7 +70,7 @@ resource "cloudfoundry_org" "org1" {
 
 resource "cloudfoundry_space_quota" "dev" {
   name = "50g"
-  org = "${cloudfoundry_org.org1.id}"
+  org_id = "${cloudfoundry_org.org1.id}"
   allow_paid_service_plans = true
   instance_memory = 1024
   total_memory = 51200
@@ -81,14 +81,14 @@ resource "cloudfoundry_space_quota" "dev" {
 
 resource "cloudfoundry_space" "space1" {
   name = "space-one"
-  org = "${cloudfoundry_org.org1.id}"
-  quota = "${cloudfoundry_space_quota.dev.id}"
+  org_id = "${cloudfoundry_org.org1.id}"
+  quota_id = "${cloudfoundry_space_quota.dev.id}"
   allow_ssh = true
 }
 
 resource "cloudfoundry_user_provided_service" "mq" {
   name = "mq"
-  space = "${cloudfoundry_space.space1.id}"
+  space_id = "${cloudfoundry_space.space1.id}"
   credentials = {
     "url" = "mq://localhost:9000"
     "username" = "new-user"
@@ -106,13 +106,13 @@ resource "cloudfoundry_org" "org1" {
 
 resource "cloudfoundry_space" "space1" {
   name = "space-one"
-  org = "${cloudfoundry_org.org1.id}"
+  org_id = "${cloudfoundry_org.org1.id}"
   allow_ssh = true
 }
 
 resource "cloudfoundry_user_provided_service" "complex" {
 	name = "complex"
-  space = "${cloudfoundry_space.space1.id}"
+  space_id = "${cloudfoundry_space.space1.id}"
   credentials_json = "{ \"cnx\": { \"host\": \"127.0.0.1\", \"ports\": [ 8088 ] } }"
   syslog_drain_url = "http://localhost/syslog"
   route_service_url = "https://localhost/route"

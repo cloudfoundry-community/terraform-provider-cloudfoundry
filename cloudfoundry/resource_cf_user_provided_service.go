@@ -29,7 +29,7 @@ func resourceUserProvidedService() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"space": &schema.Schema{
+			"space_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -83,7 +83,7 @@ func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{})
 	)
 
 	name := d.Get("name").(string)
-	space := d.Get("space").(string)
+	spaceID := d.Get("space_id").(string)
 	syslogDrainURL := d.Get("syslog_drain_url").(string)
 	routeServiceURL := d.Get("route_service_url").(string)
 
@@ -108,7 +108,7 @@ func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{})
 
 	sm := session.ServiceManager()
 
-	if id, err = sm.CreateUserProvidedService(name, space, credentials, syslogDrainURL, routeServiceURL); err != nil {
+	if id, err = sm.CreateUserProvidedService(name, spaceID, credentials, syslogDrainURL, routeServiceURL); err != nil {
 		return err
 	}
 	session.Log.DebugMessage("New User Provided Service : %# v", id)
@@ -138,7 +138,7 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) (
 	}
 
 	d.Set("name", ups.Name)
-	d.Set("space", ups.SpaceGUID)
+	d.Set("space_id", ups.SpaceGUID)
 
 	// should be changed when syslogDrainURL and routeServiceURL will be removed, this will be:
 	// d.Set("syslog_drain_url", ups.SyslogDrainURL)

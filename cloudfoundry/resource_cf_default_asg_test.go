@@ -33,7 +33,7 @@ resource "cloudfoundry_asg" "services" {
 
 resource "cloudfoundry_default_asg" "running" {
 	name = "running"
-    asgs = [ "${cloudfoundry_asg.apps.id}", "${cloudfoundry_asg.services.id}" ]
+    asg_ids = [ "${cloudfoundry_asg.apps.id}", "${cloudfoundry_asg.services.id}" ]
 }
 `
 
@@ -65,7 +65,7 @@ resource "cloudfoundry_asg" "services" {
 
 resource "cloudfoundry_default_asg" "running" {
 	name = "running"
-    asgs = [ "${data.cloudfoundry_asg.public.id}", "${cloudfoundry_asg.apps.id}" ]
+    asg_ids = [ "${data.cloudfoundry_asg.public.id}", "${cloudfoundry_asg.apps.id}" ]
 }
 `
 
@@ -83,7 +83,7 @@ resource "cloudfoundry_asg" "apps" {
 
 resource "cloudfoundry_default_asg" "staging" {
   name = "staging"
-  asgs = [ "${cloudfoundry_asg.apps.id}" ]
+  asg_ids = [ "${cloudfoundry_asg.apps.id}" ]
 }
 `
 
@@ -106,7 +106,7 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", "running"),
 						resource.TestCheckResourceAttr(
-							ref, "asgs.#", "2"),
+							ref, "asg_ids.#", "2"),
 					),
 				},
 				resource.TestStep{
@@ -116,7 +116,7 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", "running"),
 						resource.TestCheckResourceAttr(
-							ref, "asgs.#", "2"),
+							ref, "asg_ids.#", "2"),
 					),
 				},
 			},
@@ -141,7 +141,7 @@ func TestAccDefaultStagingAsg_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", "staging"),
 						resource.TestCheckResourceAttr(
-							ref, "asgs.#", "1"),
+							ref, "asg_ids.#", "1"),
 					),
 				},
 			},
@@ -166,22 +166,22 @@ func checkDefaultAsgsExists(resource string) resource.TestCheckFunc {
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		var asgs []string
+		var asgIDs []string
 
 		switch id {
 		case "running":
-			if asgs, err = session.ASGManager().Running(); err != nil {
+			if asgIDs, err = session.ASGManager().Running(); err != nil {
 				return
 			}
 		case "staging":
-			if asgs, err = session.ASGManager().Staging(); err != nil {
+			if asgIDs, err = session.ASGManager().Staging(); err != nil {
 				return
 			}
 		}
 
-		if err = assertListEquals(attributes, "asgs", len(asgs),
+		if err = assertListEquals(attributes, "asg_ids", len(asgIDs),
 			func(values map[string]string, i int) (match bool) {
-				return values["value"] == asgs[i]
+				return values["value"] == asgIDs[i]
 			}); err != nil {
 			return
 		}
@@ -195,11 +195,11 @@ func testAccCheckDefaultRunningAsgDestroy(s *terraform.State) error {
 	session := testAccProvider.Meta().(*cfapi.Session)
 	am := session.ASGManager()
 
-	asgs, err := am.Running()
+	asgIDs, err := am.Running()
 	if err != nil {
 		return err
 	}
-	if len(asgs) > 0 {
+	if len(asgIDs) > 0 {
 		return fmt.Errorf("running asgs are not empty")
 	}
 
@@ -219,11 +219,11 @@ func testAccCheckDefaultStagingAsgDestroy(s *terraform.State) error {
 	session := testAccProvider.Meta().(*cfapi.Session)
 	am := session.ASGManager()
 
-	asgs, err := am.Staging()
+	asgIDs, err := am.Staging()
 	if err != nil {
 		return err
 	}
-	if len(asgs) > 0 {
+	if len(asgIDs) > 0 {
 		return fmt.Errorf("staging asgs are not empty")
 	}
 

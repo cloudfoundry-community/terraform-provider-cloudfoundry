@@ -61,7 +61,7 @@ func resourceSpaceQuota() *schema.Resource {
 				Optional: true,
 				Default:  -1,
 			},
-			"org": &schema.Schema{
+			"org_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -111,7 +111,7 @@ func resourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) (err error
 	d.Set("total_service_keys", quota.TotalServiceKeys)
 	d.Set("instance_memory", quota.InstanceMemoryLimit)
 	d.Set("total_app_instances", quota.AppInstanceLimit)
-	d.Set("org", quota.OrgGUID)
+	d.Set("org_id", quota.OrgGUID)
 	d.Set("total_app_tasks", quota.AppTaskLimit)
 
 	return nil
@@ -149,9 +149,9 @@ func readSpaceQuotaResource(d *schema.ResourceData) cfapi.CCQuota {
 		TotalServiceKeys:        d.Get("total_service_keys").(int),
 		TotalRoutes:             d.Get("total_routes").(int),
 		TotalReserveredPorts:    d.Get("total_route_ports").(int),
-		OrgGUID:                 d.Get("org").(string),
+		OrgGUID:                 d.Get("org_id").(string),
 	}
-	if v, ok := d.GetOk("org"); ok {
+	if v, ok := d.GetOk("org_id"); ok {
 		quota.OrgGUID = v.(string)
 	}
 	return quota

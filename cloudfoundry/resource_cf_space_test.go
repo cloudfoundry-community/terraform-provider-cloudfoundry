@@ -67,7 +67,7 @@ resource "cloudfoundry_org" "org1" {
 }
 resource "cloudfoundry_space_quota" "dev" {
 	name = "50g"
-	org = "${cloudfoundry_org.org1.id}"
+	org_id = "${cloudfoundry_org.org1.id}"
     allow_paid_service_plans = true
     instance_memory = 1024
     total_memory = 51200
@@ -78,19 +78,19 @@ resource "cloudfoundry_space_quota" "dev" {
 
 resource "cloudfoundry_space" "space1" {
 	name = "space-one"
-	org = "${cloudfoundry_org.org1.id}"
-	quota = "${cloudfoundry_space_quota.dev.id}"
-	asgs = [ "${cloudfoundry_asg.svc.id}" ]
-	staging_asgs = [ "${cloudfoundry_asg.stg1.id}", "${cloudfoundry_asg.stg2.id}" ]
-    managers = [
+	org_id = "${cloudfoundry_org.org1.id}"
+	quota_id = "${cloudfoundry_space_quota.dev.id}"
+	asg_ids = [ "${cloudfoundry_asg.svc.id}" ]
+	staging_asg_ids = [ "${cloudfoundry_asg.stg1.id}", "${cloudfoundry_asg.stg2.id}" ]
+    manager_ids = [
         "${cloudfoundry_user.tl.id}"
     ]
-    developers = [
+    developer_ids = [
         "${cloudfoundry_user.tl.id}",
         "${cloudfoundry_user.dev1.id}",
 		"${cloudfoundry_user.dev2.id}"
     ]
-    auditors = [
+    auditor_ids = [
         "${cloudfoundry_user.adr.id}",
 		"${cloudfoundry_user.dev3.id}"
     ]
@@ -153,7 +153,7 @@ resource "cloudfoundry_org" "org1" {
 }
 resource "cloudfoundry_space_quota" "dev" {
 	name = "50g"
-	org = "${cloudfoundry_org.org1.id}"
+	org_id = "${cloudfoundry_org.org1.id}"
     allow_paid_service_plans = true
     instance_memory = 1024
     total_memory = 51200
@@ -164,18 +164,18 @@ resource "cloudfoundry_space_quota" "dev" {
 
 resource "cloudfoundry_space" "space1" {
 	name = "space-one-updated"
-	org = "${cloudfoundry_org.org1.id}"
-	quota = "${cloudfoundry_space_quota.dev.id}"
-	asgs = [ "${cloudfoundry_asg.svc.id}" ]
-	staging_asgs = [ "${cloudfoundry_asg.stg2.id}", "${cloudfoundry_asg.stg3.id}" ]
-    managers = [
+	org_id = "${cloudfoundry_org.org1.id}"
+	quota_id = "${cloudfoundry_space_quota.dev.id}"
+	asg_ids = [ "${cloudfoundry_asg.svc.id}" ]
+	staging_asg_ids = [ "${cloudfoundry_asg.stg2.id}", "${cloudfoundry_asg.stg3.id}" ]
+    manager_ids = [
         "${cloudfoundry_user.tl.id}"
     ]
-    developers = [
+    developer_ids = [
         "${cloudfoundry_user.tl.id}",
         "${cloudfoundry_user.dev1.id}",
     ]
-    auditors = [
+    auditor_ids = [
         "${cloudfoundry_user.adr.id}",
 		"${cloudfoundry_user.dev2.id}"
     ]
@@ -202,13 +202,13 @@ func TestAccSpace_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", "space-one"),
 						resource.TestCheckResourceAttr(
-							ref, "asgs.#", "1"),
+							ref, "asg_ids.#", "1"),
 						resource.TestCheckResourceAttr(
-							ref, "managers.#", "1"),
+							ref, "manager_ids.#", "1"),
 						resource.TestCheckResourceAttr(
-							ref, "developers.#", "3"),
+							ref, "developer_ids.#", "3"),
 						resource.TestCheckResourceAttr(
-							ref, "auditors.#", "2"),
+							ref, "auditor_ids.#", "2"),
 					),
 				},
 
@@ -219,13 +219,13 @@ func TestAccSpace_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", "space-one-updated"),
 						resource.TestCheckResourceAttr(
-							ref, "asgs.#", "1"),
+							ref, "asg_ids.#", "1"),
 						resource.TestCheckResourceAttr(
-							ref, "managers.#", "1"),
+							ref, "manager_ids.#", "1"),
 						resource.TestCheckResourceAttr(
-							ref, "developers.#", "2"),
+							ref, "developer_ids.#", "2"),
 						resource.TestCheckResourceAttr(
-							ref, "auditors.#", "2"),
+							ref, "auditor_ids.#", "2"),
 					),
 				},
 			},
@@ -253,9 +253,9 @@ func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.T
 		var (
 			space cfapi.CCSpace
 
-			runningAsgs, stagingAsgs       []string
-			spaceAsgs                      []interface{}
-			managers, developers, auditors []interface{}
+			runningAsgIDs, stagingAsgIDs       []string
+			spaceAsgIDs                      []interface{}
+			managerIDs, developerIDs, auditorIDs []interface{}
 		)
 
 		sm := session.SpaceManager()
@@ -279,76 +279,76 @@ func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.T
 			return err
 		}
 
-		if runningAsgs, err = session.ASGManager().Running(); err != nil {
+		if runningAsgIDs, err = session.ASGManager().Running(); err != nil {
 			return err
 		}
-		if spaceAsgs, err = sm.ListASGs(id); err != nil {
+		if spaceAsgIDs, err = sm.ListASGs(id); err != nil {
 			return
 		}
-		asgs := []interface{}{}
-		for _, a := range spaceAsgs {
-			if !isStringInList(runningAsgs, a.(string)) {
-				asgs = append(asgs, a)
+		asgIDs := []interface{}{}
+		for _, a := range spaceAsgIDs {
+			if !isStringInList(runningAsgIDs, a.(string)) {
+				asgIDs = append(asgIDs, a)
 			}
 		}
 		session.Log.DebugMessage(
 			"retrieved asgs of space identified resource '%s': %# v",
-			resource, asgs)
+			resource, asgIDs)
 
-		if err = assertSetEquals(attributes, "asgs", asgs); err != nil {
+		if err = assertSetEquals(attributes, "asg_ids", asgIDs); err != nil {
 			return err
 		}
 
-		if stagingAsgs, err = session.ASGManager().Staging(); err != nil {
+		if stagingAsgIDs, err = session.ASGManager().Staging(); err != nil {
 			return err
 		}
-		if spaceAsgs, err = sm.ListStagingASGs(id); err != nil {
+		if spaceAsgIDs, err = sm.ListStagingASGs(id); err != nil {
 			return
 		}
-		asgs = []interface{}{}
-		for _, a := range spaceAsgs {
-			if !isStringInList(stagingAsgs, a.(string)) {
-				asgs = append(asgs, a)
+		asgIDs = []interface{}{}
+		for _, a := range spaceAsgIDs {
+			if !isStringInList(stagingAsgIDs, a.(string)) {
+				asgIDs = append(asgIDs, a)
 			}
 		}
 		session.Log.DebugMessage(
 			"retrieved staging asgs of space identified resource '%s': %# v",
-			resource, asgs)
+			resource, asgIDs)
 
-		if err = assertSetEquals(attributes, "staging_asgs", asgs); err != nil {
+		if err = assertSetEquals(attributes, "staging_asg_ids", asgIDs); err != nil {
 			return err
 		}
 
-		if managers, err = sm.ListUsers(id, cfapi.SpaceRoleManager); err != nil {
+		if managerIDs, err = sm.ListUsers(id, cfapi.SpaceRoleManager); err != nil {
 			return
 		}
 		session.Log.DebugMessage(
 			"retrieved managers of space identified resource '%s': %# v",
-			resource, managers)
+			resource, managerIDs)
 
-		if err = assertSetEquals(attributes, "managers", managers); err != nil {
+		if err = assertSetEquals(attributes, "manager_ids", managerIDs); err != nil {
 			return err
 		}
 
-		if developers, err = sm.ListUsers(id, cfapi.SpaceRoleDeveloper); err != nil {
+		if developerIDs, err = sm.ListUsers(id, cfapi.SpaceRoleDeveloper); err != nil {
 			return
 		}
 		session.Log.DebugMessage(
 			"retrieved developers of space identified resource '%s': %# v",
-			resource, developers)
+			resource, developerIDs)
 
-		if err = assertSetEquals(attributes, "developers", developers); err != nil {
+		if err = assertSetEquals(attributes, "developer_ids", developerIDs); err != nil {
 			return err
 		}
 
-		if auditors, err = sm.ListUsers(id, cfapi.SpaceRoleAuditor); err != nil {
+		if auditorIDs, err = sm.ListUsers(id, cfapi.SpaceRoleAuditor); err != nil {
 			return
 		}
 		session.Log.DebugMessage(
 			"retrieved managers of space identified resource '%s': %# v",
-			resource, auditors)
+			resource, auditorIDs)
 
-		if err = assertSetEquals(attributes, "auditors", auditors); err != nil {
+		if err = assertSetEquals(attributes, "auditor_ids", auditorIDs); err != nil {
 			return err
 		}
 

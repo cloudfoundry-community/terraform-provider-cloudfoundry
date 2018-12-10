@@ -28,7 +28,7 @@ data "cloudfoundry_router_group" "tcp" {
 resource "cloudfoundry_domain" "shared-tcp" {
     sub_domain = "tcp-test"
 	domain = "%s"
-	router_group = "${data.cloudfoundry_router_group.tcp.id}"
+	router_group_id = "${data.cloudfoundry_router_group.tcp.id}"
 }
 `
 
@@ -36,7 +36,7 @@ const domainResourcePrivate = `
 
 resource "cloudfoundry_domain" "private" {
     name = "pcfdev-org.io"
-	org = "%s"
+	org_id = "%s"
 }
 `
 
@@ -122,7 +122,7 @@ func TestAccPrivateDomain_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "domain", "io"),
 						resource.TestCheckResourceAttr(
-							ref, "org", orgID),
+							ref, "org_id", orgID),
 					),
 				},
 			},
@@ -189,7 +189,7 @@ func checkPrivateDomainExists(resource string) resource.TestCheckFunc {
 		if id != domainFields.GUID {
 			return fmt.Errorf("expecting domain guid to be '%s' but got '%session'", id, domainFields.GUID)
 		}
-		if err := assertEquals(attributes, "org", domainFields.OwningOrganizationGUID); err != nil {
+		if err := assertEquals(attributes, "org_id", domainFields.OwningOrganizationGUID); err != nil {
 			return err
 		}
 		return nil

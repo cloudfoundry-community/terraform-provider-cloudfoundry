@@ -26,11 +26,11 @@ func resourceSpace() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"org": &schema.Schema{
+			"org_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"quota": &schema.Schema{
+			"quota_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 			},
@@ -39,35 +39,35 @@ func resourceSpace() *schema.Resource {
 				Optional: true,
 				Default:  true,
 			},
-			"isolation_segment": &schema.Schema{
+			"isolation_segment_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"asgs": &schema.Schema{
+			"asg_ids": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      resourceStringHash,
 			},
-			"staging_asgs": &schema.Schema{
+			"staging_asg_ids": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      resourceStringHash,
 			},
-			"managers": &schema.Schema{
+			"manager_ids": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      resourceStringHash,
 			},
-			"developers": &schema.Schema{
+			"developer_ids": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      resourceStringHash,
 			},
-			"auditors": &schema.Schema{
+			"auditor_ids": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
@@ -78,9 +78,9 @@ func resourceSpace() *schema.Resource {
 }
 
 var typeToSpaceRoleMap = map[string]cfapi.SpaceRole{
-	"managers":   cfapi.SpaceRoleManager,
-	"developers": cfapi.SpaceRoleDeveloper,
-	"auditors":   cfapi.SpaceRoleAuditor,
+	"manager_ids":   cfapi.SpaceRoleManager,
+	"developer_ids": cfapi.SpaceRoleDeveloper,
+	"auditor_ids":   cfapi.SpaceRoleAuditor,
 }
 
 func resourceSpaceCreate(d *schema.ResourceData, meta interface{}) (err error) {
@@ -91,24 +91,24 @@ func resourceSpaceCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	var (
-		name, org, quota string
+		name, orgID, quotaID string
 		allowSSH         bool
-		asgs             []interface{}
+		asgIDs             []interface{}
 	)
 	name = d.Get("name").(string)
-	org = d.Get("org").(string)
-	if v, ok := d.GetOk("quota"); ok {
-		quota = v.(string)
+	orgID = d.Get("org_id").(string)
+	if v, ok := d.GetOk("quota_id"); ok {
+		quotaID = v.(string)
 	}
-	if v, ok := d.GetOk("asgs"); ok {
-		asgs = v.(*schema.Set).List()
+	if v, ok := d.GetOk("asg_ids"); ok {
+		asgIDs = v.(*schema.Set).List()
 	}
 	allowSSH = d.Get("allow_ssh").(bool)
 
 	var id string
 
 	sm := session.SpaceManager()
-	if id, err = sm.CreateSpace(name, org, quota, allowSSH, asgs); err != nil {
+	if id, err = sm.CreateSpace(name, orgID, quotaID, allowSSH, asgIDs); err != nil {
 		return err
 	}
 	d.SetId(id)
@@ -133,16 +133,16 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 	var (
 		space cfapi.CCSpace
 
-		runningAsgs     []string
-		spaceAsgs, asgs []interface{}
+		runningAsgIDs     []string
+		spaceAsgIDs, asgIDs []interface{}
 	)
 
 	if space, err = sm.ReadSpace(id); err != nil {
 		return err
 	}
 	d.Set("name", space.Name)
-	d.Set("org", space.OrgGUID)
-	d.Set("quota", space.QuotaGUID)
+	d.Set("org_id", space.OrgGUID)
+	d.Set("quota_id", space.QuotaGUID)
 	d.Set("allow_ssh", space.AllowSSH)
 
 	var users []interface{}
@@ -153,24 +153,24 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 		d.Set(t, schema.NewSet(resourceStringHash, users))
 	}
 
-	if runningAsgs, err = session.ASGManager().Running(); err != nil {
+	if runningAsgIDs, err = session.ASGManager().Running(); err != nil {
 		return err
 	}
-	if spaceAsgs, err = sm.ListASGs(id); err != nil {
+	if spaceAsgIDs, err = sm.ListASGs(id); err != nil {
 		return err
 	}
-	for _, a := range spaceAsgs {
-		if !isStringInList(runningAsgs, a.(string)) {
-			asgs = append(asgs, a)
+	for _, a := range spaceAsgIDs {
+		if !isStringInList(runningAsgIDs, a.(string)) {
+			asgIDs = append(asgIDs, a)
 		}
 	}
-	d.Set("asgs", schema.NewSet(resourceStringHash, asgs))
+	d.Set("asg_ids", schema.NewSet(resourceStringHash, asgIDs))
 
-	segment, err := sm.GetSpaceSegment(id)
+	segmentID, err := sm.GetSpaceSegment(id)
 	if err != nil {
 		return err
 	}
-	d.Set("isolation_segment", segment)
+	d.Set("isolation_segment_id", segmentID)
 	return nil
 }
 
@@ -193,14 +193,14 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	spaceID := d.Id()
-	orgID := d.Get("org").(string)
+	orgID := d.Get("org_id").(string)
 
 	om := session.OrgManager()
 	sm := session.SpaceManager()
 
 	if !newResource {
 
-		var asgs []interface{}
+		var asgIDs []interface{}
 
 		space := cfapi.CCSpace{
 			ID:   spaceID,
@@ -210,19 +210,19 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 			AllowSSH: d.Get("allow_ssh").(bool),
 		}
-		if v, ok := d.GetOk("quota"); ok {
+		if v, ok := d.GetOk("quota_id"); ok {
 			space.QuotaGUID = v.(string)
 		}
-		if v, ok := d.GetOk("asgs"); ok {
-			asgs = v.(*schema.Set).List()
+		if v, ok := d.GetOk("asg_ids"); ok {
+			asgIDs = v.(*schema.Set).List()
 		}
 
-		if err = sm.UpdateSpace(space, asgs); err != nil {
+		if err = sm.UpdateSpace(space, asgIDs); err != nil {
 			return err
 		}
 	}
 
-	old, new := d.GetChange("staging_asgs")
+	old, new := d.GetChange("staging_asg_ids")
 	remove, add := getListChanges(old, new)
 	for _, asgID := range remove {
 		if err = sm.RemoveStagingASG(spaceID, asgID); err != nil {
@@ -297,7 +297,7 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		}
 	}
 
-	segID := d.Get("isolation_segment").(string)
+	segID := d.Get("isolation_segment_id").(string)
 	err = sm.SetSpaceSegment(spaceID, segID)
 	if err != nil {
 		return err

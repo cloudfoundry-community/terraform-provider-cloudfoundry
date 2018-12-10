@@ -39,7 +39,7 @@ func resourceServiceBroker() *schema.Resource {
 				Required:  true,
 				Sensitive: true,
 			},
-			"space": &schema.Schema{
+			"space_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 			},
@@ -59,11 +59,11 @@ func resourceServiceBrokerCreate(d *schema.ResourceData, meta interface{}) (err 
 		return fmt.Errorf("client is nil")
 	}
 
-	_, name, url, username, password, space := getSchemaAttributes(d)
+	_, name, url, username, password, spaceID := getSchemaAttributes(d)
 
 	sm := session.ServiceManager()
 
-	if id, err = sm.CreateServiceBroker(name, url, username, password, space); err != nil {
+	if id, err = sm.CreateServiceBroker(name, url, username, password, spaceID); err != nil {
 		return err
 	}
 	if err = readServiceDetail(id, sm, d); err != nil {
@@ -99,7 +99,7 @@ func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) (err er
 	d.Set("name", serviceBroker.Name)
 	d.Set("url", serviceBroker.BrokerURL)
 	d.Set("username", serviceBroker.AuthUserName)
-	d.Set("space", serviceBroker.SpaceGUID)
+	d.Set("space_id", serviceBroker.SpaceGUID)
 
 	return err
 }
@@ -111,10 +111,10 @@ func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) (err 
 		return fmt.Errorf("client is nil")
 	}
 
-	id, name, url, username, password, space := getSchemaAttributes(d)
+	id, name, url, username, password, spaceID := getSchemaAttributes(d)
 
 	sm := session.ServiceManager()
-	if _, err = sm.UpdateServiceBroker(id, name, url, username, password, space); err != nil {
+	if _, err = sm.UpdateServiceBroker(id, name, url, username, password, spaceID); err != nil {
 		d.SetId("")
 		return err
 	}
@@ -139,7 +139,7 @@ func resourceServiceBrokerDelete(d *schema.ResourceData, meta interface{}) (err 
 	return err
 }
 
-func getSchemaAttributes(d *schema.ResourceData) (id, name, url, username, password, space string) {
+func getSchemaAttributes(d *schema.ResourceData) (id, name, url, username, password, spaceID string) {
 
 	id = d.Id()
 	name = d.Get("name").(string)
@@ -147,10 +147,10 @@ func getSchemaAttributes(d *schema.ResourceData) (id, name, url, username, passw
 	username = d.Get("username").(string)
 	password = d.Get("password").(string)
 
-	if v, ok := d.GetOk("space"); ok {
-		space = v.(string)
+	if v, ok := d.GetOk("space_id"); ok {
+		spaceID = v.(string)
 	}
-	return id, name, url, username, password, space
+	return id, name, url, username, password, spaceID
 }
 
 func readServiceDetail(id string, sm *cfapi.ServiceManager, d *schema.ResourceData) (err error) {

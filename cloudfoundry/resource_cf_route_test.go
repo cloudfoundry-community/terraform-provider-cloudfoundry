@@ -26,7 +26,7 @@ data "cloudfoundry_space" "space" {
 
 resource "cloudfoundry_app" "test-app-8080" {
 	name = "test-app"
-	space = "${data.cloudfoundry_space.space.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	command = "test-app --ports=8080"
 	timeout = 1800
 
@@ -35,12 +35,12 @@ resource "cloudfoundry_app" "test-app-8080" {
 	}
 }
 resource "cloudfoundry_route" "test-app-route" {
-	domain = "${data.cloudfoundry_domain.local.id}"
-	space = "${data.cloudfoundry_space.space.id}"
+	domain_id = "${data.cloudfoundry_domain.local.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	hostname = "test-app-single"
 
 	target {
-		app = "${cloudfoundry_app.test-app-8080.id}"
+		app_id = "${cloudfoundry_app.test-app-8080.id}"
 	}
 }
 `
@@ -60,7 +60,7 @@ data "cloudfoundry_space" "space" {
 
 resource "cloudfoundry_app" "test-app-8080" {
 	name = "test-app-8080"
-	space = "${data.cloudfoundry_space.space.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	command = "test-app --ports=8080"
 	timeout = 1800
 
@@ -70,7 +70,7 @@ resource "cloudfoundry_app" "test-app-8080" {
 }
 resource "cloudfoundry_app" "test-app-8888" {
 	name = "test-app-8888"
-	space = "${data.cloudfoundry_space.space.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	ports = [ 8888 ]
 	command = "test-app --ports=8888"
 	timeout = 1800
@@ -81,7 +81,7 @@ resource "cloudfoundry_app" "test-app-8888" {
 }
 resource "cloudfoundry_app" "test-app-9999" {
 	name = "test-app-9999"
-	space = "${data.cloudfoundry_space.space.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	ports = [ 9999 ]
 	command = "test-app --ports=9999"
 	timeout = 1800
@@ -91,20 +91,20 @@ resource "cloudfoundry_app" "test-app-9999" {
 	}
 }
 resource "cloudfoundry_route" "test-app-route" {
-	domain = "${data.cloudfoundry_domain.local.id}"
-	space = "${data.cloudfoundry_space.space.id}"
+	domain_id = "${data.cloudfoundry_domain.local.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	hostname = "test-app-multi"
 
 	target {
-		app = "${cloudfoundry_app.test-app-9999.id}"
+		app_id = "${cloudfoundry_app.test-app-9999.id}"
 		port = 9999
 	}
 	target {
-		app = "${cloudfoundry_app.test-app-8888.id}"
+		app_id = "${cloudfoundry_app.test-app-8888.id}"
 		port = 8888
 	}
 	target {
-		app = "${cloudfoundry_app.test-app-8080.id}"
+		app_id = "${cloudfoundry_app.test-app-8080.id}"
 	}
 }
 `
@@ -188,10 +188,10 @@ func testAccCheckRouteExists(resRoute string, validate func() error) resource.Te
 			"retrieved route for resource '%s' with id '%s': %# v",
 			resRoute, id, route)
 
-		if err = assertEquals(attributes, "domain", route.DomainGUID); err != nil {
+		if err = assertEquals(attributes, "domain_id", route.DomainGUID); err != nil {
 			return
 		}
-		if err = assertEquals(attributes, "space", route.SpaceGUID); err != nil {
+		if err = assertEquals(attributes, "space_id", route.SpaceGUID); err != nil {
 			return
 		}
 		if err = assertEquals(attributes, "hostname", route.Hostname); err != nil {

@@ -26,13 +26,13 @@ data "cloudfoundry_service" "rabbitmq" {
 
 resource "cloudfoundry_service_instance" "rabbitmq" {
 	name = "rabbitmq"
-    space = "${data.cloudfoundry_space.space.id}"
+    space_id = "${data.cloudfoundry_space.space.id}"
     service_plan = "${data.cloudfoundry_service.rabbitmq.service_plans["standard"]}"
 }
 
 resource "cloudfoundry_service_key" "rabbitmq-key" {
 	name = "rabbitmq-key"
-	service_instance = "${cloudfoundry_service_instance.rabbitmq.id}"
+	service_instance_id = "${cloudfoundry_service_instance.rabbitmq.id}"
 
 	params {
 		"key1" = "aaaa"

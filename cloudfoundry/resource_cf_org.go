@@ -26,7 +26,7 @@ func resourceOrg() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"quota": &schema.Schema{
+			"quota_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
@@ -67,20 +67,20 @@ func resourceOrgCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	var (
-		name, quota string
+		name, quotaID string
 		org         cfapi.CCOrg
 	)
 	name = d.Get("name").(string)
-	if v, ok := d.GetOk("quota"); ok {
-		quota = v.(string)
+	if v, ok := d.GetOk("quota_id"); ok {
+		quotaID = v.(string)
 	}
 
 	om := session.OrgManager()
-	if org, err = om.CreateOrg(name, quota); err != nil {
+	if org, err = om.CreateOrg(name, quotaID); err != nil {
 		return err
 	}
-	if len(quota) == 0 {
-		d.Set("quota", org.QuotaGUID)
+	if len(quotaID) == 0 {
+		d.Set("quota_id", org.QuotaGUID)
 	}
 	d.SetId(org.ID)
 	return resourceOrgUpdate(d, NewResourceMeta{meta})
@@ -102,7 +102,7 @@ func resourceOrgRead(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	d.Set("name", org.Name)
-	d.Set("quota", org.QuotaGUID)
+	d.Set("quota_id", org.QuotaGUID)
 
 	var users []interface{}
 	for t, r := range orgRoleMap {
@@ -142,7 +142,7 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			ID:   id,
 			Name: d.Get("name").(string),
 		}
-		if v, ok := d.GetOk("quota"); ok {
+		if v, ok := d.GetOk("quota_id"); ok {
 			org.QuotaGUID = v.(string)
 		}
 

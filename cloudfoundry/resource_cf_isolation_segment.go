@@ -37,11 +37,11 @@ func resourceSegmentEntitlement() *schema.Resource {
 		// },
 
 		Schema: map[string]*schema.Schema{
-			"segment": &schema.Schema{
+			"segment_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"orgs": &schema.Schema{
+			"org_ids": &schema.Schema{
 				Type:     schema.TypeSet,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      resourceStringHash,
@@ -119,12 +119,12 @@ func resourceSegmentEntitlementCreate(d *schema.ResourceData, meta interface{}) 
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
-	name := d.Get("segment").(string)
-	orgs := d.Get("orgs").(*schema.Set).List()
+	name := d.Get("segment_id").(string)
+	orgIDs := d.Get("org_ids").(*schema.Set).List()
 	d.SetId(name)
 
 	sm := session.SegmentManager()
-	if err := sm.SetSegmentOrgs(d.Id(), orgs); err != nil {
+	if err := sm.SetSegmentOrgs(d.Id(), orgIDs); err != nil {
 		d.SetId("")
 		return err
 	}
@@ -137,9 +137,9 @@ func resourceSegmentEntitlementUpdate(d *schema.ResourceData, meta interface{}) 
 		return fmt.Errorf("client is nil")
 	}
 	sm := session.SegmentManager()
-	if d.HasChange("orgs") {
-		orgs := d.Get("orgs").(*schema.Set).List()
-		if err := sm.SetSegmentOrgs(d.Id(), orgs); err != nil {
+	if d.HasChange("org_ids") {
+		orgIDs := d.Get("org_ids").(*schema.Set).List()
+		if err := sm.SetSegmentOrgs(d.Id(), orgIDs); err != nil {
 			return err
 		}
 	}
@@ -152,12 +152,12 @@ func resourceSegmentEntitlementRead(d *schema.ResourceData, meta interface{}) er
 		return fmt.Errorf("client is nil")
 	}
 	sm := session.SegmentManager()
-	orgs, err := sm.GetSegmentOrgs(d.Id())
+	orgIDs, err := sm.GetSegmentOrgs(d.Id())
 	if err != nil {
 		d.SetId("")
 		return err
 	}
-	d.Set("orgs", schema.NewSet(resourceStringHash, orgs))
+	d.Set("org_ids", schema.NewSet(resourceStringHash, orgIDs))
 	return nil
 }
 
@@ -167,6 +167,6 @@ func resourceSegmentEntitlementDelete(d *schema.ResourceData, meta interface{}) 
 		return fmt.Errorf("client is nil")
 	}
 	sm := session.SegmentManager()
-	orgs := d.Get("orgs").(*schema.Set).List()
-	return sm.DeleteSegmentOrgs(d.Id(), orgs)
+	orgIDs := d.Get("org_ids").(*schema.Set).List()
+	return sm.DeleteSegmentOrgs(d.Id(), orgIDs)
 }

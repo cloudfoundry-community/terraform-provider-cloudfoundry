@@ -41,7 +41,7 @@ func resourceApp() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"space": &schema.Schema{
+			"space_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -67,7 +67,7 @@ func resourceApp() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"stack": &schema.Schema{
+			"stack_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
@@ -207,7 +207,7 @@ func resourceApp() *schema.Resource {
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"service_instance": &schema.Schema{
+						"service_instance_id": &schema.Schema{
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -230,7 +230,7 @@ func resourceApp() *schema.Resource {
 				Deprecated:    "Use the new 'routes' block.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"default_route": &schema.Schema{
+						"default_route_id": &schema.Schema{
 							Type:     schema.TypeString,
 							Optional: true,
 						},
@@ -238,7 +238,7 @@ func resourceApp() *schema.Resource {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"stage_route": &schema.Schema{
+						"stage_route_id": &schema.Schema{
 							Type:     schema.TypeString,
 							Optional: true,
 							Removed:  "Support for the non-default route has been removed.",
@@ -247,7 +247,7 @@ func resourceApp() *schema.Resource {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"live_route": &schema.Schema{
+						"live_route_id": &schema.Schema{
 							Type:     schema.TypeString,
 							Optional: true,
 							Removed:  "Support for the non-default route has been removed.",
@@ -272,7 +272,7 @@ func resourceApp() *schema.Resource {
 				Set:           hashRouteMappingSet,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"route": &schema.Schema{
+						"route_id": &schema.Schema{
 							Type:         schema.TypeString,
 							Required:     true,
 							ValidateFunc: validation.NoZeroValues,
@@ -360,7 +360,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 		addContent []map[string]interface{}
 
-		defaultRoute string
+		defaultRouteID string
 
 		serviceBindings    []map[string]interface{}
 		hasServiceBindings bool
@@ -369,7 +369,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	)
 
 	app.Name = d.Get("name").(string)
-	app.SpaceGUID = d.Get("space").(string)
+	app.SpaceGUID = d.Get("space_id").(string)
 	if v, ok = d.GetOk("ports"); ok {
 		p := []int{}
 		for _, vv := range v.(*schema.Set).List() {
@@ -389,7 +389,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		vv := v.(int)
 		app.DiskQuota = &vv
 	}
-	if v, ok = d.GetOk("stack"); ok {
+	if v, ok = d.GetOk("stack_id"); ok {
 		vv := v.(string)
 		app.StackGUID = &vv
 	}
@@ -449,7 +449,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 		routeConfig = v.([]interface{})[0].(map[string]interface{})
 
-		if defaultRoute, err = validateRouteLegacy(routeConfig, "default_route", rm); err != nil {
+		if defaultRouteID, err = validateRouteLegacy(routeConfig, "default_route_id", rm); err != nil {
 			return err
 		}
 	}
@@ -508,10 +508,10 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if _, hasRouteConfig := d.GetOk("route"); hasRouteConfig {
 		// old style route block
-		if len(defaultRoute) > 0 {
+		if len(defaultRouteID) > 0 {
 			// Bind default route
 			var mappingID string
-			if mappingID, err = rm.CreateRouteMapping(defaultRoute, app.ID, nil); err != nil {
+			if mappingID, err = rm.CreateRouteMapping(defaultRouteID, app.ID, nil); err != nil {
 				return err
 			}
 			routeConfig["default_route_mapping_id"] = mappingID
@@ -523,7 +523,7 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		var mappedRoutes []interface{}
 		for _, r := range v.(*schema.Set).List() {
 			data := r.(map[string]interface{})
-			routeID := data["route"].(string)
+			routeID := data["route_id"].(string)
 			if err := validateRoute("", routeID, rm); err != nil {
 				return err
 			}
@@ -624,13 +624,13 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 				"stage_route",
 				"live_route",
 			} {
-				currentRouteMappings[r] = ""
+				currentRouteMappings[r+"_id"] = ""
 				currentRouteMappings[r+"_mapping_id"] = ""
 				for _, mapping := range routeMappings {
-					var route, mappingID = mapping["route"], mapping["mapping_id"]
-					if route == stateRouteMappings[r] {
+					var routeID, mappingID = mapping["route_id"], mapping["mapping_id"]
+					if routeID == stateRouteMappings[r+"_id"] {
 						mappingFound = true
-						currentRouteMappings[r] = route
+						currentRouteMappings[r+"_id"] = routeID
 						currentRouteMappings[r+"_mapping_id"] = mappingID
 						break
 					}
@@ -650,7 +650,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) (err error) {
 					refreshedData := map[string]interface{}{
 						"mapping_id": mapping["mapping_id"].(string),
 						"port":       mapping["port"].(int),
-						"route":      mapping["route"].(string),
+						"route_id":      mapping["route_id"].(string),
 					}
 					if stateRoutes.Contains(refreshedData) {
 						updatedRoutes = append(updatedRoutes, refreshedData)
@@ -687,7 +687,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	update := false // for changes where no restart is required
 	app.Name = *getChangedValueString("name", &update, d)
-	app.SpaceGUID = *getChangedValueString("space", &update, d)
+	app.SpaceGUID = *getChangedValueString("space_id", &update, d)
 	app.Instances = getChangedValueInt("instances", &update, d)
 	app.EnableSSH = getChangedValueBool("enable_ssh", &update, d)
 
@@ -722,7 +722,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		setAppArguments(app, d)
 		d.SetPartial("name")
-		d.SetPartial("space")
+		d.SetPartial("space_id")
 		d.SetPartial("ports")
 		d.SetPartial("instances")
 		d.SetPartial("memory")
@@ -759,7 +759,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 					bb := b.(map[string]interface{})
 
 					for _, a := range added {
-						if bb["service_instance"] == a["service_instance"] {
+						if bb["service_instance_id"] == a["service_instance_id"] {
 							bb["binding_id"] = a["binding_id"]
 							break
 						}
@@ -802,7 +802,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 				"stage_route",
 				"live_route",
 			} {
-				if _, err := validateRouteLegacy(newRouteConfig, r, rm); err != nil {
+				if _, err := validateRouteLegacy(newRouteConfig, r + "_id", rm); err != nil {
 					return err
 				}
 				if mappingID, err := updateAppRouteMappings(oldRouteConfig, newRouteConfig, r, app.ID, rm); err != nil {
@@ -838,14 +838,14 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 					"stage_route",
 					"live_route",
 				} {
-					if oldRouteConfig[r].(string) == data["route"].(string) {
+					if oldRouteConfig[r+"_id"].(string) == data["route_id"].(string) {
 						data["mapping_id"] = oldRouteConfig[r+"_mapping_id"].(string)
 						matchingOldRouteFound = true
 						break
 					}
 				}
 				if !matchingOldRouteFound {
-					routeID := data["route"].(string)
+					routeID := data["route_id"].(string)
 					if err := validateRoute(app.ID, routeID, rm); err != nil {
 						return err
 					}
@@ -890,7 +890,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		// mappings to add
 		for _, r := range ns.Difference(os).List() {
 			data := r.(map[string]interface{})
-			routeID := data["route"].(string)
+			routeID := data["route_id"].(string)
 			if err := validateRoute(app.ID, routeID, rm); err != nil {
 				return err
 			}
@@ -1109,7 +1109,7 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) (err error) {
 func setAppArguments(app cfapi.CCApp, d *schema.ResourceData) {
 
 	d.Set("name", app.Name)
-	d.Set("space", app.SpaceGUID)
+	d.Set("space_id", app.SpaceGUID)
 	if app.Instances != nil || IsImportState(d) {
 		d.Set("instances", app.Instances)
 	}
@@ -1120,7 +1120,7 @@ func setAppArguments(app cfapi.CCApp, d *schema.ResourceData) {
 		d.Set("disk_quota", app.DiskQuota)
 	}
 	if app.StackGUID != nil || IsImportState(d) {
-		d.Set("stack", app.StackGUID)
+		d.Set("stack_id", app.StackGUID)
 	}
 	if app.Buildpack != nil || IsImportState(d) {
 		d.Set("buildpack", app.Buildpack)
@@ -1215,7 +1215,7 @@ func prepareApp(app cfapi.CCApp, d *schema.ResourceData, log *cfapi.Logger) (pat
 func validateRoute(appID string, routeID string, rm *cfapi.RouteManager) error {
 	if mappings, err := rm.ReadRouteMappingsByRoute(routeID); err == nil && len(mappings) > 0 {
 		if len(mappings) == 1 {
-			if boundApp, ok := mappings[0]["app"]; ok && boundApp == appID {
+			if boundApp, ok := mappings[0]["app_id"]; ok && boundApp == appID {
 				return nil
 			}
 		}
@@ -1252,10 +1252,10 @@ func updateAppRouteMappings(
 		oldRouteID, newRouteID string
 	)
 
-	if v, ok := old[route]; ok {
+	if v, ok := old[route+"_id"]; ok {
 		oldRouteID = v.(string)
 	}
-	if v, ok := new[route]; ok {
+	if v, ok := new[route+"_id"]; ok {
 		newRouteID = v.(string)
 	}
 
@@ -1296,7 +1296,7 @@ func addServiceBindings(
 	)
 
 	for _, b := range add {
-		serviceInstanceID = b["service_instance"].(string)
+		serviceInstanceID = b["service_instance_id"].(string)
 		params = nil
 		if v, ok := b["params"]; ok {
 			vv := v.(map[string]interface{})
@@ -1318,7 +1318,7 @@ func removeServiceBindings(delete []map[string]interface{},
 
 	for _, b := range delete {
 
-		serviceInstanceID := b["service_instance"].(string)
+		serviceInstanceID := b["service_instance_id"].(string)
 		bindingID := b["binding_id"].(string)
 
 		if len(bindingID) > 0 {

@@ -22,8 +22,8 @@ resource "cloudfoundry_isolation_segment" "segment1" {
 	name = "segment-one"
 }
 resource "cloudfoundry_isolation_segment_entitlement" "segment1_orgs" {
-	segment = "${cloudfoundry_isolation_segment.segment1.id}"
-	orgs = [
+	segment_id = "${cloudfoundry_isolation_segment.segment1.id}"
+	org_ids = [
     "${cloudfoundry_org.iso-org1.id}",
     "${cloudfoundry_org.iso-org2.id}"
   ]
@@ -41,8 +41,8 @@ resource "cloudfoundry_isolation_segment" "segment1" {
 	name = "segment-one-name"
 }
 resource "cloudfoundry_isolation_segment_entitlement" "segment1_orgs" {
-	segment = "${cloudfoundry_isolation_segment.segment1.id}"
-	orgs = [
+	segment_id = "${cloudfoundry_isolation_segment.segment1.id}"
+	org_ids = [
     "${cloudfoundry_org.iso-org1.id}",
     "${cloudfoundry_org.iso-org2.id}"
   ]
@@ -57,8 +57,8 @@ resource "cloudfoundry_isolation_segment" "segment1" {
 	name = "segment-one-name"
 }
 resource "cloudfoundry_isolation_segment_entitlement" "segment1_orgs" {
-	segment = "${cloudfoundry_isolation_segment.segment1.id}"
-	orgs = [
+	segment_id = "${cloudfoundry_isolation_segment.segment1.id}"
+	org_ids = [
     "${cloudfoundry_org.iso-org1.id}"
   ]
 }
@@ -79,7 +79,7 @@ func TestAccSegment_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckSegmentExists(segRef, entitleRef),
 						resource.TestCheckResourceAttr(segRef, "name", "segment-one"),
-						resource.TestCheckResourceAttr(entitleRef, "orgs.#", "2"),
+						resource.TestCheckResourceAttr(entitleRef, "org_ids.#", "2"),
 					),
 				},
 				resource.TestStep{
@@ -87,7 +87,7 @@ func TestAccSegment_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckSegmentExists(segRef, entitleRef),
 						resource.TestCheckResourceAttr(segRef, "name", "segment-one-name"),
-						resource.TestCheckResourceAttr(entitleRef, "orgs.#", "2"),
+						resource.TestCheckResourceAttr(entitleRef, "org_ids.#", "2"),
 					),
 				},
 				resource.TestStep{
@@ -95,7 +95,7 @@ func TestAccSegment_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckSegmentExists(segRef, entitleRef),
 						resource.TestCheckResourceAttr(segRef, "name", "segment-one-name"),
-						resource.TestCheckResourceAttr(entitleRef, "orgs.#", "1"),
+						resource.TestCheckResourceAttr(entitleRef, "org_ids.#", "1"),
 					),
 				},
 			},
@@ -138,11 +138,11 @@ func testAccCheckSegmentExists(segName string, entitleName string) resource.Test
 		if err = assertEquals(entitleAttributes, "segment", segID); err != nil {
 			return err
 		}
-		orgs, err := sm.GetSegmentOrgs(entitleID)
+		orgIDs, err := sm.GetSegmentOrgs(entitleID)
 		if err != nil {
 			return fmt.Errorf("could fetch orgs from segment '%s'", segID)
 		}
-		if err = assertSetEquals(entitleAttributes, "orgs", orgs); err != nil {
+		if err = assertSetEquals(entitleAttributes, "org_ids", orgIDs); err != nil {
 			return err
 		}
 		return

@@ -27,7 +27,7 @@ func resourceServiceKey() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"service_instance": &schema.Schema{
+			"service_instance_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -53,13 +53,13 @@ func resourceServiceKeyCreate(d *schema.ResourceData, meta interface{}) (err err
 	}
 
 	name := d.Get("name").(string)
-	serviceInstance := d.Get("service_instance").(string)
+	serviceInstanceID := d.Get("service_instance_id").(string)
 	params := d.Get("params").(map[string]interface{})
 
 	sm := session.ServiceManager()
 	var serviceKey cfapi.CCServiceKey
 
-	if serviceKey, err = sm.CreateServiceKey(name, serviceInstance, params); err != nil {
+	if serviceKey, err = sm.CreateServiceKey(name, serviceInstanceID, params); err != nil {
 		return err
 	}
 	session.Log.DebugMessage("Created Service Key: %# v", serviceKey)
@@ -88,7 +88,7 @@ func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) (err error
 		return err
 	}
 	d.Set("name", serviceKey.Name)
-	d.Set("service_instance", serviceKey.ServiceGUID)
+	d.Set("service_instance_id", serviceKey.ServiceGUID)
 	d.Set("credentials", normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_"))
 
 	session.Log.DebugMessage("Read Service Instance : %# v", serviceKey)

@@ -31,7 +31,7 @@ func resourceDefaultAsg() *schema.Resource {
 				ForceNew:     true,
 				ValidateFunc: validateDefaultRunningStagingName,
 			},
-			"asgs": &schema.Schema{
+			"asg_ids": &schema.Schema{
 				Type:     schema.TypeSet,
 				Required: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
@@ -49,7 +49,7 @@ func resourceDefaultAsgCreate(d *schema.ResourceData, meta interface{}) (err err
 	}
 
 	name := d.Get("name").(string)
-	asgs := d.Get("asgs").(*schema.Set).List()
+	asgIDs := d.Get("asg_ids").(*schema.Set).List()
 
 	am := session.ASGManager()
 	switch name {
@@ -57,7 +57,7 @@ func resourceDefaultAsgCreate(d *schema.ResourceData, meta interface{}) (err err
 		if err = am.UnbindAllFromRunning(); err != nil {
 			return err
 		}
-		for _, g := range asgs {
+		for _, g := range asgIDs {
 			if err = am.BindToRunning(g.(string)); err != nil {
 				return err
 			}
@@ -66,7 +66,7 @@ func resourceDefaultAsgCreate(d *schema.ResourceData, meta interface{}) (err err
 		if err = am.UnbindAllFromStaging(); err != nil {
 			return err
 		}
-		for _, g := range asgs {
+		for _, g := range asgIDs {
 			if err = am.BindToStaging(g.(string)); err != nil {
 				return err
 			}
@@ -86,25 +86,25 @@ func resourceDefaultAsgRead(d *schema.ResourceData, meta interface{}) (err error
 		return fmt.Errorf("client is nil")
 	}
 
-	var asgs []string
+	var asgIDs []string
 
 	am := session.ASGManager()
 	switch d.Get("name").(string) {
 	case AppStatusRunning:
-		if asgs, err = am.Running(); err != nil {
+		if asgIDs, err = am.Running(); err != nil {
 			return err
 		}
 	case AppStatusStaging:
-		if asgs, err = am.Staging(); err != nil {
+		if asgIDs, err = am.Staging(); err != nil {
 			return err
 		}
 	}
 
-	tfAsgs := []interface{}{}
-	for _, s := range asgs {
-		tfAsgs = append(tfAsgs, s)
+	tfAsgIDs := []interface{}{}
+	for _, s := range asgIDs {
+		tfAsgIDs = append(tfAsgIDs, s)
 	}
-	d.Set("asgs", schema.NewSet(resourceStringHash, tfAsgs))
+	d.Set("asg_ids", schema.NewSet(resourceStringHash, tfAsgIDs))
 	return nil
 }
 
@@ -115,46 +115,46 @@ func resourceDefaultAsgUpdate(d *schema.ResourceData, meta interface{}) (err err
 		return fmt.Errorf("client is nil")
 	}
 
-	var asgs []string
+	var asgIDs []string
 
-	tfAsgs := d.Get("asgs").(*schema.Set).List()
+	tfAsgIDs := d.Get("asg_ids").(*schema.Set).List()
 
 	am := session.ASGManager()
 	switch d.Get("name").(string) {
 	case AppStatusRunning:
-		if asgs, err = am.Running(); err != nil {
+		if asgIDs, err = am.Running(); err != nil {
 			return err
 		}
-		for _, s := range tfAsgs {
+		for _, s := range tfAsgIDs {
 			asg := s.(string)
-			if !isStringInList(asgs, asg) {
+			if !isStringInList(asgIDs, asg) {
 				if err = am.BindToRunning(asg); err != nil {
 					return err
 				}
 			}
 		}
-		for _, s := range asgs {
-			if !isStringInInterfaceList(tfAsgs, s) {
+		for _, s := range asgIDs {
+			if !isStringInInterfaceList(tfAsgIDs, s) {
 				if err = am.UnbindFromRunning(s); err != nil {
 					return err
 				}
 			}
 		}
 	case AppStatusStaging:
-		if asgs, err = am.Staging(); err != nil {
+		if asgIDs, err = am.Staging(); err != nil {
 			return err
 		}
-		for _, s := range tfAsgs {
+		for _, s := range tfAsgIDs {
 			asg := s.(string)
-			if !isStringInList(asgs, asg) {
+			if !isStringInList(asgIDs, asg) {
 				err = am.BindToStaging(asg)
 				if err != nil {
 					return err
 				}
 			}
 		}
-		for _, s := range asgs {
-			if !isStringInInterfaceList(tfAsgs, s) {
+		for _, s := range asgIDs {
+			if !isStringInInterfaceList(tfAsgIDs, s) {
 				if err = am.UnbindFromStaging(s); err != nil {
 					return err
 				}

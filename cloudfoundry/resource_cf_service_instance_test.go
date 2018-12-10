@@ -26,8 +26,8 @@ data "cloudfoundry_service" "mysql" {
 
 resource "cloudfoundry_service_instance" "mysql" {
 	name = "mysql"
-    space = "${data.cloudfoundry_space.space.id}"
-    service_plan = "${data.cloudfoundry_service.mysql.service_plans["1gb"]}"
+    space_id = "${data.cloudfoundry_space.space.id}"
+    service_plan_id = "${data.cloudfoundry_service.mysql.service_plans["1gb"]}"
 	tags = [ "tag-1" , "tag-2" ]
 }
 `
@@ -47,8 +47,8 @@ data "cloudfoundry_service" "mysql" {
 
 resource "cloudfoundry_service_instance" "mysql" {
 	name = "mysql-updated"
-    space = "${data.cloudfoundry_space.space.id}"
-    service_plan = "${data.cloudfoundry_service.mysql.service_plans["512mb"]}"
+    space_id = "${data.cloudfoundry_space.space.id}"
+    service_plan_id = "${data.cloudfoundry_service.mysql.service_plans["512mb"]}"
 	tags = [ "tag-2", "tag-3", "tag-4" ]
 }
 `
@@ -72,8 +72,8 @@ data "cloudfoundry_service" "fake-service" {
 }
 
 resource "cloudfoundry_route" "fake-service-broker-route" {
-	domain = "${data.cloudfoundry_domain.fake-service-broker-domain.id}"
-    space = "${data.cloudfoundry_space.space.id}"
+	domain_id = "${data.cloudfoundry_domain.fake-service-broker-domain.id}"
+    space_id = "${data.cloudfoundry_space.space.id}"
 	hostname = "fake-service-broker"
 	depends_on = ["data.cloudfoundry_domain.fake-service-broker-domain"]
 }
@@ -81,11 +81,11 @@ resource "cloudfoundry_route" "fake-service-broker-route" {
 resource "cloudfoundry_app" "fake-service-broker" {
     name = "fake-service-broker"
 	url = "file://../tests/cf-acceptance-tests/assets/service_broker/"
-	space = "${data.cloudfoundry_space.space.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	timeout = 700
 
 	route {
-		default_route = "${cloudfoundry_route.fake-service-broker-route.id}"
+		default_route_id = "${cloudfoundry_route.fake-service-broker-route.id}"
 	}
 
 	depends_on = ["cloudfoundry_route.fake-service-broker-route"]
@@ -96,28 +96,28 @@ resource "cloudfoundry_service_broker" "fake-service-broker" {
 	url = "http://fake-service-broker.%s"
 	username = "admin"
 	password = "admin"
-	space = "${data.cloudfoundry_space.space.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	depends_on = ["cloudfoundry_app.fake-service-broker"]
 }
 
 resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-plan" {
 	name = "fake-service-instance-with-fake-plan"
-    space = "${data.cloudfoundry_space.space.id}"
-	service_plan = "${cloudfoundry_service_broker.fake-service-broker.service_plans["fake-service/fake-plan"]}"
+    space_id = "${data.cloudfoundry_space.space.id}"
+	service_plan_id = "${cloudfoundry_service_broker.fake-service-broker.service_plans["fake-service/fake-plan"]}"
 	depends_on = ["cloudfoundry_app.fake-service-broker"]
 }
 
 resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-async-plan" {
 	name = "fake-service-instance-with-fake-async-plan"
-    space = "${data.cloudfoundry_space.space.id}"
-	service_plan = "${cloudfoundry_service_broker.fake-service-broker.service_plans["fake-service/fake-async-plan"]}"
+    space_id = "${data.cloudfoundry_space.space.id}"
+	service_plan_id = "${cloudfoundry_service_broker.fake-service-broker.service_plans["fake-service/fake-async-plan"]}"
 	depends_on = ["cloudfoundry_app.fake-service-broker"]
 }
 
 resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-async-only-plan" {
 	name = "fake-service-instance-with-fake-async-only-plan"
-    space = "${data.cloudfoundry_space.space.id}"
-	service_plan = "${cloudfoundry_service_broker.fake-service-broker.service_plans["fake-service/fake-async-only-plan"]}"
+    space_id = "${data.cloudfoundry_space.space.id}"
+	service_plan_id = "${cloudfoundry_service_broker.fake-service-broker.service_plans["fake-service/fake-async-only-plan"]}"
 	depends_on = ["cloudfoundry_app.fake-service-broker"]
 }
 `

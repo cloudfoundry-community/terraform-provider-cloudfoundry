@@ -260,12 +260,12 @@ func (rm *RouteManager) readRouteMappings(id, key string) (mappings []map[string
 		mapping["mapping_id"] = routeResource["metadata"].(map[string]interface{})["guid"].(string)
 		switch key {
 		case "route_guid":
-			mapping["app"] = routeResource["entity"].(map[string]interface{})["app_guid"].(string)
+			mapping["app_id"] = routeResource["entity"].(map[string]interface{})["app_guid"].(string)
 		case "app_guid":
-			mapping["route"] = routeResource["entity"].(map[string]interface{})["route_guid"].(string)
+			mapping["route_id"] = routeResource["entity"].(map[string]interface{})["route_guid"].(string)
 		default:
-			mapping["app"] = routeResource["entity"].(map[string]interface{})["app_guid"].(string)
-			mapping["route"] = routeResource["entity"].(map[string]interface{})["route_guid"].(string)
+			mapping["app_id"] = routeResource["entity"].(map[string]interface{})["app_guid"].(string)
+			mapping["route_id"] = routeResource["entity"].(map[string]interface{})["route_guid"].(string)
 		}
 		if v, ok := routeResource["entity"].(map[string]interface{})["app_port"]; ok {
 			if port, ok := v.(float64); ok {

@@ -25,12 +25,12 @@ resource "cloudfoundry_org" "org3" {
 resource "cloudfoundry_domain" "private" {
     sub_domain = "private"
     domain     = "%s"
-    org        = "${cloudfoundry_org.org1.id}"
+    org_id        = "${cloudfoundry_org.org1.id}"
 }
 
 resource "cloudfoundry_private_domain_access" "access-to-org" {
-    domain     = "${cloudfoundry_domain.private.id}"
-    org        = "${cloudfoundry_org.org2.id}"
+    domain_id     = "${cloudfoundry_domain.private.id}"
+    org_id        = "${cloudfoundry_org.org2.id}"
 }
 `
 
@@ -50,12 +50,12 @@ resource "cloudfoundry_org" "org3" {
 resource "cloudfoundry_domain" "private" {
     sub_domain = "private"
     domain     = "%s"
-    org        = "${cloudfoundry_org.org1.id}"
+    org_id        = "${cloudfoundry_org.org1.id}"
 }
 
 resource "cloudfoundry_private_domain_access" "access-to-org" {
-    domain     = "${cloudfoundry_domain.private.id}"
-    org        = "${cloudfoundry_org.org3.id}"
+    domain_id     = "${cloudfoundry_domain.private.id}"
+    org_id        = "${cloudfoundry_org.org3.id}"
 }
 `
 
@@ -75,7 +75,7 @@ resource "cloudfoundry_org" "org3" {
 resource "cloudfoundry_domain" "private" {
     sub_domain = "private"
     domain     = "%s"
-    org        = "${cloudfoundry_org.org1.id}"
+    org_id        = "${cloudfoundry_org.org1.id}"
 }
 `
 

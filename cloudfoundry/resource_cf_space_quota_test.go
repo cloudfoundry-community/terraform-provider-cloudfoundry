@@ -38,7 +38,7 @@ resource "cloudfoundry_space_quota" "10g-space" {
   total_routes             = 5
   total_services           = 10
   total_route_ports        = 5
-	org                      = "${cloudfoundry_org.quota-org.id}"
+	org_id                      = "${cloudfoundry_org.quota-org.id}"
 }
 `
 
@@ -107,7 +107,7 @@ func checkSpaceQuotaExists(resource string) resource.TestCheckFunc {
 		if err := assertEquals(attributes, "name", quota.Name); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "org", quota.OrgGUID); err != nil {
+		if err := assertEquals(attributes, "org_id", quota.OrgGUID); err != nil {
 			return err
 		}
 		if err := assertEquals(attributes, "allow_paid_service_plans", strconv.FormatBool(quota.NonBasicServicesAllowed)); err != nil {
@@ -138,8 +138,8 @@ func checkSpaceQuotaExists(resource string) resource.TestCheckFunc {
 func testAccCheckSpaceQuotaResourceDestroy(quotaname string) resource.TestCheckFunc {
 	return func(s *terraform.State) (err error) {
 		session := testAccProvider.Meta().(*cfapi.Session)
-		org := defaultPcfDevOrgID()
-		if _, err := session.QuotaManager().FindQuotaByName(cfapi.SpaceQuota, quotaname, &org); err != nil {
+		orgID := defaultPcfDevOrgID()
+		if _, err := session.QuotaManager().FindQuotaByName(cfapi.SpaceQuota, quotaname, &orgID); err != nil {
 			switch err.(type) {
 			case *errors.ModelNotFoundError:
 				return nil

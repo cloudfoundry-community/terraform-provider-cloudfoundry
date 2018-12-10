@@ -40,21 +40,21 @@ func resourceDomain() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"router_group": &schema.Schema{
+			"router_group_id": &schema.Schema{
 				Type:          schema.TypeString,
 				ForceNew:      true,
 				Optional:      true,
-				ConflictsWith: []string{"org"},
+				ConflictsWith: []string{"org_id"},
 			},
 			"router_type": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"org": &schema.Schema{
+			"org_id": &schema.Schema{
 				Type:          schema.TypeString,
 				ForceNew:      true,
 				Optional:      true,
-				ConflictsWith: []string{"router_group"},
+				ConflictsWith: []string{"router_group_id"},
 			},
 			// "shared-with": &schema.Schema{
 			// 	Type:     schema.TypeSet,
@@ -76,8 +76,8 @@ func resourceDomainCreate(d *schema.ResourceData, meta interface{}) error {
 	nameAttr, nameOk := d.GetOk("name")
 	subDomainAttr, subDomainOk := d.GetOk("sub_domain")
 	domainAttr, domainOk := d.GetOk("domain")
-	org, orgOk := d.GetOk("org")
-	routerGroup, routerGroupOk := d.GetOk("router_group")
+	orgID, orgOk := d.GetOk("org_id")
+	routerGroup, routerGroupOk := d.GetOk("router_group_id")
 
 	if nameOk {
 
@@ -111,7 +111,7 @@ func resourceDomainCreate(d *schema.ResourceData, meta interface{}) error {
 
 	dm := session.DomainManager()
 	if orgOk {
-		ccDomain, err = dm.CreatePrivateDomain(name, org.(string))
+		ccDomain, err = dm.CreatePrivateDomain(name, orgID.(string))
 	} else {
 		if routerGroupOk {
 			rg := routerGroup.(string)
@@ -149,7 +149,7 @@ func resourceDomainRead(d *schema.ResourceData, meta interface{}) (err error) {
 		d.Set("name", ccDomain.Name)
 		d.Set("sub_domain", subDomain)
 		d.Set("domain", domain)
-		d.Set("route_group", ccDomain.RouterGroupGUID)
+		d.Set("route_group_id", ccDomain.RouterGroupGUID)
 		d.Set("router_type", ccDomain.RouterType)
 		return nil
 	}
@@ -180,7 +180,7 @@ func resourceDomainDelete(d *schema.ResourceData, meta interface{}) (err error) 
 	dm := session.DomainManager()
 	id := d.Id()
 
-	if _, orgOk := d.GetOk("org"); orgOk {
+	if _, orgOk := d.GetOk("org_id"); orgOk {
 		return dm.DeletePrivateDomain(id)
 	}
 	return dm.DeleteSharedDomain(id)

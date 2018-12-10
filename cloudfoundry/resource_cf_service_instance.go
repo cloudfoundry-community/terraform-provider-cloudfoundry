@@ -37,11 +37,11 @@ func resourceServiceInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"service_plan": &schema.Schema{
+			"service_plan_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"space": &schema.Schema{
+			"space_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -72,8 +72,8 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 		params map[string]interface{}
 	)
 	name := d.Get("name").(string)
-	servicePlan := d.Get("service_plan").(string)
-	space := d.Get("space").(string)
+	servicePlan := d.Get("service_plan_id").(string)
+	spaceID := d.Get("space_id").(string)
 	jsonParameters := d.Get("json_params").(string)
 
 	for _, v := range d.Get("tags").([]interface{}) {
@@ -88,7 +88,7 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 
 	sm := session.ServiceManager()
 
-	if id, err = sm.CreateServiceInstance(name, servicePlan, space, params, tags); err != nil {
+	if id, err = sm.CreateServiceInstance(name, servicePlan, spaceID, params, tags); err != nil {
 		return err
 	}
 	stateConf := &resource.StateChangeConf{
@@ -134,8 +134,8 @@ func resourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) (err 
 	}
 
 	d.Set("name", serviceInstance.Name)
-	d.Set("service_plan", serviceInstance.ServicePlanGUID)
-	d.Set("space", serviceInstance.SpaceGUID)
+	d.Set("service_plan_id", serviceInstance.ServicePlanGUID)
+	d.Set("space_id", serviceInstance.SpaceGUID)
 
 	if serviceInstance.Tags != nil {
 		tags := make([]interface{}, len(serviceInstance.Tags))
@@ -177,7 +177,7 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 
 	id = d.Id()
 	name = d.Get("name").(string)
-	servicePlan := d.Get("service_plan").(string)
+	servicePlan := d.Get("service_plan_id").(string)
 	jsonParameters := d.Get("json_params").(string)
 
 	if len(jsonParameters) > 0 {
@@ -262,8 +262,8 @@ func resourceServiceInstanceImport(d *schema.ResourceData, meta interface{}) ([]
 	}
 
 	d.Set("name", serviceinstance.Name)
-	d.Set("service_plan", serviceinstance.ServicePlanGUID)
-	d.Set("space", serviceinstance.SpaceGUID)
+	d.Set("service_plan_id", serviceinstance.ServicePlanGUID)
+	d.Set("space_id", serviceinstance.SpaceGUID)
 	d.Set("tags", serviceinstance.Tags)
 
 	// json_param can't be retrieved from CF, please inject manually if necessary

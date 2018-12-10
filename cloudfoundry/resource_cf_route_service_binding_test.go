@@ -30,19 +30,19 @@ data "cloudfoundry_space" "space" {
 }
 
 resource "cloudfoundry_route" "basic-auth-broker" {
-	domain = "${data.cloudfoundry_domain.local.id}"
-	space = "${data.cloudfoundry_space.space.id}"
+	domain_id = "${data.cloudfoundry_domain.local.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	hostname = "basic-auth-broker"
 }
 
 resource "cloudfoundry_app" "basic-auth-broker" {
 	name = "basic-auth-broker"
-	space = "${data.cloudfoundry_space.space.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	memory = "128"
 	disk_quota = "256"
   url = "file://{{ .CloneDir }}/servicebroker"
 	route {
-		default_route = "${cloudfoundry_route.basic-auth-broker.id}"
+		default_route_id = "${cloudfoundry_route.basic-auth-broker.id}"
 	}
   environment {
     BROKER_CONFIG_PATH = "config.yml"
@@ -59,25 +59,25 @@ resource "cloudfoundry_service_broker" "basic-auth" {
 }
 
 resource "cloudfoundry_service_plan_access" "basic-auth-access" {
-	plan = "${cloudfoundry_service_broker.basic-auth.service_plans["p-basic-auth/reverse-name"]}"
+	plan_id = "${cloudfoundry_service_broker.basic-auth.service_plans["p-basic-auth/reverse-name"]}"
 	public = true
 }
 
 
 resource "cloudfoundry_route" "basic-auth-router" {
-	domain = "${data.cloudfoundry_domain.local.id}"
-	space = "${data.cloudfoundry_space.space.id}"
+	domain_id = "${data.cloudfoundry_domain.local.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	hostname = "basic-auth-router"
 }
 
 resource "cloudfoundry_app" "basic-auth-router" {
 	name = "basic-auth-router"
-	space = "${data.cloudfoundry_space.space.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	memory = "128"
 	disk_quota = "256"
   url = "file://{{ .CloneDir }}/routeserver"
 	route {
-		default_route = "${cloudfoundry_route.basic-auth-router.id}"
+		default_route_id = "${cloudfoundry_route.basic-auth-router.id}"
 	}
   timeout = 300
 }
@@ -85,24 +85,24 @@ resource "cloudfoundry_app" "basic-auth-router" {
 resource "cloudfoundry_service_instance" "basic-auth" {
   depends_on = [ "cloudfoundry_service_plan_access.basic-auth-access" ]
 	name = "basic-auth"
-  space = "${data.cloudfoundry_space.space.id}"
-  service_plan = "${cloudfoundry_service_broker.basic-auth.service_plans["p-basic-auth/reverse-name"]}"
+  space_id = "${data.cloudfoundry_space.space.id}"
+  service_plan_id = "${cloudfoundry_service_broker.basic-auth.service_plans["p-basic-auth/reverse-name"]}"
 }
 
 resource "cloudfoundry_route" "php-app" {
-	domain = "${data.cloudfoundry_domain.local.id}"
-	space = "${data.cloudfoundry_space.space.id}"
+	domain_id = "${data.cloudfoundry_domain.local.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	hostname = "php-app"
 }
 
 resource "cloudfoundry_app" "php-app" {
 	name = "php-app"
-	space = "${data.cloudfoundry_space.space.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	memory = "128"
 	disk_quota = "256"
   url = "file://{{ .BaseDir }}/tests/phpapp"
 	route {
-		default_route = "${cloudfoundry_route.php-app.id}"
+		default_route_id = "${cloudfoundry_route.php-app.id}"
 	}
   timeout = 300
 }
@@ -112,28 +112,28 @@ resource "cloudfoundry_app" "php-app" {
 
 const routeBindingResourceCreate = `
 resource "cloudfoundry_route_service_binding" "route-bind" {
-  service_instance = "${cloudfoundry_service_instance.basic-auth.id}"
-  route = "${cloudfoundry_route.php-app.id}"
+  service_instance_id = "${cloudfoundry_service_instance.basic-auth.id}"
+  route_id = "${cloudfoundry_route.php-app.id}"
 }
 `
 
 const routeBindingResourceUpdate = `
 resource "cloudfoundry_route" "php-app-other" {
-	domain = "${data.cloudfoundry_domain.local.id}"
-	space = "${data.cloudfoundry_space.space.id}"
+	domain_id = "${data.cloudfoundry_domain.local.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	hostname = "php-app-other"
 }
 
 resource "cloudfoundry_route_service_binding" "route-bind" {
-  service_instance = "${cloudfoundry_service_instance.basic-auth.id}"
-  route = "${cloudfoundry_route.php-app-other.id}"
+  service_instance_id = "${cloudfoundry_service_instance.basic-auth.id}"
+  route_id = "${cloudfoundry_route.php-app-other.id}"
 }
 `
 
 const routeBindingResourceDelete = `
 resource "cloudfoundry_route" "php-app-other" {
-	domain = "${data.cloudfoundry_domain.local.id}"
-	space = "${data.cloudfoundry_space.space.id}"
+	domain_id = "${data.cloudfoundry_domain.local.id}"
+	space_id = "${data.cloudfoundry_space.space.id}"
 	hostname = "php-app-other"
 }
 `

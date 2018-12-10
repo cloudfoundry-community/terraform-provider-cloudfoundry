@@ -16,12 +16,12 @@ func resourceServicePlanAccess() *schema.Resource {
 			State: resourceServicePlanAccessImport,
 		},
 		Schema: map[string]*schema.Schema{
-			"plan": &schema.Schema{
+			"plan_id": &schema.Schema{
 				Type:     schema.TypeString,
 				ForceNew: true,
 				Required: true,
 			},
-			"org": &schema.Schema{
+			"org_id": &schema.Schema{
 				Type:          schema.TypeString,
 				Optional:      true,
 				ForceNew:      true,
@@ -31,7 +31,7 @@ func resourceServicePlanAccess() *schema.Resource {
 				Type:          schema.TypeBool,
 				Optional:      true,
 				ForceNew:      true,
-				ConflictsWith: []string{"org"},
+				ConflictsWith: []string{"org_id"},
 			},
 		},
 	}
@@ -44,15 +44,15 @@ func resourceServicePlanAccessCreate(d *schema.ResourceData, meta interface{}) (
 		return fmt.Errorf("client is nil")
 	}
 
-	plan := d.Get("plan").(string)
+	planID := d.Get("plan_id").(string)
 	public, hasPublic := d.GetOkExists("public")
-	org, hasOrg := d.GetOk("org")
+	orgID, hasOrg := d.GetOk("org_id")
 
 	var id string
 	sm := session.ServiceManager()
 
 	if hasOrg {
-		if id, err = sm.CreateServicePlanAccess(plan, org.(string)); err != nil {
+		if id, err = sm.CreateServicePlanAccess(planID, orgID.(string)); err != nil {
 			return
 		}
 	} else {
@@ -60,10 +60,10 @@ func resourceServicePlanAccessCreate(d *schema.ResourceData, meta interface{}) (
 		if hasPublic {
 			state = public.(bool)
 		}
-		if err = sm.UpdateServicePlanVisibility(plan, state); err != nil {
+		if err = sm.UpdateServicePlanVisibility(planID, state); err != nil {
 			return
 		}
-		id = plan
+		id = planID
 	}
 
 	d.SetId(id)
@@ -76,25 +76,25 @@ func resourceServicePlanAccessRead(d *schema.ResourceData, meta interface{}) (er
 		return fmt.Errorf("client is nil")
 	}
 
-	_, hasOrg := d.GetOk("org")
+	_, hasOrg := d.GetOk("org_id")
 
 	sm := session.ServiceManager()
 
 	if hasOrg {
-		var plan, org string
-		if plan, org, err = sm.ReadServicePlanAccess(d.Id()); err != nil {
+		var planID, orgID string
+		if planID, orgID, err = sm.ReadServicePlanAccess(d.Id()); err != nil {
 			d.SetId("")
 			return
 		}
-		d.Set("plan", plan)
-		d.Set("org", org)
+		d.Set("plan_id", planID)
+		d.Set("org_id", orgID)
 	} else {
 		var plan cfapi.CCServicePlan
 		if plan, err = sm.ReadServicePlan(d.Id()); err != nil {
 			d.SetId("")
 			return
 		}
-		d.Set("plan", d.Id())
+		d.Set("plan_id", d.Id())
 		d.Set("public", plan.Public)
 	}
 

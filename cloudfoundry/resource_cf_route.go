@@ -25,11 +25,11 @@ func resourceRoute() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 
-			"domain": &schema.Schema{
+			"domain_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"space": &schema.Schema{
+			"space_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -65,7 +65,7 @@ func resourceRoute() *schema.Resource {
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"app": &schema.Schema{
+						"app_id": &schema.Schema{
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -87,7 +87,7 @@ func resourceRoute() *schema.Resource {
 
 func routeTargetHash(d interface{}) int {
 
-	a := d.(map[string]interface{})["app"].(string)
+	a := d.(map[string]interface{})["app_id"].(string)
 
 	p := ""
 	if v, ok := d.(map[string]interface{})["port"]; ok {
@@ -105,8 +105,8 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	route := cfapi.CCRoute{
-		DomainGUID: d.Get("domain").(string),
-		SpaceGUID:  d.Get("space").(string),
+		DomainGUID: d.Get("domain_id").(string),
+		SpaceGUID:  d.Get("space_id").(string),
 	}
 
 	if v, ok := d.GetOk("hostname"); ok {
@@ -209,8 +209,8 @@ func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	update := false
-	route.DomainGUID = *getChangedValueString("domain", &update, d)
-	route.SpaceGUID = *getChangedValueString("space", &update, d)
+	route.DomainGUID = *getChangedValueString("domain_id", &update, d)
+	route.SpaceGUID = *getChangedValueString("space_id", &update, d)
 	route.Hostname = getChangedValueString("hostname", &update, d)
 
 	if update {
@@ -263,8 +263,8 @@ func resourceRouteDelete(d *schema.ResourceData, meta interface{}) (err error) {
 
 func setRouteArguments(session *cfapi.Session, route cfapi.CCRoute, d *schema.ResourceData) (err error) {
 
-	d.Set("domain", route.DomainGUID)
-	d.Set("space", route.SpaceGUID)
+	d.Set("domain_id", route.DomainGUID)
+	d.Set("space_id", route.SpaceGUID)
 	if route.Hostname != nil {
 		d.Set("hostname", route.Hostname)
 	}
@@ -303,7 +303,7 @@ func addTargets(
 
 	for _, t := range add {
 
-		appID = t["app"].(string)
+		appID = t["app_id"].(string)
 		port = nil
 		if v, ok := t["port"]; ok {
 			vv := v.(int)
@@ -327,7 +327,7 @@ func removeTargets(
 
 	for _, t := range delete {
 
-		appID := t["app"].(string)
+		appID := t["app_id"].(string)
 		mappingID := t["mapping_id"].(string)
 		log.DebugMessage("Deleting route mapping with id '%s' to app instance '%s'.", mappingID, appID)
 
