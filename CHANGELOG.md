@@ -1,3 +1,8 @@
+## 0.10  (Unreleased)
+
+BUG FIXES: 
+  * fix a crash when using `syslog_drain_url` services [#175](https://github.com/mevansam/terraform-provider-cf/pull/175) 
+
 ## 0.9.9 (September 27, 2018)
 
 BREAKING CHANGES:
