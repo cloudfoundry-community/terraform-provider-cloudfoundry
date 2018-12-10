@@ -62,9 +62,9 @@ One of the following arguments must be declared to locate application source or 
 
 ~> **NOTE:** Arguments "`tag`" and "`branch`" are mutually exclusive.
 
-~> **NOTE:** Builtin credentials like `https://user:password@host` or `ssh://git@host` is not supported.
+~> **NOTE:** Builtin credentials like `https://user:password@host` or `ssh://git@host` are not supported.
 
-~> **NOTE:** If a git SSH "`key`" is provided and it is protected the "`password`" argument should be used as the key's password.
+~> **NOTE:** If a git SSH "`key`" is provided and the key is password-protected, then the "`password`" argument should be used as the key's password.
 
 * `github_release` - (Optional, String) The github release where to download the application archive from.
 
