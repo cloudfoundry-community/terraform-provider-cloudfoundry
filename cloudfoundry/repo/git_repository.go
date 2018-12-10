@@ -2,11 +2,11 @@ package repo
 
 import (
 	"fmt"
-	"sync"
-
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"os"
+	"sync"
 )
 
 const (
@@ -20,8 +20,8 @@ const (
 type GitRepository struct {
 	repoPath string
 	gitRepo  *git.Repository
-
-	mutex *sync.Mutex
+	auth     transport.AuthMethod
+	mutex    *sync.Mutex
 }
 
 // GetPath -
@@ -31,7 +31,6 @@ func (r *GitRepository) GetPath() string {
 
 // SetVersion -
 func (r *GitRepository) SetVersion(version string, versionType VersionType) (err error) {
-
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -47,21 +46,23 @@ func (r *GitRepository) SetVersion(version string, versionType VersionType) (err
 	switch versionType {
 	case GitVersionTypeBranch:
 		refName = plumbing.ReferenceName("refs/heads/" + version)
-		if err = r.gitRepo.Pull(
-			&git.PullOptions{
-				ReferenceName:     refName,
-				SingleBranch:      true,
-				RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-			}); err != nil && err != git.NoErrAlreadyUpToDate {
+		options := &git.PullOptions{
+			ReferenceName:     refName,
+			SingleBranch:      true,
+			Auth:              r.auth,
+			RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+		}
+		if err = r.gitRepo.Pull(options); err != nil && err != git.NoErrAlreadyUpToDate {
 			return err
 		}
 
 	case GitVersionTypeTag:
 		refName = plumbing.ReferenceName("refs/tags/" + version)
-		if err = w.Checkout(&git.CheckoutOptions{
+		options := &git.CheckoutOptions{
 			Branch: refName,
 			Force:  true,
-		}); err != nil && err != git.NoErrAlreadyUpToDate {
+		}
+		if err = w.Checkout(options); err != nil && err != git.NoErrAlreadyUpToDate {
 			return err
 		}
 
