@@ -197,9 +197,9 @@ func parseID(id string) (first string, second string, err error) {
 func hashRouteMappingSet(v interface{}) int {
 	elem := v.(map[string]interface{})
 	var target string
-	if v, ok := elem["route"]; ok {
+	if v, ok := elem["route_id"]; ok {
 		target = v.(string)
-	} else if v, ok := elem["app"]; ok {
+	} else if v, ok := elem["app_id"]; ok {
 		target = v.(string)
 	}
 	return hashcode.String(fmt.Sprintf("%s", target))
