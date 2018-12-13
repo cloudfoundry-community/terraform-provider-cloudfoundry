@@ -10,6 +10,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 	"io/ioutil"
 )
@@ -41,67 +42,79 @@ func NewRepoManager() *RepoManager {
 	}
 }
 
+func (rm *RepoManager) getAuthMethod(repoURL string, user, password, privateKey *string) (transport.AuthMethod, error) {
+	ep, err := transport.NewEndpoint(repoURL)
+	if err != nil {
+		err = fmt.Errorf("unable to parse repository url : %s", err)
+		return nil, err
+	}
+	proto := ep.Protocol()
+
+	if user == nil {
+		return nil, nil
+	}
+
+	if proto == "http" || proto == "https" {
+		if privateKey != nil {
+			return nil, fmt.Errorf("privatekey authentication not available with http(s) protocol")
+		}
+		if password != nil {
+			return http.NewBasicAuth(*user, *password), nil
+		}
+		return nil, fmt.Errorf("missing password for http(s) authentication")
+	}
+
+	if proto == "ssh" {
+		if privateKey != nil {
+			auth, err := ssh.NewPublicKeys(*user, []byte(*privateKey), "")
+			if err != nil {
+				return nil, fmt.Errorf("cannot use private key for ssh authentication: %s", err)
+			}
+			return auth, nil
+		}
+		if password != nil {
+			return &ssh.Password{User: *user, Pass: *password}, nil
+		}
+		return nil, fmt.Errorf("missing password or private key for ssh authentication")
+	}
+
+	return nil, fmt.Errorf("authentication not available for protocol '%s'", proto)
+}
+
 // GetGitRepository -
 func (rm *RepoManager) GetGitRepository(name string, repoURL string, user, password, privateKey *string) (repo Repository, err error) {
-
 	rm.gitMutex.Lock()
 	defer rm.gitMutex.Unlock()
-
 	var r *git.Repository
+	var auth transport.AuthMethod
 
 	p, err := ioutil.TempDir("", "terraform-provider-cloudfoundry")
 	if err != nil {
 		return nil, err
 	}
-
 	p = p + "/" + name
 
-	if user != nil {
-
-		var auth transport.AuthMethod
-
-		if password != nil {
-
-			if privateKey != nil {
-				auth, err = ssh.NewPublicKeys(*user, []byte(*privateKey), *password)
-			} else {
-				auth = &ssh.Password{
-					User: *user,
-					Pass: *password,
-				}
-			}
-		} else if privateKey != nil {
-			auth, err = ssh.NewPublicKeys(*user, []byte(*privateKey), "")
-		} else {
-			err = fmt.Errorf("authentication password or key was not provided for user '%s'\n", *user)
-		}
-		if err != nil {
-			return
-		}
-		r, err = git.PlainClone(p, false,
-			&git.CloneOptions{
-				URL:               repoURL,
-				Auth:              auth,
-				ReferenceName:     plumbing.Master,
-				RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-			})
-	} else {
-		r, err = git.PlainClone(p, false,
-			&git.CloneOptions{
-				URL:               repoURL,
-				ReferenceName:     plumbing.Master,
-				RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-			})
+	if auth, err = rm.getAuthMethod(repoURL, user, password, privateKey); err != nil {
+		return nil, err
 	}
+
+	r, err = git.PlainClone(p, false, &git.CloneOptions{
+		URL:               repoURL,
+		Auth:              auth,
+		ReferenceName:     plumbing.Master,
+		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+	})
+
 	if err != nil {
 		_ = os.RemoveAll(p)
-		return nil, err
+		return nil, fmt.Errorf("unable to clone repository : %s", err)
 	}
 
 	return &GitRepository{
 		repoPath: p,
 		gitRepo:  r,
 		mutex:    rm.gitMutex,
+		auth:     auth,
 	}, nil
 }
 
