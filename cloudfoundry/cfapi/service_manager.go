@@ -547,12 +547,7 @@ func (sm *ServiceManager) FindServiceInstance(name string, spaceID string) (serv
 // DeleteServiceInstance -
 func (sm *ServiceManager) DeleteServiceInstance(serviceInstanceID string, recursive bool) (err error) {
 
-	if !recursive {
-		err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?accepts_incomplete=true", serviceInstanceID))
-		return err
-	}
-
-	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?recursive=true&accepts_incomplete=true", serviceInstanceID))
+	err = sm.ccGateway.DeleteResource(sm.apiEndpoint, fmt.Sprintf("/v2/service_instances/%s?recursive=%t&accepts_incomplete=true", serviceInstanceID, recursive))
 	return err
 }
 
