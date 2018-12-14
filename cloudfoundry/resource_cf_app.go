@@ -701,6 +701,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	if app.DockerImage != nil && *app.DockerImage == "" {
 		app.DockerImage = nil
 	}
+	if app.DockerImage != nil && d.HasChange("docker_image") {
+		app.Ports = nil
+	}
 
 	if update || restart || restage {
 		// push any updates to CF, we'll do any restage/restart later
