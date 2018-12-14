@@ -3,6 +3,8 @@
 ENHANCEMENTS:
  * `cloudfoundry_app.route.default_route` deprecated in favor or `cloudfoundry_app.routes` array [#150](https://github.com/mevansam/terraform-provider-cf/pull/150) following cleaned up of blue/green unimplemented support. Thanks [@jcarrothers-sap](https://github.com/jcarrothers-sap).
  * Migration script to migrate from 0.9.8 to 0.9.9 syntax. [#165](https://github.com/mevansam/terraform-provider-cf/pull/165), [#171](https://github.com/mevansam/terraform-provider-cf/pull/171). Thanks [@janosbinder](https://github.com/janosbinder), [@lixilin2301](https://github.com/lixilin2301)
+ * Added a flag support the recursive deletion of service bindings, service keys, and routes associated with the service instance. [#174](https://github.com/mevansam/terraform-provider-cf/pull/174). Thanks [@samedguener](https://github.com/samedguener), [@lixilin2301](https://github.com/lixilin2301)
+
 
 BUG FIXES:
   * changes to app health check required an app restart [#168](https://github.com/mevansam/terraform-provider-cf/pull/168). Thanks [@jcarrothers-sap](https://github.com/jcarrothers-sap)
