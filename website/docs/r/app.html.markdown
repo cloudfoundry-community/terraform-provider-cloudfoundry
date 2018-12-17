@@ -93,7 +93,7 @@ The `route` block supports:
 - `route` - (Required, String) The route id. Route can be defined using the `cloudfoundry_route` resource
 - ~`port` - (Number) The port of the application to map the tcp route to.~
 
-~> **NOTE:** in the future, the `route` block will support the `port` attribute illustrated above to allow mapping of tcp routes. 
+~> **NOTE:** in the future, the `route` block will support the `port` attribute illustrated above to allow mapping of tcp routes, and listening on custom or multiple ports. 
 ~> **NOTE:** Route mappings can be controlled from either the `cloudfoundry_app.routes` or the `cloudfoundry_routes.target` attributes. Using both syntaxes will cause conflicts and result in unpredictable behavior.  
 ~> **NOTE:** A given route can not currently be mapped to more than one application using the `cloudfoundry_app.routes` syntax. As an alternative, use the `cloudfoundry_route.target` syntax instead in this specific use-case.  
 
