@@ -43,7 +43,7 @@ The following arguments are supported:
 * `api_url` - (Required) API endpoint (e.g. https://api.local.pcfdev.io). This can also be specified
   with the `CF_API_URL` shell environment variable.
 
-* `user` - (Optional) Cloud Foundry user wih admin privileges. Defaults to "admin". This can also be specified
+* `user` - (Optional) Cloud Foundry user with admin privileges. Defaults to "admin". This can also be specified
   with the `CF_USER` shell environment variable.
 
 * `password` - (Required) Cloud Foundry admin user's password. This can also be specified
