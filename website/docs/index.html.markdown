@@ -9,8 +9,8 @@ description: |-
 # Cloud Foundry Provider
 
 The Cloud Foundry (cloudfoundry) provider is used to interact with a
-Cloud Foundry target to perform adminstrative configuration of platform 
-resources.
+Cloud Foundry target to perform administrative configuration of platform 
+resources, or user actions (such as pushing a cf app).
 
 Use the navigation to the left to read about the available resources.
 
@@ -21,7 +21,7 @@ Use the navigation to the left to read about the available resources.
 # or using -var="api_url=..." CLI option
 
 variable "api_url" {}
-variable "admin_password" {}
+variable "password" {}
 variable "uaa_admin_client_secret" {}
 
 # Configure the CloudFoundry Provider
@@ -29,7 +29,7 @@ variable "uaa_admin_client_secret" {}
 provider "cloudfoundry" {
     api_url = "${var.api_url}"
     user = "admin"
-    password = "${var.admin_password}"
+    password = "${var.password}"
     uaa_client_id = "admin"
     uaa_client_secret = "${var.uaa_admin_client_secret}"
     skip_ssl_validation = true
@@ -43,10 +43,10 @@ The following arguments are supported:
 * `api_url` - (Required) API endpoint (e.g. https://api.local.pcfdev.io). This can also be specified
   with the `CF_API_URL` shell environment variable.
 
-* `user` - (Optional) Cloud Foundry user wih admin privileges. Defaults to "admin". This can also be specified
-  with the `CF_USER` shell environment variable.
+* `user` - (Optional) Cloud Foundry user. Defaults to "admin". This can also be specified
+  with the `CF_USER` shell environment variable. Unless mentionned explicitly in a resource, CF admin permissions are not required.
 
-* `password` - (Required) Cloud Foundry admin user's password. This can also be specified
+* `password` - (Required) Cloud Foundry user's password. This can also be specified
   with the `CF_PASSWORD` shell environment variable.
 
 * `uaa_client_id` - (Optional) The UAA admin client ID. Defaults to "admin". This can also be specified
