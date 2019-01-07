@@ -52,7 +52,7 @@ The following arguments are supported:
 * `uaa_client_id` - (Optional) The UAA admin client ID. Defaults to "admin". This can also be specified
   with the `CF_UAA_CLIENT_ID` shell environment variable.
 
-* `uaa_client_secret` - (Required) This secret of the UAA admin client. This can also be specified
+* `uaa_client_secret` - (Optional) This secret of the UAA admin client. This can also be specified
   with the `CF_UAA_CLIENT_SECRET` shell environment variable.
 
 * `skip_ssl_validation` - (Optional) Skip verification of the API endpoint - Not recommended!. Defaults to "false". This can also be specified
