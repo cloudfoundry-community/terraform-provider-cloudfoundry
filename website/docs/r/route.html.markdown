@@ -41,8 +41,7 @@ The following argument applies only to HTTP routes.
 
 The following maps the route to an application.
 
-- `target` - (Optional, Set) One or more route mapping(s) that will map this route to application(s). Can be repeated multiple times to load balance route traffic among multiple applications.
-
+- `target` - (Optional, Set) One or more route mapping(s) that will map this route to application(s). Can be repeated multiple times to load balance route traffic among multiple applications.<br/>
 The `target` block supports:
   - `app` - (Required, String) The ID of the [application](/docs/providers/cloudfoundry/r/app.html) to map this route to.
   - `port` - (Optional, Int) A port that the application will be listening on. If this argument is not provided then the route will be associated with the application's default port. 
