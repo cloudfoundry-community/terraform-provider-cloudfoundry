@@ -231,7 +231,14 @@ func (um *UserManager) CreateUser(
 	case nil:
 	case errors.HTTPError:
 		if httpErr.StatusCode() == http.StatusConflict {
-			return nil, errors.NewModelAlreadyExistsError("user", username)
+			if origin != "ldap" {
+				return nil, errors.NewModelAlreadyExistsError("user", username)
+			}
+			fields, err := um.FindByUsername(username)
+			if err != nil {
+				return nil, err
+			}
+			return um.GetUser(fields.GUID)
 		}
 		return nil, err
 	default:

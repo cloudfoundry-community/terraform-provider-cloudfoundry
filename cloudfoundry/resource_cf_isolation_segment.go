@@ -157,7 +157,23 @@ func resourceSegmentEntitlementRead(d *schema.ResourceData, meta interface{}) er
 		d.SetId("")
 		return err
 	}
-	d.Set("orgs", schema.NewSet(resourceStringHash, orgs))
+
+	resourceOrgs := d.Get("orgs").(*schema.Set).List()
+	finalOrgs := []interface{}{}
+	for _, currentOrg := range orgs {
+		found := false
+		for _, requestOrg := range resourceOrgs {
+			if requestOrg == currentOrg.(string) {
+				found = true
+				break
+			}
+		}
+		if found {
+			finalOrgs = append(finalOrgs, currentOrg)
+		}
+	}
+
+	d.Set("orgs", schema.NewSet(resourceStringHash, finalOrgs))
 	return nil
 }
 

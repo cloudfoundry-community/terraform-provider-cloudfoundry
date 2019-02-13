@@ -114,13 +114,15 @@ func resourceUserRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("family_name", user.Name.FamilyName)
 	d.Set("email", user.Emails[0].Value)
 
-	var groups []interface{}
-	for _, g := range user.Groups {
-		if !um.IsDefaultGroup(g.Display) {
-			groups = append(groups, g.Display)
+	if user.Origin == "uaa" {
+		var groups []interface{}
+		for _, g := range user.Groups {
+			if !um.IsDefaultGroup(g.Display) {
+				groups = append(groups, g.Display)
+			}
 		}
+		d.Set("groups", schema.NewSet(resourceStringHash, groups))
 	}
-	d.Set("groups", schema.NewSet(resourceStringHash, groups))
 
 	return nil
 }
@@ -175,13 +177,15 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	old, new := d.GetChange("groups")
-	rolesToDelete, rolesToAdd := getListChanges(old, new)
-
-	if len(rolesToDelete) > 0 || len(rolesToAdd) > 0 {
-		err := um.UpdateRoles(id, rolesToDelete, rolesToAdd, d.Get("origin").(string))
-		if err != nil {
-			return err
+	origin := d.Get("origin").(string)
+	if origin == "uaa" {
+		old, new := d.GetChange("groups")
+		rolesToDelete, rolesToAdd := getListChanges(old, new)
+		if len(rolesToDelete) > 0 || len(rolesToAdd) > 0 {
+			err := um.UpdateRoles(id, rolesToDelete, rolesToAdd, d.Get("origin").(string))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
