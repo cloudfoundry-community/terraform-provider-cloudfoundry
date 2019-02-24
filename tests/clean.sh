@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash 
 
 echo "Start cleaning up potentially leaking resources from previous test executions. Warnings about missing resources should be ignored"
 
@@ -102,13 +102,17 @@ if [ `cf curl "/v2/apps?q=space_guid:$CF_SPACE_GUID" | jq ".total_results"` -ne 
    exit 1;
 fi
 
-if [ `cf curl "/v2/routes?q=organization_guid:$CF_ORG_GUID" | jq ".total_results"` -ne "0" ]; then
+if [ `cf curl "/v2/routes?q=organization_guid:$CF_ORG_GUID" \
+   | jq '[ .resources[] | select(.entity.space_guid == "'$CF_SPACE_GUID'") ] | length'` -ne "0" ]; then
+   
    echo "ERROR: The acceptance environment contains some residual routes, run \"cf routes\" - please clean them up using a PR on clean.sh";
    cf routes
    exit 1;
 fi
 
-if [ `cf curl "/v2/service_instances?q=organization_guid:$CF_ORG_GUID" | jq ".total_results"` -ne "0" ]; then
+if [ `cf curl "/v2/service_instances?q=organization_guid:$CF_ORG_GUID" \
+   | jq '[ .resources[] | select(.entity.space_guid == "'$CF_SPACE_GUID'") ] | length'` -ne "0" ]; then
+
    echo "ERROR: The acceptance environment contains some residual service instances, run \"cf s\" - please clean them up using a PR on clean.sh";
    cf s
    exit 1;
