@@ -40,7 +40,7 @@ func TestAccDataSourceSpaceQuota_normal(t *testing.T) {
 	}
 
 	ref := "data.cloudfoundry_space_quota.qq"
-	orgID := defaultPcfDevOrgID()
+	orgID, _ := defaultTestOrg(t)
 
 	resource.Test(t,
 		resource.TestCase{

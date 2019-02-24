@@ -18,7 +18,7 @@ data "cloudfoundry_asg" "public" {
 
 func TestAccDataSourceAsg_normal(t *testing.T) {
 
-	defaultAsg := getDefaultSecurityGroup()
+	defaultAsg := getTestSecurityGroup()
 	ref := "data.cloudfoundry_asg.public"
 
 	resource.Test(t,

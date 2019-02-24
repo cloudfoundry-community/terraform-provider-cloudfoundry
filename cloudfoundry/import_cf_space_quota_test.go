@@ -7,6 +7,9 @@ import (
 )
 
 func TestAccSpaceQuota_importBasic(t *testing.T) {
+
+	orgID, _ := defaultTestOrg(t)
+
 	resourceName := "cloudfoundry_space_quota.10g-space"
 	quotaname := "10g-space"
 
@@ -14,7 +17,7 @@ func TestAccSpaceQuota_importBasic(t *testing.T) {
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckSpaceQuotaResourceDestroy(quotaname),
+			CheckDestroy: testAccCheckSpaceQuotaResourceDestroy(quotaname, orgID),
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: spaceQuotaResource,

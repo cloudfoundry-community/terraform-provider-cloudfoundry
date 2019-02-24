@@ -9,10 +9,15 @@ import (
 )
 
 func TestAccServicePlanAccess_importBasic(t *testing.T) {
-	resourceName := "cloudfoundry_service_plan_access.redis-access"
 
-	user, password := getRedisBrokerCredentials()
-	deleteServiceBroker("p-redis")
+	serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword, serviceBrokerPlanPath := getTestBrokerCredentials(t)
+
+	// Ensure any test artifacts from a
+	// failed run are deleted if the exist
+	deleteServiceBroker("test")
+
+	orgID, _ := defaultTestOrg(t)
+	resourceName := "cloudfoundry_service_plan_access.test-access"
 
 	var servicePlanAccessGUID string
 
@@ -22,12 +27,14 @@ func TestAccServicePlanAccess_importBasic(t *testing.T) {
 			Providers:    testAccProviders,
 			CheckDestroy: testAccCheckServicePlanAccessDestroyed(servicePlanAccessGUID),
 			Steps: []resource.TestStep{
-
 				resource.TestStep{
 					Config: fmt.Sprintf(saResource,
-						defaultSysDomain(), user, password, defaultPcfDevOrgID()),
+						serviceBrokerURL,
+						serviceBrokerUser,
+						serviceBrokerPassword,
+						serviceBrokerPlanPath,
+						orgID),
 				},
-
 				resource.TestStep{
 					ResourceName:      resourceName,
 					ImportState:       true,

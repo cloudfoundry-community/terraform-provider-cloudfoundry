@@ -13,14 +13,16 @@ import (
 
 const serviceDataResource = `
 
-data "cloudfoundry_service" "mysql" {
-    name = "p-mysql"
+data "cloudfoundry_service" "test" {
+    name = "%s"
 }
 `
 
 func TestAccDataSourceService_normal(t *testing.T) {
 
-	ref := "data.cloudfoundry_service.mysql"
+	serviceName1, _, servicePlan := getTestServiceBrokers(t)
+
+	ref := "data.cloudfoundry_service.test"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -29,15 +31,14 @@ func TestAccDataSourceService_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: serviceDataResource,
+					Config: fmt.Sprintf(serviceDataResource,
+						serviceName1),
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceServiceExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "p-mysql"),
+							ref, "name", serviceName1),
 						resource.TestCheckResourceAttrSet(
-							ref, "service_plans.512mb"),
-						resource.TestCheckResourceAttrSet(
-							ref, "service_plans.1gb"),
+							ref, "service_plans."+servicePlan),
 					),
 				},
 			},

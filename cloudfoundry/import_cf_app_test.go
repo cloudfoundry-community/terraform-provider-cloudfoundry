@@ -9,6 +9,11 @@ import (
 )
 
 func TestAccApp_importBasic(t *testing.T) {
+
+	_, orgName := defaultTestOrg(t)
+	_, spaceName := defaultTestSpace(t)
+	serviceName1, serviceName2, servicePlan := getTestServiceBrokers(t)
+
 	resourceName := "cloudfoundry_app.java-spring"
 
 	resource.Test(t,
@@ -19,7 +24,10 @@ func TestAccApp_importBasic(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceJavaSpring, defaultAppDomain()),
+					Config: fmt.Sprintf(appResourceJavaSpring,
+						defaultAppDomain(),
+						orgName, spaceName,
+						serviceName1, serviceName2, servicePlan, servicePlan),
 				},
 
 				resource.TestStep{
