@@ -12,19 +12,26 @@ import (
 )
 
 func TestAccServiceInstance_importBasic(t *testing.T) {
-	resourceName := "cloudfoundry_service_instance.mysql"
+
+	_, orgName := defaultTestOrg(t)
+	_, spaceName := defaultTestSpace(t)
+	serviceName1, _, servicePlan := getTestServiceBrokers(t)
+
+	resourceName := "cloudfoundry_service_instance.test-service-instance"
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceInstanceDestroyedImportState([]string{"mysql", "mysql-updated"}, resourceName),
+			PreCheck:  func() { testAccPreCheck(t) },
+			Providers: testAccProviders,
+			CheckDestroy: testAccCheckServiceInstanceDestroyedImportState(
+				[]string{"test-service"},
+				resourceName),
 			Steps: []resource.TestStep{
-
 				resource.TestStep{
-					Config: serviceInstanceResourceCreate,
+					Config: fmt.Sprintf(serviceInstanceResourceCreate,
+						orgName, spaceName, serviceName1, servicePlan,
+					),
 				},
-
 				resource.TestStep{
 					ResourceName:            resourceName,
 					ImportState:             true,
@@ -33,7 +40,7 @@ func TestAccServiceInstance_importBasic(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(resourceName),
 						resource.TestCheckResourceAttr(
-							resourceName, "name", "mysql"),
+							resourceName, "name", "test-service-instance"),
 						resource.TestCheckResourceAttr(
 							resourceName, "tags.#", "2"),
 						resource.TestCheckResourceAttr(

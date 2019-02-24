@@ -13,9 +13,9 @@ import (
 
 const sbResource = `
 
-resource "cloudfoundry_service_broker" "redis" {
-	name = "test-redis"
-	url = "https://redis-broker.%s"
+resource "cloudfoundry_service_broker" "test" {
+	name = "test"
+	url = "%s"
 	username = "%s"
 	password = "%s"
 }
@@ -23,9 +23,9 @@ resource "cloudfoundry_service_broker" "redis" {
 
 const sbResourceUpdate = `
 
-resource "cloudfoundry_service_broker" "redis" {
-	name = "test-redis-renamed"
-	url = "https://redis-broker.%s"
+resource "cloudfoundry_service_broker" "test" {
+	name = "test-renamed"
+	url = "%s"
 	username = "%s"
 	password = "%s"
 }
@@ -33,41 +33,45 @@ resource "cloudfoundry_service_broker" "redis" {
 
 func TestAccServiceBroker_normal(t *testing.T) {
 
-	user, password := getRedisBrokerCredentials()
-	deleteServiceBroker("p-redis")
+	serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword, serviceBrokerPlanPath := getTestBrokerCredentials(t)
 
-	ref := "cloudfoundry_service_broker.redis"
+	// Ensure any test artifacts from a
+	// failed run are deleted if the exist
+	deleteServiceBroker("test")
+	deleteServiceBroker("test-renamed")
+
+	ref := "cloudfoundry_service_broker.test"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceBrokerDestroyed("test-redis"),
+			CheckDestroy: testAccCheckServiceBrokerDestroyed("test"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
 					Config: fmt.Sprintf(sbResource,
-						defaultSysDomain(), user, password),
+						serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceBrokerExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "test-redis"),
+							ref, "name", "test"),
 						resource.TestCheckResourceAttr(
-							ref, "url", "https://redis-broker."+defaultSysDomain()),
+							ref, "url", serviceBrokerURL),
 						resource.TestCheckResourceAttr(
-							ref, "username", "admin"),
+							ref, "username", serviceBrokerUser),
 						resource.TestCheckResourceAttrSet(
-							ref, "service_plans.p-redis/shared-vm"),
+							ref, "service_plans."+serviceBrokerPlanPath),
 					),
 				},
 
 				resource.TestStep{
 					Config: fmt.Sprintf(sbResourceUpdate,
-						defaultSysDomain(), user, password),
+						serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceBrokerExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "test-redis-renamed"),
+							ref, "name", "test-renamed"),
 					),
 				},
 			},

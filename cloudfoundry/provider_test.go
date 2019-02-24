@@ -25,8 +25,10 @@ var testAccProvider *schema.Provider
 
 var tstSession *cfapi.Session
 
-var pcfDevOrgID string
-var pcfDevSpaceID string
+var testOrgID string
+var testOrgName string
+var testSpaceID string
+var testSpaceName string
 
 func init() {
 
@@ -73,7 +75,7 @@ func testAccEnvironmentSet() bool {
 		len(githubUser) == 0 ||
 		len(githubPassword) == 0 {
 
-		fmt.Println("CF_API_URL, CF_USER, CF_PASSWORD, CF_UAA_CLIENT_ID, CF_UAA_CLIENT_SECRET " +
+		fmt.Println("CF_API_URL, CF_USER, CF_PASSWORD, CF_UAA_CLIENT_ID, CF_UAA_CLIENT_SECRET, " +
 			"CF_SKIP_SSL_VALIDATION, GITHUB_USER and GITHUB_TOKEN must be set for acceptance tests to work.")
 		return false
 	}
@@ -120,7 +122,7 @@ func defaultSysDomain() (domain string) {
 }
 
 func defaultAppDomain() (domain string) {
-	if domain = os.Getenv("CF_TEST_APP_DOMAIN"); len(domain) == 0 {
+	if domain = os.Getenv("TEST_APP_DOMAIN"); len(domain) == 0 {
 		domain = defaultSysDomain()
 	}
 	return domain
@@ -131,38 +133,49 @@ func defaultBaseDir() string {
 	return filepath.Dir(filepath.Dir(file))
 }
 
-func defaultPcfDevOrgID() string {
+func defaultTestOrg(t *testing.T) (string, string) {
 
-	if len(pcfDevOrgID) == 0 {
+	testOrgName := os.Getenv("TEST_ORG_NAME")
+	if len(testOrgName) > 0 {
 
 		var (
-			err       error
-			pcfDevOrg cfapi.CCOrg
+			err error
+			org cfapi.CCOrg
 		)
 
-		if pcfDevOrg, err = testSession().OrgManager().FindOrg("pcfdev-org"); err != nil {
-			panic(err.Error())
+		if org, err = testSession().OrgManager().FindOrg(testOrgName); err != nil {
+			t.Fatal(err.Error())
 		}
-		pcfDevOrgID = pcfDevOrg.ID
+		testOrgID = org.ID
+
+	} else {
+		t.Fatal("Environment variable TEST_ORG_NAME must be set for acceptance tests to work.")
 	}
-	return pcfDevOrgID
+
+	return testOrgID, testOrgName
 }
 
-func defaultPcfDevSpaceID() string {
+func defaultTestSpace(t *testing.T) (string, string) {
 
-	if len(pcfDevSpaceID) == 0 {
+	testSpaceName := os.Getenv("TEST_SPACE_NAME")
+	if len(testSpaceName) > 0 {
 
 		var (
-			err         error
-			pcfDevSpace cfapi.CCSpace
+			err   error
+			space cfapi.CCSpace
 		)
+		orgID, _ := defaultTestOrg(t)
 
-		if pcfDevSpace, err = testSession().SpaceManager().FindSpaceInOrg("pcfdev-space", defaultPcfDevOrgID()); err != nil {
-			panic(err.Error())
+		if space, err = testSession().SpaceManager().FindSpaceInOrg(testSpaceName, orgID); err != nil {
+			t.Fatal(err.Error())
 		}
-		pcfDevSpaceID = pcfDevSpace.ID
+		testSpaceID = space.ID
+
+	} else {
+		t.Fatal("Environment variable TEST_SPACE_NAME must be set for acceptance tests to work.")
 	}
-	return pcfDevSpaceID
+
+	return testSpaceID, testSpaceName
 }
 
 func deleteServiceBroker(name string) {
@@ -175,22 +188,52 @@ func deleteServiceBroker(name string) {
 	}
 }
 
-func getDefaultSecurityGroup() (defaultAsg string) {
-	if defaultAsg = os.Getenv("CF_TEST_DEFAULT_ASG"); len(defaultAsg) == 0 {
+func getTestSecurityGroup() string {
+	defaultAsg := os.Getenv("TEST_DEFAULT_ASG")
+	if len(defaultAsg) == 0 {
 		defaultAsg = "public_networks"
 	}
 	return defaultAsg
 }
 
-func getRedisBrokerCredentials() (user string, password string) {
+func getTestBrokerCredentials(t *testing.T) (
+	serviceBrokerURL string,
+	serviceBrokerUser string,
+	serviceBrokerPassword string,
+	serviceBrokerPlanPath string) {
 
-	if user = os.Getenv("CF_TEST_REDIS_BROKER_USER"); len(user) == 0 {
-		user = "admin"
+	serviceBrokerURL = os.Getenv("TEST_SERVICE_BROKER_URL")
+	serviceBrokerUser = os.Getenv("TEST_SERVICE_BROKER_USER")
+	serviceBrokerPassword = os.Getenv("TEST_SERVICE_BROKER_PASSWORD")
+	serviceBrokerPlanPath = os.Getenv("TEST_SERVICE_PLAN_PATH")
+
+	if len(serviceBrokerURL) == 0 ||
+		len(serviceBrokerUser) == 0 ||
+		len(serviceBrokerPassword) == 0 ||
+		len(serviceBrokerPlanPath) == 0 {
+
+		t.Fatal("TEST_SERVICE_BROKER_URL, TEST_SERVICE_BROKER_USER, TEST_SERVICE_BROKER_PASSWORD " +
+			"and TEST_SERVICE_PLAN_PATH must be set for acceptance tests to work.")
 	}
-	if password = os.Getenv("CF_TEST_REDIS_BROKER_PASSWORD"); len(password) == 0 {
-		password = "admin"
+	return
+}
+
+func getTestServiceBrokers(t *testing.T) (
+	serviceName1 string,
+	serviceName2 string,
+	servicePlan string) {
+
+	serviceName1 = os.Getenv("TEST_SERVICE_1")
+	serviceName2 = os.Getenv("TEST_SERVICE_2")
+	servicePlan = os.Getenv("TEST_SERVICE_PLAN")
+
+	if len(serviceName1) == 0 ||
+		len(serviceName2) == 0 ||
+		len(servicePlan) == 0 {
+
+		t.Fatal("TEST_SERVICE_1, TEST_SERVICE_2 and TEST_SERVICE_PLAN must be set for acceptance tests to work.")
 	}
-	return user, password
+	return serviceName1, serviceName2, servicePlan
 }
 
 // func assertContains(str string, list []string) bool {

@@ -20,7 +20,7 @@ resource "cloudfoundry_space" "space1" {
 }
 
 data "cloudfoundry_space" "myspace" {
-    name = "${cloudfoundry_space.space1.name}"
+	name = "${cloudfoundry_space.space1.name}"
 	org = "${cloudfoundry_org.org1.id}"
 }
 `
@@ -28,8 +28,8 @@ data "cloudfoundry_space" "myspace" {
 const spaceDataResource2 = `
 
 data "cloudfoundry_space" "default" {
-    name = "pcfdev-space"
-	org_name = "pcfdev-org"
+	name = "%s"
+	org_name = "%s"
 }
 `
 
@@ -37,6 +37,9 @@ func TestAccDataSourceSpace_normal(t *testing.T) {
 
 	ref1 := "data.cloudfoundry_space.myspace"
 	ref2 := "data.cloudfoundry_space.default"
+
+	orgID, orgName := defaultTestOrg(t)
+	_, spaceName := defaultTestSpace(t)
 
 	resource.Test(t,
 		resource.TestCase{
@@ -58,15 +61,15 @@ func TestAccDataSourceSpace_normal(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: spaceDataResource2,
+					Config: fmt.Sprintf(spaceDataResource2, spaceName, orgName),
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceSpaceExists(ref2),
 						resource.TestCheckResourceAttr(
-							ref2, "name", "pcfdev-space"),
+							ref2, "name", spaceName),
 						resource.TestCheckResourceAttr(
-							ref2, "org_name", "pcfdev-org"),
+							ref2, "org_name", orgName),
 						resource.TestCheckResourceAttr(
-							ref2, "org", defaultPcfDevOrgID()),
+							ref2, "org", orgID),
 					),
 				},
 			},

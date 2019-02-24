@@ -2,6 +2,7 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
@@ -32,6 +33,7 @@ data "cloudfoundry_domain" "private" {
 
 func TestAccDataSourceDomain_normal(t *testing.T) {
 
+	domain := strings.Join(strings.Split(defaultAppDomain(), ".")[1:], ".")
 	ref := "data.cloudfoundry_domain.tcp"
 
 	resource.Test(t,
@@ -44,11 +46,11 @@ func TestAccDataSourceDomain_normal(t *testing.T) {
 					Config: domainDataResource,
 					Check: resource.ComposeTestCheckFunc(
 						resource.TestCheckResourceAttr(
-							ref, "name", "tcp."+defaultAppDomain()),
+							ref, "name", "tcp."+domain),
 						resource.TestCheckResourceAttr(
 							ref, "sub_domain", "tcp"),
 						resource.TestCheckResourceAttr(
-							ref, "domain", defaultAppDomain()),
+							ref, "domain", domain),
 					),
 				},
 			},

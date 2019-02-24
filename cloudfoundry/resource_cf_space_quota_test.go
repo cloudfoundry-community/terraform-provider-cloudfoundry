@@ -44,6 +44,8 @@ resource "cloudfoundry_space_quota" "10g-space" {
 
 func TestAccSpaceQuota_normal(t *testing.T) {
 
+	orgID, _ := defaultTestOrg(t)
+
 	ref := "cloudfoundry_space_quota.10g-space"
 	quotaname := "10g-space"
 
@@ -51,7 +53,7 @@ func TestAccSpaceQuota_normal(t *testing.T) {
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckSpaceQuotaResourceDestroy(quotaname),
+			CheckDestroy: testAccCheckSpaceQuotaResourceDestroy(quotaname, orgID),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -135,11 +137,12 @@ func checkSpaceQuotaExists(resource string) resource.TestCheckFunc {
 	}
 }
 
-func testAccCheckSpaceQuotaResourceDestroy(quotaname string) resource.TestCheckFunc {
+func testAccCheckSpaceQuotaResourceDestroy(quotaname string, orgID string) resource.TestCheckFunc {
 	return func(s *terraform.State) (err error) {
+
 		session := testAccProvider.Meta().(*cfapi.Session)
-		org := defaultPcfDevOrgID()
-		if _, err := session.QuotaManager().FindQuotaByName(cfapi.SpaceQuota, quotaname, &org); err != nil {
+
+		if _, err := session.QuotaManager().FindQuotaByName(cfapi.SpaceQuota, quotaname, &orgID); err != nil {
 			switch err.(type) {
 			case *errors.ModelNotFoundError:
 				return nil

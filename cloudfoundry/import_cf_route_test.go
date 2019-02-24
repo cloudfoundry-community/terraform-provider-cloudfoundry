@@ -9,6 +9,10 @@ import (
 )
 
 func TestAccRoute_importBasic(t *testing.T) {
+
+	_, orgName := defaultTestOrg(t)
+	_, spaceName := defaultTestSpace(t)
+
 	resourceName := "cloudfoundry_route.test-app-route"
 
 	resource.Test(t,
@@ -19,7 +23,9 @@ func TestAccRoute_importBasic(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(routeResource, defaultAppDomain()),
+					Config: fmt.Sprintf(routeResource,
+						defaultAppDomain(),
+						orgName, spaceName),
 				},
 
 				resource.TestStep{

@@ -89,7 +89,7 @@ resource "cloudfoundry_default_asg" "staging" {
 
 func TestAccDefaultRunningAsg_normal(t *testing.T) {
 
-	defaultAsg := getDefaultSecurityGroup()
+	defaultAsg := getTestSecurityGroup()
 	ref := "cloudfoundry_default_asg.running"
 
 	resource.Test(t,
@@ -203,7 +203,7 @@ func testAccCheckDefaultRunningAsgDestroy(s *terraform.State) error {
 		return fmt.Errorf("running asgs are not empty")
 	}
 
-	sg, err := am.Read(getDefaultSecurityGroup())
+	sg, err := am.Read(getTestSecurityGroup())
 	if err != nil {
 		return err
 	}
@@ -227,7 +227,7 @@ func testAccCheckDefaultStagingAsgDestroy(s *terraform.State) error {
 		return fmt.Errorf("staging asgs are not empty")
 	}
 
-	sg, err := am.Read(getDefaultSecurityGroup())
+	sg, err := am.Read(getTestSecurityGroup())
 	if err != nil {
 		return err
 	}
