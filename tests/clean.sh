@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/bin/bash -x
 
 echo "Start cleaning up potentially leaking resources from previous test executions. Warnings about missing resources should be ignored"
 
-CF_SPACE=pcfdev-space
-CF_ORG=pcfdev-org
+CF_ORG=${TEST_ORG_NAME:-pcfdev-org}
+CF_SPACE=${TEST_SPACE_NAME:-pcfdev-space}
 
 set -e # Exit if the login fails (not set or wrongly set!)
 cf api $CF_API_URL --skip-ssl-validation
@@ -41,16 +41,16 @@ cf delete-quota       -f 100g-org &> /dev/null
 cf delete-quota       -f 50g-org &> /dev/null
 
 # Delete services and service instances
-
 cf delete-service -f basic-auth &> /dev/null
 cf delete-service -f rabbitmq &> /dev/null
 cf delete-service -f db &> /dev/null
 cf delete-service -f fs1 &> /dev/null
 cf purge-service-offering -f p-basic-auth &> /dev/null
 cf delete-service-broker -f basic-auth &> /dev/null
+cf delete-service-broker -f test &> /dev/null
+cf delete-service-broker -f test-renamed &> /dev/null
 
 # Delete routes
-
 cf delete-route -f $CF_TEST_APP_DOMAIN --hostname php-app &> /dev/null
 cf delete-route -f $CF_TEST_APP_DOMAIN --hostname php-app-other &> /dev/null
 cf delete-route -f $CF_TEST_APP_DOMAIN --hostname basic-auth-router &> /dev/null
