@@ -120,6 +120,12 @@ func resourceConfig() *schema.Resource {
 							Optional:     true,
 							Computed:     true,
 						},
+						"hide_marketplace_from_unauthenticated_users": &schema.Schema{
+							Type:         schema.TypeString,
+							ValidateFunc: validateFeatureFlagValue,
+							Optional:     true,
+							Computed:     true,
+						},
 					},
 				},
 			},
