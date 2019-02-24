@@ -90,6 +90,9 @@ if [[ -n $GITHUB_TOKEN ]]; then
     travis encrypt TEST_SERVICE_1=$TEST_SERVICE_1 --add
     travis encrypt TEST_SERVICE_2=$TEST_SERVICE_2 --add
     travis encrypt TEST_SERVICE_PLAN=$TEST_SERVICE_PLAN --add
+
+    travis encrypt GITHUB_USER=$GITHUB_USER --add
+    travis encrypt GITHUB_TOKEN=$GITHUB_TOKEN --add
 fi
 
 set +xe
