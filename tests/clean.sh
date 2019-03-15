@@ -5,6 +5,12 @@ echo "Start cleaning up potentially leaking resources from previous test executi
 CF_ORG=${TEST_ORG_NAME:-pcfdev-org}
 CF_SPACE=${TEST_SPACE_NAME:-pcfdev-space}
 
+if [ -z "$CF_API_URL" ] || [ -z "$CF_USER" ] || [ -z "$CF_PASSWORD" ]; then
+   echo "ERROR: the script runs probably on a PR from a fork - terminating";
+   exit 1;
+fi
+
+
 set -e # Exit if the login fails (not set or wrongly set!)
 cf api $CF_API_URL --skip-ssl-validation
 cf login -u $CF_USER -p $CF_PASSWORD -o $CF_ORG -s $CF_SPACE
