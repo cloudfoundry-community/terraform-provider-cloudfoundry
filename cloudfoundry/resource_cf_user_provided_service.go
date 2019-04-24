@@ -221,7 +221,7 @@ func resourceUserProvidedServiceDelete(d *schema.ResourceData, meta interface{})
 
 	sm := session.ServiceManager()
 
-	if err = sm.DeleteServiceInstance(d.Id()); err != nil {
+	if err = sm.DeleteUserProvidedService(d.Id()); err != nil {
 		return err
 	}
 

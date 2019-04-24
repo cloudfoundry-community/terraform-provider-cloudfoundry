@@ -14,25 +14,25 @@ import (
 const serviceKeyResource = `
 
 data "cloudfoundry_org" "org" {
-    name = "pcfdev-org"
+  name = "%s"
 }
 data "cloudfoundry_space" "space" {
-    name = "pcfdev-space"
-	org = "${data.cloudfoundry_org.org.id}"
+  name = "%s"
+  org = "${data.cloudfoundry_org.org.id}"
 }
-data "cloudfoundry_service" "rabbitmq" {
-    name = "p-rabbitmq"
-}
-
-resource "cloudfoundry_service_instance" "rabbitmq" {
-	name = "rabbitmq"
-    space = "${data.cloudfoundry_space.space.id}"
-    service_plan = "${data.cloudfoundry_service.rabbitmq.service_plans["standard"]}"
+data "cloudfoundry_service" "test-service" {
+  name = "%s"
 }
 
-resource "cloudfoundry_service_key" "rabbitmq-key" {
-	name = "rabbitmq-key"
-	service_instance = "${cloudfoundry_service_instance.rabbitmq.id}"
+resource "cloudfoundry_service_instance" "test-service-instance" {
+	name = "test-service-instance"
+  space = "${data.cloudfoundry_space.space.id}"
+  service_plan = "${data.cloudfoundry_service.test-service.service_plans["%s"]}"
+}
+
+resource "cloudfoundry_service_key" "test-service-instance-key" {
+	name = "test-service-instance-key"
+	service_instance = "${cloudfoundry_service_instance.test-service-instance.id}"
 
 	params {
 		"key1" = "aaaa"
@@ -43,21 +43,28 @@ resource "cloudfoundry_service_key" "rabbitmq-key" {
 
 func TestAccServiceKey_normal(t *testing.T) {
 
-	ref := "cloudfoundry_service_key.rabbitmq-key"
+	_, orgName := defaultTestOrg(t)
+	_, spaceName := defaultTestSpace(t)
+	serviceName1, _, servicePlan := getTestServiceBrokers(t)
+
+	ref := "cloudfoundry_service_key.test-service-instance-key"
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceKeyDestroyed("rabbitmq-key", "cloudfoundry_service_instance.rabbitmq"),
+			PreCheck:  func() { testAccPreCheck(t) },
+			Providers: testAccProviders,
+			CheckDestroy: testAccCheckServiceKeyDestroyed(
+				"test-service-instance-key", ref),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: serviceKeyResource,
+					Config: fmt.Sprintf(serviceKeyResource,
+						orgName, spaceName,
+						serviceName1, servicePlan),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceKeyExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "rabbitmq-key"),
+							ref, "name", "test-service-instance-key"),
 					),
 				},
 			},
@@ -101,15 +108,15 @@ func testAccCheckServiceKeyExists(resource string) resource.TestCheckFunc {
 	}
 }
 
-func testAccCheckServiceKeyDestroyed(name, serviceInstance string) resource.TestCheckFunc {
+func testAccCheckServiceKeyDestroyed(name, serviceInstanceKey string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
 		session := testAccProvider.Meta().(*cfapi.Session)
 
-		rs, ok := s.RootModule().Resources[serviceInstance]
+		rs, ok := s.RootModule().Resources[serviceInstanceKey]
 		if !ok {
-			return fmt.Errorf("service instance '%s' not found in terraform state", spaceResource)
+			return fmt.Errorf("service instance '%s' not found in terraform state", serviceInstanceKey)
 		}
 
 		session.Log.DebugMessage("checking ServiceKey is Destroyed %s", name)

@@ -14,29 +14,29 @@ import (
 const domainResourceShared = `
 
 resource "cloudfoundry_domain" "shared" {
-    sub_domain = "dev"
-	domain = "%s"
+  sub_domain = "dev"
+  domain = "%s"
 }
 `
 
 const domainResourceSharedTCP = `
 
 data "cloudfoundry_router_group" "tcp" {
-    name = "default-tcp"
+  name = "default-tcp"
 }
 
 resource "cloudfoundry_domain" "shared-tcp" {
-    sub_domain = "tcp-test"
-	domain = "%s"
-	router_group = "${data.cloudfoundry_router_group.tcp.id}"
+  sub_domain = "tcp-test"
+  domain = "%s"
+  router_group = "${data.cloudfoundry_router_group.tcp.id}"
 }
 `
 
 const domainResourcePrivate = `
 
 resource "cloudfoundry_domain" "private" {
-    name = "pcfdev-org.io"
-	org = "%s"
+	name = "%s.%s"
+  org = "%s"
 }
 `
 
@@ -101,26 +101,30 @@ func TestAccSharedTCPDomain_normal(t *testing.T) {
 func TestAccPrivateDomain_normal(t *testing.T) {
 
 	ref := "cloudfoundry_domain.private"
-	domainname := "pcfdev-org.io"
-	orgID := defaultPcfDevOrgID()
+
+	domain := "io"
+	subDomain := "test-domain"
+
+	orgID, _ := defaultTestOrg(t)
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckPrivateDomainDestroy(domainname),
+			CheckDestroy: testAccCheckPrivateDomainDestroy(domain),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(domainResourcePrivate, orgID),
+					Config: fmt.Sprintf(domainResourcePrivate,
+						subDomain, domain, orgID),
 					Check: resource.ComposeTestCheckFunc(
 						checkPrivateDomainExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "pcfdev-org.io"),
+							ref, "name", subDomain+"."+domain),
 						resource.TestCheckResourceAttr(
-							ref, "sub_domain", "pcfdev-org"),
+							ref, "sub_domain", subDomain),
 						resource.TestCheckResourceAttr(
-							ref, "domain", "io"),
+							ref, "domain", domain),
 						resource.TestCheckResourceAttr(
 							ref, "org", orgID),
 					),

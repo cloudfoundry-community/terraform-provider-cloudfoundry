@@ -17,10 +17,10 @@ data "cloudfoundry_domain" "local" {
     name = "%s"
 }
 data "cloudfoundry_org" "org" {
-    name = "pcfdev-org"
+    name = "%s"
 }
 data "cloudfoundry_space" "space" {
-    name = "pcfdev-space"
+    name = "%s"
 	org = "${data.cloudfoundry_org.org.id}"
 }
 
@@ -51,10 +51,10 @@ data "cloudfoundry_domain" "local" {
     name = "%s"
 }
 data "cloudfoundry_org" "org" {
-    name = "pcfdev-org"
+    name = "%s"
 }
 data "cloudfoundry_space" "space" {
-    name = "pcfdev-space"
+    name = "%s"
 	org = "${data.cloudfoundry_org.org.id}"
 }
 
@@ -111,6 +111,9 @@ resource "cloudfoundry_route" "test-app-route" {
 
 func TestAccRoute_normal(t *testing.T) {
 
+	_, orgName := defaultTestOrg(t)
+	_, spaceName := defaultTestSpace(t)
+
 	refRoute := "cloudfoundry_route.test-app-route"
 
 	resource.Test(t,
@@ -121,7 +124,9 @@ func TestAccRoute_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(routeResource, defaultAppDomain()),
+					Config: fmt.Sprintf(routeResource,
+						defaultAppDomain(),
+						orgName, spaceName),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
@@ -139,7 +144,9 @@ func TestAccRoute_normal(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(routeResourceUpdate, defaultAppDomain()),
+					Config: fmt.Sprintf(routeResourceUpdate,
+						defaultAppDomain(),
+						orgName, spaceName),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 

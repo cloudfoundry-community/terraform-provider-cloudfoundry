@@ -17,7 +17,7 @@ func TestAccConfig_importBasic(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: configResource,
+					Config: configResourceUpdate,
 				},
 
 				resource.TestStep{

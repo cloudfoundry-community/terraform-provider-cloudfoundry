@@ -12,9 +12,8 @@ import (
 const configResource = `
 resource "cloudfoundry_feature_flags" "ff" {
 	feature_flags{
-		route_creation = "disabled"
-		task_creation = "enabled"
-		env_var_visibility = "disabled"
+		user_org_creation = "enabled"
+		private_domain_creation = "disabled"
 	}
 }
 `
@@ -22,9 +21,8 @@ resource "cloudfoundry_feature_flags" "ff" {
 const configResourceUpdate = `
 resource "cloudfoundry_feature_flags" "ff" {
 	feature_flags{
-		route_creation = "enabled"
-		task_creation = "disabled"
-		env_var_visibility = "enabled"
+		user_org_creation = "disabled"
+		private_domain_creation = "enabled"
 	}
 }
 `
@@ -45,15 +43,15 @@ func TestAccConfig_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckConfig(resConfig),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.user_org_creation", "disabled"),
+							resConfig, "feature_flags.0.user_org_creation", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.private_domain_creation", "enabled"),
+							resConfig, "feature_flags.0.private_domain_creation", "disabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.app_bits_upload", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.app_scaling", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.route_creation", "disabled"),
+							resConfig, "feature_flags.0.route_creation", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.service_instance_creation", "enabled"),
 						resource.TestCheckResourceAttr(
@@ -65,13 +63,15 @@ func TestAccConfig_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.task_creation", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.env_var_visibility", "disabled"),
+							resConfig, "feature_flags.0.env_var_visibility", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.space_scoped_private_broker_creation", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.space_developer_env_var_visibility", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.service_instance_sharing", "disabled"),
+							resConfig, "feature_flags.0.service_instance_sharing", "enabled"),
+						resource.TestCheckResourceAttr(
+							resConfig, "feature_flags.0.hide_marketplace_from_unauthenticated_users", "disabled"),
 					),
 				},
 
@@ -98,7 +98,7 @@ func TestAccConfig_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.unset_roles_by_username", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.task_creation", "disabled"),
+							resConfig, "feature_flags.0.task_creation", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.env_var_visibility", "enabled"),
 						resource.TestCheckResourceAttr(
@@ -106,7 +106,9 @@ func TestAccConfig_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.space_developer_env_var_visibility", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.service_instance_sharing", "disabled"),
+							resConfig, "feature_flags.0.service_instance_sharing", "enabled"),
+						resource.TestCheckResourceAttr(
+							resConfig, "feature_flags.0.hide_marketplace_from_unauthenticated_users", "disabled"),
 					),
 				},
 			},
