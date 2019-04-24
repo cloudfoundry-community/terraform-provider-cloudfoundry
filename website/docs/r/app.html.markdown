@@ -91,12 +91,26 @@ One of the following arguments must be declared to locate application source or 
 
 ### Routing
 
-* `routes` - (Optional, Set) Configures how the application will be accessed externally to cloudfoundry.
-  - Arguments
-    - `route` - (Required, String) The route GUID.
-  - Attributes
-    - `port` - (Number) The port of the application that the route mapping was bound to.
-    - `mapping_id` - (String) The Cloud Foundry mapping ID for this route binding.
+* `routes` - (Optional, Set) The routes to map to the application to control its ingress traffic. Each route mapping is represented by its `route` block which supports fields documented below.
+
+The `route` block supports:
+- `route` - (Required, String) The route id. Route can be defined using the `cloudfoundry_route` resource
+- ~`port` - (Number) The port of the application to map the tcp route to.~
+
+~> **NOTE:** in the future, the `route` block will support the `port` attribute illustrated above to allow mapping of tcp routes, and listening on custom or multiple ports.  
+~> **NOTE:** Route mappings can be controlled from either the `cloudfoundry_app.routes` or the `cloudfoundry_routes.target` attributes. Using both syntaxes will cause conflicts and result in unpredictable behavior.  
+~> **NOTE:** A given route can not currently be mapped to more than one application using the `cloudfoundry_app.routes` syntax. As an alternative, use the `cloudfoundry_route.target` syntax instead in this specific use-case.  
+
+#### Example usage:
+
+```hcl
+resource "cloudfoundry_app" "java-spring" {
+[...]
+ routes = [
+    { route = "${cloudfoundry_route.java-spring.id}" },
+    { route = "${cloudfoundry_route.java-spring-2.id}" }
+  ]
+```
 
 ### Environment Variables
 
