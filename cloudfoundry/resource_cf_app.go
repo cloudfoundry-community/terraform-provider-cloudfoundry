@@ -1,6 +1,7 @@
 package cloudfoundry
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -212,8 +213,15 @@ func resourceApp() *schema.Resource {
 							Required: true,
 						},
 						"params": &schema.Schema{
-							Type:     schema.TypeMap,
-							Optional: true,
+							Type:          schema.TypeMap,
+							Optional:      true,
+							ConflictsWith: []string{"service_binding.params_json"},
+						},
+						"params_json": &schema.Schema{
+							Type:          schema.TypeString,
+							Optional:      true,
+							ConflictsWith: []string{"service_binding.params"},
+							Default:       "",
 						},
 						"binding_id": &schema.Schema{
 							Type:     schema.TypeString,
@@ -1284,6 +1292,29 @@ func updateAppRouteMappings(
 	return mappingID, err
 }
 
+func getServiceBindingParams(binding map[string]interface{}) (result *map[string]interface{}, err error) {
+
+	var (
+		parsedJSON map[string]interface{}
+	)
+
+	if v, ok := binding["params"]; ok {
+		vv := v.(map[string]interface{})
+		result = &vv
+	}
+	if v, ok := binding["params_json"]; ok {
+		params := v.(string)
+		if len(params) > 0 {
+			if err = json.Unmarshal([]byte(params), &parsedJSON); err != nil {
+				return nil, err
+			}
+
+			result = &parsedJSON
+		}
+	}
+	return
+}
+
 func addServiceBindings(
 	id string,
 	add []map[string]interface{},
@@ -1297,11 +1328,11 @@ func addServiceBindings(
 
 	for _, b := range add {
 		serviceInstanceID = b["service_instance"].(string)
-		params = nil
-		if v, ok := b["params"]; ok {
-			vv := v.(map[string]interface{})
-			params = &vv
+
+		if params, err = getServiceBindingParams(b); err != nil {
+			return bindings, err
 		}
+
 		if bindingID, _, err = am.CreateServiceBinding(id, serviceInstanceID, params); err != nil {
 			return bindings, err
 		}

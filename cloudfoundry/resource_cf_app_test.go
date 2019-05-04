@@ -1321,6 +1321,73 @@ func TestAccApp_dockerApp(t *testing.T) {
 		})
 }
 
+func TestAccApp_getServiceBindingParams(t *testing.T) {
+	t.Run("params is used when present", func(t *testing.T) {
+		m := make(map[string]interface{})
+		p := make(map[string]interface{})
+		p["key"] = "value"
+
+		m["params"] = p
+		r, _ := getServiceBindingParams(m)
+
+		if r == nil {
+			t.Errorf("params should be non nil")
+		}
+
+		rr := *r
+
+		if v := rr["key"]; v != "value" {
+			t.Errorf("expected param to contain key => value, got %s", rr)
+		}
+	})
+
+	t.Run("params_json is used when present", func(t *testing.T) {
+		m := make(map[string]interface{})
+
+		m["params_json"] = `{"key": "value"}`
+
+		r, _ := getServiceBindingParams(m)
+
+		if r == nil {
+			t.Errorf("params should be non nil")
+		}
+
+		rr := *r
+
+		if v := rr["key"]; v != "value" {
+			t.Errorf("expected param to contain key => value, got %s", rr)
+		}
+	})
+
+	t.Run("params_json is ignored when present and empty", func(t *testing.T) {
+		m := make(map[string]interface{})
+
+		m["params_json"] = ""
+
+		r, _ := getServiceBindingParams(m)
+
+		if r != nil {
+			t.Errorf("params should be nil")
+		}
+	})
+
+	t.Run("params_json causes err if json is invalid", func(t *testing.T) {
+		m := make(map[string]interface{})
+
+		m["params_json"] = `invalidJson`
+
+		r, ok := getServiceBindingParams(m)
+
+		if r != nil {
+			t.Errorf("params should be nil")
+		}
+
+		if ok == nil {
+			t.Errorf("err should be non nil")
+		}
+	})
+}
+
 func testAccCheckAppExists(resApp string, validate func() error) resource.TestCheckFunc {
 
 	return func(s *terraform.State) (err error) {
