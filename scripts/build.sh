@@ -9,7 +9,7 @@ function makeRelease {
     make release
 }
 
-if [[ -z "$CF_PASSWORD" ]] ; then
+if [ -z "$CF_PASSWORD" ]; then
     echo "Git commit is probably on a fork - only building it"
     make build
     exit 0
