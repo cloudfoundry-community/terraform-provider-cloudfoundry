@@ -5,6 +5,12 @@ echo "Start cleaning up potentially leaking resources from previous test executi
 CF_ORG=${TEST_ORG_NAME:-pcfdev-org}
 CF_SPACE=${TEST_SPACE_NAME:-pcfdev-space}
 
+if [ -z "$CF_API_URL" ] || [ -z "$CF_USER" ] || [ -z "$CF_PASSWORD" ]; then
+   echo "ERROR: the script runs probably on a PR from a fork - terminating";
+   exit 1;
+fi
+
+
 set -e # Exit if the login fails (not set or wrongly set!)
 cf api $CF_API_URL --skip-ssl-validation
 cf login -u $CF_USER -p $CF_PASSWORD -o $CF_ORG -s $CF_SPACE
@@ -20,6 +26,7 @@ cf delete -f fake-service-broker &> /dev/null
 cf delete -f test-app &> /dev/null
 cf delete -f test-docker-app &> /dev/null
 cf delete -f spring-music &> /dev/null
+cf delete -f java-spring &> /dev/null
 
 # Delete org and security gorups
 
@@ -51,15 +58,16 @@ cf delete-service-broker -f test &> /dev/null
 cf delete-service-broker -f test-renamed &> /dev/null
 
 # Delete routes
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname php-app &> /dev/null
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname php-app-other &> /dev/null
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname basic-auth-router &> /dev/null
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname basic-auth-broker &> /dev/null
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname test-app &> /dev/null
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname test-docker-app &> /dev/null
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname fake-service-broker &> /dev/null
-cf delete-route -f $CF_TEST_APP_DOMAIN --hostname spring-music &> /dev/null
-cf unbind-route-service -f $CF_TEST_APP_DOMAIN basic-auth --hostname php-app &> /dev/null
+cf delete-route -f $TEST_APP_DOMAIN --hostname php-app &> /dev/null
+cf delete-route -f $TEST_APP_DOMAIN --hostname php-app-other &> /dev/null
+cf delete-route -f $TEST_APP_DOMAIN --hostname basic-auth-router &> /dev/null
+cf delete-route -f $TEST_APP_DOMAIN --hostname basic-auth-broker &> /dev/null
+cf delete-route -f $TEST_APP_DOMAIN --hostname test-app &> /dev/null
+cf delete-route -f $TEST_APP_DOMAIN --hostname test-docker-app &> /dev/null
+cf delete-route -f $TEST_APP_DOMAIN --hostname fake-service-broker &> /dev/null
+cf delete-route -f $TEST_APP_DOMAIN --hostname spring-music &> /dev/null
+cf delete-route -f $TEST_APP_DOMAIN --hostname java-spring &> /dev/null
+cf unbind-route-service -f $TEST_APP_DOMAIN basic-auth --hostname php-app &> /dev/null
 
 # Delete domains
 #

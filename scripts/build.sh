@@ -9,6 +9,12 @@ function makeRelease {
     make release
 }
 
+if [ -z "$CF_PASSWORD" ]; then
+    echo "Git commit is probably on a fork - only building it"
+    make build
+    exit 0
+fi
+
 
 if [[ "$TRAVIS_PULL_REQUEST" == "true" ]] ; then
     echo "Git commit is a pull request - building and running the acceptance tests"
