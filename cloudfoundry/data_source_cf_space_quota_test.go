@@ -1,7 +1,10 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -9,7 +12,6 @@ import (
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const spaceQuotaDataResource = `
@@ -62,23 +64,23 @@ func TestAccDataSourceSpaceQuota_normal(t *testing.T) {
 
 func checkDataSourceSpaceQuotaExists(resource string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("quota '%s' not found in terraform state", resource)
 		}
-		session.Log.DebugMessage("terraform state for resource '%s': %# v", resource, rs)
+
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 		var (
 			err   error
-			quota cfapi.CCQuota
+			quota ccv2.Quota
 		)
-		quota, err = session.QuotaManager().ReadQuota(cfapi.SpaceQuota, id)
+		quota, _, err = session.ClientV2.GetQuota(constant.SpaceQuota, id)
 		if err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "org", quota.OrgGUID); err != nil {
+		if err := assertEquals(attributes, "org", quota.OrganizationGUID); err != nil {
 			return err
 		}
 		return nil

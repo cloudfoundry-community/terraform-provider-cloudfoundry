@@ -1,15 +1,15 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strconv"
 	"testing"
 
-	"code.cloudfoundry.org/cli/cf/errors"
-
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const orgQuotaResource = `
@@ -104,27 +104,19 @@ func TestAccOrgQuota_normal(t *testing.T) {
 func checkOrgQuotaExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) (err error) {
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("quota '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		var quota cfapi.CCQuota
-		if quota, err = session.QuotaManager().ReadQuota(cfapi.OrgQuota, id); err != nil {
+		var quota ccv2.Quota
+		if quota, _, err = session.ClientV2.GetQuota(constant.OrgQuota, id); err != nil {
 			return
 		}
-
-		session.Log.DebugMessage(
-			"quota detail read from cloud foundry '%s': %# v",
-			resource, quota)
 
 		if err := assertEquals(attributes, "name", quota.Name); err != nil {
 			return err
@@ -132,13 +124,13 @@ func checkOrgQuotaExists(resource string) resource.TestCheckFunc {
 		if err := assertEquals(attributes, "allow_paid_service_plans", strconv.FormatBool(quota.NonBasicServicesAllowed)); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "instance_memory", strconv.Itoa(int(quota.InstanceMemoryLimit))); err != nil {
+		if err := assertEquals(attributes, "instance_memory", strconv.Itoa(int(quota.InstanceMemoryLimit.Value))); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "total_memory", strconv.Itoa(int(quota.MemoryLimit))); err != nil {
+		if err := assertEquals(attributes, "total_memory", strconv.Itoa(int(quota.MemoryLimit.Value))); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "total_app_instances", strconv.Itoa(quota.AppInstanceLimit)); err != nil {
+		if err := assertEquals(attributes, "total_app_instances", strconv.Itoa(quota.AppInstanceLimit.Value)); err != nil {
 			return err
 		}
 		if err := assertEquals(attributes, "total_services", strconv.Itoa(quota.TotalServices)); err != nil {
@@ -147,7 +139,7 @@ func checkOrgQuotaExists(resource string) resource.TestCheckFunc {
 		if err := assertEquals(attributes, "total_routes", strconv.Itoa(quota.TotalRoutes)); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "total_route_ports", strconv.Itoa(quota.TotalReserveredPorts)); err != nil {
+		if err := assertEquals(attributes, "total_route_ports", strconv.Itoa(quota.TotalReservedRoutePorts.Value)); err != nil {
 			return err
 		}
 		return
@@ -156,15 +148,14 @@ func checkOrgQuotaExists(resource string) resource.TestCheckFunc {
 
 func testAccCheckOrgQuotaResourceDestroy(quotaname string) resource.TestCheckFunc {
 	return func(s *terraform.State) (err error) {
-		session := testAccProvider.Meta().(*cfapi.Session)
-		if _, err := session.QuotaManager().FindQuotaByName(cfapi.OrgQuota, quotaname, nil); err != nil {
-			switch err.(type) {
-			case *errors.ModelNotFoundError:
-				return nil
-			default:
-				return err
-			}
+		session := testAccProvider.Meta().(*managers.Session)
+		quotas, _, err := session.ClientV2.GetQuotas(constant.OrgQuota, ccv2.FilterByName(quotaname))
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("quota with name '%s' still exists in cloud foundry", quotaname)
+		if len(quotas) > 0 {
+			return fmt.Errorf("quota with name '%s' still exists in cloud foundry", quotaname)
+		}
+		return nil
 	}
 }

@@ -2,11 +2,11 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const configResource = `
@@ -119,43 +119,37 @@ func testAccCheckConfig(resConfig string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) (err error) {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resConfig]
 		if !ok {
 			return fmt.Errorf("'%s' resource not found in terraform state", resConfig)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v", resConfig, rs)
-
 		attributes := rs.Primary.Attributes
 
-		var featureFlags map[string]bool
-		if featureFlags, err = session.GetFeatureFlags(); err != nil {
+		featureFlags, _, err := session.ClientV2.GetConfigFeatureFlags()
+		if err != nil {
 			return
 		}
-
-		session.Log.DebugMessage(
-			"retrieved feature flags: %# v", featureFlags)
-
 		if err := assertListEquals(attributes, "feature_flags", 1,
 			func(values map[string]string, i int) (match bool) {
 
 				if len(values) == len(featureFlags) {
 
 					var (
-						vv interface{}
 						ok bool
 					)
 
 					for k, v := range values {
-
-						if vv, ok = featureFlags[k]; ok {
-							if vv.(bool) {
-								ok = (v == "enabled")
-							} else {
-								ok = (v == "disabled")
+						for _, ff := range featureFlags {
+							if ff.Name == k {
+								if ff.Enabled {
+									ok = (v == "enabled")
+								} else {
+									ok = (v == "disabled")
+								}
+								break
 							}
 						}
 						if !ok {

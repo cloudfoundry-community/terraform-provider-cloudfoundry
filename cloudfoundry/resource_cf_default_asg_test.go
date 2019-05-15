@@ -1,12 +1,13 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const defaultRunningSecurityGroupResource = `
@@ -38,11 +39,6 @@ resource "cloudfoundry_default_asg" "running" {
 `
 
 const defaultRunningSecurityGroupResourceUpdate = `
-
-data "cloudfoundry_asg" "public" {
-    name = "%s"
-}
-
 resource "cloudfoundry_asg" "apps" {
 
 	name = "pcf-apps"
@@ -65,7 +61,7 @@ resource "cloudfoundry_asg" "services" {
 
 resource "cloudfoundry_default_asg" "running" {
 	name = "running"
-    asgs = [ "${data.cloudfoundry_asg.public.id}", "${cloudfoundry_asg.apps.id}" ]
+    asgs = [ "${cloudfoundry_asg.apps.id}" ]
 }
 `
 
@@ -87,11 +83,22 @@ resource "cloudfoundry_default_asg" "staging" {
 }
 `
 
+var defaultLenRunningSecGroup int
+var defaultLenStagingSecGroup int
+
 func TestAccDefaultRunningAsg_normal(t *testing.T) {
 
-	defaultAsg := getTestSecurityGroup()
 	ref := "cloudfoundry_default_asg.running"
-
+	asgs, _, err := testSession().ClientV2.GetRunningSecurityGroups()
+	if err != nil {
+		panic(err)
+	}
+	defaultLenRunningSecGroup = len(asgs)
+	asgs, _, err = testSession().ClientV2.GetStagingSecurityGroups()
+	if err != nil {
+		panic(err)
+	}
+	defaultLenStagingSecGroup = len(asgs)
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
@@ -106,17 +113,17 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", "running"),
 						resource.TestCheckResourceAttr(
-							ref, "asgs.#", "2"),
+							ref, "asgs.#", "1"),
 					),
 				},
 				resource.TestStep{
-					Config: fmt.Sprintf(defaultRunningSecurityGroupResourceUpdate, defaultAsg),
+					Config: fmt.Sprintf(defaultRunningSecurityGroupResourceUpdate),
 					Check: resource.ComposeTestCheckFunc(
 						checkDefaultAsgsExists(ref),
 						resource.TestCheckResourceAttr(
 							ref, "name", "running"),
 						resource.TestCheckResourceAttr(
-							ref, "asgs.#", "2"),
+							ref, "asgs.#", "1"),
 					),
 				},
 			},
@@ -126,6 +133,17 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 func TestAccDefaultStagingAsg_normal(t *testing.T) {
 
 	ref := "cloudfoundry_default_asg.staging"
+
+	asgs, _, err := testSession().ClientV2.GetRunningSecurityGroups()
+	if err != nil {
+		panic(err)
+	}
+	defaultLenRunningSecGroup = len(asgs)
+	asgs, _, err = testSession().ClientV2.GetStagingSecurityGroups()
+	if err != nil {
+		panic(err)
+	}
+	defaultLenStagingSecGroup = len(asgs)
 
 	resource.Test(t,
 		resource.TestCase{
@@ -152,36 +170,34 @@ func checkDefaultAsgsExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) (err error) {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("asg '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		var asgs []string
+		var asgs []ccv2.SecurityGroup
 
 		switch id {
 		case "running":
-			if asgs, err = session.ASGManager().Running(); err != nil {
+			asgs, _, err = session.ClientV2.GetRunningSecurityGroups()
+			if err != nil {
 				return
 			}
 		case "staging":
-			if asgs, err = session.ASGManager().Staging(); err != nil {
+			asgs, _, err = session.ClientV2.GetStagingSecurityGroups()
+			if err != nil {
 				return
 			}
 		}
 
 		if err = assertListEquals(attributes, "asgs", len(asgs),
 			func(values map[string]string, i int) (match bool) {
-				return values["value"] == asgs[i]
+				return values["value"] == asgs[i].GUID
 			}); err != nil {
 			return
 		}
@@ -192,23 +208,15 @@ func checkDefaultAsgsExists(resource string) resource.TestCheckFunc {
 
 func testAccCheckDefaultRunningAsgDestroy(s *terraform.State) error {
 
-	session := testAccProvider.Meta().(*cfapi.Session)
-	am := session.ASGManager()
+	session := testAccProvider.Meta().(*managers.Session)
+	am := session.ClientV2
 
-	asgs, err := am.Running()
+	asgs, _, err := am.GetRunningSecurityGroups()
 	if err != nil {
 		return err
 	}
-	if len(asgs) > 0 {
+	if len(asgs) != defaultLenRunningSecGroup {
 		return fmt.Errorf("running asgs are not empty")
-	}
-
-	sg, err := am.Read(getTestSecurityGroup())
-	if err != nil {
-		return err
-	}
-	if err = am.BindToRunning(sg.GUID); err != nil {
-		return err
 	}
 
 	return nil
@@ -216,23 +224,15 @@ func testAccCheckDefaultRunningAsgDestroy(s *terraform.State) error {
 
 func testAccCheckDefaultStagingAsgDestroy(s *terraform.State) error {
 
-	session := testAccProvider.Meta().(*cfapi.Session)
-	am := session.ASGManager()
+	session := testAccProvider.Meta().(*managers.Session)
+	am := session.ClientV2
 
-	asgs, err := am.Staging()
+	asgs, _, err := am.GetStagingSecurityGroups()
 	if err != nil {
 		return err
 	}
-	if len(asgs) > 0 {
+	if len(asgs) != defaultLenStagingSecGroup {
 		return fmt.Errorf("staging asgs are not empty")
-	}
-
-	sg, err := am.Read(getTestSecurityGroup())
-	if err != nil {
-		return err
-	}
-	if err = am.BindToStaging(sg.GUID); err != nil {
-		return err
 	}
 	return nil
 }

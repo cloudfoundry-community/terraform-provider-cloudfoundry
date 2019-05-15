@@ -1,14 +1,13 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
-
-	"code.cloudfoundry.org/cli/cf/errors"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const domainResourceShared = `
@@ -137,29 +136,27 @@ func checkShareDomainExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("domain '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 		name := attributes["name"]
 
-		dm := session.DomainManager()
-		domainFields, err := dm.FindSharedByName(name)
+		dm := session.ClientV2
+		domains, _, err := dm.GetSharedDomains(ccv2.FilterByName(name))
 		if err != nil {
 			return err
 		}
-
-		if id != domainFields.GUID {
-			return fmt.Errorf("expecting domain guid to be '%s' but got '%session'", id, domainFields.GUID)
+		if len(domains) == 0 {
+			return NotFound
+		}
+		if id != domains[0].GUID {
+			return fmt.Errorf("expecting domain guid to be '%s' but got '%session'", id, domains[0].GUID)
 		}
 		return nil
 	}
@@ -169,32 +166,27 @@ func checkPrivateDomainExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("domain '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 		name := attributes["name"]
 
-		dm := session.DomainManager()
-		domainFields, err := dm.FindPrivateByName(name)
+		dm := session.ClientV2
+		domains, _, err := dm.GetPrivateDomains(ccv2.FilterByName(name))
 		if err != nil {
 			return err
 		}
-
-		if id != domainFields.GUID {
-			return fmt.Errorf("expecting domain guid to be '%s' but got '%session'", id, domainFields.GUID)
+		if len(domains) == 0 {
+			return NotFound
 		}
-		if err := assertEquals(attributes, "org", domainFields.OwningOrganizationGUID); err != nil {
-			return err
+		if id != domains[0].GUID {
+			return fmt.Errorf("expecting domain guid to be '%s' but got '%session'", id, domains[0].GUID)
 		}
 		return nil
 	}
@@ -203,29 +195,29 @@ func checkPrivateDomainExists(resource string) resource.TestCheckFunc {
 func testAccCheckSharedDomainDestroy(domainname string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
-
-		session := testAccProvider.Meta().(*cfapi.Session)
-		_, err := session.DomainManager().FindSharedByName(domainname)
-		switch err.(type) {
-		case *errors.ModelNotFoundError:
-			return nil
+		session := testAccProvider.Meta().(*managers.Session)
+		domains, _, err := session.ClientV2.GetSharedDomains(ccv2.FilterByName(domainname))
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("shared domain with name '%s' still exists in cloud foundry", domainname)
+		if len(domains) > 0 {
+			return fmt.Errorf("shared domain with name '%s' still exists in cloud foundry", domainname)
+		}
+		return nil
 	}
 }
 
 func testAccCheckPrivateDomainDestroy(domainname string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
-		if _, err := session.DomainManager().FindPrivateByName(domainname); err != nil {
-			switch err.(type) {
-			case *errors.ModelNotFoundError:
-				return nil
-			default:
-				return err
-			}
+		session := testAccProvider.Meta().(*managers.Session)
+		domains, _, err := session.ClientV2.GetPrivateDomains(ccv2.FilterByName(domainname))
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("domain with name '%s' still exists in cloud foundry", domainname)
+		if len(domains) > 0 {
+			return fmt.Errorf("shared domain with name '%s' still exists in cloud foundry", domainname)
+		}
+		return nil
 	}
 }

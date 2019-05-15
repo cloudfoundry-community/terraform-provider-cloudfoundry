@@ -1,12 +1,9 @@
 package cloudfoundry
 
 import (
-	"fmt"
-
-	"code.cloudfoundry.org/cli/cf/models"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func dataSourceUser() *schema.Resource {
@@ -25,27 +22,21 @@ func dataSourceUser() *schema.Resource {
 	}
 }
 
-func dataSourceUserRead(d *schema.ResourceData, meta interface{}) (err error) {
+func dataSourceUserRead(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+	session := meta.(*managers.Session)
+	um := session.ClientUAA
 
-	um := session.UserManager()
+	name := d.Get("name").(string)
 
-	var (
-		name string
-		user models.UserFields
-	)
-
-	name = d.Get("name").(string)
-
-	user, err = um.FindByUsername(name)
+	users, err := um.GetUsersByUsername(name)
 	if err != nil {
-		return
+		return err
 	}
 
-	d.SetId(user.GUID)
+	if len(users) == 0 {
+		return NotFound
+	}
+	d.SetId(users[0].ID)
 	return err
 }

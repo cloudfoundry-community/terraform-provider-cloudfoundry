@@ -1,12 +1,13 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const orgQuotaDataResource = `
@@ -48,17 +49,16 @@ func TestAccDataSourceOrgQuota_normal(t *testing.T) {
 
 func checkDataSourceOrgQuotaExists(resource string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("quota '%s' not found in terraform state", resource)
 		}
-		session.Log.DebugMessage("terraform state for resource '%s': %# v", resource, rs)
 		id := rs.Primary.ID
 		var (
 			err error
 		)
-		_, err = session.QuotaManager().ReadQuota(cfapi.OrgQuota, id)
+		_, _, err = session.ClientV2.GetQuota(constant.OrgQuota, id)
 		return err
 	}
 }

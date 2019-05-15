@@ -2,6 +2,7 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strconv"
 	"testing"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const ldapUserResource = `
@@ -205,29 +205,21 @@ func testAccCheckUserExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("user '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		um := session.UserManager()
+		um := session.ClientUAA
 		user, err := um.GetUser(id)
 		if err != nil {
 			return err
 		}
-
-		session.Log.DebugMessage(
-			"retrieved user for resource '%s' with id '%s': %# v",
-			resource, id, user)
 
 		if err = assertEquals(attributes, "name", user.Username); err != nil {
 			return err
@@ -247,7 +239,7 @@ func testAccCheckUserExists(resource string) resource.TestCheckFunc {
 
 		var groups []interface{}
 		for _, g := range user.Groups {
-			if !um.IsDefaultGroup(g.Display) {
+			if !session.IsUaaDefaultCfGroup(g.Display) {
 				groups = append(groups, g.Display)
 			}
 		}
@@ -259,9 +251,10 @@ func testAccCheckUserExists(resource string) resource.TestCheckFunc {
 func testAccCheckUserDestroy(username string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
-		um := session.UserManager()
-		if _, err := um.FindByUsername(username); err != nil {
+		session := testAccProvider.Meta().(*managers.Session)
+		um := session.ClientUAA
+		users, err := um.GetUsersByUsername(username)
+		if err != nil {
 			switch err.(type) {
 			case *errors.ModelNotFoundError:
 				return nil
@@ -269,6 +262,9 @@ func testAccCheckUserDestroy(username string) resource.TestCheckFunc {
 				return err
 			}
 		}
-		return fmt.Errorf("user with username '%s' still exists in cloud foundry", username)
+		if len(users) > 0 {
+			return fmt.Errorf("user with username '%s' still exists in cloud foundry", username)
+		}
+		return nil
 	}
 }

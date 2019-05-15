@@ -2,8 +2,12 @@ package cloudfoundry
 
 import (
 	"bytes"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"crypto/tls"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"io"
 	"net/http"
 	"os"
@@ -17,18 +21,19 @@ import (
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 var testAccProviders map[string]terraform.ResourceProvider
 var testAccProvider *schema.Provider
 
-var tstSession *cfapi.Session
+var tstSession *managers.Session
 
 var testOrgID string
 var testOrgName string
 var testSpaceID string
 var testSpaceName string
+
+var helperTest *HelpersTest
 
 func init() {
 
@@ -62,52 +67,57 @@ func testAccEnvironmentSet() bool {
 	password := os.Getenv("CF_PASSWORD")
 	uaaClientID := os.Getenv("CF_UAA_CLIENT_ID")
 	uaaClientSecret := os.Getenv("CF_UAA_CLIENT_SECRET")
-	skipSslValidation := strings.ToLower(os.Getenv("CF_SKIP_SSL_VALIDATION"))
-	githubUser := os.Getenv("GITHUB_USER")
-	githubPassword := os.Getenv("GITHUB_TOKEN")
 
-	if len(endpoint) == 0 ||
-		len(user) == 0 ||
-		len(password) == 0 ||
-		len(uaaClientID) == 0 ||
-		len(uaaClientSecret) == 0 ||
-		len(skipSslValidation) == 0 ||
-		len(githubUser) == 0 ||
-		len(githubPassword) == 0 {
+	if endpoint == "" ||
+		user == "" ||
+		password == "" ||
+		uaaClientID == "" ||
+		uaaClientSecret == "" {
 
 		fmt.Println("CF_API_URL, CF_USER, CF_PASSWORD, CF_UAA_CLIENT_ID, CF_UAA_CLIENT_SECRET, " +
-			"CF_SKIP_SSL_VALIDATION, GITHUB_USER and GITHUB_TOKEN must be set for acceptance tests to work.")
+			" must be set for acceptance tests to work.")
 		return false
 	}
 	return true
 }
 
-func testSession() *cfapi.Session {
+func testSession() *managers.Session {
 
 	if !testAccEnvironmentSet() {
 		panic(fmt.Errorf("ERROR! test CF_* environment variables have not been set"))
 	}
 
 	if tstSession == nil {
-		c := Config{
-			endpoint:        os.Getenv("CF_API_URL"),
+		c := managers.Config{
+			Endpoint:        os.Getenv("CF_API_URL"),
 			User:            os.Getenv("CF_USER"),
 			Password:        os.Getenv("CF_PASSWORD"),
+			CFClientID:      os.Getenv("CF_CLIENT_ID"),
+			CFClientSecret:  os.Getenv("CF_CLIENT_SECRET"),
 			UaaClientID:     os.Getenv("CF_UAA_CLIENT_ID"),
 			UaaClientSecret: os.Getenv("CF_UAA_CLIENT_SECRET"),
 		}
+
 		c.SkipSslValidation, _ = strconv.ParseBool(os.Getenv("CF_SKIP_SSL_VALIDATION"))
 
+		if c.User == "" && c.CFClientID == "" {
+			panic(fmt.Errorf("Couple of user/password or uaa_client_id/uaa_client_secret must be set"))
+		}
+		if c.User != "" && c.CFClientID == "" {
+			c.CFClientID = "cf"
+			c.CFClientSecret = ""
+		}
 		var (
 			err     error
-			session *cfapi.Session
+			session *managers.Session
 		)
 
-		if session, err = c.Client(); err != nil {
+		if session, err = managers.NewSession(c); err != nil {
 			fmt.Printf("ERROR! Error creating a new session: %s\n", err.Error())
 			panic(err.Error())
 		}
 		tstSession = session
+		helperTest = &HelpersTest{tstSession}
 	}
 	return tstSession
 }
@@ -139,14 +149,15 @@ func defaultTestOrg(t *testing.T) (string, string) {
 	if len(testOrgName) > 0 {
 
 		var (
-			err error
-			org cfapi.CCOrg
+			err  error
+			orgs []ccv2.Organization
 		)
-
-		if org, err = testSession().OrgManager().FindOrg(testOrgName); err != nil {
+		session := testSession()
+		client := session.ClientV2
+		if orgs, _, err = client.GetOrganizations(ccv2.FilterByName(testOrgName)); err != nil {
 			t.Fatal(err.Error())
 		}
-		testOrgID = org.ID
+		testOrgID = orgs[0].GUID
 
 	} else {
 		t.Fatal("Environment variable TEST_ORG_NAME must be set for acceptance tests to work.")
@@ -161,15 +172,19 @@ func defaultTestSpace(t *testing.T) (string, string) {
 	if len(testSpaceName) > 0 {
 
 		var (
-			err   error
-			space cfapi.CCSpace
+			err    error
+			spaces []ccv2.Space
 		)
 		orgID, _ := defaultTestOrg(t)
-
-		if space, err = testSession().SpaceManager().FindSpaceInOrg(testSpaceName, orgID); err != nil {
+		session := testSession()
+		client := session.ClientV2
+		if spaces, _, err = client.GetSpaces(
+			ccv2.FilterByName(testSpaceName),
+			ccv2.FilterEqual(constant.OrganizationGUIDFilter, orgID),
+		); err != nil {
 			t.Fatal(err.Error())
 		}
-		testSpaceID = space.ID
+		testSpaceID = spaces[0].GUID
 
 	} else {
 		t.Fatal("Environment variable TEST_SPACE_NAME must be set for acceptance tests to work.")
@@ -179,13 +194,16 @@ func defaultTestSpace(t *testing.T) (string, string) {
 }
 
 func deleteServiceBroker(name string) {
-
 	session := testSession()
-	sm := session.ServiceManager()
-	serviceBrokerID, err := sm.GetServiceBrokerID(name)
-	if err == nil {
-		sm.ForceDeleteServiceBroker(serviceBrokerID)
+	client := session.ClientV2
+	sbs, _, err := client.GetServiceBrokers(ccv2.FilterByName(name))
+	if err != nil {
+		panic(err)
 	}
+	for _, sb := range sbs {
+		helperTest.ForceDeleteServiceBroker(sb.GUID)
+	}
+
 }
 
 func getTestSecurityGroup() string {
@@ -194,6 +212,23 @@ func getTestSecurityGroup() string {
 		defaultAsg = "public_networks"
 	}
 	return defaultAsg
+}
+
+func getTestDefaultIsolationSegment() ccv3.IsolationSegment {
+	segment, _, err := testSession().ClientV3.CreateIsolationSegment(ccv3.IsolationSegment{
+		Name: "segment-one",
+	})
+	if err != nil {
+		panic(err)
+	}
+	return segment
+}
+
+func deleteDefaultIsolationSegment(id string) {
+	_, err := testSession().ClientV3.DeleteIsolationSegment(id)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func getTestBrokerCredentials(t *testing.T) (

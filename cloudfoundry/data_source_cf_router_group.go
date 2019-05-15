@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/router/routererror"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func dataSourceRouterGroup() *schema.Resource {
@@ -28,16 +29,19 @@ func dataSourceRouterGroup() *schema.Resource {
 }
 
 func dataSourceRouterGroupRead(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
 
-	dm := session.DomainManager()
+	dm := session.RouterClient
 	name := d.Get("name").(string)
 
-	routerGroup, err := dm.FindRouterGroupByName(name)
+	routerGroup, err := dm.GetRouterGroupByName(name)
 	if err != nil {
+		if err == (routererror.ResourceNotFoundError{}) {
+			return NotFound
+		}
 		return err
 	}
 	d.SetId(routerGroup.GUID)

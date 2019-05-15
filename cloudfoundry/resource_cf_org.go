@@ -1,14 +1,15 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func resourceOrg() *schema.Resource {
-
 	return &schema.Resource{
 
 		Create: resourceOrgCreate,
@@ -53,63 +54,54 @@ func resourceOrg() *schema.Resource {
 	}
 }
 
-var orgRoleMap = map[string]cfapi.OrgRole{
-	"managers":         cfapi.OrgRoleManager,
-	"billing_managers": cfapi.OrgRoleBillingManager,
-	"auditors":         cfapi.OrgRoleAuditor,
+var orgRoleMap = map[string]constant.UserRole{
+	"managers":         constant.OrgManager,
+	"billing_managers": constant.BillingManager,
+	"auditors":         constant.OrgAuditor,
 }
 
-func resourceOrgCreate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceOrgCreate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	om := session.ClientV2
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+	name := d.Get("name").(string)
+	quota := d.Get("quota").(string)
 
-	var (
-		name, quota string
-		org         cfapi.CCOrg
-	)
-	name = d.Get("name").(string)
-	if v, ok := d.GetOk("quota"); ok {
-		quota = v.(string)
-	}
-
-	om := session.OrgManager()
-	if org, err = om.CreateOrg(name, quota); err != nil {
+	org, _, err := om.CreateOrganization(name, quota)
+	if err != nil {
 		return err
 	}
-	if len(quota) == 0 {
-		d.Set("quota", org.QuotaGUID)
+	if quota == "" {
+		d.Set("quota", org.QuotaDefinitionGUID)
 	}
-	d.SetId(org.ID)
+	d.SetId(org.GUID)
 	return resourceOrgUpdate(d, NewResourceMeta{meta})
 }
 
-func resourceOrgRead(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+func resourceOrgRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	om := session.ClientV2
 
 	id := d.Id()
-	om := session.OrgManager()
 
-	var org cfapi.CCOrg
-	if org, err = om.ReadOrg(id); err != nil {
+	org, _, err := om.GetOrganization(id)
+	if err != nil {
 		return err
 	}
 
 	d.Set("name", org.Name)
-	d.Set("quota", org.QuotaGUID)
+	d.Set("quota", org.QuotaDefinitionGUID)
 
-	var users []interface{}
 	for t, r := range orgRoleMap {
-		if users, err = om.ListUsers(id, r); err != nil {
+		users, _, err := om.GetOrganizationUsersByRole(r, id)
+		if err != nil {
 			return err
 		}
-		d.Set(t, schema.NewSet(resourceStringHash, users))
+		tfUsers := d.Get(t).(*schema.Set).List()
+		finalUsers := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
+			return source.(string) == item.(ccv2.User).GUID
+		})
+		d.Set(t, schema.NewSet(resourceStringHash, finalUsers))
 	}
 
 	return nil
@@ -119,14 +111,14 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	var (
 		newResource bool
-		session     *cfapi.Session
+		session     *managers.Session
 	)
 
 	if m, ok := meta.(NewResourceMeta); ok {
-		session = m.meta.(*cfapi.Session)
+		session = m.meta.(*managers.Session)
 		newResource = true
 	} else {
-		session = meta.(*cfapi.Session)
+		session = meta.(*managers.Session)
 		if session == nil {
 			return fmt.Errorf("client is nil")
 		}
@@ -134,19 +126,11 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	id := d.Id()
-	om := session.OrgManager()
+	om := session.ClientV2
 
 	if !newResource {
-
-		org := cfapi.CCOrg{
-			ID:   id,
-			Name: d.Get("name").(string),
-		}
-		if v, ok := d.GetOk("quota"); ok {
-			org.QuotaGUID = v.(string)
-		}
-
-		if err = om.UpdateOrg(org); err != nil {
+		_, _, err := om.UpdateOrganization(id, d.Get("name").(string), d.Get("quota").(string))
+		if err != nil {
 			return err
 		}
 	}
@@ -156,14 +140,14 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		remove, add := getListChanges(old, new)
 
 		for _, uid := range remove {
-			session.Log.DebugMessage("Removing user '%s' from organization '%s' with role '%s'.", uid, id, r)
-			if err = om.RemoveUser(id, uid, r); err != nil {
+			_, err = om.DeleteOrganizationUserByRole(r, id, uid)
+			if err != nil {
 				return err
 			}
 		}
 		for _, uid := range add {
-			session.Log.DebugMessage("Adding user '%s' to organization '%s' with role '%s'.", uid, id, r)
-			if err = om.AddUser(id, uid, r); err != nil {
+			_, err = om.UpdateOrganizationUserByRole(r, id, uid)
+			if err != nil {
 				return err
 			}
 		}
@@ -172,26 +156,32 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 }
 
 func resourceOrgDelete(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
-	om := session.OrgManager()
-	sm := session.SpaceManager()
+	session := meta.(*managers.Session)
+	client := session.ClientV2
 
 	id := d.Id()
+	spaces, _, err := client.GetSpaces(ccv2.FilterByOrg(id))
 
-	var spaces []cfapi.CCSpace
-	if spaces, err = sm.FindSpacesInOrg(id); err != nil {
+	if err != nil {
 		return err
 	}
 	for _, s := range spaces {
-		if err = sm.DeleteSpace(s.ID); err != nil {
+		j, _, err := client.DeleteSpace(s.GUID)
+		if err != nil {
+			return err
+		}
+		_, err = client.PollJob(j)
+		if err != nil {
 			return err
 		}
 	}
-
-	return om.DeleteOrg(d.Id())
+	j, _, err := client.DeleteOrganization(id)
+	if err != nil {
+		return err
+	}
+	_, err = client.PollJob(j)
+	if err != nil {
+		return err
+	}
+	return nil
 }

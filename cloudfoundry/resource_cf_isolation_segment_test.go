@@ -1,14 +1,13 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
-
-	"code.cloudfoundry.org/cli/cf/errors"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const segmentResource = `
@@ -59,15 +58,23 @@ resource "cloudfoundry_isolation_segment" "segment1" {
 resource "cloudfoundry_isolation_segment_entitlement" "segment1_orgs" {
 	segment = "${cloudfoundry_isolation_segment.segment1.id}"
 	orgs = [
-    "${cloudfoundry_org.iso-org1.id}"
-  ]
+    	"${cloudfoundry_org.iso-org1.id}"
+  	]
+	default = true
 }
 `
+
+var defaultLenIsolationSegments int
 
 func TestAccSegment_normal(t *testing.T) {
 	segRef := "cloudfoundry_isolation_segment.segment1"
 	entitleRef := "cloudfoundry_isolation_segment_entitlement.segment1_orgs"
 
+	segments, _, err := testSession().ClientV3.GetIsolationSegments()
+	if err != nil {
+		panic(err)
+	}
+	defaultLenIsolationSegments = len(segments)
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
@@ -104,8 +111,8 @@ func TestAccSegment_normal(t *testing.T) {
 
 func testAccCheckSegmentExists(segName string, entitleName string) resource.TestCheckFunc {
 	return func(s *terraform.State) (err error) {
-		session := testAccProvider.Meta().(*cfapi.Session)
-		sm := session.SegmentManager()
+		session := testAccProvider.Meta().(*managers.Session)
+		sm := session.ClientV3
 
 		seg, ok := s.RootModule().Resources[segName]
 		if !ok {
@@ -115,35 +122,49 @@ func testAccCheckSegmentExists(segName string, entitleName string) resource.Test
 		if !ok {
 			return fmt.Errorf("segment '%s' not found in terraform state", entitleName)
 		}
-		session.Log.DebugMessage("terraform state for resource '%s': %# v", segName, seg)
-		session.Log.DebugMessage("terraform state for resource '%s': %# v", entitleName, entitle)
 
 		segID := seg.Primary.ID
 		segAttributes := seg.Primary.Attributes
-		segment, err := sm.ReadSegment(segID)
+		segment, _, err := sm.GetIsolationSegment(segID)
 		if err != nil {
 			return fmt.Errorf("segment '%s' not found", segName)
 		}
-		session.Log.DebugMessage("retrieved segment for resource '%s' with id '%s': %# v", segName, segID, segment)
+
 		if err = assertEquals(segAttributes, "name", segment.Name); err != nil {
 			return err
 		}
 
 		entitleID := entitle.Primary.ID
 		entitleAttributes := entitle.Primary.Attributes
-		if entitleID != segID {
+		if entitleAttributes["segment"] != segID {
 			return fmt.Errorf("entitlement resource id '%s does not match segment id '%s'", entitleID, segID)
 		}
 
 		if err = assertEquals(entitleAttributes, "segment", segID); err != nil {
 			return err
 		}
-		orgs, err := sm.GetSegmentOrgs(entitleID)
+		orgs, _, err := sm.GetIsolationSegmentOrganizations(entitleAttributes["segment"])
 		if err != nil {
 			return fmt.Errorf("could fetch orgs from segment '%s'", segID)
 		}
-		if err = assertSetEquals(entitleAttributes, "orgs", orgs); err != nil {
+		tfOrgs := make([]interface{}, len(orgs))
+		for i, org := range orgs {
+			tfOrgs[i] = org.GUID
+		}
+		if err = assertSetEquals(entitleAttributes, "orgs", tfOrgs); err != nil {
 			return err
+		}
+		for _, org := range orgs {
+			rl, _, err := sm.GetOrganizationDefaultIsolationSegment(org.GUID)
+			if err != nil {
+				return err
+			}
+			if entitleAttributes["default"] == "1" && rl.GUID != segID {
+				return fmt.Errorf("entitlement resource default isolation segment for org %s mismatch, this should be using current segment", org.Name)
+			}
+			if entitleAttributes["default"] == "0" && rl.GUID == segID {
+				return fmt.Errorf("entitlement resource default isolation segment for org %s mismatch, this should be not using current segment", org.Name)
+			}
 		}
 		return
 	}
@@ -151,15 +172,17 @@ func testAccCheckSegmentExists(segName string, entitleName string) resource.Test
 
 func testAccCheckSegmentDestroyed(segName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
-		if _, err := session.SegmentManager().FindSegment(segName); err != nil {
-			switch err.(type) {
-			case *errors.ModelNotFoundError:
-				return nil
-			default:
-				return err
-			}
+		session := testAccProvider.Meta().(*managers.Session)
+		orgs, _, err := session.ClientV3.GetIsolationSegments(ccv3.Query{
+			Key:    ccv3.NameFilter,
+			Values: []string{segName},
+		})
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("segment with name '%s' still exists in cloud foundry", segName)
+		if len(orgs) > 0 {
+			return fmt.Errorf("segment with name '%s' still exists in cloud foundry", segName)
+		}
+		return nil
 	}
 }

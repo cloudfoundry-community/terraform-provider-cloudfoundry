@@ -20,6 +20,7 @@ retrieved via a [domain data source](/docs/providers/cloudfoundry/d/domain.html)
 resource "cloudfoundry_domain" "shared" {
   sub_domain = "dev"
   domain = "${data.cloudfoundry_domain.apps.domain}"
+  internal = false
 }
 ```
 
@@ -50,6 +51,8 @@ The following argument applies only to shared domains.
 The following argument applies only to private domains.
 
 * `org` - (Optional, String) The ID of the Org that owns this domain. If specified, this resource will provision a private domain. By default, the provisioned domain is a public (shared) domain.
+
+* `internal` - (Optional, bool) Flag that sets the domain as an internal domain. Internal domains are used for internal app to app networking only. Defaults to "false". Only works on shared domain.
 
 ## Attributes Reference
 

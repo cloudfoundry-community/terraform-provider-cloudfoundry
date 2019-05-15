@@ -1,11 +1,12 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func dataSourceDomain() *schema.Resource {
@@ -36,32 +37,36 @@ func dataSourceDomain() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"internal": &schema.Schema{
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 		},
 	}
 }
 
-func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) (err error) {
+func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
 
-	dm := session.DomainManager()
+	dm := session.ClientV2
 
 	var (
-		name, prefix                           string
-		sharedDomains, privateDomains, domains []cfapi.CCDomain
-		domain                                 *cfapi.CCDomain
+		name, prefix string
 	)
 
-	if sharedDomains, err = dm.GetSharedDomains(); err != nil {
-		return
+	sharedDomains, _, err := dm.GetSharedDomains()
+	if err != nil {
+		return err
 	}
-	if privateDomains, err = dm.GetPrivateDomains(); err != nil {
-		return
+	privateDomains, _, err := dm.GetPrivateDomains()
+	if err != nil {
+		return err
 	}
-	domains = append(sharedDomains, privateDomains...)
+	domains := append(sharedDomains, privateDomains...)
 
 	if v, ok := d.GetOk("sub_domain"); ok {
 		prefix = v.(string) + "."
@@ -74,6 +79,7 @@ func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) (err error) 
 		return fmt.Errorf("neither a full name or sub-domain was provided to do an effective domain search")
 	}
 
+	var domain *ccv2.Domain
 	if len(name) == 0 {
 		for _, d := range domains {
 			if strings.HasPrefix(d.Name, prefix) {
@@ -102,6 +108,7 @@ func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) (err error) 
 	d.Set("sub_domain", domainParts[0])
 	d.Set("domain", strings.Join(domainParts[1:], "."))
 	d.Set("org", domain.OwningOrganizationGUID)
-	d.SetId(domain.ID)
+	d.Set("internal", domain.Internal)
+	d.SetId(domain.GUID)
 	return err
 }

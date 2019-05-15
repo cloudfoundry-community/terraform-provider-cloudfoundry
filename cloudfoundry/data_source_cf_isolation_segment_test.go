@@ -9,18 +9,18 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 )
 
-const asgDataResource = `
+const isolationDataResource = `
 
-data "cloudfoundry_asg" "public" {
+data "cloudfoundry_isolation_segment" "segment-one" {
     name = "%s"
 }
 `
 
-func TestAccDataSourceAsg_normal(t *testing.T) {
+func TestAccDataSourceIsolationSegment_normal(t *testing.T) {
 
-	defaultAsg := getTestSecurityGroup()
-	ref := "data.cloudfoundry_asg.public"
-
+	defaultSegment := getTestDefaultIsolationSegment()
+	ref := "data.cloudfoundry_isolation_segment.segment-one"
+	defer deleteDefaultIsolationSegment(defaultSegment.GUID)
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
@@ -28,18 +28,18 @@ func TestAccDataSourceAsg_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(asgDataResource, defaultAsg),
+					Config: fmt.Sprintf(isolationDataResource, defaultSegment.Name),
 					Check: resource.ComposeTestCheckFunc(
-						checkDataSourceAsgExists(ref),
+						checkDataSourceIsolationExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", defaultAsg),
+							ref, "name", defaultSegment.Name),
 					),
 				},
 			},
 		})
 }
 
-func checkDataSourceAsgExists(resource string) resource.TestCheckFunc {
+func checkDataSourceIsolationExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
@@ -47,17 +47,17 @@ func checkDataSourceAsgExists(resource string) resource.TestCheckFunc {
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
-			return fmt.Errorf("asg '%s' not found in terraform state", resource)
+			return fmt.Errorf("isolation segment '%s' not found in terraform state", resource)
 		}
 
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		asg, _, err := session.ClientV2.GetSecurityGroup(id)
+		segment, _, err := session.ClientV3.GetIsolationSegment(id)
 		if err != nil {
 			return err
 		}
-		err = assertEquals(attributes, "name", asg.Name)
+		err = assertEquals(attributes, "name", segment.Name)
 		return err
 	}
 }

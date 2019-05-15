@@ -128,6 +128,31 @@ func getListChanges(old interface{}, new interface{}) (remove []string, add []st
 	return remove, add
 }
 
+// getListChanges -
+func getMapChanges(old interface{}, new interface{}) (remove []string, add []string) {
+	oldM := old.(map[string]interface{})
+	newM := new.(map[string]interface{})
+	for k := range oldM {
+		if _, ok := newM[k]; !ok {
+			remove = append(remove, k)
+		}
+	}
+	for k := range newM {
+		toAdd := true
+		for _, kRemove := range remove {
+			if kRemove == k {
+				toAdd = false
+				break
+			}
+		}
+		if toAdd {
+			add = append(add, k)
+		}
+	}
+
+	return remove, add
+}
+
 // getListChangedSchemaLists -
 func getListChangedSchemaLists(old []interface{}, new []interface{}) (remove []map[string]interface{}, add []map[string]interface{}) {
 
@@ -203,4 +228,28 @@ func hashRouteMappingSet(v interface{}) int {
 		target = v.(string)
 	}
 	return hashcode.String(fmt.Sprintf("%s", target))
+}
+
+// return the intersection of 2 slices ([1, 1, 3, 4, 5, 6] & [2, 3, 6] >> [3, 6])
+// sources and items must be array of whatever and element type can be whatever and can be different
+// match function must return true if item and source given match
+func intersectSlices(sources interface{}, items interface{}, match func(source, item interface{}) bool) []interface{} {
+	sourceValue := reflect.ValueOf(sources)
+	itemsValue := reflect.ValueOf(items)
+	final := make([]interface{}, 0)
+	for i := 0; i < sourceValue.Len(); i++ {
+		inside := false
+		src := sourceValue.Index(i).Interface()
+		for p := 0; p < itemsValue.Len(); p++ {
+			item := itemsValue.Index(p).Interface()
+			if match(src, item) {
+				inside = true
+				break
+			}
+		}
+		if inside {
+			final = append(final, src)
+		}
+	}
+	return final
 }

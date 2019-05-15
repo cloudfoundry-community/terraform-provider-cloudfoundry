@@ -2,9 +2,9 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func resourceEvg() *schema.Resource {
@@ -24,7 +24,6 @@ func resourceEvg() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-
 			"name": &schema.Schema{
 				Type:         schema.TypeString,
 				Required:     true,
@@ -47,40 +46,104 @@ func resourceEvgCreate(d *schema.ResourceData, meta interface{}) (err error) {
 	return nil
 }
 
-func resourceEvgRead(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceEvgRead(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
 
-	var variables map[string]interface{}
-	if variables, err = session.EVGManager().GetEVG(d.Get("name").(string)); err != nil {
-		return
+	var variables map[string]string
+	var err error
+	switch d.Get("name").(string) {
+	case AppStatusRunning:
+		variables, _, err = session.ClientV2.GetEnvVarGroupRunning()
+	case AppStatusStaging:
+		variables, _, err = session.ClientV2.GetEnvVarGroupStaging()
 	}
-	d.Set("variables", variables)
+	if err != nil {
+		return err
+	}
+	finalVariables := make(map[string]interface{})
+	tfVariables := d.Get("variables").(map[string]interface{})
+	for tfKey := range tfVariables {
+		if v, ok := variables[tfKey]; ok {
+			finalVariables[tfKey] = v
+		}
+	}
+
+	if IsImportState(d) && len(finalVariables) == 0 {
+		for k, v := range variables {
+			finalVariables[k] = v
+		}
+	}
+	d.Set("variables", finalVariables)
 	return nil
 }
 
-func resourceEvgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceEvgUpdate(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+	session := meta.(*managers.Session)
 
 	name := d.Get("name").(string)
-	variables := d.Get("variables").(map[string]interface{})
+	tfVariables := d.Get("variables").(map[string]interface{})
 
-	return session.EVGManager().SetEVG(name, variables)
-}
-
-func resourceEvgDelete(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
+	var variables map[string]string
+	var err error
+	switch name {
+	case AppStatusRunning:
+		variables, _, err = session.ClientV2.GetEnvVarGroupRunning()
+	case AppStatusStaging:
+		variables, _, err = session.ClientV2.GetEnvVarGroupStaging()
+	}
+	if err != nil {
+		return err
+	}
+	old, new := d.GetChange("variables")
+	keyToDelete, keyToAdd := getMapChanges(old, new)
+	for _, key := range keyToAdd {
+		variables[key] = tfVariables[key].(string)
+	}
+	for _, key := range keyToDelete {
+		delete(variables, key)
 	}
 
-	return session.EVGManager().SetEVG(d.Get("name").(string), map[string]interface{}{})
+	switch name {
+	case AppStatusRunning:
+		_, err = session.ClientV2.SetEnvVarGroupRunning(variables)
+	case AppStatusStaging:
+		_, err = session.ClientV2.SetEnvVarGroupStaging(variables)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func resourceEvgDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	var variables map[string]string
+	var err error
+	switch d.Get("name").(string) {
+	case AppStatusRunning:
+		variables, _, err = session.ClientV2.GetEnvVarGroupRunning()
+	case AppStatusStaging:
+		variables, _, err = session.ClientV2.GetEnvVarGroupStaging()
+	}
+	if err != nil {
+		return err
+	}
+	for k := range d.Get("variables").(map[string]interface{}) {
+		delete(variables, k)
+	}
+	switch d.Get("name").(string) {
+	case AppStatusRunning:
+		_, err = session.ClientV2.SetEnvVarGroupRunning(variables)
+	case AppStatusStaging:
+		_, err = session.ClientV2.SetEnvVarGroupStaging(variables)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
 }

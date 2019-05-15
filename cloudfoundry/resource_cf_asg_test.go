@@ -1,15 +1,14 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strconv"
 	"testing"
 
-	"code.cloudfoundry.org/cli/cf/errors"
-
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const securityGroup = `
@@ -24,9 +23,10 @@ resource "cloudfoundry_asg" "rmq" {
 		log = true
     }
     rule {
-        protocol = "udp"
+        protocol = "icmp"
         destination = "192.168.1.101"
-        ports = "5674,5673"
+		type = 8
+		code = 0
     }
 }
 `
@@ -83,11 +83,15 @@ func TestAccAsg_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "rule.0.log", "true"),
 						resource.TestCheckResourceAttr(
-							ref, "rule.1.protocol", "udp"),
+							ref, "rule.1.protocol", "icmp"),
 						resource.TestCheckResourceAttr(
 							ref, "rule.1.destination", "192.168.1.101"),
 						resource.TestCheckResourceAttr(
-							ref, "rule.1.ports", "5674,5673"),
+							ref, "rule.1.ports", ""),
+						resource.TestCheckResourceAttr(
+							ref, "rule.1.type", "8"),
+						resource.TestCheckResourceAttr(
+							ref, "rule.1.code", "0"),
 					),
 				},
 
@@ -129,21 +133,17 @@ func testAccCheckASGExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("asg '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		asg, err := session.ASGManager().GetASG(id)
+		asg, _, err := session.ClientV2.GetSecurityGroup(id)
 		if err != nil {
 			return err
 		}
@@ -158,7 +158,7 @@ func testAccCheckASGExists(resource string) resource.TestCheckFunc {
 				return values["protocol"] == asg.Rules[i].Protocol &&
 					values["destination"] == asg.Rules[i].Destination &&
 					values["ports"] == asg.Rules[i].Ports &&
-					values["log"] == strconv.FormatBool(asg.Rules[i].Log)
+					values["log"] == strconv.FormatBool(asg.Rules[i].Log.Value)
 
 			}); err != nil {
 			return err
@@ -172,15 +172,14 @@ func testAccCheckASGDestroy(asgname string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
-		if _, err := session.ASGManager().Read(asgname); err != nil {
-			switch err.(type) {
-			case *errors.ModelNotFoundError:
-				return nil
-			default:
-				return err
-			}
+		session := testAccProvider.Meta().(*managers.Session)
+		asgs, _, err := session.ClientV2.GetSecurityGroups(ccv2.FilterByName(asgname))
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("asg with name '%s' still exists in cloud foundry", asgname)
+		if len(asgs) > 0 {
+			return fmt.Errorf("asg with name '%s' still exists in cloud foundry", asgname)
+		}
+		return nil
 	}
 }
