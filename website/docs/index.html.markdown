@@ -67,3 +67,6 @@ The following arguments are supported:
   
 * `app_logs_max` - (Optional) Number of logs message which can be see when app creation is errored (-1 means all messages stored). Defaults to "30". This can also be specified
   with the `CF_APP_LOGS_MAX` shell environment variable.
+  
+* `purge_when_delete` - (Optional) Set to true to purge when deleting a resource (e.g.: service instance, service broker) . This can also be specified
+  with the `CF_PURGE_WHEN_DELETE` shell environment variable.

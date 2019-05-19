@@ -17,6 +17,8 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"net"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -44,6 +46,8 @@ type Session struct {
 	uaaDefaultCfGroups map[string]uaa.Group
 
 	defaultQuotaGuid string
+
+	PurgeWhenDelete bool
 }
 
 // NewSession -
@@ -60,6 +64,7 @@ func NewSession(c Config) (s *Session, err error) {
 	}
 	s = &Session{
 		uaaDefaultCfGroups: make(map[string]uaa.Group),
+		PurgeWhenDelete:    c.PurgeWhenDelete,
 	}
 	config := &configv3.Config{
 		ConfigFile: configv3.JSONConfig{
@@ -113,10 +118,15 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 
 	ccWrappersV2 = append(ccWrappersV2, authWrapperV2)
 	ccWrappersV2 = append(ccWrappersV2, ccWrapper.NewRetryRequest(config.RequestRetryCount()))
+	if IsDebugMode() {
+		ccWrappersV2 = append(ccWrappersV2, ccWrapper.NewRequestLogger(NewRequestLogger()))
+	}
 
 	ccWrappersV3 = append(ccWrappersV3, authWrapperV3)
 	ccWrappersV3 = append(ccWrappersV3, ccWrapper.NewRetryRequest(config.RequestRetryCount()))
-
+	if IsDebugMode() {
+		ccWrappersV3 = append(ccWrappersV3, ccWrapper.NewRequestLogger(NewRequestLogger()))
+	}
 	ccClientV2 := ccv2.NewClient(ccv2.Config{
 		AppName:            config.BinaryName(),
 		AppVersion:         config.BinaryVersion(),
@@ -239,11 +249,18 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	// Create raw http client with uaa client authentication to make raw request
 	authWrapperRaw := ccWrapper.NewUAAAuthentication(nil, config)
 	authWrapperRaw.SetClient(uaaClient)
+	rawWrappers := []ccv3.ConnectionWrapper{
+		authWrapperRaw,
+		NewRetryRequest(config.RequestRetryCount()),
+	}
+	if IsDebugMode() {
+		rawWrappers = append(rawWrappers, ccWrapper.NewRequestLogger(NewRequestLogger()))
+	}
 	s.RawClient = NewRawClient(RawClientConfig{
 		ApiEndpoint:       config.Target(),
 		SkipSSLValidation: config.SkipSSLValidation(),
 		DialTimeout:       config.DialTimeout(),
-	}, authWrapperRaw, NewRetryRequest(config.RequestRetryCount()))
+	}, rawWrappers...)
 
 	s.HttpClient = &http.Client{
 		Transport: &http.Transport{
@@ -347,4 +364,9 @@ func (s *Session) IsUaaDefaultCfGroup(group string) bool {
 // IsDefaultGroup -
 func (s *Session) DefaultQuotaGuid() string {
 	return s.defaultQuotaGuid
+}
+
+func IsDebugMode() bool {
+	tfDebug := strings.ToLower(os.Getenv("TF_LOG"))
+	return tfDebug == "info" || tfDebug == "trace"
 }

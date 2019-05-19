@@ -11,4 +11,5 @@ type Config struct {
 	UaaClientSecret   string
 	SkipSslValidation bool
 	AppLogsMax        int
+	PurgeWhenDelete   bool
 }

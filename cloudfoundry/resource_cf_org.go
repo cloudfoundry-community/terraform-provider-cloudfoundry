@@ -2,7 +2,6 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
@@ -33,31 +32,28 @@ func resourceOrg() *schema.Resource {
 				Computed: true,
 			},
 			"managers": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Deprecated: "Use resource cloudfoundry_org_users instead",
+				Type:       schema.TypeSet,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 			"billing_managers": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Deprecated: "Use resource cloudfoundry_org_users instead",
+				Type:       schema.TypeSet,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 			"auditors": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Deprecated: "Use resource cloudfoundry_org_users instead",
+				Type:       schema.TypeSet,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 		},
 	}
-}
-
-var orgRoleMap = map[string]constant.UserRole{
-	"managers":         constant.OrgManager,
-	"billing_managers": constant.BillingManager,
-	"auditors":         constant.OrgAuditor,
 }
 
 func resourceOrgCreate(d *schema.ResourceData, meta interface{}) error {
@@ -136,8 +132,7 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	for t, r := range orgRoleMap {
-		old, new := d.GetChange(t)
-		remove, add := getListChanges(old, new)
+		remove, add := getListChanges(d.GetChange(t))
 
 		for _, uid := range remove {
 			_, err = om.DeleteOrganizationUserByRole(r, id, uid)

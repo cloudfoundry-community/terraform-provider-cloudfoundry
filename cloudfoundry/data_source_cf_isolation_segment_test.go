@@ -18,9 +18,9 @@ data "cloudfoundry_isolation_segment" "segment-one" {
 
 func TestAccDataSourceIsolationSegment_normal(t *testing.T) {
 
-	defaultSegment := getTestDefaultIsolationSegment()
+	_, defaultSegmentName := getTestDefaultIsolationSegment(t)
 	ref := "data.cloudfoundry_isolation_segment.segment-one"
-	defer deleteDefaultIsolationSegment(defaultSegment.GUID)
+
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
@@ -28,11 +28,11 @@ func TestAccDataSourceIsolationSegment_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(isolationDataResource, defaultSegment.Name),
+					Config: fmt.Sprintf(isolationDataResource, defaultSegmentName),
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceIsolationExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", defaultSegment.Name),
+							ref, "name", defaultSegmentName),
 					),
 				},
 			},

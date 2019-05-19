@@ -214,21 +214,22 @@ func getTestSecurityGroup() string {
 	return defaultAsg
 }
 
-func getTestDefaultIsolationSegment() ccv3.IsolationSegment {
-	segment, _, err := testSession().ClientV3.CreateIsolationSegment(ccv3.IsolationSegment{
-		Name: "segment-one",
-	})
-	if err != nil {
-		panic(err)
-	}
-	return segment
-}
+func getTestDefaultIsolationSegment(t *testing.T) (string, string) {
+	if os.Getenv("TEST_DEFAULT_SEGMENT") != "" {
+		session := testSession()
+		client := session.ClientV3
+		segments, _, err := client.GetIsolationSegments(ccv3.Query{
+			Key:    ccv3.NameFilter,
+			Values: []string{os.Getenv("TEST_DEFAULT_SEGMENT")},
+		})
+		if err != nil {
+			t.Fatal(err.Error())
+		}
 
-func deleteDefaultIsolationSegment(id string) {
-	_, err := testSession().ClientV3.DeleteIsolationSegment(id)
-	if err != nil {
-		panic(err)
+		return segments[0].GUID, segments[0].Name
 	}
+	t.Fatal("Environment variable TEST_ORG_NAME must be set for acceptance tests to work.")
+	return "", ""
 }
 
 func getTestBrokerCredentials(t *testing.T) (
@@ -509,4 +510,65 @@ func assertHTTPResponse(url string, expectedStatusCode int, expectedResponses *[
 		}
 	}
 	return nil
+}
+
+func TestMain(m *testing.M) {
+	if os.Getenv("TF_ACC_CREATE") == "" {
+		os.Exit(m.Run())
+	}
+
+	// defer and os.Exit are not friends :(
+	clean := make([]func(), 0)
+	org, _, err := testSession().ClientV2.CreateOrganization("tf-acc-org", "")
+	if err != nil {
+		panic(err)
+	}
+	os.Setenv("TEST_ORG_NAME", org.Name)
+	clean = append(clean, func() {
+		j, _, err := testSession().ClientV2.DeleteOrganization(org.GUID)
+		if err != nil {
+			panic(err)
+		}
+		_, err = testSession().ClientV2.PollJob(j)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	space, _, err := testSession().ClientV2.CreateSpace("tf-acc-space", org.GUID)
+	if err != nil {
+		panic(err)
+	}
+	os.Setenv("TEST_SPACE_NAME", space.Name)
+	clean = append(clean, func() {
+		j, _, err := testSession().ClientV2.DeleteSpace(space.GUID)
+		if err != nil {
+			panic(err)
+		}
+		_, err = testSession().ClientV2.PollJob(j)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	segment, _, err := testSession().ClientV3.CreateIsolationSegment(ccv3.IsolationSegment{
+		Name: "segment-one",
+	})
+	if err != nil {
+		panic(err)
+	}
+	os.Setenv("TEST_DEFAULT_SEGMENT", segment.Name)
+	clean = append(clean, func() {
+		_, err := testSession().ClientV3.DeleteIsolationSegment(segment.GUID)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	exitCode := m.Run()
+	fmt.Println("Cleaning previous created resources")
+	for i := len(clean) - 1; i >= 0; i-- {
+		clean[i]()
+	}
+	os.Exit(exitCode)
 }

@@ -134,7 +134,6 @@ func readSpaceQuotaResource(d *schema.ResourceData) ccv2.Quota {
 		TotalServiceKeys:        IntToNullInt(d.Get("total_service_keys").(int)),
 		TotalRoutes:             d.Get("total_routes").(int),
 		TotalReservedRoutePorts: IntToNullInt(d.Get("total_route_ports").(int)),
-		TotalPrivateDomains:     IntToNullInt(d.Get("total_private_domains").(int)),
 		MemoryLimit:             IntToNullByteSize(d.Get("total_memory").(int)),
 		InstanceMemoryLimit:     IntToNullByteSize(d.Get("instance_memory").(int)),
 		AppInstanceLimit:        IntToNullInt(d.Get("total_app_instances").(int)),

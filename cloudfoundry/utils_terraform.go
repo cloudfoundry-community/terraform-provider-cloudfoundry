@@ -253,3 +253,26 @@ func intersectSlices(sources interface{}, items interface{}, match func(source, 
 	}
 	return final
 }
+
+// transforms list of struct to list of string id
+func objectsToIds(objects interface{}, convert func(object interface{}) string) []interface{} {
+	objectsValue := reflect.ValueOf(objects)
+	ids := make([]interface{}, objectsValue.Len())
+	for i := 0; i < objectsValue.Len(); i++ {
+		object := objectsValue.Index(i).Interface()
+		ids[i] = convert(object)
+	}
+	return ids
+}
+
+// Try to find in a list of whatever an element
+func isInSlice(objects interface{}, match func(object interface{}) bool) bool {
+	objectsValue := reflect.ValueOf(objects)
+	for i := 0; i < objectsValue.Len(); i++ {
+		object := objectsValue.Index(i).Interface()
+		if match(object) {
+			return true
+		}
+	}
+	return false
+}
