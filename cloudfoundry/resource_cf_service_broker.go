@@ -120,11 +120,28 @@ func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) error
 
 func resourceServiceBrokerDelete(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
+	if !session.PurgeWhenDelete {
+		_, err := session.ClientV2.DeleteServiceBroker(d.Id())
+		return err
 	}
 
-	_, err := session.ClientV2.DeleteServiceBroker(d.Id())
+	svcs, _, err := session.ClientV2.GetServices(ccv2.FilterEqual(constant.ServiceBrokerGUIDFilter, d.Id()))
+	if err != nil {
+		return err
+	}
+	for _, svc := range svcs {
+		sis, _, err := session.ClientV2.GetServiceInstances(ccv2.FilterEqual(constant.ServiceGUIDFilter, svc.GUID))
+		if err != nil {
+			return err
+		}
+		for _, si := range sis {
+			_, err := session.ClientV2.DeleteServiceInstance(si.GUID, true, true)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	_, err = session.ClientV2.DeleteServiceBroker(d.Id())
 	return err
 }
 
