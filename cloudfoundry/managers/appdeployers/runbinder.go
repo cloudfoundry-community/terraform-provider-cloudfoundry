@@ -134,7 +134,7 @@ func (r RunBinder) Start(appDeploy AppDeploy) error {
 			if instance.State == constant.ApplicationInstanceRunning {
 				return true, nil
 			}
-			return true, fmt.Errorf("Instance %r failed with state %s for app %s", i, instance.State, appDeploy.App.Name)
+			return true, fmt.Errorf("Instance %d failed with state %s for app %s", i, instance.State, appDeploy.App.Name)
 		}
 
 		return false, nil

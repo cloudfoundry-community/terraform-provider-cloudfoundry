@@ -100,7 +100,7 @@ func dataSourceAppRead(d *schema.ResourceData, meta interface{}) error {
 	space = d.Get("space").(string)
 
 	isUUID := uuid.FromStringOrNil(name_or_id)
-	if &isUUID == nil || uuid.Equal(isUUID, uuid.Nil) {
+	if uuid.Equal(isUUID, uuid.Nil) {
 		apps, _, err := session.ClientV2.GetApplications(ccv2.FilterByName(name_or_id), ccv2.FilterBySpace(space))
 		if err != nil {
 			return err

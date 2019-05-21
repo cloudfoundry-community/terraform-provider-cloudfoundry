@@ -195,7 +195,7 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) err
 		Timeout:        d.Timeout(schema.TimeoutUpdate),
 		PollInterval:   30 * time.Second,
 		Delay:          5 * time.Second,
-		NotFoundChecks: 3, // if we don't find the service instance in CF during an update, something is definately wrong
+		NotFoundChecks: 3, // if we don't find the service instance in CF during an update, something is definitely wrong
 	}
 	// Wait, catching any errors
 	if _, err = stateConf.WaitForState(); err != nil {

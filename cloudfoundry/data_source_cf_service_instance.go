@@ -53,7 +53,7 @@ func dataSourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) err
 	name_or_id = d.Get("name_or_id").(string)
 	space = d.Get("space").(string)
 	isUUID := uuid.FromStringOrNil(name_or_id)
-	if &isUUID == nil || uuid.Equal(isUUID, uuid.Nil) {
+	if uuid.Equal(isUUID, uuid.Nil) {
 		serviceInstances, _, err := session.ClientV2.GetServiceInstances(ccv2.FilterByName(name_or_id), ccv2.FilterEqual(constant.SpaceGUIDFilter, space))
 		if err != nil {
 			return err

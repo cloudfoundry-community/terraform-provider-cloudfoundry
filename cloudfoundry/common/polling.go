@@ -13,7 +13,7 @@ func Polling(pollingFunc func() (bool, error), waitTime time.Duration) error {
 			return err
 		}
 		if finished {
-			return nil
+			break
 		}
 		time.Sleep(waitTime)
 	}
@@ -31,7 +31,7 @@ func PollingWithTimeout(pollingFunc func() (bool, error), waitTime time.Duration
 			return err
 		}
 		if finished {
-			return nil
+			break
 		}
 		time.Sleep(waitTime)
 	}

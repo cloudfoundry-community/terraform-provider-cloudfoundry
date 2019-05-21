@@ -118,7 +118,7 @@ func (m BitsManager) UploadBuildpack(buildpackGUID string, bpPath string) error 
 	}
 	contentType := fmt.Sprintf("multipart/form-data; boundary=%s", mpw.Boundary())
 	request.Header.Set("Content-Type", contentType)
-	request.ContentLength = int64(m.predictPartBuildpack(baseName, int64(fileSize), mpw.Boundary()))
+	request.ContentLength = m.predictPartBuildpack(baseName, fileSize, mpw.Boundary())
 	request.Body = r
 
 	_, err = m.rawClient.Do(request)
@@ -176,7 +176,7 @@ func (m BitsManager) UploadApp(appGUID string, path string) error {
 	}
 	contentType := fmt.Sprintf("multipart/form-data; boundary=%s", mpw.Boundary())
 	request.Header.Set("Content-Type", contentType)
-	request.ContentLength = int64(m.predictPartApp(int64(fileSize), mpw.Boundary()))
+	request.ContentLength = m.predictPartApp(fileSize, mpw.Boundary())
 	request.Body = r
 
 	_, err = m.rawClient.Do(request)
@@ -190,7 +190,10 @@ func (m BitsManager) predictPartApp(filesize int64, boundary string) int64 {
 	buf := new(bytes.Buffer)
 	mpw := multipart.NewWriter(buf)
 
-	mpw.SetBoundary(boundary)
+	err := mpw.SetBoundary(boundary)
+	if err != nil {
+		panic(err)
+	}
 	part, err := mpw.CreateFormField("resources")
 	if err != nil {
 		mpw.Close()
@@ -207,7 +210,7 @@ func (m BitsManager) predictPartApp(filesize int64, boundary string) int64 {
 	h.Set("Content-Length", fmt.Sprintf("%d", filesize))
 	h.Set("Content-Transfer-Encoding", "binary")
 
-	part, err = mpw.CreatePart(h)
+	_, err = mpw.CreatePart(h)
 	if err != nil {
 		mpw.Close()
 		panic(err)
@@ -221,14 +224,17 @@ func (m BitsManager) predictPartBuildpack(filename string, filesize int64, bound
 	buf := new(bytes.Buffer)
 	mpw := multipart.NewWriter(buf)
 
-	mpw.SetBoundary(boundary)
+	err := mpw.SetBoundary(boundary)
+	if err != nil {
+		panic(err)
+	}
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="buildpack"; filename="%s"`, filename))
 	h.Set("Content-Type", "application/zip")
 	h.Set("Content-Length", fmt.Sprintf("%d", filesize))
 	h.Set("Content-Transfer-Encoding", "binary")
 
-	_, err := mpw.CreatePart(h)
+	_, err = mpw.CreatePart(h)
 	if err != nil {
 		mpw.Close()
 		panic(err)

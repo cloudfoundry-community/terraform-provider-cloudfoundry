@@ -12,6 +12,8 @@ before_install:
   - sudo apt-get install cf-cli -y
 install:
   - bash scripts/gogetcookie.sh
+  - GO111MODULE=on go install github.com/client9/misspell/cmd/misspell
+  - GO111MODULE=on go install github.com/golangci/golangci-lint/cmd/golangci-lint
   - go get gopkg.in/alecthomas/gometalinter.v2
   - gometalinter.v2 --install
   - export GO111MODULE=on

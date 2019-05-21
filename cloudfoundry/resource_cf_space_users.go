@@ -109,6 +109,9 @@ func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 	spaceId := d.Get("space").(string)
 	space, _, err := session.ClientV2.GetSpace(spaceId)
+	if err != nil {
+		return err
+	}
 	for t, r := range typeToSpaceRoleMap {
 		remove, add := getListChanges(d.GetChange(t))
 		for _, uid := range remove {
@@ -144,24 +147,6 @@ func addOrNothingUserInOrgBySpace(client *ccv2.Client, orgId, uaaid string) erro
 		return nil
 	}
 	_, err = client.UpdateOrganizationUserByRole(constant.OrgUser, orgId, uaaid)
-	return err
-}
-
-func delOrNothingUserInOrgBySpace(client *ccv2.Client, orgId, uaaid string) error {
-	orgs, _, err := client.GetUserOrganizations(uaaid)
-	_, isNotFound := err.(ccerror.ResourceNotFoundError)
-	if isNotFound {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if !isInSlice(orgs, func(object interface{}) bool {
-		return object.(ccv2.Organization).GUID == orgId
-	}) {
-		return nil
-	}
-	_, err = client.DeleteOrganizationUserByRole(constant.OrgUser, orgId, uaaid)
 	return err
 }
 

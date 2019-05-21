@@ -284,6 +284,9 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 func resourceSpaceDelete(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 	j, _, err := session.ClientV2.DeleteSpace(d.Id())
+	if err != nil {
+		return err
+	}
 	_, err = session.ClientV2.PollJob(j)
 	if err != nil {
 		return err
