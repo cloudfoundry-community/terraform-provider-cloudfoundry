@@ -112,6 +112,10 @@ func resourceAsgRead(d *schema.ResourceData, meta interface{}) error {
 	am := session.ClientV2
 	asg, _, err := am.GetSecurityGroup(d.Id())
 	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 

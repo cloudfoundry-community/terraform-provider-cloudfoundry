@@ -13,6 +13,9 @@ const importStateKey = "is_import_state"
 
 // getListOfStructs
 func getListOfStructs(v interface{}) []map[string]interface{} {
+	if vvSet, ok := v.(*schema.Set); ok {
+		v = vvSet.List()
+	}
 	vvv := []map[string]interface{}{}
 	for _, vv := range v.([]interface{}) {
 		vvv = append(vvv, vv.(map[string]interface{}))
@@ -132,21 +135,71 @@ func getListChanges(old interface{}, new interface{}) (remove []string, add []st
 func getMapChanges(old interface{}, new interface{}) (remove []string, add []string) {
 	oldM := old.(map[string]interface{})
 	newM := new.(map[string]interface{})
+	oldL := make([]string, 0)
 	for k := range oldM {
 		if _, ok := newM[k]; !ok {
+			oldL = append(oldL, k)
+		}
+		toDelete := true
+		for kNew := range newM {
+			if kNew == k {
+				toDelete = false
+				break
+			}
+		}
+		if toDelete {
 			remove = append(remove, k)
 		}
 	}
 	for k := range newM {
 		toAdd := true
-		for _, kRemove := range remove {
-			if kRemove == k {
+		for _, kOld := range oldL {
+			if kOld == k {
 				toAdd = false
 				break
 			}
 		}
 		if toAdd {
 			add = append(add, k)
+		}
+	}
+
+	return remove, add
+}
+
+// getListChanges -
+func getListMapChanges(old interface{}, new interface{}, match func(source, item map[string]interface{}) bool) (remove []map[string]interface{}, add []map[string]interface{}) {
+	if vvSet, ok := old.(*schema.Set); ok {
+		old = vvSet.List()
+	}
+	if vvSet, ok := new.(*schema.Set); ok {
+		new = vvSet.List()
+	}
+	oldL := old.([]interface{})
+	newL := new.([]interface{})
+
+	for _, source := range oldL {
+		toDelete := true
+		for _, item := range newL {
+			if match(source.(map[string]interface{}), item.(map[string]interface{})) {
+				toDelete = false
+				break
+			}
+		}
+		if toDelete {
+			remove = append(remove, source.(map[string]interface{}))
+		}
+	}
+	for _, source := range newL {
+		toAdd := true
+		for _, item := range oldL {
+			if match(source.(map[string]interface{}), item.(map[string]interface{})) {
+				toAdd = false
+				break
+			}
+		}
+		if toAdd {
+			add = append(add, source.(map[string]interface{}))
 		}
 	}
 
@@ -209,7 +262,7 @@ func computeID(first, second string) string {
 }
 
 func parseID(id string) (first string, second string, err error) {
-	parts := strings.Split(id, "/")
+	parts := strings.SplitN(id, "/", 2)
 	if len(parts) != 2 {
 		err = fmt.Errorf("unable to parse ID '%s', expected format is '<guid>/<guid>'", id)
 	} else {
@@ -275,4 +328,19 @@ func isInSlice(objects interface{}, match func(object interface{}) bool) bool {
 		}
 	}
 	return false
+}
+
+// Try to find in a list of whatever an element
+func getInSlice(objects interface{}, match func(object interface{}) bool) ([]interface{}, bool) {
+	finalOjects := make([]interface{}, 0)
+	objectsValue := reflect.ValueOf(objects)
+	found := false
+	for i := 0; i < objectsValue.Len(); i++ {
+		object := objectsValue.Index(i).Interface()
+		if match(object) {
+			found = true
+			finalOjects = append(finalOjects, object)
+		}
+	}
+	return finalOjects, found
 }

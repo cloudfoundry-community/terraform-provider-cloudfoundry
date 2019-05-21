@@ -1,4 +1,4 @@
-package managers
+package bits
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"encoding/json"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -21,7 +22,7 @@ import (
 type BitsManager struct {
 	clientV2   *ccv2.Client
 	clientV3   *ccv3.Client
-	rawClient  *RawClient
+	rawClient  *raw.RawClient
 	httpClient *http.Client
 }
 
@@ -38,12 +39,12 @@ type ZipFile struct {
 }
 
 // NewBitsManager -
-func NewBitsManager(sess *Session) *BitsManager {
+func NewBitsManager(clientV2 *ccv2.Client, clientV3 *ccv3.Client, rawClient *raw.RawClient, httpClient *http.Client) *BitsManager {
 	return &BitsManager{
-		clientV2:   sess.ClientV2,
-		clientV3:   sess.ClientV3,
-		rawClient:  sess.RawClient,
-		httpClient: sess.HttpClient,
+		clientV2:   clientV2,
+		clientV3:   clientV3,
+		rawClient:  rawClient,
+		httpClient: httpClient,
 	}
 }
 

@@ -129,11 +129,7 @@ func resourceDomainCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceDomainRead(d *schema.ResourceData, meta interface{}) error {
-
 	session := meta.(*managers.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
 
 	dm := session.ClientV2
 	id := d.Id()
@@ -143,6 +139,10 @@ func resourceDomainRead(d *schema.ResourceData, meta interface{}) error {
 		ccDomain, _, err = dm.GetPrivateDomain(id)
 	}
 	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 	domainParts := strings.Split(ccDomain.Name, ".")

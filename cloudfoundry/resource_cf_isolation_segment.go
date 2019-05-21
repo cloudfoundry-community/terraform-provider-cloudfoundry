@@ -82,7 +82,10 @@ func resourceSegmentRead(d *schema.ResourceData, meta interface{}) error {
 	sm := session.ClientV3
 	seg, _, err := sm.GetIsolationSegment(d.Id())
 	if err != nil {
-		d.SetId("")
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 	d.Set("name", seg.Name)
@@ -171,13 +174,14 @@ func resourceSegmentEntitlementUpdate(d *schema.ResourceData, meta interface{}) 
 
 func resourceSegmentEntitlementRead(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+
 	sm := session.ClientV3
 	orgs, _, err := sm.GetIsolationSegmentOrganizations(d.Get("segment").(string))
 	if err != nil {
-		d.SetId("")
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 

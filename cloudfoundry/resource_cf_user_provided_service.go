@@ -3,11 +3,9 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"encoding/json"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"strings"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/structure"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 func resourceUserProvidedService() *schema.Resource {
@@ -135,9 +133,9 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) e
 
 	ups, _, err := session.ClientV2.GetUserProvidedServiceInstance(d.Id())
 	if err != nil {
-		if strings.Contains(err.Error(), "status code: 404") {
+		if IsErrNotFound(err) {
 			d.SetId("")
-			err = nil
+			return nil
 		}
 		return err
 	}

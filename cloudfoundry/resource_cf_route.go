@@ -44,19 +44,18 @@ func resourceRoute() *schema.Resource {
 				Type:          schema.TypeInt,
 				Optional:      true,
 				Computed:      true,
-				ConflictsWith: []string{"path", "random_port"},
+				ConflictsWith: []string{"random_port"},
 			},
 			"random_port": &schema.Schema{
 				Type:          schema.TypeBool,
 				Optional:      true,
 				ForceNew:      true,
-				ConflictsWith: []string{"path", "port"},
+				ConflictsWith: []string{"port"},
 			},
 			"path": &schema.Schema{
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"port"},
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
 			},
 			"endpoint": &schema.Schema{
 				Type:     schema.TypeString,
@@ -167,12 +166,16 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	if _, ok := d.GetOk("target"); ok || IsImportState(d) {
-		mappingsTf := make([]map[string]interface{}, 0)
-		mappings, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.RouteGUIDFilter, d.Id()))
-		if err != nil {
-			return err
-		}
+	if _, ok := d.GetOk("target"); !ok && !IsImportState(d) {
+		return nil
+	}
+	mappingsTf := make([]map[string]interface{}, 0)
+	tfTargets := d.Get("target").(*schema.Set).List()
+	mappings, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.RouteGUIDFilter, d.Id()))
+	if err != nil {
+		return err
+	}
+	if IsImportState(d) {
 		for _, mapping := range mappings {
 			mappingsTf = append(mappingsTf, map[string]interface{}{
 				"app":        mapping.AppGUID,
@@ -183,7 +186,26 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 		if len(mappingsTf) > 0 {
 			d.Set("target", mappingsTf)
 		}
+		return nil
 	}
+
+	final := make([]map[string]interface{}, 0)
+	for _, tfTarget := range tfTargets {
+		inside := false
+		tmpT := tfTarget.(map[string]interface{})
+		for _, mapping := range mappings {
+			if mapping.GUID == tmpT["mapping_id"] {
+				inside = true
+				tmpT["port"] = mapping.AppPort
+				tmpT["app"] = mapping.AppGUID
+				break
+			}
+		}
+		if inside {
+			final = append(final, tmpT)
+		}
+	}
+	d.Set("target", final)
 	return nil
 }
 
@@ -214,12 +236,15 @@ func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if d.HasChange("target") {
 		old, new := d.GetChange("target")
-		err := removeTargets(getListOfStructs(old.(*schema.Set).List()), session)
+		remove, _ := getListMapChanges(old, new, func(source, item map[string]interface{}) bool {
+			return source["app"] == item["app"] && source["port"] == item["port"]
+		})
+		err := removeTargets(remove, session)
 		if err != nil {
 			return err
 		}
 
-		t, err := addTargets(d.Id(), getListOfStructs(new.(*schema.Set).List()), session)
+		t, err := addTargets(d.Id(), getListOfStructs(d.Get("target").(*schema.Set).List()), session)
 		if err != nil {
 			return err
 		}
@@ -274,7 +299,9 @@ func addTargets(id string, add []map[string]interface{}, session *managers.Sessi
 	targets := make([]map[string]interface{}, 0)
 
 	for _, t := range add {
-
+		if t["mapping_id"].(string) != "" {
+			continue
+		}
 		appID := t["app"].(string)
 		port := 8080
 		if v, ok := t["port"]; ok {
@@ -300,6 +327,9 @@ func removeTargets(delete []map[string]interface{}, session *managers.Session) e
 		if len(mappingID) > 0 {
 			_, err := session.ClientV2.DeleteRouteMapping(mappingID)
 			if err != nil {
+				if IsErrNotFound(err) {
+					continue
+				}
 				return err
 			}
 		}

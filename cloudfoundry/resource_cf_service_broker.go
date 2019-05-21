@@ -3,7 +3,6 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -69,14 +68,14 @@ func resourceServiceBrokerCreate(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) error {
-
 	session := meta.(*managers.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+
 	sb, _, err := session.ClientV2.GetServiceBroker(d.Id())
 	if err != nil {
-		d.SetId("")
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 	err = readServiceDetail(d.Id(), session, d)
@@ -135,7 +134,7 @@ func resourceServiceBrokerDelete(d *schema.ResourceData, meta interface{}) error
 			return err
 		}
 		for _, si := range sis {
-			_, err := session.ClientV2.DeleteServiceInstance(si.GUID, true, true)
+			_, _, err := session.ClientV2.DeleteServiceInstance(si.GUID, true, true)
 			if err != nil {
 				return err
 			}

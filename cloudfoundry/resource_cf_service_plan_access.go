@@ -79,6 +79,10 @@ func resourceServicePlanAccessRead(d *schema.ResourceData, meta interface{}) err
 	if hasOrg {
 		spV, _, err := session.ClientV2.GetServicePlanVisibility(d.Id())
 		if err != nil {
+			if IsErrNotFound(err) {
+				d.SetId("")
+				return nil
+			}
 			return err
 		}
 		d.Set("plan", spV.ServicePlanGUID)
@@ -86,7 +90,10 @@ func resourceServicePlanAccessRead(d *schema.ResourceData, meta interface{}) err
 	} else {
 		plan, _, err := session.ClientV2.GetServicePlan(d.Id())
 		if err != nil {
-			d.SetId("")
+			if IsErrNotFound(err) {
+				d.SetId("")
+				return nil
+			}
 			return err
 		}
 		d.Set("plan", d.Id())

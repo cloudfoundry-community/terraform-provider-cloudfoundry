@@ -50,7 +50,7 @@ resource "cloudfoundry_buildpack" "tomee" {
 func TestAccBuildpack_normal(t *testing.T) {
 	_, testFile, _, _ := runtime.Caller(0)
 
-	fixturesBp := filepath.Join(filepath.Dir(filepath.Dir(testFile)), "fixtures", "buildpacks")
+	fixturesBp := filepath.Join(filepath.Dir(filepath.Dir(testFile)), "tests", "cf-acceptance-tests", "assets", "buildpacks")
 	refBuildpack := "cloudfoundry_buildpack.tomee"
 
 	resource.Test(t,

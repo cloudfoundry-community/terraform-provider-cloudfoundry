@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+	"os"
 )
 
 // Provider -
@@ -81,31 +82,32 @@ func Provider() terraform.ResourceProvider {
 			"cloudfoundry_service_instance":  dataSourceServiceInstance(),
 			"cloudfoundry_service_key":       dataSourceServiceKey(),
 			"cloudfoundry_service":           dataSourceService(),
+			"cloudfoundry_app":               dataSourceApp(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"cloudfoundry_feature_flags":         resourceConfig(),
-			"cloudfoundry_user":                  resourceUser(),
-			"cloudfoundry_domain":                resourceDomain(),
-			"cloudfoundry_private_domain_access": resourcePrivateDomainAccess(),
-			"cloudfoundry_asg":                   resourceAsg(),
-			"cloudfoundry_org_quota":             resourceOrgQuota(),
-			"cloudfoundry_space_quota":           resourceSpaceQuota(),
-			"cloudfoundry_default_asg":           resourceDefaultAsg(),
-			"cloudfoundry_evg":                   resourceEvg(),
-			"cloudfoundry_org":                   resourceOrg(),
-			"cloudfoundry_space":                 resourceSpace(),
-			"cloudfoundry_space_users":           resourceSpaceUsers(),
-			"cloudfoundry_org_users":             resourceOrgUsers(),
-			"cloudfoundry_service_broker":        resourceServiceBroker(),
-			"cloudfoundry_service_plan_access":   resourceServicePlanAccess(),
-			"cloudfoundry_service_instance":      resourceServiceInstance(),
-			"cloudfoundry_service_key":           resourceServiceKey(),
-			"cloudfoundry_user_provided_service": resourceUserProvidedService(),
-			"cloudfoundry_buildpack":             resourceBuildpack(),
-			"cloudfoundry_route":                 resourceRoute(),
-			"cloudfoundry_route_service_binding": resourceRouteServiceBinding(),
-			// "cloudfoundry_app":                           resourceApp(),
+			"cloudfoundry_feature_flags":                 resourceConfig(),
+			"cloudfoundry_user":                          resourceUser(),
+			"cloudfoundry_domain":                        resourceDomain(),
+			"cloudfoundry_private_domain_access":         resourcePrivateDomainAccess(),
+			"cloudfoundry_asg":                           resourceAsg(),
+			"cloudfoundry_org_quota":                     resourceOrgQuota(),
+			"cloudfoundry_space_quota":                   resourceSpaceQuota(),
+			"cloudfoundry_default_asg":                   resourceDefaultAsg(),
+			"cloudfoundry_evg":                           resourceEvg(),
+			"cloudfoundry_org":                           resourceOrg(),
+			"cloudfoundry_space":                         resourceSpace(),
+			"cloudfoundry_space_users":                   resourceSpaceUsers(),
+			"cloudfoundry_org_users":                     resourceOrgUsers(),
+			"cloudfoundry_service_broker":                resourceServiceBroker(),
+			"cloudfoundry_service_plan_access":           resourceServicePlanAccess(),
+			"cloudfoundry_service_instance":              resourceServiceInstance(),
+			"cloudfoundry_service_key":                   resourceServiceKey(),
+			"cloudfoundry_user_provided_service":         resourceUserProvidedService(),
+			"cloudfoundry_buildpack":                     resourceBuildpack(),
+			"cloudfoundry_route":                         resourceRoute(),
+			"cloudfoundry_route_service_binding":         resourceRouteServiceBinding(),
+			"cloudfoundry_app":                           resourceApp(),
 			"cloudfoundry_isolation_segment":             resourceSegment(),
 			"cloudfoundry_isolation_segment_entitlement": resourceSegmentEntitlement(),
 		},
@@ -126,6 +128,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		SkipSslValidation: d.Get("skip_ssl_validation").(bool),
 		AppLogsMax:        d.Get("app_logs_max").(int),
 	}
-	fmt.Println("Running...")
+	if os.Getenv("TF_ACC") != "" {
+		fmt.Println("Running provider in acceptance test...")
+	}
 	return managers.NewSession(c)
 }

@@ -94,6 +94,10 @@ func resourceOrgQuotaRead(d *schema.ResourceData, meta interface{}) error {
 
 	quota, _, err := qm.GetQuota(constant.OrgQuota, d.Id())
 	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 

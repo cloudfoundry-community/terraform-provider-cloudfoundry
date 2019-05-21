@@ -212,9 +212,12 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) err
 	id := d.Id()
 
 	recursiveDelete := d.Get("recursive_delete").(bool)
-	_, err := session.ClientV2.DeleteServiceInstance(id, recursiveDelete, session.PurgeWhenDelete)
+	async, _, err := session.ClientV2.DeleteServiceInstance(id, recursiveDelete, session.PurgeWhenDelete)
 	if err != nil {
 		return err
+	}
+	if !async {
+		return nil
 	}
 	stateConf := &resource.StateChangeConf{
 		Pending:      resourceServiceInstancePendingStates,

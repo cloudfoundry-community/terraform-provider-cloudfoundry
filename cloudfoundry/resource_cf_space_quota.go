@@ -92,6 +92,10 @@ func resourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) error {
 	qm := session.ClientV2
 	quota, _, err := qm.GetQuota(constant.SpaceQuota, d.Id())
 	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 

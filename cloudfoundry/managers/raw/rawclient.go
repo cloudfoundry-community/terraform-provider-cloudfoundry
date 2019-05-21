@@ -1,4 +1,4 @@
-package managers
+package raw
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller"

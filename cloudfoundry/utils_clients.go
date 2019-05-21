@@ -1,6 +1,7 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/types"
 )
@@ -31,6 +32,30 @@ func IntToNullByteSize(v int) types.NullByteSizeInMb {
 	}
 }
 
+func StringToFilteredString(val string) types.FilteredString {
+	if val == "" {
+		return types.FilteredString{
+			IsSet: false,
+		}
+	}
+	return types.FilteredString{
+		IsSet: true,
+		Value: val,
+	}
+}
+
+func IntToNullByteSizeZero(v int) types.NullByteSizeInMb {
+	if v <= 0 {
+		return types.NullByteSizeInMb{
+			IsSet: false,
+		}
+	}
+	return types.NullByteSizeInMb{
+		IsSet: true,
+		Value: uint64(v),
+	}
+}
+
 func NullByteSizeToInt(v types.NullByteSizeInMb) int {
 	if !v.IsSet {
 		return -1
@@ -44,4 +69,11 @@ func UsersToIDs(users []ccv2.User) []interface{} {
 		ids[i] = u.GUID
 	}
 	return ids
+}
+
+func IsErrNotFound(err error) bool {
+	if httpErr, ok := err.(ccerror.RawHTTPStatusError); ok && httpErr.StatusCode == 404 {
+		return true
+	}
+	return false
 }

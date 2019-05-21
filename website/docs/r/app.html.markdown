@@ -14,10 +14,10 @@ Provides a Cloud Foundry [application](https://docs.cloudfoundry.org/devguide/de
 
 The following example creates an application.
 
-```
+```hcl
 resource "cloudfoundry_app" "spring-music" {
     name = "spring-music"
-    url = "file:///Work/cloudfoundry/apps/spring-music/build/libs/spring-music.war"
+    path = "/Work/cloudfoundry/apps/spring-music/build/libs/spring-music.war"
 }
 ```
 
@@ -44,41 +44,48 @@ The following arguments are supported:
 
 One of the following arguments must be declared to locate application source or archive to be pushed.
 
-* `url` - (Optional, String) The URL for the application binary. A local path may be referenced via "`file://...`".
+* `path` - (Required) An uri or path to target a zip file. this can be in the form of unix path (`/my/path.zip`) or url path (`http://zip.com/my.zip`)
+* `source_code_hash` - (Optional) Used to trigger updates. Must be set to a base64-encoded SHA256 hash of the path specified. The usual way to set this is `${base64sha256(file("file.zip"))}`, 
+where "file.zip" is the local filename of the lambda function source archive.
 
 * `docker_image` - (Optional, String) The URL to the docker image with tag e.g registry.example.com:5000/user/repository/tag or docker image name from the public repo e.g. redis:4.0
 * `docker_credentials` - (Optional) Defines login credentials for private docker repositories
   - `username` - (Required, String) Username for the private docker repo
   - `password` - (Required, String) Password for the private docker repo
 
-* `git` - (Optional, String) The git repository where to pull the application source from.
+~> **NOTE:** [terraform-provider-zipper](https://github.com/ArthurHlt/terraform-provider-zipper) 
+can create zip file from `tar.gz`, `tar.bz2`, `folder location`, `git repo` locally or remotely and provide `source_code_hash`.
 
-  - `url` - (Required, String) The git URL for the application repository. Supported schemes are `http://`, `https://`, `ssh://` and `file://`
-  - `branch` - (Optional, String) The branch of from which the repository contents should be retrieved.
-  - `tag` - (Optional, String) The version tag of the contents to retrieve.
-  - `key` - (Optional, String) The git private key to access a private repo via SSH.
-  - `user` - (Optional, String) Git user for accessing a private repo.
-  - `password` - (Optional, String) Git password for accessing a private repo.
+Example Usage with zipper: 
 
-~> **NOTE:** Arguments "`tag`" and "`branch`" are mutually exclusive.
+```hcl
+provider "zipper" {
+  skip_ssl_validation = false
+}
 
-~> **NOTE:** Builtin credentials like `https://user:password@host` or `ssh://git@host` are not supported.
+resource "zipper_file" "fixture" {
+  source = "https://github.com/orange-cloudfoundry/gobis-server.git#v1.7.3"
+  output_path = "path/to/gobis-server.zip"
+}
 
-~> **NOTE:** If a git SSH "`key`" is provided and the key is password-protected, then the "`password`" argument should be used as the key's password.
+resource "cloudfoundry_app" "gobis-server" {
+    name = "gobis-server"
+    path = "${zipper_file.fixture.output_path}"
+    source_code_hash = "${zipper_file.fixture.output_sha}"
+    buildpack = "go_buildpack"
+}
+```
 
-* `github_release` - (Optional, String) The github release where to download the application archive from.
+### Application Deployment strategy (Blue-Green deploy)
 
-  - `owner` - (Required, String) The github owner or organization name
-  - `repo` - (Required, String) The repository containing the release
-  - `user` - (Optional, String) Github user to use to access Github
-  - `password` - (Optional, String) Github password/personal token to use to access Github
-  - `version` - (Optional, String) The version or tag of the release.
-  - `filename` - (Required, String) The name of the published file. The values `zipball` or `tarball` will download the published
-
-* `add_content` - (Optional, Array) adds the given content from a local path to the application directory. You can use this attribute to inject files into the pushed application source.
-
-  - `source` - (Required, String) The source path to copy content from. This can be a directory.
-  - `destination` - (Required, String) The destination path to copy content to. This is relative to the application source root.
+* `strategy` - (Required) Strategy to use for creating/updating application. Default to `none`. 
+Following are supported:
+  * `none`:
+      * Alias: `standard`, `v2`
+      * Description: This is the default strategy, it will restage/create/restart app with interruption
+  * `blue-green`:
+    * Alias: `blue-green-v2`
+    * Description: It will restage and create app without interruption and rollback if an error occurred.
 
 ### Service bindings
 

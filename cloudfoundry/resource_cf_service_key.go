@@ -2,10 +2,8 @@ package cloudfoundry
 
 import (
 	"encoding/json"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"strings"
-
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 func resourceServiceKey() *schema.Resource {
@@ -36,12 +34,14 @@ func resourceServiceKey() *schema.Resource {
 				Type:          schema.TypeMap,
 				Optional:      true,
 				ForceNew:      true,
+				Sensitive:     true,
 				ConflictsWith: []string{"params_json"},
 			},
 			"params_json": &schema.Schema{
 				Type:          schema.TypeString,
 				Optional:      true,
 				ForceNew:      true,
+				Sensitive:     true,
 				ConflictsWith: []string{"params"},
 			},
 			"credentials": &schema.Schema{
@@ -81,9 +81,9 @@ func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) error {
 
 	serviceKey, _, err := session.ClientV2.GetServiceKey(d.Id())
 	if err != nil {
-		if strings.Contains(err.Error(), "404") {
+		if IsErrNotFound(err) {
 			d.SetId("")
-			err = nil
+			return nil
 		}
 		return err
 	}

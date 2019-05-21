@@ -1,6 +1,8 @@
 package managers
 
 import (
+	"code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/cfnetv1"
+	netWrapper "code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/wrapper"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	ccv2cons "code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
@@ -15,6 +17,10 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/hashicorp/go-uuid"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/bits"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
 	"net"
 	"net/http"
 	"os"
@@ -29,7 +35,7 @@ type Session struct {
 	ClientUAA *uaa.Client
 
 	// Used for direct endpoint calls
-	RawClient *RawClient
+	RawClient *raw.RawClient
 
 	// http client used for normal request
 	HttpClient *http.Client
@@ -38,16 +44,27 @@ type Session struct {
 	RouterClient *router.Client
 
 	// Manage upload bits like app and buildpack in full stream
-	BitsManager *BitsManager
+	BitsManager *bits.BitsManager
 
 	// NOAAClient permit to access to apps logs
-	NOAAClient *NOAAClient
+	NOAAClient *noaa.NOAAClient
+
+	// NetClient permit to access to networking policy api
+	NetClient *cfnetv1.Client
+
+	// Deployer is used to deploy an frim different strategy
+	Deployer *appdeployers.Deployer
+
+	// RunBinder is used to to manage start stop of an app
+	RunBinder *appdeployers.RunBinder
 
 	uaaDefaultCfGroups map[string]uaa.Group
 
 	defaultQuotaGuid string
 
 	PurgeWhenDelete bool
+
+	ApiEndpoint string
 }
 
 // NewSession -
@@ -65,6 +82,7 @@ func NewSession(c Config) (s *Session, err error) {
 	s = &Session{
 		uaaDefaultCfGroups: make(map[string]uaa.Group),
 		PurgeWhenDelete:    c.PurgeWhenDelete,
+		ApiEndpoint:        c.Endpoint,
 	}
 	config := &configv3.Config{
 		ConfigFile: configv3.JSONConfig{
@@ -94,7 +112,7 @@ func NewSession(c Config) (s *Session, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error when creating clients: %s", err.Error())
 	}
-	s.BitsManager = NewBitsManager(s)
+	s.BitsManager = bits.NewBitsManager(s.ClientV2, s.ClientV3, s.RawClient, s.HttpClient)
 
 	err = s.loadUaaDefaultCfGroups()
 	if err != nil {
@@ -105,6 +123,7 @@ func NewSession(c Config) (s *Session, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error when loading default quota: %s", err.Error())
 	}
+	s.loadDeployer()
 	return s, nil
 }
 
@@ -246,6 +265,27 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	// -------------------------
 
 	// -------------------------
+	// Create cfnetworking client with uaa client authentication to call network policies
+	netUaaAuthWrapper := netWrapper.NewUAAAuthentication(nil, config)
+	netWrappers := []cfnetv1.ConnectionWrapper{
+		netUaaAuthWrapper,
+		netWrapper.NewRetryRequest(config.RequestRetryCount()),
+	}
+	netUaaAuthWrapper.SetClient(uaaClient)
+	if IsDebugMode() {
+		netWrappers = append(netWrappers, netWrapper.NewRequestLogger(NewRequestLogger()))
+	}
+	s.NetClient = cfnetv1.NewClient(cfnetv1.Config{
+		SkipSSLValidation: config.SkipSSLValidation(),
+		DialTimeout:       config.DialTimeout(),
+		AppName:           config.BinaryName(),
+		AppVersion:        config.BinaryVersion(),
+		URL:               s.ClientV3.NetworkPolicyV1(),
+		Wrappers:          netWrappers,
+	})
+	// -------------------------
+
+	// -------------------------
 	// Create raw http client with uaa client authentication to make raw request
 	authWrapperRaw := ccWrapper.NewUAAAuthentication(nil, config)
 	authWrapperRaw.SetClient(uaaClient)
@@ -256,7 +296,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	if IsDebugMode() {
 		rawWrappers = append(rawWrappers, ccWrapper.NewRequestLogger(NewRequestLogger()))
 	}
-	s.RawClient = NewRawClient(RawClientConfig{
+	s.RawClient = raw.NewRawClient(raw.RawClientConfig{
 		ApiEndpoint:       config.Target(),
 		SkipSSLValidation: config.SkipSSLValidation(),
 		DialTimeout:       config.DialTimeout(),
@@ -302,10 +342,17 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 
 	// -------------------------
 	// Create NOAA client for accessing logs from an app
-	s.NOAAClient = NewNOAAClient(s.ClientV3.Logging(), config.SkipSSLValidation(), config, configSess.AppLogsMax)
+	s.NOAAClient = noaa.NewNOAAClient(s.ClientV3.Logging(), config.SkipSSLValidation(), config, configSess.AppLogsMax)
 	// -------------------------
 
 	return nil
+}
+
+func (s *Session) loadDeployer() {
+	s.RunBinder = appdeployers.NewRunBinder(s.ClientV2, s.NOAAClient)
+	stdStrategy := appdeployers.NewStandard(s.BitsManager, s.ClientV2, s.RunBinder)
+	bgStrategy := appdeployers.NewBlueGreenV2(s.BitsManager, s.ClientV2, s.RunBinder, stdStrategy)
+	s.Deployer = appdeployers.NewDeployer(stdStrategy, bgStrategy)
 }
 
 func (s *Session) loadUaaDefaultCfGroups() error {

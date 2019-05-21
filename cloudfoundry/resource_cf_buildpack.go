@@ -49,7 +49,6 @@ func resourceBuildpack() *schema.Resource {
 			"source_code_hash": {
 				Type:     schema.TypeString,
 				Optional: true,
-				Computed: true,
 			},
 			"filename": {
 				Type:     schema.TypeString,
@@ -101,6 +100,10 @@ func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) error {
 
 	bp, _, err := session.ClientV2.GetBuildpack(d.Id())
 	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 

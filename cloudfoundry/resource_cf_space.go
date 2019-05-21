@@ -114,6 +114,10 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
 
 	space, _, err := sm.GetSpace(id)
 	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 	d.Set("name", space.Name)
