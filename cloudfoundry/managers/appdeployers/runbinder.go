@@ -45,19 +45,19 @@ func (r RunBinder) MapRoutes(appDeploy AppDeploy) ([]ccv2.RouteMapping, error) {
 	return mappings, nil
 }
 
-func (r RunBinder) mappingExists(appGuid string, mapping ccv2.RouteMapping) (bool, error) {
+func (r RunBinder) mappingExists(appGuid string, curMapping ccv2.RouteMapping) (bool, error) {
 	mappings, _, err := r.client.GetRouteMappings(
-		ccv2.FilterEqual(constant.RouteGUIDFilter, mapping.RouteGUID),
+		ccv2.FilterEqual(constant.RouteGUIDFilter, curMapping.RouteGUID),
 		ccv2.FilterEqual(constant.AppGUIDFilter, appGuid),
 	)
 	if err != nil {
 		return false, err
 	}
-	if mapping.AppPort <= 0 {
+	if curMapping.AppPort <= 0 {
 		return len(mappings) > 0, nil
 	}
 	for _, mapping := range mappings {
-		if mapping.AppPort == mapping.AppPort {
+		if mapping.AppPort == curMapping.AppPort {
 			return true, nil
 		}
 	}
