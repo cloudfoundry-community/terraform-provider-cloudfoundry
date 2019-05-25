@@ -1,11 +1,9 @@
 package cloudfoundry
 
 import (
-	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"os"
 )
 
 // Provider -
@@ -127,9 +125,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		UaaClientSecret:   d.Get("uaa_client_secret").(string),
 		SkipSslValidation: d.Get("skip_ssl_validation").(bool),
 		AppLogsMax:        d.Get("app_logs_max").(int),
-	}
-	if os.Getenv("TF_ACC") != "" {
-		fmt.Println("Running provider in acceptance test...")
 	}
 	return managers.NewSession(c)
 }
