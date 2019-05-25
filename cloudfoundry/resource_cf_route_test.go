@@ -27,12 +27,9 @@ data "cloudfoundry_space" "space" {
 resource "cloudfoundry_app" "test-app-8080" {
 	name = "test-app"
 	space = "${data.cloudfoundry_space.space.id}"
-	command = "test-app --ports=8080"
 	timeout = 1800
-
-	git {
-		url = "https://github.com/mevansam/test-app.git"
-	}
+	buildpack = "binary_buildpack"
+	path = "%s"
 }
 resource "cloudfoundry_route" "test-app-route" {
 	domain = "${data.cloudfoundry_domain.local.id}"
@@ -61,34 +58,25 @@ data "cloudfoundry_space" "space" {
 resource "cloudfoundry_app" "test-app-8080" {
 	name = "test-app-8080"
 	space = "${data.cloudfoundry_space.space.id}"
-	command = "test-app --ports=8080"
 	timeout = 1800
-
-	git {
-		url = "https://github.com/mevansam/test-app.git"
-	}
+	buildpack = "binary_buildpack"
+	path = "%s"
 }
 resource "cloudfoundry_app" "test-app-8888" {
 	name = "test-app-8888"
 	space = "${data.cloudfoundry_space.space.id}"
 	ports = [ 8888 ]
-	command = "test-app --ports=8888"
 	timeout = 1800
-
-	git {
-		url = "https://github.com/mevansam/test-app.git"
-	}
+	buildpack = "binary_buildpack"
+	path = "%s"
 }
 resource "cloudfoundry_app" "test-app-9999" {
 	name = "test-app-9999"
 	space = "${data.cloudfoundry_space.space.id}"
 	ports = [ 9999 ]
-	command = "test-app --ports=9999"
 	timeout = 1800
-
-	git {
-		url = "https://github.com/mevansam/test-app.git"
-	}
+	buildpack = "binary_buildpack"
+	path = "%s"
 }
 resource "cloudfoundry_route" "test-app-route" {
 	domain = "${data.cloudfoundry_domain.local.id}"
@@ -126,12 +114,11 @@ func TestAccRoute_normal(t *testing.T) {
 				resource.TestStep{
 					Config: fmt.Sprintf(routeResource,
 						defaultAppDomain(),
-						orgName, spaceName),
+						orgName, spaceName,
+						appPath),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
-
-							responses := []string{"8080"}
-							if err = assertHTTPResponse("http://test-app-single."+defaultAppDomain()+"/port", 200, &responses); err != nil {
+							if err = assertHTTPResponse("http://test-app-single."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -146,13 +133,13 @@ func TestAccRoute_normal(t *testing.T) {
 				resource.TestStep{
 					Config: fmt.Sprintf(routeResourceUpdate,
 						defaultAppDomain(),
-						orgName, spaceName),
+						orgName, spaceName,
+						appPath, appPath, appPath),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
-							responses := []string{"8080", "8888", "9999"}
 							for i := 1; i <= 9; i++ {
-								if err = assertHTTPResponse("http://test-app-multi."+defaultAppDomain()+"/port", 200, &responses); err != nil {
+								if err = assertHTTPResponse("http://test-app-multi."+defaultAppDomain(), 200, nil); err != nil {
 									return err
 								}
 							}

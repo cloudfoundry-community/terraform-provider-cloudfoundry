@@ -15,7 +15,7 @@ func resourceSegment() *schema.Resource {
 		Read:   resourceSegmentRead,
 		Delete: resourceSegmentDelete,
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceSegmentRead),
 		},
 
 		Schema: map[string]*schema.Schema{

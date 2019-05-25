@@ -7,8 +7,8 @@ import (
 )
 
 func TestAccOrgQuota_importBasic(t *testing.T) {
-	resourceName := "cloudfoundry_org_quota.50g-org"
-	quotaname := "50g-org"
+	resourceName := "cloudfoundry_org_quota.quota50g-org"
+	quotaname := "quota50g-org"
 
 	resource.Test(t,
 		resource.TestCase{

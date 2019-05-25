@@ -5,11 +5,10 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"code.cloudfoundry.org/cli/types"
 	"fmt"
+	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -23,7 +22,7 @@ func resourceRoute() *schema.Resource {
 		Delete: resourceRouteDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceRouteRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -62,8 +61,15 @@ func resourceRoute() *schema.Resource {
 				Computed: true,
 			},
 			"target": &schema.Schema{
-				Type:     schema.TypeSet,
-				Set:      routeTargetHash,
+				Type: schema.TypeSet,
+				Set: func(v interface{}) int {
+					elem := v.(map[string]interface{})
+					return hashcode.String(fmt.Sprintf(
+						"%s-%d",
+						elem["app"],
+						elem["port"],
+					))
+				},
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -76,27 +82,11 @@ func resourceRoute() *schema.Resource {
 							Optional: true,
 							Default:  8080,
 						},
-						"mapping_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
 					},
 				},
 			},
 		},
 	}
-}
-
-func routeTargetHash(d interface{}) int {
-
-	a := d.(map[string]interface{})["app"].(string)
-
-	p := ""
-	if v, ok := d.(map[string]interface{})["port"]; ok {
-		p = strconv.Itoa(v.(int))
-	}
-
-	return hashcode.String(a + p)
 }
 
 func resourceRouteCreate(d *schema.ResourceData, meta interface{}) error {
@@ -114,7 +104,7 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) error {
 	route, _, err := session.ClientV2.CreateRoute(ccv2.Route{
 		DomainGUID: d.Get("domain").(string),
 		SpaceGUID:  d.Get("space").(string),
-		Host:       d.Get("host").(string),
+		Host:       d.Get("hostname").(string),
 		Path:       d.Get("path").(string),
 		Port:       port,
 	}, d.Get("random_port").(bool))
@@ -178,9 +168,8 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 	if IsImportState(d) {
 		for _, mapping := range mappings {
 			mappingsTf = append(mappingsTf, map[string]interface{}{
-				"app":        mapping.AppGUID,
-				"mapping_id": mapping.GUID,
-				"port":       mapping.AppPort,
+				"app":  mapping.AppGUID,
+				"port": mapping.AppPort,
 			})
 		}
 		if len(mappingsTf) > 0 {
@@ -194,7 +183,7 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 		inside := false
 		tmpT := tfTarget.(map[string]interface{})
 		for _, mapping := range mappings {
-			if mapping.GUID == tmpT["mapping_id"] {
+			if mapping.AppGUID == tmpT["app"] && mapping.AppPort == tmpT["port"] {
 				inside = true
 				tmpT["port"] = mapping.AppPort
 				tmpT["app"] = mapping.AppGUID
@@ -221,7 +210,7 @@ func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) error {
 			GUID:       d.Id(),
 			DomainGUID: d.Get("domain").(string),
 			SpaceGUID:  d.Get("space").(string),
-			Host:       d.Get("host").(string),
+			Host:       d.Get("hostname").(string),
 			Path:       d.Get("path").(string),
 			Port:       port,
 		})
@@ -236,15 +225,15 @@ func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if d.HasChange("target") {
 		old, new := d.GetChange("target")
-		remove, _ := getListMapChanges(old, new, func(source, item map[string]interface{}) bool {
+		remove, add := getListMapChanges(old, new, func(source, item map[string]interface{}) bool {
 			return source["app"] == item["app"] && source["port"] == item["port"]
 		})
-		err := removeTargets(remove, session)
+		err := removeTargets(d.Id(), remove, session)
 		if err != nil {
 			return err
 		}
 
-		t, err := addTargets(d.Id(), getListOfStructs(d.Get("target").(*schema.Set).List()), session)
+		t, err := addTargets(d.Id(), add, session)
 		if err != nil {
 			return err
 		}
@@ -257,7 +246,7 @@ func resourceRouteDelete(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 
 	if targets, ok := d.GetOk("target"); ok {
-		err := removeTargets(getListOfStructs(targets.(*schema.Set).List()), session)
+		err := removeTargets(d.Id(), getListOfStructs(targets.(*schema.Set).List()), session)
 		if err != nil {
 			return err
 		}
@@ -299,37 +288,33 @@ func addTargets(id string, add []map[string]interface{}, session *managers.Sessi
 	targets := make([]map[string]interface{}, 0)
 
 	for _, t := range add {
-		if t["mapping_id"].(string) != "" {
-			continue
-		}
 		appID := t["app"].(string)
 		port := 8080
 		if v, ok := t["port"]; ok {
 			port = v.(int)
 		}
-		mapping, _, err := session.ClientV2.CreateRouteMapping(appID, id, port)
+		_, _, err := session.ClientV2.CreateRouteMapping(appID, id, port)
 		if err != nil {
 			return targets, err
 		}
-		t["mapping_id"] = mapping.GUID
 		targets = append(targets, t)
 	}
 	return targets, nil
 }
 
-func removeTargets(delete []map[string]interface{}, session *managers.Session) error {
+func removeTargets(id string, delete []map[string]interface{}, session *managers.Session) error {
 
 	for _, t := range delete {
-		mappingID := t["mapping_id"].(string)
-		if mappingID == "" {
-			continue
+		mappings, _, err := session.ClientV2.GetRouteMappings(filterAppGuid(t["app"].(string)), filterRouteGuid(id))
+		if err != nil {
+			return err
 		}
-		if len(mappingID) > 0 {
-			_, err := session.ClientV2.DeleteRouteMapping(mappingID)
-			if err != nil {
-				if IsErrNotFound(err) {
-					continue
-				}
+		for _, mapping := range mappings {
+			if mapping.AppPort != t["port"] {
+				continue
+			}
+			_, err := session.ClientV2.DeleteRouteMapping(mapping.GUID)
+			if err != nil && !IsErrNotFound(err) {
 				return err
 			}
 		}

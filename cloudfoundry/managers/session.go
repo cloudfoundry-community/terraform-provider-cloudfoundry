@@ -415,5 +415,5 @@ func (s *Session) DefaultQuotaGuid() string {
 
 func IsDebugMode() bool {
 	tfDebug := strings.ToLower(os.Getenv("TF_LOG"))
-	return tfDebug == "info" || tfDebug == "trace"
+	return tfDebug == "info" || tfDebug == "trace" || tfDebug == "debug"
 }

@@ -18,7 +18,7 @@ func resourceServiceBroker() *schema.Resource {
 		Delete: resourceServiceBrokerDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceServiceBrokerRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -43,6 +43,7 @@ func resourceServiceBroker() *schema.Resource {
 			"space": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				ForceNew: true,
 			},
 			"service_plans": &schema.Schema{
 				Type:     schema.TypeMap,
@@ -55,8 +56,13 @@ func resourceServiceBroker() *schema.Resource {
 func resourceServiceBrokerCreate(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 
-	_, name, url, username, password, space := getSchemaAttributes(d)
-	sb, _, err := session.ClientV2.CreateServiceBroker(name, url, username, password, space)
+	sb, _, err := session.ClientV2.CreateServiceBroker(
+		d.Get("name").(string),
+		d.Get("username").(string),
+		d.Get("password").(string),
+		d.Get("url").(string),
+		d.Get("space").(string),
+	)
 	if err != nil {
 		return err
 	}
@@ -80,7 +86,6 @@ func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	err = readServiceDetail(d.Id(), session, d)
 	if err != nil {
-		d.SetId("")
 		return err
 	}
 
@@ -95,22 +100,19 @@ func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) error {
 func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 
-	id, name, url, username, password, space := getSchemaAttributes(d)
-
 	_, _, err := session.ClientV2.UpdateServiceBroker(ccv2.ServiceBroker{
 		GUID:         d.Id(),
-		AuthUsername: username,
-		AuthPassword: password,
-		BrokerURL:    url,
-		SpaceGUID:    space,
-		Name:         name,
+		AuthUsername: d.Get("username").(string),
+		AuthPassword: d.Get("password").(string),
+		BrokerURL:    d.Get("url").(string),
+		SpaceGUID:    d.Get("space").(string),
+		Name:         d.Get("name").(string),
 	})
 	if err != nil {
-		d.SetId("")
 		return err
 	}
-	if err = readServiceDetail(id, session, d); err != nil {
-		d.SetId("")
+
+	if err = readServiceDetail(d.Id(), session, d); err != nil {
 		return err
 	}
 
@@ -142,20 +144,6 @@ func resourceServiceBrokerDelete(d *schema.ResourceData, meta interface{}) error
 	}
 	_, err = session.ClientV2.DeleteServiceBroker(d.Id())
 	return err
-}
-
-func getSchemaAttributes(d *schema.ResourceData) (id, name, url, username, password, space string) {
-
-	id = d.Id()
-	name = d.Get("name").(string)
-	url = d.Get("url").(string)
-	username = d.Get("username").(string)
-	password = d.Get("password").(string)
-
-	if v, ok := d.GetOk("space"); ok {
-		space = v.(string)
-	}
-	return id, name, url, username, password, space
 }
 
 func readServiceDetail(id string, session *managers.Session, d *schema.ResourceData) error {

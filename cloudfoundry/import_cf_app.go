@@ -14,5 +14,6 @@ func resourceAppImport(d *schema.ResourceData, meta interface{}) ([]*schema.Reso
 
 	d.Set("path", fmt.Sprintf(dlImportPath, session.ApiEndpoint, d.Id()))
 	d.Set("timeout", DefaultAppTimeout)
-	return ImportStatePassthrough(d, meta)
+	d.Set("strategy", "none")
+	return ImportRead(resourceAppRead)(d, meta)
 }

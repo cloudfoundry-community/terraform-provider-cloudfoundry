@@ -22,12 +22,14 @@ resource "cloudfoundry_asg" "rmq" {
         ports = "5672,5671,1883,8883,61613,61614"
 		log = true
     }
+
     rule {
         protocol = "icmp"
         destination = "192.168.1.101"
 		type = 8
 		code = 0
     }
+
 }
 `
 
@@ -41,16 +43,19 @@ resource "cloudfoundry_asg" "rmq" {
         destination = "192.168.1.100"
         ports = "61613,61614"
     }
+
     rule {
         protocol = "tcp"
         destination = "192.168.1.0/24"
         ports = "61613,61614"
     }
+
     rule {
-        protocol = "all",
+        protocol = "all"
         destination = "0.0.0.0/0"
 		log = true
     }
+
 }
 `
 

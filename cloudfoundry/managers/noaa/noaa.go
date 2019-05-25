@@ -39,7 +39,7 @@ func (c NOAAClient) RecentLogs(appGUID string) (string, error) {
 		return "", err
 	}
 	maxLen := c.maxMessages
-	if maxLen < 0 {
+	if maxLen < 0 || len(logMsgs) < maxLen {
 		maxLen = len(logMsgs)
 	}
 	if maxLen-1 < 0 {
@@ -61,7 +61,7 @@ func (c NOAAClient) RecentLogs(appGUID string) (string, error) {
 		)
 		message := string(logMsg.GetMessage())
 		for _, line := range strings.Split(message, "\n") {
-			logs += fmt.Sprintf("%s%s\n", header, strings.TrimRight(line, "\r\n"))
+			logs += fmt.Sprintf("\t%s%s\n", header, strings.TrimRight(line, "\r\n"))
 		}
 	}
 	return logs, nil

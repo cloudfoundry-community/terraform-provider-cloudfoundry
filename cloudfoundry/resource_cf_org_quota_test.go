@@ -14,7 +14,7 @@ import (
 
 const orgQuotaResource = `
 
-resource "cloudfoundry_org_quota" "50g-org" {
+resource "cloudfoundry_org_quota" "quota50g-org" {
   name = "50g-org"
   allow_paid_service_plans = false
   instance_memory = 2048
@@ -28,7 +28,7 @@ resource "cloudfoundry_org_quota" "50g-org" {
 
 const orgQuotaResourceUpdate = `
 
-resource "cloudfoundry_org_quota" "50g-org" {
+resource "cloudfoundry_org_quota" "quota50g-org" {
   name = "50g-org"
   allow_paid_service_plans = true
   instance_memory = 1024
@@ -42,7 +42,7 @@ resource "cloudfoundry_org_quota" "50g-org" {
 
 func TestAccOrgQuota_normal(t *testing.T) {
 
-	ref := "cloudfoundry_org_quota.50g-org"
+	ref := "cloudfoundry_org_quota.quota50g-org"
 	quotaname := "50g-org"
 
 	resource.Test(t,

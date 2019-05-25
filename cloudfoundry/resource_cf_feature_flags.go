@@ -26,7 +26,7 @@ func resourceConfig() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: func(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 				d.SetId("config")
-				return ImportStatePassthrough(d, meta)
+				return ImportRead(resourceConfigRead)(d, meta)
 			},
 		},
 

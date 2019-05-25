@@ -5,11 +5,9 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
-	"crypto/tls"
 	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -17,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -141,6 +140,18 @@ func defaultAppDomain() (domain string) {
 func defaultBaseDir() string {
 	_, file, _, _ := runtime.Caller(1)
 	return filepath.Dir(filepath.Dir(file))
+}
+
+func testDir() string {
+	return filepath.Join(defaultBaseDir(), "tests")
+}
+
+func assetDir() string {
+	return filepath.Join(testDir(), "cf-acceptance-tests", "assets")
+}
+
+func asset(a ...string) string {
+	return filepath.Join(assetDir(), filepath.Join(a...))
 }
 
 func defaultTestOrg(t *testing.T) (string, string) {
@@ -471,104 +482,146 @@ func assertMapEquals(key string, attributes map[string]string, actual map[string
 	return nil
 }
 
-func assertHTTPResponse(url string, expectedStatusCode int, expectedResponses *[]string) (err error) {
+func assertHTTPResponse(url string, expectedStatusCode int, expectedResponses *[]string) error {
 
-	var resp *http.Response
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-
-	if resp, err = client.Get(url); err != nil {
-		return err
-	}
-	if expectedStatusCode != resp.StatusCode {
-		return fmt.Errorf(
-			"expected response status code from url '%s' to be '%d', but actual was: %s",
-			url, expectedStatusCode, resp.Status)
-	}
-	if expectedResponses != nil {
-		in := resp.Body
-		out := bytes.NewBuffer(nil)
-		if _, err = io.Copy(out, in); err != nil {
-			return err
+	client := testSession().HttpClient
+	var finalErr error
+	// this assert is used to get on a route from gorouter
+	// delay and retry is necessary in case of the route not yet registered in gorouter
+	for i := 0; i < 3; i++ {
+		finalErr = nil
+		time.Sleep(1 * time.Second)
+		resp, err := client.Get(url)
+		if err != nil {
+			finalErr = err
+			continue
 		}
-		content := out.String()
+		if expectedStatusCode != resp.StatusCode {
+			finalErr = fmt.Errorf(
+				"expected response status code from url '%s' to be '%d', but actual was: %s",
+				url, expectedStatusCode, resp.Status)
+			continue
+		}
+		if expectedResponses != nil {
+			in := resp.Body
+			out := bytes.NewBuffer(nil)
+			if _, err = io.Copy(out, in); err != nil {
+				finalErr = err
+				continue
+			}
+			content := out.String()
 
-		found := false
-		for _, e := range *expectedResponses {
-			if e == content {
-				found = true
-				break
+			found := false
+			for _, e := range *expectedResponses {
+				if e == content {
+					found = true
+					break
+				}
+			}
+			if !found {
+				finalErr = fmt.Errorf(
+					"expected response from url '%s' to be one of '%v', but actual was '%s'",
+					url, *expectedResponses, content)
+				continue
 			}
 		}
-		if !found {
-			return fmt.Errorf(
-				"expected response from url '%s' to be one of '%v', but actual was '%s'",
-				url, *expectedResponses, content)
-		}
 	}
-	return nil
+
+	return finalErr
 }
 
 func TestMain(m *testing.M) {
-	if os.Getenv("TF_ACC_CREATE") == "" {
-		os.Exit(m.Run())
-	}
-
+	fmt.Println("Running pre-hook...")
 	// defer and os.Exit are not friends :(
 	clean := make([]func(), 0)
-	org, _, err := testSession().ClientV2.CreateOrganization("tf-acc-org", "")
+
+	// Create binary_buildpack if not found in cf
+	// This is used for cloudfoundry_app test and other test needing dummy-app.zip
+	bps, _, err := testSession().ClientV2.GetBuildpacks(ccv2.FilterByName("binary_buildpack"))
 	if err != nil {
 		panic(err)
 	}
-	os.Setenv("TEST_ORG_NAME", org.Name)
-	clean = append(clean, func() {
-		j, _, err := testSession().ClientV2.DeleteOrganization(org.GUID)
+	if len(bps) == 0 {
+		fmt.Println("Creating binary_buildpack ...")
+		bp, _, err := testSession().ClientV2.CreateBuildpack(ccv2.Buildpack{
+			Name:    "binary_buildpack",
+			Enabled: BoolToNullBool(true),
+		})
 		if err != nil {
 			panic(err)
 		}
-		_, err = testSession().ClientV2.PollJob(j)
+		err = testSession().BitsManager.UploadBuildpack(bp.GUID, asset("buildpacks", "binary_buildpack-cached-v1.0.32.zip"))
 		if err != nil {
 			panic(err)
 		}
-	})
-
-	space, _, err := testSession().ClientV2.CreateSpace("tf-acc-space", org.GUID)
-	if err != nil {
-		panic(err)
+		clean = append(clean, func() {
+			fmt.Println("Deleting binary_buildpack ...")
+			_, err := testSession().ClientV2.DeleteBuildpack(bp.GUID)
+			if err != nil {
+				panic(err)
+			}
+		})
 	}
-	os.Setenv("TEST_SPACE_NAME", space.Name)
-	clean = append(clean, func() {
-		j, _, err := testSession().ClientV2.DeleteSpace(space.GUID)
-		if err != nil {
-			panic(err)
-		}
-		_, err = testSession().ClientV2.PollJob(j)
-		if err != nil {
-			panic(err)
-		}
-	})
 
-	segment, _, err := testSession().ClientV3.CreateIsolationSegment(ccv3.IsolationSegment{
-		Name: "segment-one",
-	})
-	if err != nil {
-		panic(err)
+	if os.Getenv("TF_ACC_CREATE") != "" {
+		fmt.Println("Creating org tf-acc-org ...")
+		org, _, err := testSession().ClientV2.CreateOrganization("tf-acc-org", "")
+		if err != nil {
+			panic(err)
+		}
+		os.Setenv("TEST_ORG_NAME", org.Name)
+		clean = append(clean, func() {
+			fmt.Println("Deleting org tf-acc-org ...")
+			j, _, err := testSession().ClientV2.DeleteOrganization(org.GUID)
+			if err != nil {
+				panic(err)
+			}
+			_, err = testSession().ClientV2.PollJob(j)
+			if err != nil {
+				panic(err)
+			}
+		})
+
+		fmt.Println("Creating space tf-acc-space ...")
+		space, _, err := testSession().ClientV2.CreateSpace("tf-acc-space", org.GUID)
+		if err != nil {
+			panic(err)
+		}
+		os.Setenv("TEST_SPACE_NAME", space.Name)
+		clean = append(clean, func() {
+			fmt.Println("Deleting space tf-acc-space ...")
+			j, _, err := testSession().ClientV2.DeleteSpace(space.GUID)
+			if err != nil {
+				panic(err)
+			}
+			_, err = testSession().ClientV2.PollJob(j)
+			if err != nil {
+				panic(err)
+			}
+		})
+
+		fmt.Println("Creating isolation segment segment-acc-tf ...")
+		segment, _, err := testSession().ClientV3.CreateIsolationSegment(ccv3.IsolationSegment{
+			Name: "segment-acc-tf",
+		})
+		if err != nil {
+			panic(err)
+		}
+		os.Setenv("TEST_DEFAULT_SEGMENT", segment.Name)
+		clean = append(clean, func() {
+			fmt.Println("Deleting isolation segment segment-acc-tf ...")
+			_, err := testSession().ClientV3.DeleteIsolationSegment(segment.GUID)
+			if err != nil {
+				panic(err)
+			}
+		})
 	}
-	os.Setenv("TEST_DEFAULT_SEGMENT", segment.Name)
-	clean = append(clean, func() {
-		_, err := testSession().ClientV3.DeleteIsolationSegment(segment.GUID)
-		if err != nil {
-			panic(err)
-		}
-	})
-
+	fmt.Println("Finished running pre-hook.")
 	exitCode := m.Run()
-	fmt.Println("Cleaning previous created resources")
+	fmt.Println("Running post-hook...")
 	for i := len(clean) - 1; i >= 0; i-- {
 		clean[i]()
 	}
+	fmt.Println("Finished running post-hook.")
 	os.Exit(exitCode)
 }

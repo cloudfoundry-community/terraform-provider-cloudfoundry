@@ -17,8 +17,8 @@
       "body": {
         "services": [
           {
-            "name": "fake-service",
-            "id": "f479b64b-7c25-42e6-8d8f-e6d22c456c9b",
+            "name": "fake-service-ecc45bdc-e995-41ff-acb6-6bd7d828df9f",
+            "id": "4aeb891a-329b-4125-b8da-5c567d6a7c37",
             "description": "fake service",
             "tags": [
               "no-sql",
@@ -44,15 +44,15 @@
               "shareable": true
             },
             "dashboard_client": {
-              "id": "sso-test",
-              "secret": "sso-secret",
+              "id": "6b4886e8-f0a1-4ca3-ac2d-a0e143b893c0",
+              "secret": "7b8df03b-cf45-480e-a382-b7399f74a56a",
               "redirect_uri": "http://localhost:5551"
             },
             "plan_updateable": true,
             "plans": [
               {
                 "name": "fake-plan",
-                "id": "fake-plan-guid",
+                "id": "2f1a7cdd-f064-4534-a89f-ffa512afee72",
                 "description": "Shared fake Server, 5tb persistent disk, 40 max concurrent connections",
                 "max_storage_tb": 5,
                 "metadata": {
@@ -72,7 +72,7 @@
               },
               {
                 "name": "fake-async-plan",
-                "id": "fake-async-plan-guid",
+                "id": "fb4e5f67-3a3a-401b-b781-985d199c9605",
                 "description": "Shared fake Server, 5tb persistent disk, 40 max concurrent connections. 100 async",
                 "max_storage_tb": 5,
                 "metadata": {
@@ -86,7 +86,7 @@
               },
               {
                 "name": "fake-async-only-plan",
-                "id": "fake-async-only-plan-guid",
+                "id": "03870097-ac0e-40af-a1b9-870856a878ff",
                 "description": "Shared fake Server, 5tb persistent disk, 40 max concurrent connections. 100 async",
                 "max_storage_tb": 5,
                 "metadata": {
@@ -104,21 +104,24 @@
       }
     },
     "provision": {
-      "fake-async-plan-guid": {
-        "sleep_seconds": 0,
-        "status": 202,
-        "body": {}
-      },
-      "fake-async-only-plan-guid": {
-        "async_only": true,
-        "sleep_seconds": 0,
-        "status": 202,
-        "body": {}
-      },
       "default": {
         "sleep_seconds": 0,
         "status": 200,
-        "body": {}
+        "body": {
+        }
+      },
+      "fb4e5f67-3a3a-401b-b781-985d199c9605": {
+        "sleep_seconds": 0,
+        "status": 202,
+        "body": {
+        }
+      },
+      "03870097-ac0e-40af-a1b9-870856a878ff": {
+        "async_only": true,
+        "sleep_seconds": 0,
+        "status": 202,
+        "body": {
+        }
       }
     },
     "fetch": {
@@ -140,39 +143,45 @@
       }
     },
     "update": {
-      "fake-async-plan-guid": {
-        "sleep_seconds": 0,
-        "status": 202,
-        "body": {}
-      },
-      "fake-async-only-plan-guid": {
-        "async_only": true,
-        "sleep_seconds": 0,
-        "status": 202,
-        "body": {}
-      },
       "default": {
         "sleep_seconds": 0,
         "status": 200,
-        "body": {}
+        "body": {
+        }
+      },
+      "fb4e5f67-3a3a-401b-b781-985d199c9605": {
+        "sleep_seconds": 0,
+        "status": 202,
+        "body": {
+        }
+      },
+      "03870097-ac0e-40af-a1b9-870856a878ff": {
+        "async_only": true,
+        "sleep_seconds": 0,
+        "status": 202,
+        "body": {
+        }
       }
     },
     "deprovision": {
-      "fake-async-plan-guid": {
-        "sleep_seconds": 0,
-        "status": 202,
-        "body": {}
-      },
-      "fake-async-only-plan-guid": {
-        "async_only": true,
-        "sleep_seconds": 0,
-        "status": 202,
-        "body": {}
-      },
       "default": {
         "sleep_seconds": 0,
         "status": 200,
-        "body": {}
+        "body": {
+        }
+      },
+      "fb4e5f67-3a3a-401b-b781-985d199c9605": {
+        "sleep_seconds": 0,
+        "status": 202,
+        "body": {
+        }
+      },
+      "03870097-ac0e-40af-a1b9-870856a878ff": {
+        "async_only": true,
+        "sleep_seconds": 0,
+        "status": 202,
+        "body": {
+        }
       }
     },
     "bind": {
@@ -196,11 +205,14 @@
       "default": {
         "sleep_seconds": 0,
         "status": 200,
-        "body": {}
+        "body": {
+        }
       }
     }
   },
-  "service_instances": {},
-  "service_bindings": {},
+  "service_instances": {
+  },
+  "service_bindings": {
+  },
   "max_fetch_service_instance_requests": 1
 }

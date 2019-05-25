@@ -26,12 +26,13 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 		HealthCheckHTTPEndpoint: d.Get("health_check_http_endpoint").(string),
 		HealthCheckType:         constant.ApplicationHealthCheckType(d.Get("health_check_type").(string)),
 		HealthCheckTimeout:      uint64(d.Get("health_check_timeout").(int)),
+		SpaceGUID:               d.Get("space").(string),
 	}
 	if d.Get("stopped").(bool) {
 		app.State = constant.ApplicationStopped
 	}
 	ports := make([]int, 0)
-	for _, vv := range d.Get("port").(*schema.Set).List() {
+	for _, vv := range d.Get("ports").(*schema.Set).List() {
 		ports = append(ports, vv.(int))
 	}
 	if len(ports) == 0 {
@@ -56,16 +57,8 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 	}
 
 	mappings := make([]ccv2.RouteMapping, 0)
-	if v, ok := d.GetOk("route"); ok {
-		mappings = append(mappings, ccv2.RouteMapping{
-			RouteGUID: v.([]interface{})[0].(map[string]interface{})["default_route"].(string),
-			GUID:      v.([]interface{})[0].(map[string]interface{})["default_route_mapping_id"].(string),
-		})
-	}
-
 	for _, r := range getListOfStructs(d.Get("routes")) {
 		mappings = append(mappings, ccv2.RouteMapping{
-			GUID:      r["mapping_id"].(string),
 			RouteGUID: r["route"].(string),
 		})
 	}
@@ -81,7 +74,6 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 			}
 		}
 		bindings = append(bindings, ccv2.ServiceBinding{
-			GUID:                r["binding_id"].(string),
 			ServiceInstanceGUID: r["service_instance"].(string),
 			Parameters:          params,
 		})
@@ -119,17 +111,16 @@ func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppD
 	bindingsTf := getListOfStructs(d.Get("service_binding"))
 	finalBindings := make([]map[string]interface{}, 0)
 	for _, binding := range appDeploy.ServiceBindings {
+		if IsImportState(d) {
+			b, _ := json.Marshal(binding.Parameters)
+			finalBindings = append(finalBindings, map[string]interface{}{
+				"service_instance": binding.ServiceInstanceGUID,
+				"params_json":      string(b),
+			})
+			continue
+		}
 		curBindingsRaw, ok := getInSlice(bindingsTf, func(object interface{}) bool {
-			if IsImportState(d) {
-				return true
-			}
 			objMap := object.(map[string]interface{})
-			if objMap["binding_id"] == binding.GUID {
-				return true
-			}
-			if objMap["binding_id"] != "" {
-				return false
-			}
 			return objMap["service_instance"] == binding.ServiceInstanceGUID
 		})
 		if !ok {
@@ -145,8 +136,7 @@ func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppD
 				b, _ := json.Marshal(binding.Parameters)
 				curBinding["params_json"] = string(b)
 			}
-			curBinding["binding_id"] = binding.GUID
-			curBinding["service_instance"] = binding.GUID
+			curBinding["service_instance"] = binding.ServiceInstanceGUID
 			finalBindings = append(finalBindings, curBinding)
 		}
 	}
@@ -155,16 +145,17 @@ func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppD
 	mappingsTf := getListOfStructs(d.Get("routes"))
 	finalMappings := make([]map[string]interface{}, 0)
 	for _, mapping := range appDeploy.RouteMapping {
+		if IsImportState(d) {
+			finalMappings = append(finalMappings, map[string]interface{}{
+				"route": mapping.RouteGUID,
+				"port":  mapping.AppPort,
+			})
+			continue
+		}
 		curMappingsRaw, ok := getInSlice(mappingsTf, func(object interface{}) bool {
-			if IsImportState(d) {
-				return true
-			}
 			objMap := object.(map[string]interface{})
-			if objMap["mapping_id"] == mapping.GUID {
-				return true
-			}
-			if objMap["mapping_id"] != "" {
-				return false
+			if objMap["port"].(int) <= 0 {
+				return objMap["route"] == mapping.RouteGUID
 			}
 			return objMap["route"] == mapping.RouteGUID && objMap["port"] == mapping.AppPort
 		})
@@ -175,34 +166,10 @@ func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppD
 			curMapping := curMappingRaw.(map[string]interface{})
 			curMapping["route"] = mapping.RouteGUID
 			curMapping["port"] = mapping.AppPort
-			curMapping["mapping_id"] = mapping.GUID
 			finalMappings = append(finalMappings, curMapping)
 		}
 
 	}
 	d.Set("routes", finalMappings)
 
-	if v, ok := d.GetOk("route"); ok {
-		route := v.([]interface{})[0].(map[string]interface{})["default_route"].(string)
-		routeMapId := v.([]interface{})[0].(map[string]interface{})["default_route_mapping_id"].(string)
-		mappings, ok := getInSlice(appDeploy.RouteMapping, func(object interface{}) bool {
-			objMap := object.(ccv2.RouteMapping)
-			if objMap.RouteGUID == routeMapId {
-				return true
-			}
-			if objMap.RouteGUID != "" {
-				return false
-			}
-			return objMap.RouteGUID == route
-		})
-		if ok && len(mappings) == 1 {
-			mapping := mappings[0].(ccv2.RouteMapping)
-			d.Set("route", []map[string]interface{}{
-				{
-					"default_route":            mapping.RouteGUID,
-					"default_route_mapping_id": mapping.GUID,
-				},
-			})
-		}
-	}
 }

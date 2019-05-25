@@ -12,7 +12,7 @@ func resourcePrivateDomainAccess() *schema.Resource {
 		Read:   resourcePrivateDomainAccessRead,
 		Delete: resourcePrivateDomainAccessDelete,
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourcePrivateDomainAccessRead),
 		},
 
 		Schema: map[string]*schema.Schema{

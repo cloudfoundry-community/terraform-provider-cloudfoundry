@@ -17,7 +17,7 @@ func resourceOrg() *schema.Resource {
 		Delete: resourceOrgDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceOrgRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -98,10 +98,17 @@ func resourceOrgRead(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 		tfUsers := d.Get(t).(*schema.Set).List()
-		finalUsers := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
-			return source.(string) == item.(ccv2.User).GUID
-		})
-		d.Set(t, schema.NewSet(resourceStringHash, finalUsers))
+		if !IsImportState(d) {
+			finalUsers := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
+				return source.(string) == item.(ccv2.User).GUID
+			})
+			d.Set(t, schema.NewSet(resourceStringHash, finalUsers))
+		} else {
+			d.Set(t, schema.NewSet(resourceStringHash, objectsToIds(users, func(object interface{}) string {
+				return object.(ccv2.User).GUID
+			})))
+		}
+
 	}
 
 	return nil

@@ -1,7 +1,6 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
@@ -23,23 +22,25 @@ func dataSourceSpaceQuota() *schema.Resource {
 	}
 }
 
-func dataSourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) (err error) {
+func dataSourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 	qm := session.ClientV2
 
-	var (
-		name   string
-		quotas []ccv2.Quota
-	)
-
-	name = d.Get("name").(string)
-	quotas, _, err = qm.GetQuotas(constant.SpaceQuota, ccv2.FilterByName(name), ccv2.FilterByOrg(d.Get("org").(string)))
+	name := d.Get("name").(string)
+	orgId := d.Get("org").(string)
+	quotas, _, err := qm.GetQuotas(constant.SpaceQuota)
 	if err != nil {
 		return err
 	}
-	if len(quotas) == 0 {
-		return NotFound
+	for _, quota := range quotas {
+		if quota.Name != name {
+			continue
+		}
+		if orgId != "" && quota.OrganizationGUID != orgId {
+			continue
+		}
+		d.SetId(quota.GUID)
+		return nil
 	}
-	d.SetId(quotas[0].GUID)
-	return nil
+	return NotFound
 }

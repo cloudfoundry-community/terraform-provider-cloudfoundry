@@ -12,56 +12,32 @@ import (
 )
 
 const serviceInstanceResourceCreate = `
-
-data "cloudfoundry_org" "org" {
-  name = "%s"
-}
-data "cloudfoundry_space" "space" {
-  name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
-}
 data "cloudfoundry_service" "test-service" {
   name = "%s"
 }
 
 resource "cloudfoundry_service_instance" "test-service-instance" {
   name = "test-service-instance"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   service_plan = "${data.cloudfoundry_service.test-service.service_plans["%s"]}"
   tags = [ "tag-1" , "tag-2" ]
 }
 `
 
 const serviceInstanceResourceUpdate = `
-
-data "cloudfoundry_org" "org" {
-  name = "%s"
-}
-data "cloudfoundry_space" "space" {
-  name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
-}
 data "cloudfoundry_service" "test-service" {
   name = "%s"
 }
 
 resource "cloudfoundry_service_instance" "test-service-instance" {
   name = "test-service-instance-updated"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   service_plan = "${data.cloudfoundry_service.test-service.service_plans["%s"]}"
   tags = [ "tag-2", "tag-3", "tag-4" ]
 }
 `
 
 const serviceInstanceResourceAsyncCreate = `
-
-data "cloudfoundry_org" "org" {
-  name = "%s"
-}
-data "cloudfoundry_space" "space" {
-  name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
-}
 data "cloudfoundry_service" "fake-service" {
   name = "fake-service"
   depends_on = ["cloudfoundry_service_broker.fake-service-broker"]
@@ -69,21 +45,21 @@ data "cloudfoundry_service" "fake-service" {
 
 resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-plan" {
   name = "fake-service-instance-with-fake-plan"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   service_plan = "${data.cloudfoundry_service.fake-service.service_plans["fake-plan"]}"
   depends_on = ["cloudfoundry_service_broker.fake-service-broker"]
 }
 
 resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-async-plan" {
   name = "fake-service-instance-with-fake-async-plan"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   service_plan = "${data.cloudfoundry_service.fake-service.service_plans["fake-async-plan"]}"
   depends_on = ["cloudfoundry_service_broker.fake-service-broker"]
 }
 
 resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-async-only-plan" {
   name = "fake-service-instance-with-fake-async-only-plan"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   service_plan = "${data.cloudfoundry_service.fake-service.service_plans["fake-async-only-plan"]}"
   depends_on = ["cloudfoundry_service_broker.fake-service-broker"]
 }
@@ -105,12 +81,12 @@ resource "cloudfoundry_route" "fake-service-broker-route" {
 
 resource "cloudfoundry_app" "fake-service-broker" {
   name = "fake-service-broker"
-  url = "file://../tests/cf-acceptance-tests/assets/service_broker/"
-  space = "${data.cloudfoundry_space.space.id}"
+  path = "file://../tests/cf-acceptance-tests/assets/cats-service-broker.zip"
+  space = "%s"
   timeout = 700
 
-  route {
-    default_route = "${cloudfoundry_route.fake-service-broker-route.id}"
+  routes {
+    route = "${cloudfoundry_route.fake-service-broker-route.id}"
   }
 }
 
@@ -126,8 +102,7 @@ resource "cloudfoundry_service_broker" "fake-service-broker" {
 
 func TestAccServiceInstance_normal(t *testing.T) {
 
-	_, orgName := defaultTestOrg(t)
-	_, spaceName := defaultTestSpace(t)
+	spaceId, _ := defaultTestSpace(t)
 	serviceName1, _, servicePlan := getTestServiceBrokers(t)
 
 	ref := "cloudfoundry_service_instance.test-service-instance"
@@ -145,7 +120,7 @@ func TestAccServiceInstance_normal(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceCreate,
-						orgName, spaceName, serviceName1, servicePlan,
+						serviceName1, spaceId, servicePlan,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(ref),
@@ -162,7 +137,7 @@ func TestAccServiceInstance_normal(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceUpdate,
-						orgName, spaceName, serviceName1, servicePlan,
+						serviceName1, spaceId, servicePlan,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(ref),
@@ -184,8 +159,7 @@ func TestAccServiceInstance_normal(t *testing.T) {
 
 func TestAccServiceInstances_withFakePlans(t *testing.T) {
 
-	_, orgName := defaultTestOrg(t)
-	_, spaceName := defaultTestSpace(t)
+	spaceId, _ := defaultTestSpace(t)
 	appDomain := defaultAppDomain()
 
 	refFakePlan := "cloudfoundry_service_instance.fake-service-instance-with-fake-plan"
@@ -206,8 +180,8 @@ func TestAccServiceInstances_withFakePlans(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate,
-						orgName, spaceName,
-						fmt.Sprintf(fakeServiceBroker, appDomain, appDomain),
+						spaceId, spaceId, spaceId,
+						fmt.Sprintf(fakeServiceBroker, appDomain, appDomain, spaceId),
 					),
 					Check: resource.ComposeTestCheckFunc(
 						// test fake-plan

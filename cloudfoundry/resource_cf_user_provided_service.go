@@ -18,7 +18,7 @@ func resourceUserProvidedService() *schema.Resource {
 		Delete: resourceUserProvidedServiceDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceUserProvidedServiceRead),
 		},
 
 		Schema: map[string]*schema.Schema{

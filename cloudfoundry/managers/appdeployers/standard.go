@@ -55,8 +55,11 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 			Forward: func(ctx Context) (Context, error) {
 				appResp := ctx["app_response"].(AppDeployResponse)
 				mappings, err := s.runBinder.MapRoutes(AppDeploy{
-					App:      appResp.App,
-					Mappings: appDeploy.Mappings,
+					App:          appResp.App,
+					Mappings:     appDeploy.Mappings,
+					StageTimeout: appDeploy.StageTimeout,
+					BindTimeout:  appDeploy.BindTimeout,
+					StartTimeout: appDeploy.StartTimeout,
 				})
 				if err != nil {
 					return ctx, err
@@ -75,6 +78,9 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				bindings, err := s.runBinder.BindServiceInstances(AppDeploy{
 					App:             appResp.App,
 					ServiceBindings: appDeploy.ServiceBindings,
+					StageTimeout:    appDeploy.StageTimeout,
+					BindTimeout:     appDeploy.BindTimeout,
+					StartTimeout:    appDeploy.StartTimeout,
 				})
 				if err != nil {
 					return ctx, err
@@ -109,7 +115,10 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				}
 				appResp := ctx["app_response"].(AppDeployResponse)
 				err := s.runBinder.Start(AppDeploy{
-					App: appResp.App,
+					App:          appResp.App,
+					StageTimeout: appDeploy.StageTimeout,
+					BindTimeout:  appDeploy.BindTimeout,
+					StartTimeout: appDeploy.StartTimeout,
 				})
 				return ctx, err
 			},
@@ -121,6 +130,12 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 	if appRespCtx, ok := ctx["app_response"]; ok {
 		appResp = appRespCtx.(AppDeployResponse)
 	}
+	if stateAsk == constant.ApplicationStopped || err != nil {
+		appResp.App.State = constant.ApplicationStopped
+	} else {
+		appResp.App.State = constant.ApplicationStarted
+	}
+
 	return appResp, err
 }
 
@@ -148,8 +163,8 @@ func (s Standard) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 	return appResp, nil
 }
 
-func (s Standard) AppUpdateNeeded() bool {
-	return true
+func (s Standard) IsCreateNewApp() bool {
+	return false
 }
 
 func (s Standard) Names() []string {

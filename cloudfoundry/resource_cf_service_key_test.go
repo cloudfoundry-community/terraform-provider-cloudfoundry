@@ -10,21 +10,13 @@ import (
 )
 
 const serviceKeyResource = `
-
-data "cloudfoundry_org" "org" {
-  name = "%s"
-}
-data "cloudfoundry_space" "space" {
-  name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
-}
 data "cloudfoundry_service" "test-service" {
   name = "%s"
 }
 
 resource "cloudfoundry_service_instance" "test-service-instance" {
 	name = "test-service-instance"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   service_plan = "${data.cloudfoundry_service.test-service.service_plans["%s"]}"
 }
 
@@ -32,7 +24,7 @@ resource "cloudfoundry_service_key" "test-service-instance-key" {
 	name = "test-service-instance-key"
 	service_instance = "${cloudfoundry_service_instance.test-service-instance.id}"
 
-	params {
+	params = {
 		"key1" = "aaaa"
 		"key2" = "bbbb"
 	}
@@ -41,8 +33,7 @@ resource "cloudfoundry_service_key" "test-service-instance-key" {
 
 func TestAccServiceKey_normal(t *testing.T) {
 
-	_, orgName := defaultTestOrg(t)
-	_, spaceName := defaultTestSpace(t)
+	spaceId, _ := defaultTestSpace(t)
 	serviceName1, _, servicePlan := getTestServiceBrokers(t)
 
 	ref := "cloudfoundry_service_key.test-service-instance-key"
@@ -57,8 +48,7 @@ func TestAccServiceKey_normal(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceKeyResource,
-						orgName, spaceName,
-						serviceName1, servicePlan),
+						serviceName1, spaceId, servicePlan),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceKeyExists(ref),
 						resource.TestCheckResourceAttr(

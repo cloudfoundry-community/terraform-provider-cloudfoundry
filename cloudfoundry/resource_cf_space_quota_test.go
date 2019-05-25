@@ -1,7 +1,6 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
@@ -13,7 +12,7 @@ import (
 )
 
 const spaceQuotaResource = `
-resource "cloudfoundry_org_quota" "100g-org" {
+resource "cloudfoundry_org_quota" "quota100g-org" {
   name                     = "100g-org"
   allow_paid_service_plans = false
   instance_memory          = 1024
@@ -26,10 +25,10 @@ resource "cloudfoundry_org_quota" "100g-org" {
 
 resource "cloudfoundry_org" "quota-org" {
   name  = "quota-org"
-  quota = "${cloudfoundry_org_quota.100g-org.id}"
+  quota = "${cloudfoundry_org_quota.quota100g-org.id}"
 }
 
-resource "cloudfoundry_space_quota" "10g-space" {
+resource "cloudfoundry_space_quota" "quota10g-space" {
   name                     = "10g-space"
   allow_paid_service_plans = false
   instance_memory          = 512
@@ -46,7 +45,7 @@ func TestAccSpaceQuota_normal(t *testing.T) {
 
 	orgID, _ := defaultTestOrg(t)
 
-	ref := "cloudfoundry_space_quota.10g-space"
+	ref := "cloudfoundry_space_quota.quota10g-space"
 	quotaname := "10g-space"
 
 	resource.Test(t,
@@ -133,11 +132,17 @@ func testAccCheckSpaceQuotaResourceDestroy(quotaname string, orgID string) resou
 	return func(s *terraform.State) (err error) {
 
 		session := testAccProvider.Meta().(*managers.Session)
-		quotas, _, err := session.ClientV2.GetQuotas(constant.SpaceQuota, ccv2.FilterByName(quotaname), ccv2.FilterByOrg(orgID))
+		quotas, _, err := session.ClientV2.GetQuotas(constant.SpaceQuota)
 		if err != nil {
 			return err
 		}
-		if len(quotas) > 0 {
+		for _, quota := range quotas {
+			if quota.Name != quotaname {
+				continue
+			}
+			if quota.OrganizationGUID != orgID {
+				continue
+			}
 			return fmt.Errorf("space quota with name '%s' still exists in cloud foundry", quotaname)
 		}
 		return nil

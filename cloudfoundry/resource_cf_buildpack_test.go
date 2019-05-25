@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
@@ -48,9 +47,8 @@ resource "cloudfoundry_buildpack" "tomee" {
 `
 
 func TestAccBuildpack_normal(t *testing.T) {
-	_, testFile, _, _ := runtime.Caller(0)
 
-	fixturesBp := filepath.Join(filepath.Dir(filepath.Dir(testFile)), "tests", "cf-acceptance-tests", "assets", "buildpacks")
+	fixturesBp := asset("buildpacks")
 	refBuildpack := "cloudfoundry_buildpack.tomee"
 
 	resource.Test(t,

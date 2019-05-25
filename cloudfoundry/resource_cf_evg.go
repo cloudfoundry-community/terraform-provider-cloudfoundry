@@ -19,7 +19,7 @@ func resourceEvg() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: func(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 				d.Set("name", d.Id())
-				return ImportStatePassthrough(d, meta)
+				return ImportRead(resourceEvgRead)(d, meta)
 			},
 		},
 

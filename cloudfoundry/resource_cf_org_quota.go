@@ -18,7 +18,7 @@ func resourceOrgQuota() *schema.Resource {
 		Delete: resourceOrgQuotaDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceOrgQuotaRead),
 		},
 
 		Schema: map[string]*schema.Schema{

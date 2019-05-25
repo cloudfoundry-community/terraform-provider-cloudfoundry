@@ -11,7 +11,7 @@ import (
 
 const configResource = `
 resource "cloudfoundry_feature_flags" "ff" {
-	feature_flags{
+	feature_flags {
 		user_org_creation = "enabled"
 		private_domain_creation = "disabled"
 	}
@@ -20,7 +20,7 @@ resource "cloudfoundry_feature_flags" "ff" {
 
 const configResourceUpdate = `
 resource "cloudfoundry_feature_flags" "ff" {
-	feature_flags{
+	feature_flags {
 		user_org_creation = "disabled"
 		private_domain_creation = "enabled"
 	}

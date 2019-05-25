@@ -41,7 +41,7 @@ func dataSourceServiceRead(d *schema.ResourceData, meta interface{}) error {
 	space := d.Get("space").(string)
 
 	filters := []ccv2.Filter{
-		ccv2.FilterByName(name),
+		ccv2.FilterEqual(constant.LabelFilter, name),
 	}
 	if space != "" {
 		filters = append(filters, ccv2.FilterBySpace(space))

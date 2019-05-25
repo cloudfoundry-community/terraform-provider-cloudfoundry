@@ -16,7 +16,7 @@ func resourceSpace() *schema.Resource {
 		Delete: resourceSpaceDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceSpaceRead),
 		},
 
 		Schema: map[string]*schema.Schema{

@@ -24,7 +24,7 @@ func PollingWithTimeout(pollingFunc func() (bool, error), waitTime time.Duration
 	stagingStartTime := time.Now()
 	for {
 		if time.Since(stagingStartTime) > timeout {
-			return fmt.Errorf("Timeout reached")
+			return fmt.Errorf("Timeout of %s reached", timeout)
 		}
 		finished, err := pollingFunc()
 		if err != nil {

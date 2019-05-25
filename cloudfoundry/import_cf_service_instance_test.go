@@ -14,8 +14,7 @@ import (
 
 func TestAccServiceInstance_importBasic(t *testing.T) {
 
-	_, orgName := defaultTestOrg(t)
-	_, spaceName := defaultTestSpace(t)
+	spaceId, _ := defaultTestSpace(t)
 	serviceName1, _, servicePlan := getTestServiceBrokers(t)
 
 	resourceName := "cloudfoundry_service_instance.test-service-instance"
@@ -30,7 +29,7 @@ func TestAccServiceInstance_importBasic(t *testing.T) {
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceCreate,
-						orgName, spaceName, serviceName1, servicePlan,
+						serviceName1, spaceId, servicePlan,
 					),
 				},
 				resource.TestStep{

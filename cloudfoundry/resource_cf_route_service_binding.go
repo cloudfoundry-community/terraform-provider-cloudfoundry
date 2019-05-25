@@ -45,7 +45,7 @@ func resourceRouteServiceBindingImport(d *schema.ResourceData, meta interface{})
 	if _, _, err = parseID(id); err != nil {
 		return
 	}
-	return schema.ImportStatePassthrough(d, meta)
+	return ImportRead(resourceRouteServiceBindingRead)(d, meta)
 }
 
 func resourceRouteServiceBindingCreate(d *schema.ResourceData, meta interface{}) error {

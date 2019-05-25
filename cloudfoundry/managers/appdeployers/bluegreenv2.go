@@ -27,6 +27,8 @@ func (s BlueGreenV2) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 	if appDeploy.App.State == constant.ApplicationStopped || appDeploy.App.GUID == "" {
 		return s.standard.Deploy(appDeploy)
 	}
+	appDeploy.Mappings = clearMappingId(appDeploy.Mappings)
+	appDeploy.ServiceBindings = clearBindingId(appDeploy.ServiceBindings)
 	actions := Actions{
 		{
 			Forward: func(ctx Context) (Context, error) {
@@ -48,6 +50,7 @@ func (s BlueGreenV2) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					Path:            appDeploy.Path,
 					StageTimeout:    appDeploy.StageTimeout,
 					BindTimeout:     appDeploy.BindTimeout,
+					StartTimeout:    appDeploy.StartTimeout,
 				})
 				ctx["app_response"] = appResp
 				return ctx, err
@@ -71,8 +74,7 @@ func (s BlueGreenV2) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				appResp := ctx["app_response"].(AppDeployResponse)
-				_, err := s.client.DeleteApplication(appResp.App.GUID)
+				_, err := s.client.DeleteApplication(appDeploy.App.GUID)
 				return ctx, err
 			},
 		},
@@ -88,6 +90,8 @@ func (s BlueGreenV2) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 	if appDeploy.App.State == constant.ApplicationStopped {
 		return s.standard.Restage(appDeploy)
 	}
+	appDeploy.Mappings = clearMappingId(appDeploy.Mappings)
+	appDeploy.ServiceBindings = clearBindingId(appDeploy.ServiceBindings)
 	defaultReverse := func(ctx Context) error {
 		appResp := ctx["app_response"].(AppDeployResponse)
 		if appResp.App.GUID != "" {
@@ -122,6 +126,9 @@ func (s BlueGreenV2) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 					ServiceBindings: appDeploy.ServiceBindings,
 					Mappings:        appDeploy.Mappings,
 					Path:            "",
+					StageTimeout:    appDeploy.StageTimeout,
+					BindTimeout:     appDeploy.BindTimeout,
+					StartTimeout:    appDeploy.StartTimeout,
 				})
 				ctx["app_response"] = appResp
 				return ctx, err
@@ -143,6 +150,7 @@ func (s BlueGreenV2) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 					App:          appResp.App,
 					StageTimeout: appDeploy.StageTimeout,
 					BindTimeout:  appDeploy.BindTimeout,
+					StartTimeout: appDeploy.StartTimeout,
 				})
 				return ctx, err
 			},
@@ -150,8 +158,7 @@ func (s BlueGreenV2) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				appResp := ctx["app_response"].(AppDeployResponse)
-				_, err := s.client.DeleteApplication(appResp.App.GUID)
+				_, err := s.client.DeleteApplication(appDeploy.App.GUID)
 				return ctx, err
 			},
 		},
@@ -163,8 +170,8 @@ func (s BlueGreenV2) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 	return ctx["app_response"].(AppDeployResponse), nil
 }
 
-func (BlueGreenV2) AppUpdateNeeded() bool {
-	return false
+func (BlueGreenV2) IsCreateNewApp() bool {
+	return true
 }
 
 func (BlueGreenV2) Names() []string {

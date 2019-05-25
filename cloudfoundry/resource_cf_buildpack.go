@@ -16,7 +16,7 @@ func resourceBuildpack() *schema.Resource {
 		Delete: resourceBuildpackDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceBuildpackRead),
 		},
 
 		Schema: map[string]*schema.Schema{

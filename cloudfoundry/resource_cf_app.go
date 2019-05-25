@@ -5,6 +5,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 	"log"
@@ -16,15 +17,15 @@ import (
 	"github.com/hashicorp/terraform/helper/validation"
 )
 
+// schema.BasicMapReader
 // DefaultAppTimeout - Timeout (in seconds) when pushing apps to CF
 const (
 	DefaultAppTimeout   = 60
-	DefaultBindTimeout  = 15 * time.Minute
+	DefaultBindTimeout  = 5 * time.Minute
 	DefaultStageTimeout = 15 * time.Minute
 )
 
 func resourceApp() *schema.Resource {
-
 	return &schema.Resource{
 
 		Create: resourceAppCreate,
@@ -36,7 +37,6 @@ func resourceApp() *schema.Resource {
 			State: resourceAppImport,
 		},
 
-		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{
@@ -89,7 +89,7 @@ func resourceApp() *schema.Resource {
 			"enable_ssh": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
-				Computed: true,
+				Default:  true,
 			},
 			"timeout": &schema.Schema{
 				Type:     schema.TypeInt,
@@ -103,18 +103,18 @@ func resourceApp() *schema.Resource {
 			},
 			"strategy": &schema.Schema{
 				Type:         schema.TypeString,
-				Required:     true,
+				Optional:     true,
 				Default:      "none",
 				Description:  "Deployment strategy, default to none but accept blue-green strategy",
 				ValidateFunc: validateStrategy,
 			},
 			"path": &schema.Schema{
 				Type:          schema.TypeString,
-				Required:      true,
+				Optional:      true,
 				Description:   "Path to an app zip in the form of unix path or http url",
 				ConflictsWith: []string{"docker_image", "docker_credentials"},
 			},
-			"source_code_hash": {
+			"source_code_hash": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 			},
@@ -130,8 +130,13 @@ func resourceApp() *schema.Resource {
 				ConflictsWith: []string{"path"},
 			},
 			"service_binding": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
+				Type:       schema.TypeSet,
+				Optional:   true,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Set: func(v interface{}) int {
+					elem := v.(map[string]interface{})
+					return hashcode.String(elem["service_instance"].(string))
+				},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"service_instance": &schema.Schema{
@@ -148,62 +153,32 @@ func resourceApp() *schema.Resource {
 							Optional:  true,
 							Sensitive: true,
 						},
-						"binding_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-					},
-				},
-			},
-			"route": &schema.Schema{
-				Type:          schema.TypeList,
-				Optional:      true,
-				MaxItems:      1,
-				ConflictsWith: []string{"routes"},
-				Deprecated:    "Use the new 'routes' block.",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"default_route": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"default_route_mapping_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"stage_route": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-							Removed:  "Support for the non-default route has been removed.",
-						},
-						"stage_route_mapping_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"live_route": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-							Removed:  "Support for the non-default route has been removed.",
-						},
-						"live_route_mapping_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"validation_script": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-							Removed:  "The 'route' block has been deprecated.",
-						},
 					},
 				},
 			},
 			"routes": &schema.Schema{
-				Type:          schema.TypeSet,
-				Optional:      true,
-				MinItems:      1,
-				ConflictsWith: []string{"route"},
-				Set:           hashRouteMappingSet,
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set: func(v interface{}) int {
+					elem := v.(map[string]interface{})
+					return hashcode.String(fmt.Sprintf(
+						"%s-%d",
+						elem["route"],
+						elem["port"],
+					))
+				},
 				Elem: &schema.Resource{
+					CustomizeDiff: func(diff *schema.ResourceDiff, i interface{}) error {
+
+						if diff.HasChange("port") {
+							return nil
+						}
+						oldPort, newPort := diff.GetChange("port")
+						if oldPort != "" && newPort == "" {
+							return diff.SetNew("port", oldPort)
+						}
+						return nil
+					},
 					Schema: map[string]*schema.Schema{
 						"route": &schema.Schema{
 							Type:         schema.TypeString,
@@ -213,11 +188,8 @@ func resourceApp() *schema.Resource {
 						"port": &schema.Schema{
 							Type:         schema.TypeInt,
 							Optional:     true,
+							Computed:     true,
 							ValidateFunc: validation.IntBetween(1024, 65535),
-						},
-						"mapping_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
 						},
 					},
 				},
@@ -339,26 +311,21 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("routes") {
 		oldRoutes, newRoutes := d.GetChange("routes")
 		remove, _ := getListMapChanges(oldRoutes, newRoutes, func(source, item map[string]interface{}) bool {
-			return source["route"] == item["route"] && source["port"] == item["port"] && source["mapping_id"] == item["mapping_id"]
+			return source["route"] == item["route"] && source["port"] == item["port"]
 		})
 		for _, r := range remove {
-			if r["mapping_id"].(string) == "" {
-				continue
-			}
-			_, err := session.ClientV2.DeleteRouteMapping(r["mapping_id"].(string))
+			mappings, _, err := session.ClientV2.GetRouteMappings(filterAppGuid(d.Id()), filterRouteGuid(r["route"].(string)))
 			if err != nil {
 				return err
 			}
-		}
-	}
-
-	if d.HasChange("route") {
-		oldRoute, _ := d.GetChange("route")
-		oldRouteGuid := oldRoute.([]interface{})[0].(map[string]interface{})["default_route"].(string)
-		if oldRouteGuid != "" {
-			_, err := session.ClientV2.DeleteRouteMapping(oldRouteGuid)
-			if err != nil {
-				return err
+			for _, mapping := range mappings {
+				if mapping.AppPort != r["port"] {
+					continue
+				}
+				_, err := session.ClientV2.DeleteRouteMapping(mapping.GUID)
+				if err != nil && !IsErrNotFound(err) {
+					return err
+				}
 			}
 		}
 	}
@@ -366,7 +333,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("service_binding") {
 		oldBindings, newBindings := d.GetChange("service_binding")
 		remove, _ := getListMapChanges(oldBindings, newBindings, func(source, item map[string]interface{}) bool {
-			matchId := source["service_instance"] == item["service_instance"] && source["binding_id"] == item["binding_id"]
+			matchId := source["service_instance"] == item["service_instance"]
 			if !matchId {
 				return false
 			}
@@ -376,11 +343,19 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 			return !isDiff
 		})
+
 		for _, r := range remove {
-			_, _, err := session.ClientV2.DeleteServiceBinding(r["binding_id"].(string), true)
+			bindings, _, err := session.ClientV2.GetRouteMappings(filterAppGuid(d.Id()), filterServiceInstanceGuid(r["service_instance"].(string)))
 			if err != nil {
 				return err
 			}
+			for _, binding := range bindings {
+				_, _, err := session.ClientV2.DeleteServiceBinding(binding.GUID, true)
+				if err != nil && !IsErrNotFound(err) {
+					return err
+				}
+			}
+
 		}
 	}
 
@@ -398,10 +373,10 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		d.Partial(false)
 		AppDeployToResourceData(d, appResp)
-		return nil
+		return err
 	}
 
-	if d.HasChange("routes") || d.HasChange("route") {
+	if d.HasChange("routes") {
 		mappings, err := session.RunBinder.MapRoutes(appDeploy)
 		if err != nil {
 			return err
@@ -409,7 +384,6 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		appDeploy.Mappings = mappings
 	}
 	d.SetPartial("routes")
-	d.SetPartial("route")
 
 	if d.HasChange("service_binding") {
 		bindings, err := session.RunBinder.BindServiceInstances(appDeploy)
@@ -488,8 +462,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	if !IsAppRestageNeeded(d) || deployer.AppUpdateNeeded() {
-
+	if IsAppUpdateOnly(d) || (IsAppRestageNeeded(d) && !deployer.IsCreateNewApp()) || (IsAppRestartNeeded(d) && !deployer.IsCreateNewApp()) {
 		app, _, err := session.ClientV2.UpdateApplication(appUpdate)
 		if err != nil {
 			return err
@@ -512,7 +485,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		appDeploy.App = app
 	}
 
-	if IsAppRestageNeeded(d) || !deployer.AppUpdateNeeded() {
+	if IsAppRestageNeeded(d) || (deployer.IsCreateNewApp() && IsAppRestartNeeded(d)) {
 		appResp, err := deployer.Restage(appDeploy)
 		if err != nil {
 			return err
@@ -538,9 +511,16 @@ func IsAppCodeChange(d *schema.ResourceData) bool {
 	return d.HasChange("path") || d.HasChange("source_code_hash")
 }
 
+func IsAppUpdateOnly(d *schema.ResourceData) bool {
+	if IsAppCodeChange(d) || IsAppRestageNeeded(d) || IsAppRestartNeeded(d) {
+		return false
+	}
+	return d.HasChange("name") || d.HasChange("instances") ||
+		d.HasChange("enable_ssh") || d.HasChange("stopped")
+}
+
 func IsAppRestageNeeded(d *schema.ResourceData) bool {
-	return d.HasChange("route") || d.HasChange("routes") ||
-		d.HasChange("routes") || d.HasChange("buildpack") ||
+	return d.HasChange("routes") || d.HasChange("buildpack") ||
 		d.HasChange("stack") || d.HasChange("docker_image") ||
 		d.HasChange("service_binding") || d.HasChange("environment")
 }

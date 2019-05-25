@@ -2,6 +2,7 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
@@ -58,7 +59,7 @@ func checkDataSourceServiceExists(resource string) resource.TestCheckFunc {
 		id := rs.Primary.ID
 		name := rs.Primary.Attributes["name"]
 
-		services, _, err := session.ClientV2.GetServices(ccv2.FilterByName(name))
+		services, _, err := session.ClientV2.GetServices(ccv2.FilterEqual(constant.LabelFilter, name))
 		if err != nil {
 			return err
 		}

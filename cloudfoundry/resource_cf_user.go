@@ -16,7 +16,7 @@ func resourceUser() *schema.Resource {
 		Delete: resourceUserDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceUserRead),
 		},
 
 		Schema: map[string]*schema.Schema{

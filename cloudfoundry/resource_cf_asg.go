@@ -24,7 +24,7 @@ func resourceAsg() *schema.Resource {
 		Delete: resourceAsgDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceAsgRead),
 		},
 
 		Schema: map[string]*schema.Schema{

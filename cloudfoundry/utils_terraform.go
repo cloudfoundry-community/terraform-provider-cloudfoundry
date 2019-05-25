@@ -5,11 +5,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
-const importStateKey = "is_import_state"
+const (
+	importStateKey = "is_import_state"
+)
 
 // getListOfStructs
 func getListOfStructs(v interface{}) []map[string]interface{} {
@@ -129,10 +130,16 @@ func getListMapChanges(old interface{}, new interface{}, match func(source, item
 	return remove, add
 }
 
-// ImportStatePassthrough -
-func ImportStatePassthrough(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-	MarkImportState(d)
-	return schema.ImportStatePassthrough(d, meta)
+// ImportRead -
+func ImportRead(read schema.ReadFunc) schema.StateFunc {
+	return func(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+		MarkImportState(d)
+		err := read(d, meta)
+		if err != nil {
+			return []*schema.ResourceData{}, err
+		}
+		return []*schema.ResourceData{d}, nil
+	}
 }
 
 // MarkImportState -
@@ -168,17 +175,6 @@ func parseID(id string) (first string, second string, err error) {
 		second = parts[1]
 	}
 	return first, second, err
-}
-
-func hashRouteMappingSet(v interface{}) int {
-	elem := v.(map[string]interface{})
-	var target string
-	if v, ok := elem["route"]; ok {
-		target = v.(string)
-	} else if v, ok := elem["app"]; ok {
-		target = v.(string)
-	}
-	return hashcode.String(target)
 }
 
 // return the intersection of 2 slices ([1, 1, 3, 4, 5, 6] & [2, 3, 6] >> [3, 6])

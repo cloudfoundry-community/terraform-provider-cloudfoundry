@@ -45,6 +45,7 @@ func resourceServiceInstance() *schema.Resource {
 			"space": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"json_params": &schema.Schema{
 				Type:     schema.TypeString,
@@ -72,7 +73,6 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) err
 	servicePlan := d.Get("service_plan").(string)
 	space := d.Get("space").(string)
 	jsonParameters := d.Get("json_params").(string)
-
 	tags := make([]string, 0)
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
@@ -85,7 +85,7 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) err
 			return err
 		}
 	}
-	si, _, err := session.ClientV2.CreateServiceInstance(name, servicePlan, space, params, tags)
+	si, _, err := session.ClientV2.CreateServiceInstance(space, servicePlan, name, params, tags)
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func resourceServiceInstanceImport(d *schema.ResourceData, meta interface{}) ([]
 	// json_param can't be retrieved from CF, please inject manually if necessary
 	d.Set("json_param", "")
 
-	return ImportStatePassthrough(d, meta)
+	return ImportRead(resourceServiceInstanceRead)(d, meta)
 }
 
 func resourceServiceInstanceStateFunc(serviceInstanceID string, operationType string, meta interface{}) resource.StateRefreshFunc {

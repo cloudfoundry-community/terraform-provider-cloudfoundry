@@ -3,6 +3,7 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
@@ -113,7 +114,7 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", "running"),
 						resource.TestCheckResourceAttr(
-							ref, "asgs.#", "1"),
+							ref, "asgs.#", "2"),
 					),
 				},
 				resource.TestStep{
@@ -168,7 +169,7 @@ func TestAccDefaultStagingAsg_normal(t *testing.T) {
 
 func checkDefaultAsgsExists(resource string) resource.TestCheckFunc {
 
-	return func(s *terraform.State) (err error) {
+	return func(s *terraform.State) error {
 
 		session := testAccProvider.Meta().(*managers.Session)
 
@@ -181,28 +182,49 @@ func checkDefaultAsgsExists(resource string) resource.TestCheckFunc {
 		attributes := rs.Primary.Attributes
 
 		var asgs []ccv2.SecurityGroup
-
+		var lenAsgs int
+		var err error
 		switch id {
 		case "running":
 			asgs, _, err = session.ClientV2.GetRunningSecurityGroups()
 			if err != nil {
-				return
+				return err
 			}
+			lenAsgs = len(asgs) - defaultLenRunningSecGroup
 		case "staging":
 			asgs, _, err = session.ClientV2.GetStagingSecurityGroups()
 			if err != nil {
-				return
+				return err
+			}
+			lenAsgs = len(asgs) - defaultLenStagingSecGroup
+		}
+
+		entity := resourceDefaultAsg()
+		reader := &schema.MapFieldReader{
+			Schema: entity.Schema,
+			Map:    schema.BasicMapReader(attributes),
+		}
+		result, err := reader.ReadField([]string{"asgs"})
+		if err != nil {
+			return err
+		}
+		asgsTf := result.Value.(*schema.Set).List()
+
+		if len(asgsTf) != lenAsgs {
+			return fmt.Errorf("Expected %d asgs got %d", len(asgsTf), lenAsgs)
+		}
+
+		for _, asgTf := range asgsTf {
+			inside := isInSlice(asgs, func(object interface{}) bool {
+				asg := object.(ccv2.SecurityGroup)
+				return asg.GUID == asgTf.(string)
+			})
+			if !inside {
+				return fmt.Errorf("Missing creation of %s asgs", asgTf.(string))
 			}
 		}
 
-		if err = assertListEquals(attributes, "asgs", len(asgs),
-			func(values map[string]string, i int) (match bool) {
-				return values["value"] == asgs[i].GUID
-			}); err != nil {
-			return
-		}
-
-		return
+		return nil
 	}
 }
 

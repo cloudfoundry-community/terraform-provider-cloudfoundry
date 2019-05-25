@@ -26,7 +26,11 @@ func (r RunBinder) MapRoutes(appDeploy AppDeploy) ([]ccv2.RouteMapping, error) {
 	appGuid := appDeploy.App.GUID
 
 	for _, mappingCur := range appDeploy.Mappings {
-		if mappingCur.GUID != "" {
+		exists, err := r.mappingExists(appGuid, mappingCur)
+		if err != nil {
+			return mappings, err
+		}
+		if exists {
 			mappings = append(mappings, mappingCur)
 			continue
 		}
@@ -41,11 +45,45 @@ func (r RunBinder) MapRoutes(appDeploy AppDeploy) ([]ccv2.RouteMapping, error) {
 	return mappings, nil
 }
 
+func (r RunBinder) mappingExists(appGuid string, mapping ccv2.RouteMapping) (bool, error) {
+	mappings, _, err := r.client.GetRouteMappings(
+		ccv2.FilterEqual(constant.RouteGUIDFilter, mapping.RouteGUID),
+		ccv2.FilterEqual(constant.AppGUIDFilter, appGuid),
+	)
+	if err != nil {
+		return false, err
+	}
+	if mapping.AppPort <= 0 {
+		return len(mappings) > 0, nil
+	}
+	for _, mapping := range mappings {
+		if mapping.AppPort == mapping.AppPort {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (r RunBinder) bindingExists(appGuid string, binding ccv2.ServiceBinding) (bool, error) {
+	bindings, _, err := r.client.GetServiceBindings(
+		ccv2.FilterEqual(constant.ServiceInstanceGUIDFilter, binding.ServiceInstanceGUID),
+		ccv2.FilterEqual(constant.AppGUIDFilter, appGuid),
+	)
+	if err != nil {
+		return false, err
+	}
+	return len(bindings) > 0, nil
+}
+
 func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]ccv2.ServiceBinding, error) {
 	bindings := make([]ccv2.ServiceBinding, 0)
 	appGuid := appDeploy.App.GUID
 	for _, binding := range appDeploy.ServiceBindings {
-		if binding.GUID != "" {
+		exists, err := r.bindingExists(appGuid, binding)
+		if err != nil {
+			return bindings, err
+		}
+		if exists {
 			bindings = append(bindings, binding)
 			continue
 		}
@@ -175,5 +213,5 @@ func (r RunBinder) processDeployErr(origErr error, appDeploy AppDeploy) error {
 	if err != nil {
 		logs = fmt.Sprintf("Error occured when recolting app %s logs: %s", appDeploy.App.Name, err.Error())
 	}
-	return fmt.Errorf("%s\n\n App %s logs: \n%s", origErr.Error(), appDeploy.App.Name, logs)
+	return fmt.Errorf("%s\n\nApp '%s' logs: \n%s", origErr.Error(), appDeploy.App.Name, logs)
 }
