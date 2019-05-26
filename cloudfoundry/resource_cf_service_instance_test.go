@@ -76,7 +76,7 @@ data "cloudfoundry_domain" "fake-service-broker-domain" {
 
 resource "cloudfoundry_route" "fake-service-broker-route" {
   domain = "${data.cloudfoundry_domain.fake-service-broker-domain.id}"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   hostname = "fake-service-broker"
 }
 
@@ -182,7 +182,7 @@ func TestAccServiceInstances_withFakePlans(t *testing.T) {
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate,
 						spaceId, spaceId, spaceId,
-						fmt.Sprintf(fakeServiceBroker, appDomain, appDomain, spaceId, spaceId),
+						fmt.Sprintf(fakeServiceBroker, appDomain, spaceId, appDomain, spaceId, spaceId),
 					),
 					Check: resource.ComposeTestCheckFunc(
 						// test fake-plan

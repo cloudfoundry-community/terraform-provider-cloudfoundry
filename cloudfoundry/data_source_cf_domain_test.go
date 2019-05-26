@@ -27,7 +27,7 @@ resource "cloudfoundry_domain" "mydomain" {
 
 data "cloudfoundry_domain" "private" {
   domain = "${cloudfoundry_domain.mydomain.domain}"
-  sub_domain = "private"
+  sub_domain = "private-ds-domain"
 }
 `
 
@@ -67,7 +67,7 @@ func TestAccDataSourceDomain_private(t *testing.T) {
 				resource.TestStep{
 					Config: fmt.Sprintf(privateDomainDataResource, defaultAppDomain()),
 					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(ref, "name", "private."+defaultAppDomain()),
+						resource.TestCheckResourceAttr(ref, "name", "private-ds-domain."+defaultAppDomain()),
 						resource.TestCheckResourceAttr(ref, "sub_domain", "private-ds-domain"),
 						resource.TestCheckResourceAttr(ref, "domain", defaultAppDomain()),
 					),

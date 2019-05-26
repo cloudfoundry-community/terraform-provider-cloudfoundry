@@ -151,16 +151,6 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 							ref, "asgs.#", "1"),
 					),
 				},
-				resource.TestStep{
-					Config: defaultStagingSecurityGroupResource,
-					Check: resource.ComposeTestCheckFunc(
-						checkDefaultAsgsExists("cloudfoundry_default_asg.staging"),
-						resource.TestCheckResourceAttr(
-							ref, "name", "staging"),
-						resource.TestCheckResourceAttr(
-							ref, "asgs.#", "1"),
-					),
-				},
 			},
 		})
 }
