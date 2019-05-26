@@ -33,6 +33,10 @@ The following arguments are supported:
 * `position` - (Optional, Number) Specifies where to place the buildpack in the detection priority list. For more information, see the [Buildpack Detection](https://docs.cloudfoundry.org/buildpacks/detection.html) topic. When not provided, cloudfoundry assigns a default buildpack position.
 * `enabled` - (Optional, Boolean) Specifies whether to allow apps to be pushed with the buildpack, and defaults to true.
 * `locked` - (Optional, Boolean) Specifies whether buildpack is locked to prevent further updates, and defaults to false.
+* `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.
+* `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.
 
 ### Buildpack location
 

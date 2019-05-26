@@ -24,6 +24,8 @@ func resourceSegment() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
@@ -73,6 +75,10 @@ func resourceSegmentCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 	d.SetId(seg.GUID)
+	err = metadataCreate(segmentMetadata, d, meta)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -89,6 +95,11 @@ func resourceSegmentRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 	d.Set("name", seg.Name)
+
+	err = metadataRead(segmentMetadata, d, meta, false)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

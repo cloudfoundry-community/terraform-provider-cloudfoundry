@@ -52,6 +52,8 @@ func resourceOrg() *schema.Resource {
 				Elem:       &schema.Schema{Type: schema.TypeString},
 				Set:        resourceStringHash,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
@@ -110,7 +112,10 @@ func resourceOrgRead(d *schema.ResourceData, meta interface{}) error {
 		}
 
 	}
-
+	err = metadataRead(orgMetadata, d, meta, false)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -157,6 +162,10 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 				return err
 			}
 		}
+	}
+	err = metadataUpdate(orgMetadata, d, meta)
+	if err != nil {
+		return err
 	}
 	return nil
 }

@@ -216,6 +216,8 @@ func resourceApp() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 
 		CustomizeDiff: func(diff *schema.ResourceDiff, v interface{}) error {
@@ -271,6 +273,10 @@ func resourceAppCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 	AppDeployToResourceData(d, appResp)
+	err = metadataCreate(appMetadata, d, meta)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -298,6 +304,10 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 		RouteMapping:    mappings,
 		ServiceBindings: bindings,
 	})
+	err = metadataRead(appMetadata, d, meta, false)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -501,6 +511,10 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		d.Partial(false)
 		return nil
+	}
+	err = metadataUpdate(appMetadata, d, meta)
+	if err != nil {
+		return err
 	}
 	d.Partial(false)
 	return nil

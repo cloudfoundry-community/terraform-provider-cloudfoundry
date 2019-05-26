@@ -41,6 +41,10 @@ The following arguments are supported:
   the placement_tags section of the Diego manifest file. If the names do not match, Cloud Foundry
   fails to place apps in the isolation segment when apps are started or restarted in the space
   assigned to the isolation segment.
+ * `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+ Works only on cloud foundry with api >= v3.63.
+ * `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+ Works only on cloud foundry with api >= v3.63.
 
 
 ## Attributes Reference

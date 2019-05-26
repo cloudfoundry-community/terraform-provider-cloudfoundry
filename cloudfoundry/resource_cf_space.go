@@ -75,6 +75,8 @@ func resourceSpace() *schema.Resource {
 				Elem:       &schema.Schema{Type: schema.TypeString},
 				Set:        resourceStringHash,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
@@ -102,7 +104,10 @@ func resourceSpaceCreate(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return err
 	}
-
+	err = metadataCreate(spaceMetadata, d, meta)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -178,6 +183,11 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 	d.Set("isolation_segment", segment.GUID)
+
+	err = metadataRead(spaceMetadata, d, meta, false)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -277,6 +287,11 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		if err != nil {
 			return err
 		}
+	}
+
+	err = metadataUpdate(spaceMetadata, d, meta)
+	if err != nil {
+		return err
 	}
 	return nil
 }

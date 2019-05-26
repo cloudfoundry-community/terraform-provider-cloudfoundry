@@ -20,6 +20,8 @@ func dataSourceOrg() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
@@ -42,5 +44,10 @@ func dataSourceOrgRead(d *schema.ResourceData, meta interface{}) error {
 		return NotFound
 	}
 	d.SetId(orgs[0].GUID)
+
+	err = metadataRead(orgMetadata, d, meta, true)
+	if err != nil {
+		return err
+	}
 	return err
 }

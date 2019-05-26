@@ -21,6 +21,14 @@ func jsonNumToValue(in json.Number) interface{} {
 	return in.String()
 }
 
+func mapInterfaceToMapString(in map[string]interface{}) map[string]string {
+	out := make(map[string]string)
+	for k, v := range in {
+		out[k] = fmt.Sprint(v)
+	}
+	return out
+}
+
 // normalizeMap -
 func normalizeMap(in interface{}, outMap map[string]interface{}, key, delim string) map[string]interface{} {
 

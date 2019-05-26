@@ -36,6 +36,8 @@ func dataSourceSpace() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
@@ -84,5 +86,9 @@ func dataSourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 	d.Set("org", orgId)
 	d.Set("quota", space.SpaceQuotaDefinitionGUID)
 
+	err = metadataRead(spaceMetadata, d, meta, true)
+	if err != nil {
+		return err
+	}
 	return err
 }

@@ -55,6 +55,8 @@ func resourceBuildpack() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
@@ -91,6 +93,10 @@ func resourceBuildpackCreate(d *schema.ResourceData, meta interface{}) error {
 	d.Set("locked", bp.Locked.Value)
 	d.Set("filename", bp.Filename)
 
+	err = metadataCreate(buildpackMetadata, d, meta)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -113,6 +119,10 @@ func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("locked", bp.Locked.Value)
 	d.Set("filename", bp.Filename)
 
+	err = metadataRead(buildpackMetadata, d, meta, false)
+	if err != nil {
+		return err
+	}
 	return err
 }
 
@@ -141,6 +151,10 @@ func resourceBuildpackUpdate(d *schema.ResourceData, meta interface{}) (err erro
 
 	if d.HasChange("path") || d.HasChange("source_code_hash") || d.HasChange("filename") {
 		return session.BitsManager.UploadBuildpack(d.Id(), d.Get("path").(string))
+	}
+	err = metadataUpdate(buildpackMetadata, d, meta)
+	if err != nil {
+		return err
 	}
 	return nil
 }

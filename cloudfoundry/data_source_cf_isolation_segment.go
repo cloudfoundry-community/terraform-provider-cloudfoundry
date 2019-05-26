@@ -18,6 +18,8 @@ func dataSourceIsolationSegment() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
@@ -36,5 +38,9 @@ func dataSourceIsolationSegmentRead(d *schema.ResourceData, meta interface{}) er
 		return NotFound
 	}
 	d.SetId(segments[0].GUID)
+	err = metadataRead(segmentMetadata, d, meta, true)
+	if err != nil {
+		return err
+	}
 	return nil
 }

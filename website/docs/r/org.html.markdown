@@ -33,6 +33,10 @@ The following arguments are supported:
 * `managers` - (Optional) List of users to assign [OrgManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to. By default, no managers are assigned.
 * `billing_managers` - (Optional) List of ID of users to assign [BillingManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to.  By default, no billing managers are assigned.
 * `auditors` - (Optional) List of ID of users to assign [OrgAuditor](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to.  By default, no auditors are assigned.
+* `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.
+* `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.
 
 ## Attributes Reference
 

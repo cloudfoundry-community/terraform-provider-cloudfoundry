@@ -24,6 +24,8 @@ func dataSourceStack() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
@@ -47,5 +49,9 @@ func dataSourceStackRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.SetId(stacks[0].GUID)
 	d.Set("description", stacks[0].Description)
+	err = metadataRead(stackMetadata, d, meta, true)
+	if err != nil {
+		return err
+	}
 	return err
 }

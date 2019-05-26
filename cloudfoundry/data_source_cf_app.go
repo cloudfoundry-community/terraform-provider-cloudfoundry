@@ -78,6 +78,8 @@ func dataSourceApp() *schema.Resource {
 				Type:     schema.TypeInt,
 				Computed: true,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
@@ -132,5 +134,9 @@ func dataSourceAppRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("health_check_type", app.HealthCheckType)
 	d.Set("health_check_timeout", app.HealthCheckTimeout)
 
+	err = metadataRead(appMetadata, d, meta, true)
+	if err != nil {
+		return err
+	}
 	return nil
 }
