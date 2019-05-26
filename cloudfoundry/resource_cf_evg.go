@@ -1,7 +1,6 @@
 package cloudfoundry
 
 import (
-	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -47,11 +46,7 @@ func resourceEvgCreate(d *schema.ResourceData, meta interface{}) (err error) {
 }
 
 func resourceEvgRead(d *schema.ResourceData, meta interface{}) error {
-
 	session := meta.(*managers.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
 
 	var variables map[string]string
 	var err error
