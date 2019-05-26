@@ -92,6 +92,7 @@ cf delete-user test-user5@acme.com -f &> /dev/null
 
  cf delete-quota runaway_test -f &> /dev/null
 
+
 # url=$(cf curl /v2/service_brokers | jq -r '.resources[] | select(.entity.name | contains("basic-auth")) | .metadata.url')
 # if [ ! -z "${url}" ]; then
 #     echo deleting ${url}

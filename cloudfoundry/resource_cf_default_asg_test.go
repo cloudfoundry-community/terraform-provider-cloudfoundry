@@ -1,11 +1,12 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"testing"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
@@ -153,7 +154,7 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 				resource.TestStep{
 					Config: defaultStagingSecurityGroupResource,
 					Check: resource.ComposeTestCheckFunc(
-						checkDefaultAsgsExists(ref),
+						checkDefaultAsgsExists("cloudfoundry_default_asg.staging"),
 						resource.TestCheckResourceAttr(
 							ref, "name", "staging"),
 						resource.TestCheckResourceAttr(

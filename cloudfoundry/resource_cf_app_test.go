@@ -1,13 +1,14 @@
 package cloudfoundry
 
 import (
+	"fmt"
+	"testing"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
-	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
@@ -223,51 +224,6 @@ resource "cloudfoundry_app" "dummy-app" {
 }
 `
 
-const appResourceWithMultiplePorts = `
-
-data "cloudfoundry_domain" "local" {
-	name = "%s"
-}
-data "cloudfoundry_org" "org" {
-	name = "%s"
-}
-data "cloudfoundry_space" "space" {
-	name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
-}
-
-resource "cloudfoundry_app" "test-app" {
-  name = "test-app"
-  space = "${data.cloudfoundry_space.space.id}"
-  timeout = 1800
-  ports = [ 8888, 9999 ]
-  buildpack = "binary_buildpack"
-  health_check_type = "process"
-  
-  routes {
-    route = "${cloudfoundry_route.test-app-8888.id}"
-    port = 8888
-  }
-
-  routes {
-    route = "${cloudfoundry_route.test-app-9999.id}"
-    port = 9999
-  }
-
-  path = "%s"
-}
-resource "cloudfoundry_route" "test-app-8888" {
-  domain = "${data.cloudfoundry_domain.local.id}"
-  space = "${data.cloudfoundry_space.space.id}"
-  hostname = "test-app-8888"
-}
-resource "cloudfoundry_route" "test-app-9999" {
-  domain = "${data.cloudfoundry_domain.local.id}"
-  space = "${data.cloudfoundry_space.space.id}"
-  hostname = "test-app-9999"
-}
-`
-
 const appResourceDocker = `
 
 data "cloudfoundry_domain" "local" {
@@ -479,47 +435,6 @@ func TestAccApp_app1(t *testing.T) {
 						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
 						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
 						resource.TestCheckResourceAttr(refApp, "service_binding.#", "3"),
-					),
-				},
-			},
-		})
-}
-
-func TestAccApp_app2(t *testing.T) {
-
-	_, orgName := defaultTestOrg(t)
-	spaceID, spaceName := defaultTestSpace(t)
-
-	refApp := "cloudfoundry_app.test-app"
-
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"test-app"}),
-			Steps: []resource.TestStep{
-
-				resource.TestStep{
-					Config: fmt.Sprintf(appResourceWithMultiplePorts,
-						defaultAppDomain(),
-						orgName, spaceName,
-						appPath,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
-							if err = assertHTTPResponse("https://test-app-8888."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							if err = assertHTTPResponse("https://test-app-9999."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "test-app"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "2"),
-						resource.TestCheckResourceAttr(refApp, "ports.8888", "8888"),
-						resource.TestCheckResourceAttr(refApp, "ports.9999", "9999"),
 					),
 				},
 			},

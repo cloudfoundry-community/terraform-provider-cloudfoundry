@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
@@ -42,7 +43,7 @@ resource "cloudfoundry_domain" "private" {
 func TestAccSharedDomain_normal(t *testing.T) {
 
 	ref := "cloudfoundry_domain.shared"
-	domainname := "dev." + defaultAppDomain()
+	domainname := "dev-res." + defaultAppDomain()
 
 	resource.ParallelTest(t,
 		resource.TestCase{
@@ -75,7 +76,7 @@ func TestAccSharedDomain_normal(t *testing.T) {
 func TestAccSharedTCPDomain_normal(t *testing.T) {
 
 	ref := "cloudfoundry_domain.shared-tcp"
-	domainname := "tcp-test." + defaultAppDomain()
+	domainname := "tcp-test-res." + defaultAppDomain()
 
 	resource.ParallelTest(t,
 		resource.TestCase{

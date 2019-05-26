@@ -2,11 +2,7 @@ package cloudfoundry
 
 import (
 	"bytes"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"fmt"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"io"
 	"os"
 	"path/filepath"
@@ -16,6 +12,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -239,7 +240,7 @@ func getTestDefaultIsolationSegment(t *testing.T) (string, string) {
 
 		return segments[0].GUID, segments[0].Name
 	}
-	t.Fatal("Environment variable TEST_ORG_NAME must be set for acceptance tests to work.")
+	t.Fatal("Environment variable TEST_DEFAULT_SEGMENT must be set for acceptance tests to work.")
 	return "", ""
 }
 
@@ -562,7 +563,21 @@ func TestMain(m *testing.M) {
 			}
 		})
 	}
-
+	fmt.Println("Creating isolation segment segment-acc-tf ...")
+	segment, _, err := testSession().ClientV3.CreateIsolationSegment(ccv3.IsolationSegment{
+		Name: "segment-acc-tf",
+	})
+	if err != nil {
+		panic(err)
+	}
+	os.Setenv("TEST_DEFAULT_SEGMENT", segment.Name)
+	clean = append(clean, func() {
+		fmt.Println("Deleting isolation segment segment-acc-tf ...")
+		_, err := testSession().ClientV3.DeleteIsolationSegment(segment.GUID)
+		if err != nil {
+			panic(err)
+		}
+	})
 	if os.Getenv("TF_ACC_CREATE") != "" {
 		fmt.Println("Creating org tf-acc-org ...")
 		org, _, err := testSession().ClientV2.CreateOrganization("tf-acc-org", "")
@@ -595,22 +610,6 @@ func TestMain(m *testing.M) {
 				panic(err)
 			}
 			_, err = testSession().ClientV2.PollJob(j)
-			if err != nil {
-				panic(err)
-			}
-		})
-
-		fmt.Println("Creating isolation segment segment-acc-tf ...")
-		segment, _, err := testSession().ClientV3.CreateIsolationSegment(ccv3.IsolationSegment{
-			Name: "segment-acc-tf",
-		})
-		if err != nil {
-			panic(err)
-		}
-		os.Setenv("TEST_DEFAULT_SEGMENT", segment.Name)
-		clean = append(clean, func() {
-			fmt.Println("Deleting isolation segment segment-acc-tf ...")
-			_, err := testSession().ClientV3.DeleteIsolationSegment(segment.GUID)
 			if err != nil {
 				panic(err)
 			}

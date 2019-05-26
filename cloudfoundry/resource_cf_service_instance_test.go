@@ -1,11 +1,12 @@
 package cloudfoundry
 
 import (
+	"fmt"
+	"testing"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
@@ -95,7 +96,7 @@ resource "cloudfoundry_service_broker" "fake-service-broker" {
   url = "http://fake-service-broker.%s"
   username = "admin"
   password = "admin"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   depends_on = ["cloudfoundry_app.fake-service-broker"]
 }
 `
@@ -181,7 +182,7 @@ func TestAccServiceInstances_withFakePlans(t *testing.T) {
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate,
 						spaceId, spaceId, spaceId,
-						fmt.Sprintf(fakeServiceBroker, appDomain, appDomain, spaceId),
+						fmt.Sprintf(fakeServiceBroker, appDomain, appDomain, spaceId, spaceId),
 					),
 					Check: resource.ComposeTestCheckFunc(
 						// test fake-plan
