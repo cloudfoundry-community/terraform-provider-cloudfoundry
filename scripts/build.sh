@@ -4,16 +4,16 @@ set -e
 
 function testAcceptance {
     tests/clean.sh
-    if [[ "TRAVIS_BUILD_STAGE_NAME" == "Testds" ]] ; then
+    if [[ "$TRAVIS_BUILD_STAGE_NAME" == "Testds" ]] ; then
         TESTARGS="-run 'TestAccData'" make testacc
     fi
-    if [[ "TRAVIS_BUILD_STAGE_NAME" == "Testimport" ]] ; then
+    if [[ "$TRAVIS_BUILD_STAGE_NAME" == "Testimport" ]] ; then
         TESTARGS="-run 'TestAcc.*_import.*'" make testacc
     fi
-    if [[ "TRAVIS_BUILD_STAGE_NAME" == "Testres" ]] ; then
+    if [[ "$TRAVIS_BUILD_STAGE_NAME" == "Testres" ]] ; then
         TESTARGS="-run 'TestAccRes'" make testacc
     fi
-    if [[ "TRAVIS_BUILD_STAGE_NAME" == "Testlint" ]] ; then
+    if [[ "$TRAVIS_BUILD_STAGE_NAME" == "Testlint" ]] ; then
         make check
     fi
 }
@@ -24,7 +24,7 @@ if [ -z "$CF_PASSWORD" ]; then
     exit 0
 fi
 
-if [[ "TRAVIS_BUILD_STAGE_NAME" == "Deploy" ]] ; then
+if [[ "$TRAVIS_BUILD_STAGE_NAME" == "Deploy" ]] ; then
     make release
     exit 0
 fi
