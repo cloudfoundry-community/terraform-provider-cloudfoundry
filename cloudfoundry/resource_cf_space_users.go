@@ -136,7 +136,7 @@ func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 func addOrNothingUserInOrgBySpace(client *ccv2.Client, orgId, uaaid string) error {
 	orgs, _, err := client.GetUserOrganizations(uaaid)
 	isNotFound := IsErrNotFound(err)
-	if err != nil && isNotFound {
+	if err != nil && !isNotFound {
 		return err
 	}
 
