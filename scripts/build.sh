@@ -13,6 +13,9 @@ function testAcceptance {
     if [[ "TRAVIS_BUILD_STAGE_NAME" == "Testres" ]] ; then
         TESTARGS="-run 'TestAccRes'" make testacc
     fi
+    if [[ "TRAVIS_BUILD_STAGE_NAME" == "Testlint" ]] ; then
+        make check
+    fi
 }
 
 if [ -z "$CF_PASSWORD" ]; then
@@ -20,6 +23,7 @@ if [ -z "$CF_PASSWORD" ]; then
     make build
     exit 0
 fi
+
 if [[ "TRAVIS_BUILD_STAGE_NAME" == "Deploy" ]] ; then
     make release
     exit 0

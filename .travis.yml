@@ -4,6 +4,7 @@ language: go
 go:
   - '1.12'
 stages:
+  - testlint
   - testds
   - testimport
   - testres
@@ -21,6 +22,8 @@ install:
   - export GO111MODULE=on
 jobs:
   include:
+    - stage: testlint
+      script: travis_wait 360 scripts/build.sh
     - stage: testds
       script: travis_wait 360 scripts/build.sh
     - stage: testimport

@@ -20,7 +20,7 @@ test: check
 	echo $(TEST) | \
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
-testacc: check
+testacc:
 	TF_ACC=1 go test $(TEST) -v -parallel 20 $(TESTARGS) -timeout 240m
 
 fmt:
