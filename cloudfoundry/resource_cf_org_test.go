@@ -99,7 +99,7 @@ resource "cloudfoundry_org" "org1" {
 }
 `
 
-func TestAccOrg_normal(t *testing.T) {
+func TestAccResOrg_normal(t *testing.T) {
 
 	refOrg := "cloudfoundry_org.org1"
 	refQuotaRunway := "cloudfoundry_org_quota.runaway"

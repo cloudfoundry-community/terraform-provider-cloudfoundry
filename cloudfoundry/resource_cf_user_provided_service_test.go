@@ -120,7 +120,7 @@ resource "cloudfoundry_user_provided_service" "complex" {
 }
 `
 
-func TestAccUserProvidedService_normal(t *testing.T) {
+func TestAccResUserProvidedService_normal(t *testing.T) {
 
 	ref := "cloudfoundry_user_provided_service.mq"
 
@@ -162,7 +162,7 @@ func TestAccUserProvidedService_normal(t *testing.T) {
 		})
 }
 
-func TestAccUserProvidedService_complex(t *testing.T) {
+func TestAccResUserProvidedService_complex(t *testing.T) {
 	ref := "cloudfoundry_user_provided_service.complex"
 	resource.Test(t,
 		resource.TestCase{

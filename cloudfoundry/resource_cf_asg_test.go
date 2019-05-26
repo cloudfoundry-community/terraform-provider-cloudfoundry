@@ -59,7 +59,7 @@ resource "cloudfoundry_asg" "rmq" {
 }
 `
 
-func TestAccAsg_normal(t *testing.T) {
+func TestAccResAsg_normal(t *testing.T) {
 
 	ref := "cloudfoundry_asg.rmq"
 	asgname := "rmq-dev-res"

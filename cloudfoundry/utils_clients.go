@@ -76,6 +76,9 @@ func IsErrNotFound(err error) bool {
 	if httpErr, ok := err.(ccerror.RawHTTPStatusError); ok && httpErr.StatusCode == 404 {
 		return true
 	}
+	if _, ok := err.(ccerror.ResourceNotFoundError); ok {
+		return true
+	}
 	return false
 }
 

@@ -88,7 +88,7 @@ resource "cloudfoundry_default_asg" "staging" {
 var defaultLenRunningSecGroup int
 var defaultLenStagingSecGroup int
 
-func TestAccDefaultRunningAsg_normal(t *testing.T) {
+func TestAccResDefaultRunningAsg_normal(t *testing.T) {
 
 	ref := "cloudfoundry_default_asg.running"
 	asgs, _, err := testSession().ClientV2.GetRunningSecurityGroups()

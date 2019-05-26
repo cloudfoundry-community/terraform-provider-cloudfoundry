@@ -134,7 +134,7 @@ resource "cloudfoundry_route" "dummy-app-other" {
 }
 `
 
-func TestAccRouteServiceBinding_normal(t *testing.T) {
+func TestAccResRouteServiceBinding_normal(t *testing.T) {
 	_, orgName := defaultTestOrg(t)
 	_, spaceName := defaultTestSpace(t)
 

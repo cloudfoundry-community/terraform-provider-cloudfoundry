@@ -78,7 +78,7 @@ resource "cloudfoundry_org_users" "org_users1" {
 }
 `
 
-func TestAccOrgUsers_normal(t *testing.T) {
+func TestAccResOrgUsers_normal(t *testing.T) {
 	ref := "cloudfoundry_org_users.org_users1"
 	orgId, _ := defaultTestOrg(t)
 	usersMap := make(map[string][]ccv2.User)
@@ -117,7 +117,7 @@ func TestAccOrgUsers_normal(t *testing.T) {
 		})
 }
 
-func TestAccOrgUsers_force(t *testing.T) {
+func TestAccResOrgUsers_force(t *testing.T) {
 	ref := "cloudfoundry_org_users.org_users1"
 	orgId, _ := defaultTestOrg(t)
 	usersMap := make(map[string][]ccv2.User)

@@ -30,7 +30,7 @@ resource "cloudfoundry_service_broker" "test" {
 }
 `
 
-func TestAccServiceBroker_normal(t *testing.T) {
+func TestAccResServiceBroker_normal(t *testing.T) {
 
 	serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword, serviceBrokerPlanPath := getTestBrokerCredentials(t)
 

@@ -44,6 +44,7 @@ The following attributes are exported:
 
 * `id` - The GUID of the service broker
 * `service_plans` - Map of service plan GUIDs keyed by service "&lt;service name&gt;/&lt;plan name&gt;"
+* `services` - Map of service service GUIDs keyed by service name
 
 ## Import
 

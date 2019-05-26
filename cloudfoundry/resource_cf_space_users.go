@@ -1,7 +1,6 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"github.com/hashicorp/go-uuid"
@@ -136,8 +135,8 @@ func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 
 func addOrNothingUserInOrgBySpace(client *ccv2.Client, orgId, uaaid string) error {
 	orgs, _, err := client.GetUserOrganizations(uaaid)
-	_, isNotFound := err.(ccerror.ResourceNotFoundError)
-	if err != nil && !isNotFound {
+	isNotFound := IsErrNotFound(err)
+	if err != nil && isNotFound {
 		return err
 	}
 

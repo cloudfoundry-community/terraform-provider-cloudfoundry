@@ -41,7 +41,7 @@ resource "cloudfoundry_space_quota" "quota10g-space" {
 }
 `
 
-func TestAccSpaceQuota_normal(t *testing.T) {
+func TestAccResSpaceQuota_normal(t *testing.T) {
 
 	orgID, _ := defaultTestOrg(t)
 

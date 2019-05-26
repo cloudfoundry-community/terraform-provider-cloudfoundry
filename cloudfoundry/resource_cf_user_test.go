@@ -66,7 +66,7 @@ resource "cloudfoundry_user" "empty-group" {
 }
 `
 
-func TestAccUser_LdapOrigin_normal(t *testing.T) {
+func TestAccResUser_LdapOrigin_normal(t *testing.T) {
 
 	ref := "cloudfoundry_user.manager1"
 	username := "manager1@acme.com"
@@ -94,7 +94,7 @@ func TestAccUser_LdapOrigin_normal(t *testing.T) {
 		})
 }
 
-func TestAccUser_WithGroups_normal(t *testing.T) {
+func TestAccResUser_WithGroups_normal(t *testing.T) {
 
 	ref := "cloudfoundry_user.admin-service-user"
 	username := "cf-admin"
@@ -160,7 +160,7 @@ func TestAccUser_WithGroups_normal(t *testing.T) {
 		})
 }
 
-func TestAccUser_EmptyGroups_normal(t *testing.T) {
+func TestAccResUser_EmptyGroups_normal(t *testing.T) {
 
 	ref := "cloudfoundry_user.empty-group"
 	username := "jdoe"

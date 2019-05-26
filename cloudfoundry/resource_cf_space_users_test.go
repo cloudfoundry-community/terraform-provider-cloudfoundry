@@ -78,7 +78,7 @@ resource "cloudfoundry_space_users" "space_users1" {
 }
 `
 
-func TestAccSpaceUsers_normal(t *testing.T) {
+func TestAccResSpaceUsers_normal(t *testing.T) {
 	ref := "cloudfoundry_space_users.space_users1"
 	spaceId, _ := defaultTestSpace(t)
 	usersMap := make(map[string][]ccv2.User)
@@ -117,7 +117,7 @@ func TestAccSpaceUsers_normal(t *testing.T) {
 		})
 }
 
-func TestAccSpaceUsers_force(t *testing.T) {
+func TestAccResSpaceUsers_force(t *testing.T) {
 	ref := "cloudfoundry_space_users.space_users1"
 	spaceId, _ := defaultTestSpace(t)
 	orgId, _ := defaultTestOrg(t)

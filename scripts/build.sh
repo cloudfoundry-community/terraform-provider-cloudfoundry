@@ -2,29 +2,39 @@
 
 set -e
 
-function makeRelease {
-    echo "No need for this build ? As a reminder, commits can be instructed to not trigger a travis build by setting the [skip ci keyword](https://docs.travis-ci.com/user/customizing-the-build/#skipping-a-build) in their commit message."
+function testAcceptance {
     tests/clean.sh
-    make testacc
-    make release
+    if [[ "TRAVIS_BUILD_STAGE_NAME" == "Testds" ]] ; then
+        TESTARGS="-run 'TestAccData'" make testacc
+    fi
+    if [[ "TRAVIS_BUILD_STAGE_NAME" == "Testimport" ]] ; then
+        TESTARGS="-run 'TestAcc.*_import.*'" make testacc
+    fi
+    if [[ "TRAVIS_BUILD_STAGE_NAME" == "Testres" ]] ; then
+        TESTARGS="-run 'TestAccRes'" make testacc
+    fi
 }
 
+if [[ "TRAVIS_BUILD_STAGE_NAME" == "Deploy" ]] ; then
+    make release
+    exit 0
+fi
 
 if [[ "$TRAVIS_PULL_REQUEST" == "true" ]] ; then
     echo "Git commit is a pull request - building and running the acceptance tests"
-    makeRelease
+    testAcceptance
     exit 0
 fi
 
 if [[ -n "$TRAVIS_TAG" ]] ; then
     echo "Git commit has a release tag - building and running the acceptance tests"
-    makeRelease
+    testAcceptance
     exit 0
 fi
 
 if [[ "$TRAVIS_BRANCH" == "dev" || "$TRAVIS_BRANCH" == "master" ]] ; then
     echo "Git commit is on dev or master branch - building and running the acceptance tests"
-    makeRelease
+    testAcceptance
     exit 0
 fi
 

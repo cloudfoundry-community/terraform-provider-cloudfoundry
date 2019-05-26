@@ -27,7 +27,7 @@ resource "cloudfoundry_feature_flags" "ff" {
 }
 `
 
-func TestAccConfig_normal(t *testing.T) {
+func TestAccResConfig_normal(t *testing.T) {
 
 	resConfig := "cloudfoundry_feature_flags.ff"
 

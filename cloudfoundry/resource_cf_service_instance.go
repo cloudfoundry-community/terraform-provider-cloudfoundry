@@ -1,13 +1,13 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"encoding/json"
 	"fmt"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"strings"
 	"time"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -110,17 +110,13 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) err
 }
 
 func resourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) error {
-
 	session := meta.(*managers.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
 
 	serviceInstance, _, err := session.ClientV2.GetServiceInstance(d.Id())
 	if err != nil {
-		if strings.Contains(err.Error(), "404") {
+		if IsErrNotFound(err) {
 			d.SetId("")
-			err = nil
+			return nil
 		}
 		return err
 	}
@@ -221,7 +217,7 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) err
 	}
 	stateConf := &resource.StateChangeConf{
 		Pending:      resourceServiceInstancePendingStates,
-		Target:       []string{}, // in case of deletion, the state manager checks for nil object result and a 0 length list of target states
+		Target:       []string{},
 		Refresh:      resourceServiceInstanceStateFunc(id, "delete", meta),
 		Timeout:      d.Timeout(schema.TimeoutDelete),
 		PollInterval: 30 * time.Second,
@@ -262,7 +258,7 @@ func resourceServiceInstanceStateFunc(serviceInstanceID string, operationType st
 		if err != nil {
 			// We should get a 404 if the resource doesn't exist (eg. it has been deleted)
 			// In this case, the refresh code is expecting a nil object
-			if strings.Contains(err.Error(), "404") {
+			if IsErrNotFound(err) {
 				return nil, "", nil
 			}
 			return nil, "", err

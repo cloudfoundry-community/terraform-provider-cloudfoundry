@@ -97,7 +97,7 @@ resource "cloudfoundry_route" "test-app-route" {
 }
 `
 
-func TestAccRoute_normal(t *testing.T) {
+func TestAccResRoute_normal(t *testing.T) {
 
 	_, orgName := defaultTestOrg(t)
 	_, spaceName := defaultTestSpace(t)

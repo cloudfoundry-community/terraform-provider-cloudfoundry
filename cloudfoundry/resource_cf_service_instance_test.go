@@ -40,8 +40,7 @@ resource "cloudfoundry_service_instance" "test-service-instance" {
 
 const serviceInstanceResourceAsyncCreate = `
 data "cloudfoundry_service" "fake-service" {
-  name = "fake-service"
-  depends_on = ["cloudfoundry_service_broker.fake-service-broker"]
+  name = "${keys(cloudfoundry_service_broker.fake-service-broker.services)[0]}"
 }
 
 resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-plan" {
@@ -55,13 +54,6 @@ resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-async-
   name = "fake-service-instance-with-fake-async-plan"
   space = "%s"
   service_plan = "${data.cloudfoundry_service.fake-service.service_plans["fake-async-plan"]}"
-  depends_on = ["cloudfoundry_service_broker.fake-service-broker"]
-}
-
-resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-async-only-plan" {
-  name = "fake-service-instance-with-fake-async-only-plan"
-  space = "%s"
-  service_plan = "${data.cloudfoundry_service.fake-service.service_plans["fake-async-only-plan"]}"
   depends_on = ["cloudfoundry_service_broker.fake-service-broker"]
 }
 
@@ -101,7 +93,7 @@ resource "cloudfoundry_service_broker" "fake-service-broker" {
 }
 `
 
-func TestAccServiceInstance_normal(t *testing.T) {
+func TestAccResServiceInstance_normal(t *testing.T) {
 
 	spaceId, _ := defaultTestSpace(t)
 	serviceName1, _, servicePlan := getTestServiceBrokers(t)
@@ -158,15 +150,13 @@ func TestAccServiceInstance_normal(t *testing.T) {
 		})
 }
 
-func TestAccServiceInstances_withFakePlans(t *testing.T) {
+func TestAccResServiceInstances_withFakePlans(t *testing.T) {
 
 	spaceId, _ := defaultTestSpace(t)
 	appDomain := defaultAppDomain()
 
 	refFakePlan := "cloudfoundry_service_instance.fake-service-instance-with-fake-plan"
 	refFakeAsyncPlan := "cloudfoundry_service_instance.fake-service-instance-with-fake-async-plan"
-	refFakeAsyncOnlyPlan := "cloudfoundry_service_instance.fake-service-instance-with-fake-async-only-plan"
-
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
@@ -174,15 +164,14 @@ func TestAccServiceInstances_withFakePlans(t *testing.T) {
 			CheckDestroy: testAccCheckServiceInstanceDestroyed(
 				[]string{
 					"fake-service-instance-with-fake-plan",
-					"fake-service-instance-with-fake-async-plan",
-					"fake-service-instance-with-fake-async-only-plan"},
+					"fake-service-instance-with-fake-async-plan"},
 				refFakePlan),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate,
-						spaceId, spaceId, spaceId,
-						fmt.Sprintf(fakeServiceBroker, appDomain, spaceId, appDomain, spaceId, spaceId),
+						spaceId, spaceId,
+						fmt.Sprintf(fakeServiceBroker, appDomain, spaceId, spaceId, appDomain, spaceId),
 					),
 					Check: resource.ComposeTestCheckFunc(
 						// test fake-plan
@@ -191,18 +180,7 @@ func TestAccServiceInstances_withFakePlans(t *testing.T) {
 						// test fake-async-plan
 						testAccCheckServiceInstanceExists(refFakeAsyncPlan),
 						resource.TestCheckResourceAttr(refFakeAsyncPlan, "name", "fake-service-instance-with-fake-async-plan"),
-						// test fake-async-only-plan
-						testAccCheckServiceInstanceExists(refFakeAsyncOnlyPlan),
-						resource.TestCheckResourceAttr(refFakeAsyncOnlyPlan, "name", "fake-service-instance-with-fake-async-only-plan"),
 					),
-					// ExpectNonEmptyPlan to avoid the following bug in the test
-					// --- FAIL: TestAccServiceBroker_async (174.55s)
-					// testing.go:513: Step 0 error: After applying this step and refreshing, the plan was not empty:
-					//  DIFF:
-					//  CREATE: data.cloudfoundry_service.fake-service
-					//    name:            "" => "fake-service"
-					//    service_plans.%: "" => "<computed>"
-					ExpectNonEmptyPlan: true,
 				},
 			},
 		})

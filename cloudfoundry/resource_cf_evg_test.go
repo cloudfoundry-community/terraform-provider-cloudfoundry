@@ -68,7 +68,7 @@ resource "cloudfoundry_evg" "staging" {
 var defaultLenStagingEvg int
 var defaultLenRunningEvg int
 
-func TestAccRunningEvg_normal(t *testing.T) {
+func TestAccResunningEvg_normal(t *testing.T) {
 	evg, _, err := testSession().ClientV2.GetEnvVarGroupRunning()
 	if err != nil {
 		panic(err)
@@ -137,7 +137,7 @@ func TestAccRunningEvg_normal(t *testing.T) {
 		})
 }
 
-func TestAccStagingEvg_normal(t *testing.T) {
+func TestAccResStagingEvg_normal(t *testing.T) {
 
 	ref := "cloudfoundry_evg.staging"
 	name := "staging"

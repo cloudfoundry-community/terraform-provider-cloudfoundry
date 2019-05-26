@@ -79,7 +79,7 @@ resource "cloudfoundry_domain" "private" {
 }
 `
 
-func TestAccPrivateDomainAccess_normal(t *testing.T) {
+func TestAccResPrivateDomainAccess_normal(t *testing.T) {
 	ref := "cloudfoundry_private_domain_access.access-to-org"
 
 	resource.Test(t,

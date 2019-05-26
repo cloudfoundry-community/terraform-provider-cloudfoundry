@@ -66,7 +66,7 @@ resource "cloudfoundry_isolation_segment_entitlement" "segment1_orgs" {
 
 var defaultLenIsolationSegments int
 
-func TestAccSegment_normal(t *testing.T) {
+func TestAccResSegment_normal(t *testing.T) {
 	segRef := "cloudfoundry_isolation_segment.segment1"
 	entitleRef := "cloudfoundry_isolation_segment_entitlement.segment1_orgs"
 

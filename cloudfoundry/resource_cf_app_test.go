@@ -317,7 +317,7 @@ resource "cloudfoundry_app" "test-app" {
 
 var appPath = asset("dummy-app.zip")
 
-func TestAccAppVersions_app1(t *testing.T) {
+func TestAccResAppVersions_app1(t *testing.T) {
 
 	_, orgName := defaultTestOrg(t)
 	_, spaceName := defaultTestSpace(t)
@@ -359,7 +359,7 @@ func TestAccAppVersions_app1(t *testing.T) {
 		})
 }
 
-func TestAccApp_app1(t *testing.T) {
+func TestAccResApp_app1(t *testing.T) {
 
 	_, orgName := defaultTestOrg(t)
 	spaceID, spaceName := defaultTestSpace(t)
@@ -441,7 +441,7 @@ func TestAccApp_app1(t *testing.T) {
 		})
 }
 
-func TestAccApp_Routes_updateToAndmore(t *testing.T) {
+func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 
 	_, orgName := defaultTestOrg(t)
 	spaceID, spaceName := defaultTestSpace(t)
@@ -630,7 +630,7 @@ func TestAccApp_Routes_updateToAndmore(t *testing.T) {
 		})
 }
 
-func TestAccApp_dockerApp(t *testing.T) {
+func TestAccResApp_dockerApp(t *testing.T) {
 
 	_, orgName := defaultTestOrg(t)
 	spaceID, spaceName := defaultTestSpace(t)
@@ -678,7 +678,7 @@ func TestAccApp_dockerApp(t *testing.T) {
 		})
 }
 
-func TestAccApp_app_bluegreen(t *testing.T) {
+func TestAccResApp_app_bluegreen(t *testing.T) {
 
 	spaceID, _ := defaultTestSpace(t)
 

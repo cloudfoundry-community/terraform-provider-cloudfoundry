@@ -193,7 +193,7 @@ resource "cloudfoundry_space" "space1" {
 }
 `
 
-func TestAccSpace_normal(t *testing.T) {
+func TestAccResSpace_normal(t *testing.T) {
 
 	ref := "cloudfoundry_space.space1"
 	refUserRemoved := "cloudfoundry_user.dev3"

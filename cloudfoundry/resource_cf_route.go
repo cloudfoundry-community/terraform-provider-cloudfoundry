@@ -6,10 +6,8 @@ import (
 	"code.cloudfoundry.org/cli/types"
 	"fmt"
 	"github.com/hashicorp/terraform/helper/hashcode"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"strings"
-
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 func resourceRoute() *schema.Resource {
@@ -146,9 +144,9 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 
 	route, _, err := session.ClientV2.GetRoute(id)
 	if err != nil {
-		if strings.Contains(err.Error(), "404") {
+		if IsErrNotFound(err) {
 			d.SetId("")
-			err = nil
+			return nil
 		}
 		return err
 	}

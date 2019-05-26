@@ -40,7 +40,7 @@ resource "cloudfoundry_org_quota" "quota50g-org" {
 }
 `
 
-func TestAccOrgQuota_normal(t *testing.T) {
+func TestAccResOrgQuota_normal(t *testing.T) {
 
 	ref := "cloudfoundry_org_quota.quota50g-org"
 	quotaname := "50g-org"

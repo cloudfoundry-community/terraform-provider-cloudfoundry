@@ -67,7 +67,7 @@ resource "cloudfoundry_service_plan_access" "test-access" {
 }
 `
 
-func TestAccServicePlanAccess_normal(t *testing.T) {
+func TestAccResServicePlanAccess_normal(t *testing.T) {
 
 	serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword, serviceBrokerPlanPath := getTestBrokerCredentials(t)
 
@@ -130,7 +130,7 @@ func TestAccServicePlanAccess_normal(t *testing.T) {
 		})
 }
 
-func TestAccServicePlanAccess_error(t *testing.T) {
+func TestAccResServicePlanAccess_error(t *testing.T) {
 
 	serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword, serviceBrokerPlanPath := getTestBrokerCredentials(t)
 

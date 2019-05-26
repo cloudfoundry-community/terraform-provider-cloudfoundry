@@ -49,6 +49,10 @@ func resourceServiceBroker() *schema.Resource {
 				Type:     schema.TypeMap,
 				Computed: true,
 			},
+			"services": &schema.Schema{
+				Type:     schema.TypeMap,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -153,7 +157,9 @@ func readServiceDetail(id string, session *managers.Session, d *schema.ResourceD
 	}
 
 	servicePlansTf := make(map[string]interface{})
+	servicesTf := make(map[string]interface{})
 	for _, s := range services {
+		servicesTf[s.Label] = s.GUID
 		servicePlans, _, err := session.ClientV2.GetServicePlans(ccv2.FilterEqual(constant.ServiceGUIDFilter, s.GUID))
 		if err != nil {
 			return err
@@ -163,6 +169,7 @@ func readServiceDetail(id string, session *managers.Session, d *schema.ResourceD
 		}
 	}
 	d.Set("service_plans", servicePlansTf)
+	d.Set("services", servicesTf)
 
 	return err
 }

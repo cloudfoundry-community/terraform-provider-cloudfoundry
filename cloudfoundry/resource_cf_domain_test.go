@@ -40,7 +40,7 @@ resource "cloudfoundry_domain" "private" {
 }
 `
 
-func TestAccSharedDomain_normal(t *testing.T) {
+func TestAccResSharedDomain_normal(t *testing.T) {
 
 	ref := "cloudfoundry_domain.shared"
 	domainname := "dev-res." + defaultAppDomain()
@@ -73,7 +73,7 @@ func TestAccSharedDomain_normal(t *testing.T) {
 		})
 }
 
-func TestAccSharedTCPDomain_normal(t *testing.T) {
+func TestAccResSharedTCPDomain_normal(t *testing.T) {
 
 	ref := "cloudfoundry_domain.shared-tcp"
 	domainname := "tcp-test-res." + defaultAppDomain()
@@ -103,7 +103,7 @@ func TestAccSharedTCPDomain_normal(t *testing.T) {
 		})
 }
 
-func TestAccPrivateDomain_normal(t *testing.T) {
+func TestAccResPrivateDomain_normal(t *testing.T) {
 
 	ref := "cloudfoundry_domain.private"
 

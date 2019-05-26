@@ -46,7 +46,7 @@ resource "cloudfoundry_buildpack" "tomee" {
 }
 `
 
-func TestAccBuildpack_normal(t *testing.T) {
+func TestAccResBuildpack_normal(t *testing.T) {
 
 	fixturesBp := asset("buildpacks")
 	refBuildpack := "cloudfoundry_buildpack.tomee"

@@ -31,7 +31,7 @@ resource "cloudfoundry_service_key" "test-service-instance-key" {
 }
 `
 
-func TestAccServiceKey_normal(t *testing.T) {
+func TestAccResServiceKey_normal(t *testing.T) {
 
 	spaceId, _ := defaultTestSpace(t)
 	serviceName1, _, servicePlan := getTestServiceBrokers(t)
