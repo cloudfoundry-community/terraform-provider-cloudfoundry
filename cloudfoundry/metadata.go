@@ -5,6 +5,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"encoding/json"
 	"fmt"
+	"github.com/blang/semver"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"io/ioutil"
@@ -50,10 +51,28 @@ func annotationsSchema() *schema.Schema {
 }
 
 func metadataCreate(t metadataType, d *schema.ResourceData, meta interface{}) error {
+	if !isMetadataApiCompat(meta) {
+		return nil
+	}
 	return metadataUpdate(t, d, meta)
 }
 
+func isMetadataApiCompat(meta interface{}) bool {
+	apiVersion := meta.(*managers.Session).ClientV3.CloudControllerAPIVersion()
+	v, err := semver.Parse(apiVersion)
+	if err != nil {
+		// in case version is incorrect
+		// we set true anyway, it will only do the calls to api but not fail if endpoint is not found in crud
+		return true
+	}
+	expectedRange := semver.MustParseRange(">=3.63.0")
+	return expectedRange(v)
+}
+
 func metadataUpdate(t metadataType, d *schema.ResourceData, meta interface{}) error {
+	if !isMetadataApiCompat(meta) {
+		return nil
+	}
 	metadata := resourceMetadataToMetadata(d)
 	if len(metadata.Labels) == 0 && len(metadata.Annotations) == 0 &&
 		!d.HasChange(labelsKey) && !d.HasChange(annotationsKey) {
@@ -86,7 +105,7 @@ func metadataUpdate(t metadataType, d *schema.ResourceData, meta interface{}) er
 			panic(err)
 		}
 	}()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != 200 && resp.StatusCode != 404 {
 		b, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return err
@@ -100,9 +119,12 @@ func metadataUpdate(t metadataType, d *schema.ResourceData, meta interface{}) er
 }
 
 func metadataRead(t metadataType, d *schema.ResourceData, meta interface{}, forceRead bool) error {
+	if !isMetadataApiCompat(meta) {
+		return nil
+	}
 	_, hasLabels := d.GetOk(labelsKey)
 	_, hasAnnotations := d.GetOk(annotationsKey)
-	if !hasAnnotations && !hasLabels && !forceRead {
+	if !hasAnnotations && !hasLabels && !forceRead && !IsImportState(d) {
 		return nil
 	}
 	metadata := resourceMetadataToMetadata(d)
@@ -112,20 +134,32 @@ func metadataRead(t metadataType, d *schema.ResourceData, meta interface{}, forc
 	}
 
 	labels := make(map[string]interface{})
-	for k := range metadata.Labels {
-		if _, ok := oldMetadata.Labels[k]; !ok {
-			continue
+	if IsImportState(d) {
+		for k, v := range oldMetadata.Labels {
+			labels[k] = v
 		}
-		labels[k] = oldMetadata.Labels[k]
+	} else {
+		for k := range metadata.Labels {
+			if _, ok := oldMetadata.Labels[k]; !ok {
+				continue
+			}
+			labels[k] = oldMetadata.Labels[k]
+		}
 	}
 	d.Set(labelsKey, labels)
 
 	annotations := make(map[string]interface{})
-	for k := range metadata.Annotations {
-		if _, ok := oldMetadata.Annotations[k]; !ok {
-			continue
+	if IsImportState(d) {
+		for k, v := range oldMetadata.Annotations {
+			annotations[k] = v
 		}
-		annotations[k] = oldMetadata.Annotations[k]
+	} else {
+		for k := range metadata.Annotations {
+			if _, ok := oldMetadata.Annotations[k]; !ok {
+				continue
+			}
+			annotations[k] = oldMetadata.Annotations[k]
+		}
 	}
 	d.Set(annotationsKey, annotations)
 
@@ -178,6 +212,9 @@ func metadataRetrieve(t metadataType, d *schema.ResourceData, meta interface{}) 
 		return Metadata{}, err
 	}
 	if resp.StatusCode != 200 {
+		if resp.StatusCode == 404 {
+			return Metadata{}, nil
+		}
 		return Metadata{}, ccerror.RawHTTPStatusError{
 			StatusCode:  resp.StatusCode,
 			RawResponse: b,

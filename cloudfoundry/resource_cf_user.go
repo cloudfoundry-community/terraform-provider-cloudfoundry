@@ -147,6 +147,7 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if m, ok := meta.(NewResourceMeta); ok {
 		session = m.meta.(*managers.Session)
+		meta = m.meta
 		newResource = true
 	} else {
 		session = meta.(*managers.Session)

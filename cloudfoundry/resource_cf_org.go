@@ -128,6 +128,7 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if m, ok := meta.(NewResourceMeta); ok {
 		session = m.meta.(*managers.Session)
+		meta = m.meta
 		newResource = true
 	} else {
 		session = meta.(*managers.Session)
