@@ -14,7 +14,7 @@ import (
 const buildpackResource = `
 resource "cloudfoundry_buildpack" "tomee" {
 
-	name = "tomee-buildpack"
+	name = "tomee-buildpack-res"
 
 	path = "https://github.com/cloudfoundry-community/tomee-buildpack/releases/download/v4.3/tomee-buildpack-v4.3.zip"
 }
@@ -24,7 +24,7 @@ const buildpackResourceUpdate1 = `
 
 resource "cloudfoundry_buildpack" "tomee" {
 
-	name = "tomee-buildpack"
+	name = "tomee-buildpack-res"
 	position = 5
 	enabled = false
 	locked = true
@@ -37,7 +37,7 @@ const buildpackResourceUpdate2 = `
 
 resource "cloudfoundry_buildpack" "tomee" {
 
-	name = "tomee-buildpack"
+	name = "tomee-buildpack-res"
 	position = 5
 	enabled = true
 	locked = false
@@ -51,11 +51,11 @@ func TestAccBuildpack_normal(t *testing.T) {
 	fixturesBp := asset("buildpacks")
 	refBuildpack := "cloudfoundry_buildpack.tomee"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckBuildpackDestroyed("tomee-buildpack"),
+			CheckDestroy: testAccCheckBuildpackDestroyed("tomee-buildpack-res"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -63,7 +63,7 @@ func TestAccBuildpack_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckBuildpackExists(refBuildpack, "tomee-buildpack-v4.3.zip"),
 						resource.TestCheckResourceAttr(
-							refBuildpack, "name", "tomee-buildpack"),
+							refBuildpack, "name", "tomee-buildpack-res"),
 						resource.TestCheckResourceAttr(
 							refBuildpack, "position", "1"),
 						resource.TestCheckResourceAttr(
@@ -72,13 +72,18 @@ func TestAccBuildpack_normal(t *testing.T) {
 							refBuildpack, "locked", "false"),
 					),
 				},
-
+				resource.TestStep{
+					ResourceName:            refBuildpack,
+					ImportState:             true,
+					ImportStateVerify:       true,
+					ImportStateVerifyIgnore: []string{"path"},
+				},
 				resource.TestStep{
 					Config: buildpackResourceUpdate1,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckBuildpackExists(refBuildpack, "tomee-buildpack-v4.3.zip"),
 						resource.TestCheckResourceAttr(
-							refBuildpack, "name", "tomee-buildpack"),
+							refBuildpack, "name", "tomee-buildpack-res"),
 						resource.TestCheckResourceAttr(
 							refBuildpack, "position", "5"),
 						resource.TestCheckResourceAttr(
@@ -93,7 +98,7 @@ func TestAccBuildpack_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckBuildpackExists(refBuildpack, "tomee-buildpack-v4.5.2.zip"),
 						resource.TestCheckResourceAttr(
-							refBuildpack, "name", "tomee-buildpack"),
+							refBuildpack, "name", "tomee-buildpack-res"),
 						resource.TestCheckResourceAttr(
 							refBuildpack, "position", "5"),
 						resource.TestCheckResourceAttr(

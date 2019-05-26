@@ -21,7 +21,7 @@ func TestAccDataSourceAsg_normal(t *testing.T) {
 	defaultAsg := getTestSecurityGroup()
 	ref := "data.cloudfoundry_asg.public"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,

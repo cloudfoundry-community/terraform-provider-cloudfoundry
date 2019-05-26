@@ -100,7 +100,7 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 		panic(err)
 	}
 	defaultLenStagingSecGroup = len(asgs)
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
@@ -118,6 +118,29 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 					),
 				},
 				resource.TestStep{
+					ResourceName: ref,
+					ImportState:  true,
+					ImportStateCheck: func(states []*terraform.InstanceState) error {
+						if len(states) == 0 {
+							return fmt.Errorf("There is no import state")
+						}
+						entity := resourceDefaultAsg()
+						state := states[0]
+						reader := &schema.MapFieldReader{
+							Schema: entity.Schema,
+							Map:    schema.BasicMapReader(state.Attributes),
+						}
+						result, err := reader.ReadField([]string{"asgs"})
+						if err != nil {
+							return err
+						}
+						if len(result.Value.(*schema.Set).List()) != defaultLenRunningSecGroup+2 {
+							return fmt.Errorf("missing default running sec group")
+						}
+						return nil
+					},
+				},
+				resource.TestStep{
 					Config: fmt.Sprintf(defaultRunningSecurityGroupResourceUpdate),
 					Check: resource.ComposeTestCheckFunc(
 						checkDefaultAsgsExists(ref),
@@ -127,32 +150,6 @@ func TestAccDefaultRunningAsg_normal(t *testing.T) {
 							ref, "asgs.#", "1"),
 					),
 				},
-			},
-		})
-}
-
-func TestAccDefaultStagingAsg_normal(t *testing.T) {
-
-	ref := "cloudfoundry_default_asg.staging"
-
-	asgs, _, err := testSession().ClientV2.GetRunningSecurityGroups()
-	if err != nil {
-		panic(err)
-	}
-	defaultLenRunningSecGroup = len(asgs)
-	asgs, _, err = testSession().ClientV2.GetStagingSecurityGroups()
-	if err != nil {
-		panic(err)
-	}
-	defaultLenStagingSecGroup = len(asgs)
-
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckDefaultStagingAsgDestroy,
-			Steps: []resource.TestStep{
-
 				resource.TestStep{
 					Config: defaultStagingSecurityGroupResource,
 					Check: resource.ComposeTestCheckFunc(

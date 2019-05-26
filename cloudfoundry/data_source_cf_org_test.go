@@ -13,7 +13,7 @@ import (
 const orgDataResource = `
 
 resource "cloudfoundry_org" "myorg" {
-	name = "myorg"
+	name = "myorg-ds-org"
 }
 
 data "cloudfoundry_org" "dd" {
@@ -25,7 +25,7 @@ func TestAccDataSourceOrg_normal(t *testing.T) {
 
 	ref := "data.cloudfoundry_org.dd"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,
@@ -36,7 +36,7 @@ func TestAccDataSourceOrg_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceOrgExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "myorg"),
+							ref, "name", "myorg-ds-org"),
 					),
 				},
 			},

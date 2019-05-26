@@ -25,10 +25,14 @@ cf delete -f spring-music &> /dev/null
 # Delete org and security gorups
 
 cf delete-org -f myorg &> /dev/null
+cf delete-org -f myorg-ds-space &> /dev/null
+cf delete-org -f myorg-ds-org &> /dev/null
+cf delete-org -f myorg-ds-domain &> /dev/null
 cf delete-org -f org1 &> /dev/null
 cf delete-org -f org2 &> /dev/null
 cf delete-org -f org3 &> /dev/null
 cf delete-org -f organization-one &> /dev/null
+cf delete-org -f organization-ds-space &> /dev/null
 cf delete-org -f organization-one-updated &> /dev/null
 cf delete-org -f quota-org &> /dev/null
 cf delete-security-group -f app-services1 &> /dev/null
@@ -38,7 +42,9 @@ cf delete-security-group -f app-services &> /dev/null
 
 # Delete quotas
 cf delete-space-quota -f 10g-space &> /dev/null
+cf delete-space-quota -f 20g-space-ds &> /dev/null
 cf delete-quota       -f 100g-org &> /dev/null
+cf delete-quota       -f 100g-org-ds &> /dev/null
 cf delete-quota       -f 50g-org &> /dev/null
 
 # Delete services and service instances

@@ -14,7 +14,7 @@ import (
 const securityGroup = `
 resource "cloudfoundry_asg" "rmq" {
 
-	name = "rmq-dev"
+	name = "rmq-dev-res"
 
     rule {
         protocol = "tcp"
@@ -36,7 +36,7 @@ resource "cloudfoundry_asg" "rmq" {
 const securityGroupUpdate = `
 resource "cloudfoundry_asg" "rmq" {
 
-	name = "rmq-dev"
+	name = "rmq-dev-res"
 
     rule {
         protocol = "tcp"
@@ -62,9 +62,9 @@ resource "cloudfoundry_asg" "rmq" {
 func TestAccAsg_normal(t *testing.T) {
 
 	ref := "cloudfoundry_asg.rmq"
-	asgname := "rmq-dev"
+	asgname := "rmq-dev-res"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
@@ -99,7 +99,11 @@ func TestAccAsg_normal(t *testing.T) {
 							ref, "rule.1.code", "0"),
 					),
 				},
-
+				resource.TestStep{
+					ResourceName:      ref,
+					ImportState:       true,
+					ImportStateVerify: true,
+				},
 				resource.TestStep{
 					Config: securityGroupUpdate,
 					Check: resource.ComposeTestCheckFunc(

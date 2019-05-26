@@ -75,7 +75,7 @@ func TestAccSegment_normal(t *testing.T) {
 		panic(err)
 	}
 	defaultLenIsolationSegments = len(segments)
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,

@@ -20,7 +20,7 @@ func TestAccDataSourceUser_normal(t *testing.T) {
 
 	ref := "data.cloudfoundry_user.admin-user"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,

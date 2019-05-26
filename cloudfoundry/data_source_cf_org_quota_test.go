@@ -13,7 +13,7 @@ import (
 const orgQuotaDataResource = `
 
 resource "cloudfoundry_org_quota" "q" {
-  name = "100g-org"
+  name = "100g-org-ds"
   allow_paid_service_plans = false
   instance_memory = 2048
   total_memory = 51200
@@ -30,7 +30,7 @@ data "cloudfoundry_org_quota" "qq" {
 
 func TestAccDataSourceOrgQuota_normal(t *testing.T) {
 	ref := "data.cloudfoundry_org_quota.qq"
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,
@@ -40,7 +40,7 @@ func TestAccDataSourceOrgQuota_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceOrgQuotaExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "100g-org"),
+							ref, "name", "100g-org-ds"),
 					),
 				},
 			},

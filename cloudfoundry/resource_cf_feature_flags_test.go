@@ -31,7 +31,7 @@ func TestAccConfig_normal(t *testing.T) {
 
 	resConfig := "cloudfoundry_feature_flags.ff"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
@@ -110,6 +110,11 @@ func TestAccConfig_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.hide_marketplace_from_unauthenticated_users", "disabled"),
 					),
+				},
+				resource.TestStep{
+					ResourceName:      resConfig,
+					ImportState:       true,
+					ImportStateVerify: true,
 				},
 			},
 		})

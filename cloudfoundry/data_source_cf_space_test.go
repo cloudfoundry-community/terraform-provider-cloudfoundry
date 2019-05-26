@@ -13,10 +13,10 @@ import (
 const spaceDataResource1 = `
 
 resource "cloudfoundry_org" "org1" {
-	name = "organization-one"
+	name = "organization-ds-space"
 }
 resource "cloudfoundry_space" "space1" {
-	name = "space-one"
+	name = "space-ds-space"
 	org = "${cloudfoundry_org.org1.id}"
 }
 
@@ -42,7 +42,7 @@ func TestAccDataSourceSpace_normal(t *testing.T) {
 	orgID, orgName := defaultTestOrg(t)
 	_, spaceName := defaultTestSpace(t)
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,
@@ -53,9 +53,9 @@ func TestAccDataSourceSpace_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceSpaceExists(ref1),
 						resource.TestCheckResourceAttr(
-							ref1, "name", "space-one"),
+							ref1, "name", "space-ds-space"),
 						resource.TestCheckResourceAttr(
-							ref1, "org_name", "organization-one"),
+							ref1, "org_name", "organization-ds-space"),
 						resource.TestCheckResourceAttrSet(
 							ref1, "org"),
 					),

@@ -24,7 +24,7 @@ func TestAccDataSourceStack_normal(t *testing.T) {
 	}
 	ref := "data.cloudfoundry_stack.s"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,

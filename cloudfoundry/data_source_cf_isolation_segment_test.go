@@ -21,7 +21,7 @@ func TestAccDataSourceIsolationSegment_normal(t *testing.T) {
 	_, defaultSegmentName := getTestDefaultIsolationSegment(t)
 	ref := "data.cloudfoundry_isolation_segment.segment-one"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,

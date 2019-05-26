@@ -13,7 +13,7 @@ import (
 const domainResourceShared = `
 
 resource "cloudfoundry_domain" "shared" {
-  sub_domain = "dev"
+  sub_domain = "dev-res"
   domain = "%s"
 }
 `
@@ -25,7 +25,7 @@ data "cloudfoundry_router_group" "tcp" {
 }
 
 resource "cloudfoundry_domain" "shared-tcp" {
-  sub_domain = "tcp-test"
+  sub_domain = "tcp-test-res"
   domain = "%s"
   router_group = "${data.cloudfoundry_router_group.tcp.id}"
 }
@@ -44,7 +44,7 @@ func TestAccSharedDomain_normal(t *testing.T) {
 	ref := "cloudfoundry_domain.shared"
 	domainname := "dev." + defaultAppDomain()
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
@@ -58,10 +58,15 @@ func TestAccSharedDomain_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", domainname),
 						resource.TestCheckResourceAttr(
-							ref, "sub_domain", "dev"),
+							ref, "sub_domain", "dev-res"),
 						resource.TestCheckResourceAttr(
 							ref, "domain", defaultAppDomain()),
 					),
+				},
+				resource.TestStep{
+					ResourceName:      ref,
+					ImportState:       true,
+					ImportStateVerify: true,
 				},
 			},
 		})
@@ -72,7 +77,7 @@ func TestAccSharedTCPDomain_normal(t *testing.T) {
 	ref := "cloudfoundry_domain.shared-tcp"
 	domainname := "tcp-test." + defaultAppDomain()
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
@@ -86,7 +91,7 @@ func TestAccSharedTCPDomain_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", domainname),
 						resource.TestCheckResourceAttr(
-							ref, "sub_domain", "tcp-test"),
+							ref, "sub_domain", "tcp-test-res"),
 						resource.TestCheckResourceAttr(
 							ref, "domain", defaultAppDomain()),
 						resource.TestCheckResourceAttr(
@@ -102,11 +107,11 @@ func TestAccPrivateDomain_normal(t *testing.T) {
 	ref := "cloudfoundry_domain.private"
 
 	domain := "io"
-	subDomain := "test-domain"
+	subDomain := "test-domain-res"
 
 	orgID, _ := defaultTestOrg(t)
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,

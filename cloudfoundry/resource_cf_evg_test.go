@@ -83,7 +83,7 @@ func TestAccRunningEvg_normal(t *testing.T) {
 	ref := "cloudfoundry_evg.running"
 	name := "running"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
@@ -107,6 +107,11 @@ func TestAccRunningEvg_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "variables.name4", "value4"),
 					),
+				},
+				resource.TestStep{
+					ResourceName:      ref,
+					ImportState:       true,
+					ImportStateVerify: true,
 				},
 				resource.TestStep{
 					Config: evgRunningResourceUpdated,
@@ -137,7 +142,7 @@ func TestAccStagingEvg_normal(t *testing.T) {
 	ref := "cloudfoundry_evg.staging"
 	name := "staging"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,

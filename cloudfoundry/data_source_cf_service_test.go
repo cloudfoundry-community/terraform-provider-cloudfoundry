@@ -24,7 +24,7 @@ func TestAccDataSourceService_normal(t *testing.T) {
 
 	ref := "data.cloudfoundry_service.test"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,

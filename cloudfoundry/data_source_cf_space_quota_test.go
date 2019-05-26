@@ -17,7 +17,7 @@ import (
 const spaceQuotaDataResource = `
 
 resource "cloudfoundry_space_quota" "q" {
-  name = "20g-space"
+  name = "20g-space-ds"
   allow_paid_service_plans = false
   instance_memory = 512
   total_memory = 10240
@@ -44,7 +44,7 @@ func TestAccDataSourceSpaceQuota_normal(t *testing.T) {
 	ref := "data.cloudfoundry_space_quota.qq"
 	orgID, _ := defaultTestOrg(t)
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,
@@ -54,7 +54,7 @@ func TestAccDataSourceSpaceQuota_normal(t *testing.T) {
 					Config: fmt.Sprintf(spaceQuotaDataResource, orgID, orgID),
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceSpaceQuotaExists(ref),
-						resource.TestCheckResourceAttr(ref, "name", "20g-space"),
+						resource.TestCheckResourceAttr(ref, "name", "20g-space-ds"),
 						resource.TestCheckResourceAttr(ref, "org", orgID),
 					),
 				},
