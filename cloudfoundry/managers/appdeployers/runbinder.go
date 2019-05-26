@@ -39,6 +39,9 @@ func (r RunBinder) MapRoutes(appDeploy AppDeploy) ([]ccv2.RouteMapping, error) {
 			if err != nil {
 				return mappings, err
 			}
+			// we wait one second after mapping because mapping is an async operation which can take time to complete
+			// mostly due to route emitter to perform its action inside diego
+			time.Sleep(1 * time.Second)
 			mappings = append(mappings, mapping)
 		}
 	}
@@ -120,6 +123,29 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]ccv2.ServiceBind
 	return bindings, nil
 }
 
+func (r RunBinder) WaitStart(appDeploy AppDeploy) error {
+	return common.PollingWithTimeout(func() (bool, error) {
+		appInstances, _, err := r.client.GetApplicationApplicationInstances(appDeploy.App.GUID)
+		if err != nil {
+			return true, err
+		}
+		if appDeploy.App.Instances.Value == 0 {
+			return true, nil
+		}
+		for i, instance := range appInstances {
+			if instance.State == constant.ApplicationInstanceStarting {
+				continue
+			}
+			if instance.State == constant.ApplicationInstanceRunning {
+				return true, nil
+			}
+			return true, fmt.Errorf("Instance %d failed with state %s for app %s", i, instance.State, appDeploy.App.Name)
+		}
+
+		return false, nil
+	}, 5*time.Second, appDeploy.StartTimeout)
+}
+
 func (r RunBinder) WaitStaging(appDeploy AppDeploy) error {
 	err := common.PollingWithTimeout(func() (bool, error) {
 		app, _, err := r.client.GetApplication(appDeploy.App.GUID)
@@ -157,26 +183,7 @@ func (r RunBinder) Start(appDeploy AppDeploy) error {
 	if err != nil {
 		return err
 	}
-	err = common.PollingWithTimeout(func() (bool, error) {
-		appInstances, _, err := r.client.GetApplicationApplicationInstances(appDeploy.App.GUID)
-		if err != nil {
-			return true, err
-		}
-		if appDeploy.App.Instances.Value == 0 {
-			return true, nil
-		}
-		for i, instance := range appInstances {
-			if instance.State == constant.ApplicationInstanceStarting {
-				continue
-			}
-			if instance.State == constant.ApplicationInstanceRunning {
-				return true, nil
-			}
-			return true, fmt.Errorf("Instance %d failed with state %s for app %s", i, instance.State, appDeploy.App.Name)
-		}
-
-		return false, nil
-	}, 5*time.Second, appDeploy.StartTimeout)
+	err = r.WaitStart(appDeploy)
 	if err != nil {
 		return r.processDeployErr(err, appDeploy)
 	}

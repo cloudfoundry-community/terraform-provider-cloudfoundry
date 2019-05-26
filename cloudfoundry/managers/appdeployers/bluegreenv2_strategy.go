@@ -1,7 +1,6 @@
 package appdeployers
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/bits"
@@ -56,15 +55,8 @@ func (s BlueGreenV2) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				return ctx, err
 			},
 			ReversePrevious: func(ctx Context) error {
-				appResp := ctx["app_response"].(AppDeployResponse)
-				if appResp.App.GUID != "" {
-					_, err := s.client.DeleteApplication(appResp.App.GUID)
-					if err != nil {
-						if httpErr, ok := err.(ccerror.RawHTTPStatusError); !ok || httpErr.StatusCode != 404 {
-							return err
-						}
-					}
-				}
+				// if in error app must be already deleted by standard deployer
+				// we only need to rename old app to its actual name
 				_, _, err := s.client.UpdateApplication(ccv2.Application{
 					GUID: appDeploy.App.GUID,
 					Name: appDeploy.App.Name,

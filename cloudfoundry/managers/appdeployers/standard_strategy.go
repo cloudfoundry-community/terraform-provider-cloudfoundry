@@ -156,10 +156,15 @@ func (s Standard) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 	if err != nil {
 		return appResp, err
 	}
+	err = s.runBinder.WaitStart(appDeploy)
+	if err != nil {
+		return appResp, err
+	}
 	if appDeploy.App.State == constant.ApplicationStopped {
 		err := s.runBinder.Stop(appDeploy)
 		return appResp, err
 	}
+
 	return appResp, nil
 }
 

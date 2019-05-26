@@ -305,7 +305,6 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	d.Partial(true)
 	d.SetPartial("docker_credentials")
 	session := meta.(*managers.Session)
-
 	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
 
 	if d.HasChange("routes") {
@@ -520,9 +519,9 @@ func IsAppUpdateOnly(d *schema.ResourceData) bool {
 }
 
 func IsAppRestageNeeded(d *schema.ResourceData) bool {
-	return d.HasChange("routes") || d.HasChange("buildpack") ||
-		d.HasChange("stack") || d.HasChange("docker_image") ||
-		d.HasChange("service_binding") || d.HasChange("environment")
+	return d.HasChange("buildpack") || d.HasChange("stack") ||
+		d.HasChange("docker_image") || d.HasChange("service_binding") ||
+		d.HasChange("environment")
 }
 
 func IsAppRestartNeeded(d *schema.ResourceData) bool {

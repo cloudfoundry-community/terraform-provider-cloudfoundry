@@ -1231,7 +1231,8 @@ func testAccCheckAppDestroyed(apps []string) resource.TestCheckFunc {
 				return err
 			}
 			if len(apps) > 0 {
-				return fmt.Errorf("app with name '%s' still exists in cloud foundry", a)
+				_, err := session.ClientV2.DeleteApplication(apps[0].GUID)
+				return err
 			}
 		}
 		return nil

@@ -488,7 +488,7 @@ func assertHTTPResponse(url string, expectedStatusCode int, expectedResponses *[
 	var finalErr error
 	// this assert is used to get on a route from gorouter
 	// delay and retry is necessary in case of the route not yet registered in gorouter
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 9; i++ {
 		finalErr = nil
 		time.Sleep(1 * time.Second)
 		resp, err := client.Get(url)
