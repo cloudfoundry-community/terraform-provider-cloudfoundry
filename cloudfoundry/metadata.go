@@ -41,23 +41,6 @@ func labelsSchema() *schema.Schema {
 	}
 }
 
-func labelsForceNewSchema() *schema.Schema {
-	return &schema.Schema{
-		Type:     schema.TypeMap,
-		Optional: true,
-		ForceNew: true,
-		Elem:     schema.TypeString,
-	}
-}
-
-func annotationsForceNewSchema() *schema.Schema {
-	return &schema.Schema{
-		Type:     schema.TypeMap,
-		Optional: true,
-		ForceNew: true,
-		Elem:     schema.TypeString,
-	}
-}
 func annotationsSchema() *schema.Schema {
 	return &schema.Schema{
 		Type:     schema.TypeMap,
