@@ -13,6 +13,7 @@ func resourceSegment() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceSegmentCreate,
 		Read:   resourceSegmentRead,
+		Update: resourceSegmentUpdate,
 		Delete: resourceSegmentDelete,
 		Importer: &schema.ResourceImporter{
 			State: ImportRead(resourceSegmentRead),
@@ -80,6 +81,10 @@ func resourceSegmentCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 	return nil
+}
+
+func resourceSegmentUpdate(d *schema.ResourceData, meta interface{}) error {
+	return metadataUpdate(segmentMetadata, d, meta)
 }
 
 func resourceSegmentRead(d *schema.ResourceData, meta interface{}) error {
