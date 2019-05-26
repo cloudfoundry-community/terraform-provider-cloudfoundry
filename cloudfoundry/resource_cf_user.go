@@ -105,7 +105,7 @@ func resourceUserCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.SetId(user.ID)
-	return resourceUserUpdate(d, NewResourceMeta{meta})
+	return resourceUserUpdate(d, meta)
 }
 
 func resourceUserRead(d *schema.ResourceData, meta interface{}) error {
@@ -139,28 +139,12 @@ func resourceUserRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
-
-	var (
-		newResource bool
-		session     *managers.Session
-	)
-
-	if m, ok := meta.(NewResourceMeta); ok {
-		session = m.meta.(*managers.Session)
-		meta = m.meta
-		newResource = true
-	} else {
-		session = meta.(*managers.Session)
-		if session == nil {
-			return fmt.Errorf("client is nil")
-		}
-		newResource = false
-	}
+	session := meta.(*managers.Session)
 
 	id := d.Id()
 	um := session.ClientUAA
 
-	if !newResource {
+	if !d.IsNewResource() {
 
 		updateUserDetail := false
 		name := d.Get("name").(string)

@@ -2,7 +2,6 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -73,7 +72,7 @@ func resourceOrgCreate(d *schema.ResourceData, meta interface{}) error {
 		d.Set("quota", org.QuotaDefinitionGUID)
 	}
 	d.SetId(org.GUID)
-	return resourceOrgUpdate(d, NewResourceMeta{meta})
+	return resourceOrgUpdate(d, meta)
 }
 
 func resourceOrgRead(d *schema.ResourceData, meta interface{}) error {
@@ -120,28 +119,12 @@ func resourceOrgRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
-
-	var (
-		newResource bool
-		session     *managers.Session
-	)
-
-	if m, ok := meta.(NewResourceMeta); ok {
-		session = m.meta.(*managers.Session)
-		meta = m.meta
-		newResource = true
-	} else {
-		session = meta.(*managers.Session)
-		if session == nil {
-			return fmt.Errorf("client is nil")
-		}
-		newResource = false
-	}
+	session := meta.(*managers.Session)
 
 	id := d.Id()
 	om := session.ClientV2
 
-	if !newResource {
+	if !d.IsNewResource() {
 		_, _, err := om.UpdateOrganization(id, d.Get("name").(string), d.Get("quota").(string))
 		if err != nil {
 			return err

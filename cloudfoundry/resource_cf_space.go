@@ -100,7 +100,7 @@ func resourceSpaceCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 	d.SetId(space.GUID)
-	err = resourceSpaceUpdate(d, NewResourceMeta{meta})
+	err = resourceSpaceUpdate(d, meta)
 	if err != nil {
 		return err
 	}
@@ -192,24 +192,11 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
-
-	var (
-		newResource bool
-		session     *managers.Session
-	)
-
-	if m, ok := meta.(NewResourceMeta); ok {
-		session = m.meta.(*managers.Session)
-		meta = m.meta
-		newResource = true
-	} else {
-		session = meta.(*managers.Session)
-		newResource = false
-	}
+	session := meta.(*managers.Session)
 
 	spaceID := d.Id()
 	orgID := d.Get("org").(string)
-	if !newResource {
+	if !d.IsNewResource() {
 		_, _, err := session.ClientV2.UpdateSpace(ccv2.Space{
 			GUID:             spaceID,
 			Name:             d.Get("name").(string),
@@ -276,14 +263,14 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	}
 
 	segID := d.Get("isolation_segment").(string)
-	if segID != "" && newResource {
+	if segID != "" && d.IsNewResource() {
 		_, _, err := session.ClientV3.UpdateSpaceIsolationSegmentRelationship(spaceID, segID)
 		if err != nil {
 			return err
 		}
 	}
 
-	if !newResource && d.HasChange("isolation_segment") {
+	if !d.IsNewResource() && d.HasChange("isolation_segment") {
 		_, _, err := session.ClientV3.UpdateSpaceIsolationSegmentRelationship(spaceID, segID)
 		if err != nil {
 			return err
