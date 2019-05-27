@@ -13,6 +13,9 @@ function testAcceptance {
     if [[ "$TRAVIS_BUILD_STAGE_NAME" == "Testres" ]] ; then
         TESTARGS="-run 'TestAccRes'" make testacc
     fi
+    if [[ "$TRAVIS_BUILD_STAGE_NAME" == "Testmigrate" ]] ; then
+        TESTARGS="-run 'Test.*MigrateState.*'" make testacc
+    fi
     if [[ "$TRAVIS_BUILD_STAGE_NAME" == "Testlint" ]] ; then
         make check
     fi

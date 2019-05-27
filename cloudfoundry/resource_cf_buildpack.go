@@ -18,7 +18,8 @@ func resourceBuildpack() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: ImportRead(resourceBuildpackRead),
 		},
-
+		SchemaVersion: 3,
+		MigrateState:  resourceBuildpackMigrateState,
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

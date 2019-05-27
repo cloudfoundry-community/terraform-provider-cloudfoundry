@@ -36,7 +36,8 @@ func resourceApp() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: resourceAppImport,
 		},
-
+		SchemaVersion: 3,
+		MigrateState:  resourceAppMigrateState,
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{

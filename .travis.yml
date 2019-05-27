@@ -6,6 +6,7 @@ stages:
   - testds
   - testimport
   - testres
+  - testmigrate
   - deploy
 go_import_path: github.com/terraform-providers/terraform-provider-cloudfoundry
 before_install:
@@ -27,6 +28,9 @@ jobs:
       script: travis_wait 360 scripts/build.sh
       if: type = pull_request AND fork = false OR branch = dev OR branch = master
     - stage: testres
+      script: travis_wait 360 scripts/build.sh
+      if: type = pull_request AND fork = false OR branch = dev OR branch = master
+    - stage: testmigrate
       script: travis_wait 360 scripts/build.sh
       if: type = pull_request AND fork = false OR branch = dev OR branch = master
     - stage: deploy

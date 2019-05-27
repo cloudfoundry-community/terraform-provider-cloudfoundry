@@ -64,6 +64,8 @@ type Session struct {
 
 	PurgeWhenDelete bool
 
+	Config Config
+
 	ApiEndpoint string
 }
 
@@ -83,6 +85,7 @@ func NewSession(c Config) (s *Session, err error) {
 		uaaDefaultCfGroups: make(map[string]uaa.Group),
 		PurgeWhenDelete:    c.PurgeWhenDelete,
 		ApiEndpoint:        c.Endpoint,
+		Config:             c,
 	}
 	config := &configv3.Config{
 		ConfigFile: configv3.JSONConfig{
