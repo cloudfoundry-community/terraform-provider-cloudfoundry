@@ -75,7 +75,7 @@ func schemaOldApp() map[string]*schema.Schema {
 				} else if v, ok := elem["app"]; ok {
 					target = v.(string)
 				}
-				return hashcode.String(fmt.Sprintf("%s", target))
+				return hashcode.String(target)
 			},
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
