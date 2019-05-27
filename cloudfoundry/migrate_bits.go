@@ -181,7 +181,7 @@ func migrateBitsStateV2toV3(is *terraform.InstanceState, meta interface{}) (*ter
 	if u == nil {
 		return is, nil
 	}
-
+	is.Attributes["source_code_hash"] = ""
 	if (u.Scheme == "http" || u.Scheme == "https") && filepath.Ext(u.Path) == ".zip" {
 		is.Attributes["path"] = u.String()
 		is.Attributes = migrateBitsDeleteAttr(is.Attributes)
@@ -200,12 +200,6 @@ func migrateBitsStateV2toV3(is *terraform.InstanceState, meta interface{}) (*ter
 	if err != nil {
 		return is, err
 	}
-
-	sha1, err := s.Sha1()
-	if err != nil {
-		return is, err
-	}
-	is.Attributes["source_code_hash"] = sha1
 
 	outputPath := filepath.Join(folderBits, migrateBitsOutputPath(u))
 	err = os.MkdirAll(filepath.Dir(outputPath), os.ModePerm)

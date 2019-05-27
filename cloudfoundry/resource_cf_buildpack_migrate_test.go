@@ -45,8 +45,7 @@ func TestBuildpackMigrateStateV0toV3(t *testing.T) {
 				"url": filepath.Join(testDir(), "dummy-app"),
 			},
 			Expected: map[string]string{
-				"path":             filepath.Join(folderBits, "dummy-app.zip"),
-				"source_code_hash": "notempty",
+				"path": filepath.Join(folderBits, "dummy-app.zip"),
 			},
 			Meta: testSession(),
 		},
@@ -58,8 +57,7 @@ func TestBuildpackMigrateStateV0toV3(t *testing.T) {
 				"git.0.tag": "v4.5.2",
 			},
 			Expected: map[string]string{
-				"path":             filepath.Join(folderBits, "github.com", "cloudfoundry-community", "tomee-buildpack.zip"),
-				"source_code_hash": "notempty",
+				"path": filepath.Join(folderBits, "github.com", "cloudfoundry-community", "tomee-buildpack.zip"),
 			},
 			Meta: testSession(),
 		},
@@ -105,14 +103,6 @@ func TestBuildpackMigrateStateV0toV3(t *testing.T) {
 		}
 
 		for k, v := range tc.Expected {
-			if v == "notempty" && is.Attributes[k] == "" {
-				t.Fatalf(
-					"bad: %s\n\n expected: %#v not be empty but it was",
-					tn, k)
-			}
-			if v == "notempty" {
-				continue
-			}
 			if is.Attributes[k] != v {
 				t.Fatalf(
 					"bad: %s\n\n expected: %#v -> %#v\n got: %#v -> %#v\n in: %#v",
