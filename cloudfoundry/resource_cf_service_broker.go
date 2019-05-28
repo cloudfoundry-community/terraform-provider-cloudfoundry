@@ -264,7 +264,7 @@ func serviceBrokerCatalogSignature(d *schema.ResourceData, meta interface{}) (st
 	if err != nil {
 		return "", err
 	}
-
+	fmt.Println(resp.StatusCode)
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("Status code: %s, Body: %s ", resp.Status, string(bodyBytes))
 	}
