@@ -270,6 +270,9 @@ func serviceBrokerCatalogSignature(d *schema.ResourceData, meta interface{}) (st
 	}
 
 	h := sha1.New()
-	h.Write(bodyBytes)
+	_, err = h.Write(bodyBytes)
+	if err != nil {
+		return "", err
+	}
 	return base64.URLEncoding.EncodeToString(h.Sum(nil)), nil
 }
