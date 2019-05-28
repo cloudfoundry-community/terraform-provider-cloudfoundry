@@ -3,9 +3,19 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-
+	"crypto/sha1"
+	"encoding/base64"
+	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"strings"
+)
+
+const (
+	catalogEndpoint = "/v2/catalog"
 )
 
 func resourceServiceBroker() *schema.Resource {
@@ -53,12 +63,35 @@ func resourceServiceBroker() *schema.Resource {
 				Type:     schema.TypeMap,
 				Computed: true,
 			},
+			"catalog_hash": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Optional: true,
+			},
+			"catalog_change": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Special marker to know and trigger a service broker update, this should not be set to true on your resource declaration",
+			},
+			"fail_when_catalog_not_accessible": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Set to true if you want to see errors when getting service broker catalog",
+			},
 		},
 	}
 }
 
 func resourceServiceBrokerCreate(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
+
+	// do as first to not try add broker if catalog not accessible
+	err := serviceBrokerUpdateCatalogSignature(d, meta)
+	if err != nil {
+		return err
+	}
 
 	sb, _, err := session.ClientV2.CreateServiceBroker(
 		d.Get("name").(string),
@@ -74,11 +107,18 @@ func resourceServiceBrokerCreate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 	d.SetId(sb.GUID)
+
 	return nil
 }
 
 func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
+
+	// do as first to not try add broker if catalog not accessible
+	err := serviceBrokerUpdateCatalogSignature(d, meta)
+	if err != nil {
+		return err
+	}
 
 	sb, _, err := session.ClientV2.GetServiceBroker(d.Id())
 	if err != nil {
@@ -104,7 +144,13 @@ func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) error {
 func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 
-	_, _, err := session.ClientV2.UpdateServiceBroker(ccv2.ServiceBroker{
+	// do as first to not try add broker if catalog not accessible
+	err := serviceBrokerUpdateCatalogSignature(d, meta)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = session.ClientV2.UpdateServiceBroker(ccv2.ServiceBroker{
 		GUID:         d.Id(),
 		AuthUsername: d.Get("username").(string),
 		AuthPassword: d.Get("password").(string),
@@ -172,4 +218,58 @@ func readServiceDetail(id string, session *managers.Session, d *schema.ResourceD
 	d.Set("services", servicesTf)
 
 	return err
+}
+
+func serviceBrokerUpdateCatalogSignature(d *schema.ResourceData, meta interface{}) error {
+	signature, err := serviceBrokerCatalogSignature(d, meta)
+	if err != nil && d.Get("fail_when_catalog_not_accessible").(bool) {
+		return fmt.Errorf("Error when getting catalog signature: %s", err.Error())
+	}
+	if err != nil {
+		log.Printf(
+			"[WARN] skipping generating catalog sha1, error during request creation: %s",
+			err.Error(),
+		)
+		return nil
+	}
+	previousSignature := d.Get("catalog_hash")
+	d.Set("catalog_hash", signature)
+	if d.IsNewResource() {
+		return nil
+	}
+	d.Set("catalog_change", previousSignature != signature)
+	return nil
+}
+
+func serviceBrokerCatalogSignature(d *schema.ResourceData, meta interface{}) (string, error) {
+	client := meta.(*managers.Session).HttpClient
+	catalogUrl := d.Get("url").(string)
+	if strings.HasSuffix(catalogUrl, "/") {
+		catalogUrl = strings.TrimSuffix(catalogUrl, "/")
+	}
+	catalogUrl += catalogEndpoint
+	req, err := http.NewRequest("GET", catalogUrl, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("X-Broker-API-Version", "2.11")
+	req.SetBasicAuth(d.Get("username").(string), d.Get("password").(string))
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("Status code: %s, Body: %s ", resp.Status, string(bodyBytes))
+	}
+
+	h := sha1.New()
+	h.Write(bodyBytes)
+	return base64.URLEncoding.EncodeToString(h.Sum(nil)), nil
 }
