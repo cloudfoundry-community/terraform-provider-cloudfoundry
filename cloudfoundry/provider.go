@@ -108,6 +108,7 @@ func Provider() terraform.ResourceProvider {
 			"cloudfoundry_app":                           resourceApp(),
 			"cloudfoundry_isolation_segment":             resourceSegment(),
 			"cloudfoundry_isolation_segment_entitlement": resourceSegmentEntitlement(),
+			"cloudfoundry_network_policy":                resourceNetworkPolicy(),
 		},
 
 		ConfigureFunc: providerConfigure,

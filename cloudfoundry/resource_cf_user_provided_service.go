@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/structure"
+	"github.com/hashicorp/terraform/helper/validation"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
@@ -66,6 +67,7 @@ func resourceUserProvidedService() *schema.Resource {
 				ConflictsWith:    []string{"credentials"},
 				Sensitive:        true,
 				DiffSuppressFunc: structure.SuppressJsonDiff,
+				ValidateFunc:     validation.ValidateJsonString,
 			},
 			"tags": &schema.Schema{
 				Type:     schema.TypeSet,

@@ -3,6 +3,7 @@ package cloudfoundry
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform/helper/validation"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
@@ -48,9 +49,10 @@ func resourceServiceInstance() *schema.Resource {
 				ForceNew: true,
 			},
 			"json_params": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validation.ValidateJsonString,
 			},
 			"tags": &schema.Schema{
 				Type:     schema.TypeList,

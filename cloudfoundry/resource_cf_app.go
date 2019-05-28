@@ -131,9 +131,8 @@ func resourceApp() *schema.Resource {
 				ConflictsWith: []string{"path"},
 			},
 			"service_binding": &schema.Schema{
-				Type:       schema.TypeSet,
-				Optional:   true,
-				ConfigMode: schema.SchemaConfigModeAttr,
+				Type:     schema.TypeSet,
+				Optional: true,
 				Set: func(v interface{}) int {
 					elem := v.(map[string]interface{})
 					return hashcode.String(elem["service_instance"].(string))
@@ -150,9 +149,10 @@ func resourceApp() *schema.Resource {
 							Sensitive: true,
 						},
 						"params_json": &schema.Schema{
-							Type:      schema.TypeString,
-							Optional:  true,
-							Sensitive: true,
+							Type:         schema.TypeString,
+							Optional:     true,
+							Sensitive:    true,
+							ValidateFunc: validation.ValidateJsonString,
 						},
 					},
 				},

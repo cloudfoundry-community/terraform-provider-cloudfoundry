@@ -28,6 +28,8 @@ cf delete -f dummy-app &> /dev/null
 cf delete -f test-docker-app &> /dev/null
 cf delete -f spring-music &> /dev/null
 cf delete -f java-spring &> /dev/null
+cf delete -f net-policy-res-back &> /dev/null
+cf delete -f net-policy-res-front &> /dev/null
 
 # Delete org and security gorups
 
@@ -65,16 +67,8 @@ cf delete-service-broker -f test &> /dev/null
 cf delete-service-broker -f test-renamed &> /dev/null
 
 # Delete routes
-cf delete-route -f $TEST_APP_DOMAIN --hostname php-app &> /dev/null
-cf delete-route -f $TEST_APP_DOMAIN --hostname php-app-other &> /dev/null
-cf delete-route -f $TEST_APP_DOMAIN --hostname basic-auth-router &> /dev/null
-cf delete-route -f $TEST_APP_DOMAIN --hostname basic-auth-broker &> /dev/null
-cf delete-route -f $TEST_APP_DOMAIN --hostname test-app &> /dev/null
-cf delete-route -f $TEST_APP_DOMAIN --hostname test-docker-app &> /dev/null
-cf delete-route -f $TEST_APP_DOMAIN --hostname fake-service-broker &> /dev/null
-cf delete-route -f $TEST_APP_DOMAIN --hostname spring-music &> /dev/null
-cf delete-route -f $TEST_APP_DOMAIN --hostname java-spring &> /dev/null
 cf unbind-route-service -f $TEST_APP_DOMAIN basic-auth --hostname php-app &> /dev/null
+cf delete-orphaned-routes -f &> /dev/null
 
 # Delete domains
 #
