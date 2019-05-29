@@ -90,7 +90,7 @@ func resourceApp() *schema.Resource {
 			"enable_ssh": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
-				Default:  true,
+				Computed: true,
 			},
 			"timeout": &schema.Schema{
 				Type:     schema.TypeInt,

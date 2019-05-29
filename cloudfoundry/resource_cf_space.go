@@ -36,7 +36,7 @@ func resourceSpace() *schema.Resource {
 			"allow_ssh": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
-				Default:  true,
+				Computed: true,
 			},
 			"isolation_segment": &schema.Schema{
 				Type:     schema.TypeString,
@@ -87,7 +87,12 @@ func resourceSpaceCreate(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 	org := d.Get("org").(string)
 	quota := d.Get("quota").(string)
-	allowSSH := d.Get("allow_ssh").(bool)
+	allowSSH := true
+	// if user does explicitly set allow_ssh
+	// it set allow the user value
+	if allow, ok := d.GetOk("allow_ssh"); ok {
+		allowSSH = allow.(bool)
+	}
 
 	sm := session.ClientV2
 	space, _, err := sm.CreateSpaceFromObject(ccv2.Space{

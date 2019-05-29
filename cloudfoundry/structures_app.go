@@ -11,6 +11,15 @@ import (
 )
 
 func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, error) {
+	enableSSH := d.Get("enable_ssh").(bool)
+	if d.IsNewResource() {
+		// if user does not explicitly set allow_ssh
+		// it set allow ssh to true only during creation
+		if _, ok := d.GetOk("allow_ssh"); !ok {
+			enableSSH = true
+		}
+	}
+
 	app := ccv2.Application{
 		GUID:                    d.Id(),
 		Name:                    d.Get("name").(string),
@@ -20,7 +29,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 		StackGUID:               d.Get("stack").(string),
 		Buildpack:               StringToFilteredString(d.Get("buildpack").(string)),
 		Command:                 StringToFilteredString(d.Get("command").(string)),
-		EnableSSH:               BoolToNullBool(d.Get("enable_ssh").(bool)),
+		EnableSSH:               BoolToNullBool(enableSSH),
 		State:                   constant.ApplicationStarted,
 		DockerImage:             d.Get("docker_image").(string),
 		HealthCheckHTTPEndpoint: d.Get("health_check_http_endpoint").(string),
