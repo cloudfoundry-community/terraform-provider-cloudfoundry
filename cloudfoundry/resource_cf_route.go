@@ -28,6 +28,7 @@ func resourceRoute() *schema.Resource {
 			"domain": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"space": &schema.Schema{
 				Type:     schema.TypeString,
