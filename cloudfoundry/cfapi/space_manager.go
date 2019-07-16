@@ -163,16 +163,13 @@ func (sm *SpaceManager) CreateSpace(
 }
 
 // UpdateSpace -
-func (sm *SpaceManager) UpdateSpace(space CCSpace, asgs []interface{}) (err error) {
+func (sm *SpaceManager) UpdateSpace(space CCSpace) (err error) {
 
 	payload := map[string]interface{}{
 		"name":                        space.Name,
 		"organization_guid":           space.OrgGUID,
 		"space_quota_definition_guid": space.QuotaGUID,
 		"allow_ssh":                   space.AllowSSH,
-	}
-	if len(asgs) > 0 {
-		payload["security_group_guids"] = asgs
 	}
 
 	body, err := json.Marshal(payload)
@@ -220,6 +217,18 @@ func (sm *SpaceManager) ListUsers(spaceID string, role SpaceRole) (userIDs []int
 		userIDs = append(userIDs, r.Metadata.GUID)
 	}
 	return userIDs, nil
+}
+
+// AddASG -
+func (sm *SpaceManager) AddASG(spaceID string, asgID string) (err error) {
+	path := fmt.Sprintf("/v2/spaces/%s/security_groups/%s", spaceID, asgID)
+	return sm.ccGateway.UpdateResource(sm.apiEndpoint, path, strings.NewReader(""))
+}
+
+// RemoveASG -
+func (sm *SpaceManager) RemoveASG(spaceID string, asgID string) (err error) {
+	path := fmt.Sprintf("/v2/spaces/%s/security_groups/%s", spaceID, asgID)
+	return sm.ccGateway.DeleteResource(sm.apiEndpoint, path)
 }
 
 // AddStagingASG -

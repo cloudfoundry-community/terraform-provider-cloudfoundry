@@ -46,12 +46,14 @@ func resourceSpace() *schema.Resource {
 			"asgs": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
+				Computed: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      resourceStringHash,
 			},
 			"staging_asgs": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
+				Computed: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      resourceStringHash,
 			},
@@ -199,31 +201,34 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	sm := session.SpaceManager()
 
 	if !newResource {
-
-		var asgs []interface{}
-
 		space := cfapi.CCSpace{
-			ID:   spaceID,
-			Name: d.Get("name").(string),
-
-			OrgGUID: orgID,
-
+			ID:       spaceID,
+			Name:     d.Get("name").(string),
+			OrgGUID:  orgID,
 			AllowSSH: d.Get("allow_ssh").(bool),
 		}
 		if v, ok := d.GetOk("quota"); ok {
 			space.QuotaGUID = v.(string)
 		}
-		if v, ok := d.GetOk("asgs"); ok {
-			asgs = v.(*schema.Set).List()
+		if err = sm.UpdateSpace(space); err != nil {
+			return err
 		}
+	}
 
-		if err = sm.UpdateSpace(space, asgs); err != nil {
+	remove, add := getListChanges(d.GetChange("asgs"))
+	for _, asgID := range remove {
+		if err = sm.RemoveASG(spaceID, asgID); err != nil {
+			return err
+		}
+	}
+	for _, asgID := range add {
+		if err = sm.AddASG(spaceID, asgID); err != nil {
 			return err
 		}
 	}
 
 	old, new := d.GetChange("staging_asgs")
-	remove, add := getListChanges(old, new)
+	remove, add = getListChanges(old, new)
 	for _, asgID := range remove {
 		if err = sm.RemoveStagingASG(spaceID, asgID); err != nil {
 			return err
