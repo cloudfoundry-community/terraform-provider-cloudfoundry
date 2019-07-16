@@ -25,18 +25,20 @@ func dataSourceUser() *schema.Resource {
 func dataSourceUserRead(d *schema.ResourceData, meta interface{}) error {
 
 	session := meta.(*managers.Session)
-	um := session.ClientUAA
+	um := session.ClientV2
 
 	name := d.Get("name").(string)
 
-	users, err := um.GetUsersByUsername(name)
+	users, _, err := um.GetUsers()
 	if err != nil {
 		return err
 	}
 
-	if len(users) == 0 {
-		return NotFound
+	for _, user := range users {
+		if user.Username == name {
+			d.SetId(user.GUID)
+			return nil
+		}
 	}
-	d.SetId(users[0].ID)
-	return err
+	return NotFound
 }

@@ -20,7 +20,6 @@ func resourceUser() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
@@ -39,10 +38,12 @@ func resourceUser() *schema.Resource {
 			"given_name": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 			},
 			"family_name": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 			},
 			"email": &schema.Schema{
 				Type:     schema.TypeString,
@@ -50,10 +51,12 @@ func resourceUser() *schema.Resource {
 				Optional: true,
 			},
 			"groups": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Optional:   true,
+				Computed:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 		},
 	}
