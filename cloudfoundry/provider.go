@@ -51,6 +51,12 @@ func Provider() terraform.ResourceProvider {
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CF_SKIP_SSL_VALIDATION", false),
 			},
+			"default_quota_name": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Name of the default quota",
+				DefaultFunc: schema.EnvDefaultFunc("CF_DEFAULT_QUOTA_NAME", "default"),
+			},
 			"app_logs_max": &schema.Schema{
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -126,6 +132,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		UaaClientSecret:   d.Get("uaa_client_secret").(string),
 		SkipSslValidation: d.Get("skip_ssl_validation").(bool),
 		AppLogsMax:        d.Get("app_logs_max").(int),
+		DefaultQuotaName:  d.Get("default_quota_name").(string),
 	}
 	return managers.NewSession(c)
 }

@@ -12,4 +12,5 @@ type Config struct {
 	SkipSslValidation bool
 	AppLogsMax        int
 	PurgeWhenDelete   bool
+	DefaultQuotaName  string
 }

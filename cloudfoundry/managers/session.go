@@ -122,7 +122,7 @@ func NewSession(c Config) (s *Session, err error) {
 		return nil, fmt.Errorf("Error when loading uaa groups: %s", err.Error())
 	}
 
-	err = s.loadDefaultQuotaGuid()
+	err = s.loadDefaultQuotaGuid(c.DefaultQuotaName)
 	if err != nil {
 		return nil, fmt.Errorf("Error when loading default quota: %s", err.Error())
 	}
@@ -393,13 +393,13 @@ func (s *Session) loadUaaDefaultCfGroups() error {
 	return nil
 }
 
-func (s *Session) loadDefaultQuotaGuid() error {
-	quotas, _, err := s.ClientV2.GetQuotas(ccv2cons.OrgQuota, ccv2.FilterByName("default"))
+func (s *Session) loadDefaultQuotaGuid(quotaName string) error {
+	quotas, _, err := s.ClientV2.GetQuotas(ccv2cons.OrgQuota, ccv2.FilterByName(quotaName))
 	if err != nil {
 		return err
 	}
 	if len(quotas) == 0 {
-		return fmt.Errorf("Can't found default quota")
+		return fmt.Errorf("Can't found default quota '%s'", quotaName)
 	}
 	s.defaultQuotaGuid = quotas[0].GUID
 	return nil

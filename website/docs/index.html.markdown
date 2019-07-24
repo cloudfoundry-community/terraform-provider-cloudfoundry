@@ -65,6 +65,9 @@ The following arguments are supported:
 * `skip_ssl_validation` - (Optional) Skip verification of the API endpoint - Not recommended!. Defaults to "false". This can also be specified
   with the `CF_SKIP_SSL_VALIDATION` shell environment variable.
   
+* `default_quota_name` - (Optional, Default: `default`) Change the name of your default quota . This can also be specified
+  with the `CF_DEFAULT_QUOTA_NAME` shell environment variable.
+  
 * `app_logs_max` - (Optional) Number of logs message which can be see when app creation is errored (-1 means all messages stored). Defaults to "30". This can also be specified
   with the `CF_APP_LOGS_MAX` shell environment variable.
   
