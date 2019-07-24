@@ -102,14 +102,16 @@ func NewSession(c Config) (s *Session, err error) {
 		},
 	}
 	uaaClientId := c.UaaClientID
+	uaaClientSecret := c.UaaClientSecret
 	if uaaClientId == "" {
 		uaaClientId = c.CFClientID
+		uaaClientSecret = c.CFClientSecret
 	}
 	configUaa := &configv3.Config{
 		ConfigFile: configv3.JSONConfig{
 			ConfigVersion:        3,
-			UAAOAuthClient:       c.UaaClientID,
-			UAAOAuthClientSecret: c.UaaClientSecret,
+			UAAOAuthClient:       uaaClientId,
+			UAAOAuthClientSecret: uaaClientSecret,
 			SkipSSLValidation:    c.SkipSslValidation,
 		},
 	}
