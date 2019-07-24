@@ -101,7 +101,10 @@ func NewSession(c Config) (s *Session, err error) {
 			BinaryName: "terraform-provider",
 		},
 	}
-
+	uaaClientId := c.UaaClientID
+	if uaaClientId == "" {
+		uaaClientId = c.CFClientID
+	}
 	configUaa := &configv3.Config{
 		ConfigFile: configv3.JSONConfig{
 			ConfigVersion:        3,
@@ -250,10 +253,20 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 			return fmt.Errorf("Error setup resource uaa: %s", err)
 		}
 
-		accessTokenSess, refreshTokenSess, err := uaaClientSess.Authenticate(map[string]string{
-			"client_id":     configUaa.UAAOAuthClient(),
-			"client_secret": configUaa.UAAOAuthClientSecret(),
-		}, "", constant.GrantTypeClientCredentials)
+		var accessTokenSess string
+		var refreshTokenSess string
+		if config.UAAOAuthClient() == "cf" {
+			accessTokenSess, refreshTokenSess, err = uaaClientSess.Authenticate(map[string]string{
+				"username": config.CFUsername(),
+				"password": config.CFPassword(),
+			}, "", constant.GrantTypePassword)
+		} else {
+			accessTokenSess, refreshTokenSess, err = uaaClientSess.Authenticate(map[string]string{
+				"client_id":     configUaa.UAAOAuthClient(),
+				"client_secret": configUaa.UAAOAuthClientSecret(),
+			}, "", constant.GrantTypeClientCredentials)
+		}
+
 		if err != nil {
 			return fmt.Errorf("Error when authenticate on uaa: %s", err)
 		}
