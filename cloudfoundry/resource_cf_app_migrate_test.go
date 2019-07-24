@@ -163,7 +163,7 @@ func TestAppMigrateStateV0toV3(t *testing.T) {
 				}
 				stat, err := os.Stat(is.Attributes[k])
 				if err != nil {
-					t.Fatalf("Error occured when retrieving path %s: %s", is.Attributes[k], err.Error())
+					t.Fatalf("Error occurred when retrieving path %s: %s", is.Attributes[k], err.Error())
 				}
 				if stat.Size() == 0 {
 					t.Fatalf("Path %s seems to be an empty file, len: %d", is.Attributes[k], stat.Size())

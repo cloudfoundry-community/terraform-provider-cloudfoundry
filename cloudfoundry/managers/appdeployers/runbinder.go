@@ -218,7 +218,7 @@ func (r RunBinder) processDeployErr(origErr error, appDeploy AppDeploy) error {
 	var logs string
 	logs, err = r.noaaClient.RecentLogs(appDeploy.App.GUID)
 	if err != nil {
-		logs = fmt.Sprintf("Error occured when recolting app %s logs: %s", appDeploy.App.Name, err.Error())
+		logs = fmt.Sprintf("Error occurred when recolting app %s logs: %s", appDeploy.App.Name, err.Error())
 	}
 	return fmt.Errorf("%s\n\nApp '%s' logs: \n%s", origErr.Error(), appDeploy.App.Name, logs)
 }
