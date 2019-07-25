@@ -33,6 +33,8 @@ func resourceOrg() *schema.Resource {
 			"managers": &schema.Schema{
 				Deprecated: "Use resource cloudfoundry_org_users instead",
 				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
 				Optional:   true,
 				Elem:       &schema.Schema{Type: schema.TypeString},
 				Set:        resourceStringHash,
@@ -40,6 +42,8 @@ func resourceOrg() *schema.Resource {
 			"billing_managers": &schema.Schema{
 				Deprecated: "Use resource cloudfoundry_org_users instead",
 				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
 				Optional:   true,
 				Elem:       &schema.Schema{Type: schema.TypeString},
 				Set:        resourceStringHash,
@@ -47,6 +51,8 @@ func resourceOrg() *schema.Resource {
 			"auditors": &schema.Schema{
 				Deprecated: "Use resource cloudfoundry_org_users instead",
 				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
 				Optional:   true,
 				Elem:       &schema.Schema{Type: schema.TypeString},
 				Set:        resourceStringHash,

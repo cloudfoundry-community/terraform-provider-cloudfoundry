@@ -57,6 +57,8 @@ func resourceSpace() *schema.Resource {
 			"managers": &schema.Schema{
 				Deprecated: "Use resource cloudfoundry_space_users instead",
 				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
 				Optional:   true,
 				Elem:       &schema.Schema{Type: schema.TypeString},
 				Set:        resourceStringHash,
@@ -64,6 +66,8 @@ func resourceSpace() *schema.Resource {
 			"developers": &schema.Schema{
 				Deprecated: "Use resource cloudfoundry_space_users instead",
 				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
 				Optional:   true,
 				Elem:       &schema.Schema{Type: schema.TypeString},
 				Set:        resourceStringHash,
@@ -71,6 +75,8 @@ func resourceSpace() *schema.Resource {
 			"auditors": &schema.Schema{
 				Deprecated: "Use resource cloudfoundry_space_users instead",
 				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
 				Optional:   true,
 				Elem:       &schema.Schema{Type: schema.TypeString},
 				Set:        resourceStringHash,

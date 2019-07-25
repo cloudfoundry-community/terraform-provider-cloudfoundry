@@ -23,6 +23,10 @@ func resourceOrgUsers() *schema.Resource {
 		Update: resourceOrgUsersUpdate,
 		Delete: resourceOrgUsersDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: ImportRead(resourceOrgUsersRead),
+		},
+
 		Schema: map[string]*schema.Schema{
 			"org": &schema.Schema{
 				Type:     schema.TypeString,
@@ -35,22 +39,28 @@ func resourceOrgUsers() *schema.Resource {
 				Default:  false,
 			},
 			"managers": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 			"billing_managers": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 			"auditors": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 		},
 	}
@@ -83,6 +93,9 @@ func resourceOrgUsersCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceOrgUsersRead(d *schema.ResourceData, meta interface{}) error {
+	if IsImportState(d) {
+		d.Set("org", d.Id())
+	}
 	session := meta.(*managers.Session)
 	for t, r := range orgRoleMap {
 		users, _, err := session.ClientV2.GetOrganizationUsersByRole(r, d.Get("org").(string))
@@ -90,7 +103,7 @@ func resourceOrgUsersRead(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 		tfUsers := d.Get(t).(*schema.Set).List()
-		if !d.Get("force").(bool) {
+		if !d.Get("force").(bool) && !IsImportState(d) {
 			finalUsers := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
 				return source.(string) == item.(ccv2.User).GUID
 			})

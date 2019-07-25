@@ -23,6 +23,10 @@ func resourceSpaceUsers() *schema.Resource {
 		Update: resourceSpaceUsersUpdate,
 		Delete: resourceSpaceUsersDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: ImportRead(resourceSpaceUsersRead),
+		},
+
 		Schema: map[string]*schema.Schema{
 			"space": &schema.Schema{
 				Type:     schema.TypeString,
@@ -35,22 +39,28 @@ func resourceSpaceUsers() *schema.Resource {
 				Default:  false,
 			},
 			"managers": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 			"developers": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 			"auditors": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 		},
 	}
@@ -83,6 +93,9 @@ func resourceSpaceUsersCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceSpaceUsersRead(d *schema.ResourceData, meta interface{}) error {
+	if IsImportState(d) {
+		d.Set("space", d.Id())
+	}
 	session := meta.(*managers.Session)
 	for t, r := range typeToSpaceRoleMap {
 		users, _, err := session.ClientV2.GetSpaceUsersByRole(r, d.Get("space").(string))
@@ -90,7 +103,7 @@ func resourceSpaceUsersRead(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 		tfUsers := d.Get(t).(*schema.Set).List()
-		if !d.Get("force").(bool) {
+		if !d.Get("force").(bool) && !IsImportState(d) {
 			finalUsers := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
 				return source.(string) == item.(ccv2.User).GUID
 			})
