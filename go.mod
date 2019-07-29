@@ -34,7 +34,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/tedsuo/rata v1.0.0 // indirect
+	github.com/vito/go-interact v1.0.0 // indirect
 	github.com/whilp/git-urls v0.0.0-20160530060445-31bac0d230fa
-	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f // indirect
 	golang.org/x/net v0.0.0-20190520210107-018c4d40a106 // indirect
 )

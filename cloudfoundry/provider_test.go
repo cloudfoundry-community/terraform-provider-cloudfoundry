@@ -89,13 +89,14 @@ func testSession() *managers.Session {
 
 	if tstSession == nil {
 		c := managers.Config{
-			Endpoint:        os.Getenv("CF_API_URL"),
-			User:            os.Getenv("CF_USER"),
-			Password:        os.Getenv("CF_PASSWORD"),
-			CFClientID:      os.Getenv("CF_CLIENT_ID"),
-			CFClientSecret:  os.Getenv("CF_CLIENT_SECRET"),
-			UaaClientID:     os.Getenv("CF_UAA_CLIENT_ID"),
-			UaaClientSecret: os.Getenv("CF_UAA_CLIENT_SECRET"),
+			Endpoint:         os.Getenv("CF_API_URL"),
+			User:             os.Getenv("CF_USER"),
+			Password:         os.Getenv("CF_PASSWORD"),
+			CFClientID:       os.Getenv("CF_CLIENT_ID"),
+			CFClientSecret:   os.Getenv("CF_CLIENT_SECRET"),
+			UaaClientID:      os.Getenv("CF_UAA_CLIENT_ID"),
+			UaaClientSecret:  os.Getenv("CF_UAA_CLIENT_SECRET"),
+			DefaultQuotaName: "default",
 		}
 
 		c.SkipSslValidation, _ = strconv.ParseBool(os.Getenv("CF_SKIP_SSL_VALIDATION"))

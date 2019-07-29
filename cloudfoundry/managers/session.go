@@ -197,7 +197,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	// to use it in v2 and v3 api for authenticate requests
 	uaaClient := uaa.NewClient(config)
 
-	uaaAuthWrapper := uaaWrapper.NewUAAAuthentication(nil, config)
+	uaaAuthWrapper := uaaWrapper.NewUAAAuthentication(nil, configUaa)
 	uaaClient.WrapConnection(uaaAuthWrapper)
 	uaaClient.WrapConnection(uaaWrapper.NewRetryRequest(config.RequestRetryCount()))
 	err = uaaClient.SetupResources(ccClientV2.AuthorizationEndpoint())
@@ -257,7 +257,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 
 		var accessTokenSess string
 		var refreshTokenSess string
-		if config.UAAOAuthClient() == "cf" {
+		if configUaa.UAAOAuthClient() == "cf" {
 			accessTokenSess, refreshTokenSess, err = uaaClientSess.Authenticate(map[string]string{
 				"username": config.CFUsername(),
 				"password": config.CFPassword(),
