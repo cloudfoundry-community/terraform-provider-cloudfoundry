@@ -37,14 +37,16 @@ func resourceUser() *schema.Resource {
 				Default:  "uaa",
 			},
 			"given_name": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				Computed:         true,
+				DiffSuppressFunc: CaseDifference,
 			},
 			"family_name": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				Computed:         true,
+				DiffSuppressFunc: CaseDifference,
 			},
 			"email": &schema.Schema{
 				Type:     schema.TypeString,
