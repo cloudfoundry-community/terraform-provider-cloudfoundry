@@ -16,7 +16,6 @@ import (
 	"code.cloudfoundry.org/cli/util/configv3"
 	"crypto/tls"
 	"fmt"
-	"github.com/hashicorp/go-uuid"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/bits"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
@@ -58,8 +57,6 @@ type Session struct {
 	// RunBinder is used to to manage start stop of an app
 	RunBinder *appdeployers.RunBinder
 
-	uaaDefaultCfGroups map[string]uaa.Group
-
 	defaultQuotaGuid string
 
 	PurgeWhenDelete bool
@@ -82,10 +79,9 @@ func NewSession(c Config) (s *Session, err error) {
 		c.User = ""
 	}
 	s = &Session{
-		uaaDefaultCfGroups: make(map[string]uaa.Group),
-		PurgeWhenDelete:    c.PurgeWhenDelete,
-		ApiEndpoint:        c.Endpoint,
-		Config:             c,
+		PurgeWhenDelete: c.PurgeWhenDelete,
+		ApiEndpoint:     c.Endpoint,
+		Config:          c,
 	}
 	config := &configv3.Config{
 		ConfigFile: configv3.JSONConfig{
@@ -121,11 +117,6 @@ func NewSession(c Config) (s *Session, err error) {
 		return nil, fmt.Errorf("Error when creating clients: %s", err.Error())
 	}
 	s.BitsManager = bits.NewBitsManager(s.ClientV2, s.ClientV3, s.RawClient, s.HttpClient)
-
-	err = s.loadUaaDefaultCfGroups()
-	if err != nil {
-		return nil, fmt.Errorf("Error when loading uaa groups: %s", err.Error())
-	}
 
 	err = s.loadDefaultQuotaGuid(c.DefaultQuotaName)
 	if err != nil {
@@ -373,41 +364,6 @@ func (s *Session) loadDeployer() {
 	s.Deployer = appdeployers.NewDeployer(stdStrategy, bgStrategy)
 }
 
-func (s *Session) loadUaaDefaultCfGroups() error {
-
-	if s.ClientUAA == nil {
-		return nil
-	}
-	client := s.ClientUAA
-
-	// Retrieve default scope/groups for a new user by creating
-	// a dummy user and extracting the default scope of that user
-	username, err := uuid.GenerateUUID()
-	if err != nil {
-		return err
-	}
-	userResource := uaa.User{
-		Username: username,
-		Password: "password",
-		Origin:   "uaa",
-		Emails:   []uaa.Email{{Value: "email@domain.com"}},
-	}
-	user, err := client.CreateUserFromObject(userResource)
-	if err != nil {
-		return err
-	}
-
-	err = client.DeleteUser(user.ID)
-	if err != nil {
-		return err
-	}
-	for _, g := range user.Groups {
-		s.uaaDefaultCfGroups[g.Name()] = g
-	}
-
-	return nil
-}
-
 func (s *Session) loadDefaultQuotaGuid(quotaName string) error {
 	quotas, _, err := s.ClientV2.GetQuotas(ccv2cons.OrgQuota, ccv2.FilterByName(quotaName))
 	if err != nil {
@@ -418,12 +374,6 @@ func (s *Session) loadDefaultQuotaGuid(quotaName string) error {
 	}
 	s.defaultQuotaGuid = quotas[0].GUID
 	return nil
-}
-
-// IsDefaultGroup -
-func (s *Session) IsUaaDefaultCfGroup(group string) bool {
-	_, ok := s.uaaDefaultCfGroups[group]
-	return ok
 }
 
 // IsDefaultGroup -

@@ -60,6 +60,8 @@ resource "cloudfoundry_space_users" "space_users1" {
     developers = [
         "${cloudfoundry_user.dev1.id}",
     ]
+	auditors = []
+	managers = []
 }
 `
 

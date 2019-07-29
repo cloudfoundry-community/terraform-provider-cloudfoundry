@@ -156,14 +156,18 @@ func resourceUserRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("family_name", user.Name.FamilyName)
 	d.Set("email", user.Emails[0].Value)
 
-	var groups []interface{}
-	for _, g := range user.Groups {
-		if !session.IsUaaDefaultCfGroup(g.Name()) {
-			groups = append(groups, g.Name())
-		}
+	tfGroups := d.Get("groups").(*schema.Set).List()
+	groups := user.Groups
+	if !IsImportState(d) {
+		finalGroups := intersectSlices(tfGroups, groups, func(source, item interface{}) bool {
+			return source.(string) == item.(uaa.Group).Name()
+		})
+		d.Set("groups", schema.NewSet(resourceStringHash, finalGroups))
+	} else {
+		d.Set("groups", schema.NewSet(resourceStringHash, objectsToIds(groups, func(object interface{}) string {
+			return object.(uaa.Group).Name()
+		})))
 	}
-	d.Set("groups", schema.NewSet(resourceStringHash, groups))
-
 	return nil
 }
 

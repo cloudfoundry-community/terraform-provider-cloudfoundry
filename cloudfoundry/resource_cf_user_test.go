@@ -88,6 +88,8 @@ func TestAccResUser_LdapOrigin_normal(t *testing.T) {
 							ref, "origin", "ldap"),
 						resource.TestCheckResourceAttr(
 							ref, "email", username),
+						resource.TestCheckResourceAttr(
+							ref, "groups.#", "0"),
 					),
 				},
 			},
@@ -182,6 +184,8 @@ func TestAccResUser_EmptyGroups_normal(t *testing.T) {
 							ref, "origin", "uaa"),
 						resource.TestCheckResourceAttr(
 							ref, "email", "john.doe@acme.com"),
+						resource.TestCheckResourceAttr(
+							ref, "groups.#", "0"),
 					),
 				},
 
@@ -195,6 +199,8 @@ func TestAccResUser_EmptyGroups_normal(t *testing.T) {
 							ref, "origin", "uaa"),
 						resource.TestCheckResourceAttr(
 							ref, "email", "john.doe@acme.com"),
+						resource.TestCheckResourceAttr(
+							ref, "groups.#", "0"),
 					),
 				},
 			},
@@ -237,13 +243,6 @@ func testAccCheckUserExists(resource string) resource.TestCheckFunc {
 			return err
 		}
 
-		var groups []interface{}
-		for _, g := range user.Groups {
-			if !session.IsUaaDefaultCfGroup(g.Display) {
-				groups = append(groups, g.Display)
-			}
-		}
-		err = assertSetEquals(attributes, "groups", groups)
 		return err
 	}
 }

@@ -57,9 +57,11 @@ resource "cloudfoundry_user" "dev1" {
 
 resource "cloudfoundry_org_users" "org_users1" {
 	org = "%s"
+	managers = []
     billing_managers = [
         "${cloudfoundry_user.dev1.id}",
     ]
+	auditors = []
 }
 `
 

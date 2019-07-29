@@ -103,15 +103,15 @@ func resourceOrgUsersRead(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 		tfUsers := d.Get(t).(*schema.Set).List()
-		if !d.Get("force").(bool) && !IsImportState(d) {
+		if d.Get("force").(bool) || IsImportState(d) {
+			d.Set(t, schema.NewSet(resourceStringHash, objectsToIds(users, func(object interface{}) string {
+				return object.(ccv2.User).GUID
+			})))
+		} else {
 			finalUsers := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
 				return source.(string) == item.(ccv2.User).GUID
 			})
 			d.Set(t, schema.NewSet(resourceStringHash, finalUsers))
-		} else {
-			d.Set(t, schema.NewSet(resourceStringHash, objectsToIds(users, func(object interface{}) string {
-				return object.(ccv2.User).GUID
-			})))
 		}
 	}
 	return nil
