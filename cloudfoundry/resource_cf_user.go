@@ -99,17 +99,40 @@ func resourceUserCreate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 	um := session.ClientUAA
-	user, err := um.CreateUserFromObject(uaa.User{
-		Username: username,
-		Password: password,
-		Origin:   origin,
-		Name:     name,
-		Emails:   emails,
-	})
-	if err != nil {
-		return err
+	var user uaa.User
+
+	createUser := func() (uaa.User, error) {
+		return um.CreateUserFromObject(uaa.User{
+			Username: username,
+			Password: password,
+			Origin:   origin,
+			Name:     name,
+			Emails:   emails,
+		})
 	}
 
+	users, err := um.GetUsersByUsername(username)
+	if err != nil && IsErrNotFound(err) {
+		user, err = createUser()
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	} else {
+		for _, u := range users {
+			if u.Origin == origin {
+				user = u
+				break
+			}
+		}
+		if user.ID == "" {
+			user, err = createUser()
+			if err != nil {
+				return err
+			}
+		}
+	}
 	d.SetId(user.ID)
 	return resourceUserUpdate(d, meta)
 }

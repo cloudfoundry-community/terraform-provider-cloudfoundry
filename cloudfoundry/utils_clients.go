@@ -4,6 +4,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/uaa"
 	"code.cloudfoundry.org/cli/types"
 )
 
@@ -77,6 +78,12 @@ func IsErrNotFound(err error) bool {
 		return true
 	}
 	if _, ok := err.(ccerror.ResourceNotFoundError); ok {
+		return true
+	}
+	if httpErr, ok := err.(ccerror.RawHTTPStatusError); ok && httpErr.StatusCode == 404 {
+		return true
+	}
+	if uaaErr, ok := err.(uaa.RawHTTPStatusError); ok && uaaErr.StatusCode == 404 {
 		return true
 	}
 	return false
