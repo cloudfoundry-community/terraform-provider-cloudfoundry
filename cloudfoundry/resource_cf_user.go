@@ -21,8 +21,9 @@ func resourceUser() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
+				Type:             schema.TypeString,
+				Required:         true,
+				DiffSuppressFunc: CaseDifference,
 			},
 			"password": &schema.Schema{
 				Type:      schema.TypeString,
