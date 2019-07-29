@@ -352,3 +352,17 @@ func newUUID() (string, error) {
 	uuid[6] = uuid[6]&^0xf0 | 0x40
 	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:]), nil
 }
+
+// newRandomString generates a random string of desired length
+func newRandomString(n int) (string, error) {
+    const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+        bytes := make([]byte, n)
+        _, err := rand.Read(bytes)
+        if err != nil {
+            return "", err
+        }
+        for i, b := range bytes {
+            bytes[i] = letters[b%byte(len(letters))]
+        }
+        return string(bytes), nil
+}
