@@ -9,6 +9,7 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"github.com/whilp/git-urls"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -269,11 +270,20 @@ func migrateBitsUrl(rawUrl string, git, github map[string]interface{}) (*url.URL
 		if err != nil {
 			return nil, err
 		}
-		if git["branch"].(string) != "" || git["tag"].(string) != "" {
-			u.Fragment = git["branch"].(string) + git["tag"].(string)
+		if git["tag"].(string) != "" {
+			u.Fragment = git["tag"].(string)
+		} else if git["branch"].(string) != "" {
+			u.Fragment = git["branch"].(string)
 		}
 		if git["user"].(string) != "" {
 			u.User = url.UserPassword(git["user"].(string), git["password"].(string))
+		}
+		if git["key"].(string) != "" {
+			keyPath, err := migrateGitKeyToFile(git["key"].(string), u)
+			if err != nil {
+				return nil, err
+			}
+			u.Query().Add("private-key", keyPath)
 		}
 		return u, nil
 	}
@@ -314,4 +324,13 @@ func migrateBitsDeleteAttr(m map[string]string) map[string]string {
 	m = cleanByKeyAttribute("git", m)
 	m = cleanByKeyAttribute("github_release", m)
 	return m
+}
+
+func migrateGitKeyToFile(key string, u *url.URL) (string, error) {
+	keyFilename := strings.Replace(u.Host, ".", "_", -1)
+	keyFilename = strings.Replace(keyFilename, ":", "_", -1)
+	keyFilename += "_key.pem"
+	keyPath := filepath.Join(folderBits, keyFilename)
+	err := ioutil.WriteFile(keyPath, []byte(key), 0644)
+	return keyPath, err
 }
