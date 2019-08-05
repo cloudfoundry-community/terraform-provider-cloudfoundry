@@ -1,6 +1,7 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/uaa"
 	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -66,7 +67,6 @@ func resourceUser() *schema.Resource {
 }
 
 func resourceUserCreate(d *schema.ResourceData, meta interface{}) error {
-
 	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
@@ -98,55 +98,113 @@ func resourceUserCreate(d *schema.ResourceData, meta interface{}) error {
 			FamilyName: familyName,
 		}
 	}
-	um := session.ClientUAA
-	var user uaa.User
+	uaam := session.ClientUAA
+	um := session.ClientV2
+
+	userUAA, err := createUaaUserIfNotExists(username, password, origin, &name, emails, uaam)
+	if err != nil {
+		return err
+	}
+
+	userCF, err := createCFUserIfNotExists(userUAA.ID, um)
+	if err != nil {
+		return err
+	}
+
+	d.SetId(userCF.GUID)
+	return resourceUserUpdate(d, meta)
+}
+
+func createCFUserIfNotExists(ID string, um *ccv2.Client) (ccv2.User, error) {
+	users, _, err := um.GetUsers()
+	if err != nil {
+		return ccv2.User{}, err
+	}
+
+	for _, user := range users {
+		if user.GUID == ID {
+			return user, nil
+		}
+	}
+
+	user, _, err := um.CreateUser(ID)
+	return user, err
+}
+
+func createUaaUserIfNotExists(
+	username string,
+	password string,
+	origin string,
+	name *uaa.UserName,
+	emails []uaa.Email,
+	uaam *uaa.Client,
+) (uaa.User, error) {
 
 	createUser := func() (uaa.User, error) {
-		return um.CreateUserFromObject(uaa.User{
+		return uaam.CreateUserFromObject(uaa.User{
 			Username: username,
 			Password: password,
 			Origin:   origin,
-			Name:     name,
+			Name:     *name,
 			Emails:   emails,
 		})
 	}
 
-	users, err := um.GetUsersByUsername(username)
-	if err != nil && IsErrNotFound(err) {
-		user, err = createUser()
+	// create uaa user if not exists
+	users, err := uaam.GetUsersByUsername(username)
+	if err != nil {
+		if IsErrNotFound(err) {
+			return createUser()
+		}
+		return uaa.User{}, err
+	}
+
+	for _, uaaUser := range users {
+		// warn: GetUsersByUsername only fetch id and username attributes
+		user, err := uaam.GetUser(uaaUser.ID)
 		if err != nil {
-			return err
+			return uaa.User{}, err
 		}
-	} else if err != nil {
-		return err
-	} else {
-		for _, u := range users {
-			if u.Origin == origin {
-				user = u
-				break
-			}
-		}
-		if user.ID == "" {
-			user, err = createUser()
-			if err != nil {
-				return err
-			}
+		if user.Origin == origin {
+			return user, nil
 		}
 	}
-	d.SetId(user.ID)
-	return resourceUserUpdate(d, meta)
+	return createUser()
 }
 
 func resourceUserRead(d *schema.ResourceData, meta interface{}) error {
 
 	session := meta.(*managers.Session)
 
-	um := session.ClientUAA
+	umuaa := session.ClientUAA
+	um := session.ClientV2
 	id := d.Id()
 
-	user, err := um.GetUser(id)
+	// 1. check  user exists in CF
+	usersCF, _, err := um.GetUsers()
 	if err != nil {
 		d.SetId("")
+		return err
+	}
+	found := false
+	for _, user := range usersCF {
+		if user.GUID == id {
+			found = true
+			break
+		}
+	}
+	if !found {
+		d.SetId("")
+		return nil
+	}
+
+	// 2. check  user exists in UAA
+	user, err := umuaa.GetUser(id)
+	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 
@@ -175,7 +233,7 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 
 	id := d.Id()
-	um := session.ClientUAA
+	umuaa := session.ClientUAA
 
 	if !d.IsNewResource() {
 
@@ -213,7 +271,7 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 
 		if updateUserDetail {
-			_, err := um.UpdateUser(uaa.User{
+			_, err := umuaa.UpdateUser(uaa.User{
 				ID:       id,
 				Username: name,
 				Emails:   emails,
@@ -227,7 +285,7 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		updatePassword, oldPassword, newPassword := getResourceChange("password", d)
 		if updatePassword {
-			err := um.ChangeUserPassword(id, oldPassword, newPassword)
+			err := umuaa.ChangeUserPassword(id, oldPassword, newPassword)
 			if err != nil {
 				return err
 			}
@@ -238,14 +296,14 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
 	rolesToDelete, rolesToAdd := getListChanges(old, new)
 
 	for _, r := range rolesToDelete {
-		err := um.DeleteMemberByName(id, r)
+		err := umuaa.DeleteMemberByName(id, r)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, r := range rolesToAdd {
-		err := um.AddMemberByName(id, d.Get("origin").(string), r)
+		err := umuaa.AddMemberByName(id, d.Get("origin").(string), r)
 		if err != nil {
 			return err
 		}
@@ -256,6 +314,6 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
 func resourceUserDelete(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 	id := d.Id()
-	um := session.ClientUAA
-	return um.DeleteUser(id)
+	umuaa := session.ClientUAA
+	return umuaa.DeleteUser(id)
 }
