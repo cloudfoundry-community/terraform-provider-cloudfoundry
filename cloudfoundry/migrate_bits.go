@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"github.com/whilp/git-urls"
 	"io"
 	"io/ioutil"
 	"log"
@@ -182,6 +181,7 @@ func migrateBitsStateV2toV3(is *terraform.InstanceState, meta interface{}) (*ter
 	if u == nil {
 		return is, nil
 	}
+	log.Println("totoitti " + is.Attributes["name"] + " " + u.String())
 	is.Attributes["source_code_hash"] = ""
 	if (u.Scheme == "http" || u.Scheme == "https") && filepath.Ext(u.Path) == ".zip" {
 		is.Attributes["path"] = u.String()
@@ -266,7 +266,7 @@ func migrateBitsUrl(rawUrl string, git, github map[string]interface{}) (*url.URL
 		return u, nil
 	}
 	if len(git) > 0 {
-		u, err := giturls.Parse(git["url"].(string))
+		u, err := url.Parse(git["url"].(string))
 		if err != nil {
 			return nil, err
 		}
@@ -275,15 +275,20 @@ func migrateBitsUrl(rawUrl string, git, github map[string]interface{}) (*url.URL
 		} else if git["branch"].(string) != "" {
 			u.Fragment = git["branch"].(string)
 		}
-		if git["user"].(string) != "" {
+		if git["user"].(string) != "" && git["password"].(string) != "" {
 			u.User = url.UserPassword(git["user"].(string), git["password"].(string))
+		}
+		if git["user"].(string) != "" && git["password"].(string) == "" {
+			u.User = url.User(git["user"].(string))
 		}
 		if git["key"].(string) != "" {
 			keyPath, err := migrateGitKeyToFile(git["key"].(string), u)
 			if err != nil {
 				return nil, err
 			}
-			u.Query().Add("private-key", keyPath)
+			val := u.Query()
+			val.Set("private-key", keyPath)
+			u.RawQuery = val.Encode()
 		}
 		return u, nil
 	}

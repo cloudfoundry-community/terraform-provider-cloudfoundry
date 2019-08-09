@@ -23,6 +23,7 @@ const (
 	DefaultAppTimeout   = 60
 	DefaultBindTimeout  = 5 * time.Minute
 	DefaultStageTimeout = 15 * time.Minute
+	DefaultAppPort      = 8080
 )
 
 func resourceApp() *schema.Resource {
@@ -162,10 +163,14 @@ func resourceApp() *schema.Resource {
 				Optional: true,
 				Set: func(v interface{}) int {
 					elem := v.(map[string]interface{})
+					port := elem["port"].(int)
+					if port == 0 {
+						port = DefaultAppPort
+					}
 					return hashcode.String(fmt.Sprintf(
 						"%s-%d",
 						elem["route"],
-						elem["port"],
+						port,
 					))
 				},
 				Elem: &schema.Resource{
