@@ -4,6 +4,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+	"strings"
 )
 
 // Provider -
@@ -123,7 +124,7 @@ func Provider() terraform.ResourceProvider {
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	c := managers.Config{
-		Endpoint:          d.Get("api_url").(string),
+		Endpoint:          strings.TrimSuffix(d.Get("api_url").(string), "/"),
 		User:              d.Get("user").(string),
 		Password:          d.Get("password").(string),
 		CFClientID:        d.Get("cf_client_id").(string),
