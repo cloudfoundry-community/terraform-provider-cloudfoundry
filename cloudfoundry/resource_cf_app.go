@@ -1016,23 +1016,44 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 		}
 	} else if restart && !d.Get("stopped").(bool) { // only run restart if the final state is running
-		if err := am.StopApp(app.ID, timeout); err != nil {
-			return err
-		}
-		if err := am.StartApp(app.ID, timeout); err != nil {
-			return err
+		if _, ok := d.GetOk("docker_image"); ok {
+			if err := am.StopDockerApp(app.ID, timeout); err != nil {
+				return err
+			}
+			if err := am.StartDockerApp(app.ID, timeout); err != nil {
+				return err
+			}
+		} else {
+			if err := am.StopApp(app.ID, timeout); err != nil {
+				return err
+			}
+			if err := am.StartApp(app.ID, timeout); err != nil {
+				return err
+			}
 		}
 	}
 
 	// now set the final started/stopped state, whatever it is
 	if d.HasChange("stopped") {
 		if d.Get("stopped").(bool) {
-			if err := am.StopApp(app.ID, timeout); err != nil {
-				return err
+			if _, ok := d.GetOk("docker_image"); ok {
+				if err := am.StopDockerApp(app.ID, timeout); err != nil {
+					return err
+				}
+			} else {
+				if err := am.StopApp(app.ID, timeout); err != nil {
+					return err
+				}
 			}
 		} else {
-			if err := am.StartApp(app.ID, timeout); err != nil {
-				return err
+			if _, ok := d.GetOk("docker_image"); ok {
+				if err := am.StartDockerApp(app.ID, timeout); err != nil {
+					return err
+				}
+			} else {
+				if err := am.StartApp(app.ID, timeout); err != nil {
+					return err
+				}
 			}
 		}
 	}
