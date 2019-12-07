@@ -99,6 +99,7 @@ Following are supported:
   - `params` - (Optional, Map) A list of key/value parameters used by the service broker to create the binding. Defaults to empty map.
 
 ~> **NOTE:** Modifying this argument will cause the application to be restaged.
+~> **NOTE:** Resource only manages service binding previously set by resource.
 
 ### Routing
 
@@ -111,6 +112,7 @@ The `route` block supports:
 ~> **NOTE:** in the future, the `route` block will support the `port` attribute illustrated above to allow mapping of tcp routes, and listening on custom or multiple ports.  
 ~> **NOTE:** Route mappings can be controlled from either the `cloudfoundry_app.routes` or the `cloudfoundry_routes.target` attributes. Using both syntaxes will cause conflicts and result in unpredictable behavior.  
 ~> **NOTE:** A given route can not currently be mapped to more than one application using the `cloudfoundry_app.routes` syntax. As an alternative, use the `cloudfoundry_route.target` syntax instead in this specific use-case.  
+~> **NOTE:** Resource only manages route mapping previously set by resource.
 
 #### Example usage:
 

@@ -47,7 +47,7 @@ The `target` block supports:
   - `port` - (Optional, Int) A port that the application will be listening on. If this argument is not provided then the route will be associated with the application's default port. 
 
 ~> **NOTE:** Route mappings can be controlled from either the `cloudfoundry_routes.target` or the `cloudfoundry_app.routes` attributes.  
-
+~> **NOTE:** Resource only handles `target` previously created by resource (i.e. it does not destroy nor modifies target set by other resources like cloudfoundry_application).
 
 ## Attributes Reference
 

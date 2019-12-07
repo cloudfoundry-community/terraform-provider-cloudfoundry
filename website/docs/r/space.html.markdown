@@ -11,7 +11,7 @@ description: |-
 Provides a Cloud Foundry resource for managing Cloud Foundry [spaces](https://docs.cloudfoundry.org/concepts/roles.html) within organizations.
 
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted org manager permissions.
-
+~> **NOTE:** Only modify users managed in the resource, and ignore any existing other users provisioned elsewhere.
 
 ## Example Usage
 
@@ -23,18 +23,6 @@ resource "cloudfoundry_space" "s1" {
     org = "${cloudfoundry_org.o1.id}"
     quota = "${cloudfoundry_quota.dev.id}"
     asgs = [ "${cloudfoundry_asg.svc.id}" ]
-    managers = [
-        "${data.cloudfoundry_user.tl.id}"
-    ]
-    developers = [
-        "${data.cloudfoundry_user.tl.id}",
-        "${data.cloudfoundry_user.dev1.id}",
-        "${data.cloudfoundry_user.dev2.id}"
-    ]
-    auditors = [
-        "${data.cloudfoundry_user.adr.id}",
-        "${data.cloudfoundry_user.dev3.id}"
-    ]
     allow_ssh = true
 }
 ```
@@ -50,9 +38,6 @@ The following arguments are supported:
 * `isolation_segment` - (`Experimental`,Optional) The ID of the isolation segment to assign to the space. The segment must be entitled to the space's parent organization. If the isolation segment id is unspecified, then Cloud Foundry assigns the space to the org’s default isolation segment if any. Note that existing apps in the space will not run in a newly assigned isolation segment until they are restarted.
 * `asgs` - (Optional) List of running [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications running within this space. Defaults to empty list.
 * `staging_asgs` - (Optional) List of staging [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications being staged for this space. Defaults to empty list.
-* `managers` - (Optional) List of users to assign [SpaceManager](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to. Defaults to empty list.
-* `developers` - (Optional) List of users to assign [SpaceDeveloper](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to. Defaults to empty list.
-* `auditors` - (Optional) List of users to assign [SpaceAuditor](https://docs.cloudfoundry.org/concepts/roles.html#roles) role to. Defaults to empty list.
 * `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
 Works only on cloud foundry with api >= v3.63.
 * `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 

@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
+	"strings"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"strings"
 )
 
 // Provider -
@@ -78,6 +79,7 @@ func Provider() terraform.ResourceProvider {
 			"cloudfoundry_router_group":      dataSourceRouterGroup(),
 			"cloudfoundry_user":              dataSourceUser(),
 			"cloudfoundry_domain":            dataSourceDomain(),
+			"cloudfoundry_route":             dataSourceRoute(),
 			"cloudfoundry_asg":               dataSourceAsg(),
 			"cloudfoundry_org":               dataSourceOrg(),
 			"cloudfoundry_org_quota":         dataSourceOrgQuota(),

@@ -8,7 +8,7 @@ description: |-
 
 # cloudfoundry\_isolation\_segment\_entitlement
 
-(Experimental) Provides a Cloud Foundry resource for managing Cloud Foundry relationships between an
+Provides a Cloud Foundry resource for managing Cloud Foundry relationships between an
 [isolation segment](https://docs.cloudfoundry.org/adminguide/isolation-segments.html)
 and an organization.
 

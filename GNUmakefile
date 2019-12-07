@@ -21,7 +21,8 @@ test: check
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
 testacc:
-	TF_ACC=1 go test $(TEST) -v -parallel 20 $(TESTARGS) -timeout 240m
+	printf "\e[33mWarning: acceptance platform has passwords changed... will not running acceptance test.\e[0m\n"
+#	TF_ACC=1 go test $(TEST) -v -parallel 20 $(TESTARGS) -timeout 240m
 
 fmt:
 	gofmt -w $(GOFMT_FILES)
