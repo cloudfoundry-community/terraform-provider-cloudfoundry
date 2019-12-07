@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 echo "Start cleaning up potentially leaking resources from previous test executions. Warnings about missing resources should be ignored"
 
@@ -11,10 +11,10 @@ if [ -z "$CF_API_URL" ] || [ -z "$CF_USER" ] || [ -z "$CF_PASSWORD" ]; then
 fi
 
 
-set -e # Exit if the login fails (not set or wrongly set!)
+#set -e # Exit if the login fails (not set or wrongly set!)
 cf api $CF_API_URL --skip-ssl-validation
 cf login -u $CF_USER -p $CF_PASSWORD -o $CF_ORG -s $CF_SPACE
-set +e
+#set +e
 
 # Please add any further resources do not get destroyed
 
@@ -114,7 +114,7 @@ fi
 
 if [ `cf curl "/v2/routes?q=organization_guid:$CF_ORG_GUID" \
    | jq '[ .resources[] | select(.entity.space_guid == "'$CF_SPACE_GUID'") ] | length'` -ne "0" ]; then
-   
+
    echo "ERROR: The acceptance environment contains some residual routes, run \"cf routes\" - please clean them up using a PR on clean.sh";
    cf routes
    exit 1;
