@@ -1,134 +1,152 @@
 <% wrap_layout :inner do %>
-	<% content_for :sidebar do %>
+  <% content_for :sidebar do %>
 
-	<div class="docs-sidebar hidden-print affix-top" role="complementary">
-		<ul class="nav docs-sidenav">
+    <div class="docs-sidebar hidden-print affix-top" role="complementary">
+      <ul class="nav docs-sidenav">
 
-			<li<%= sidebar_current("docs-home") %>>
-				<a href="/docs/providers/index.html">All Providers</a>
-			</li>
+        <li<%= sidebar_current("docs-home") %>>
+          <a href="/docs/providers/index.html">All Providers</a>
+        </li>
 
-			<li<%= sidebar_current("docs-cf-index") %>>
-			<a href="/docs/providers/cloudfoundry/index.html">Cloud Foundry Provider</a>
-			</li>
+        <li<%= sidebar_current("docs-cf-index") %>>
+          <a href="/docs/providers/cloudfoundry/index.html">Cloud Foundry Provider</a>
+        </li>
 
-			<li<%= sidebar_current("docs-cf-datasource") %>>
-				<a href="#">Data Sources</a>
-				<ul class="nav nav-visible">
-					<li<%= sidebar_current("docs-cf-datasource-info") %>>
-					<a href="/docs/providers/cloudfoundry/d/info.html">cloudfoundry_info</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-datasource-stack") %>>
-					<a href="/docs/providers/cloudfoundry/d/stack.html">cloudfoundry_stack</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-datasource-router-group") %>>
-					<a href="/docs/providers/cloudfoundry/d/router_group.html">cloudfoundry_router_group</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-datasource-domain") %>>
-					<a href="/docs/providers/cloudfoundry/d/domain.html">cloudfoundry_domain</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-datasource-asg") %>>
-					<a href="/docs/providers/cloudfoundry/d/asg.html">cloudfoundry_asg</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-datasource-org-quota") %>>
-					<a href="/docs/providers/cloudfoundry/d/org_quota.html">cloudfoundry_org_quota</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-datasource-space-quota") %>>
-					<a href="/docs/providers/cloudfoundry/d/space_quota.html">cloudfoundry_space_quota</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-datasource-user") %>>
-					<a href="/docs/providers/cloudfoundry/d/user.html">cloudfoundry_user</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-datasource-org") %>>
-					<a href="/docs/providers/cloudfoundry/d/org.html">cloudfoundry_org</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-datasource-space") %>>
-					<a href="/docs/providers/cloudfoundry/d/space.html">cloudfoundry_space</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-datasource-service") %>>
-					<a href="/docs/providers/cloudfoundry/d/service.html">cloudfoundry_service</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-datasource-isolation-segment") %>>
-					<a href="/docs/providers/cf/d/isolation_segment.html">cloudfoundry_isolation_segment</a>
-					</li>
-				</ul>
-			</li>
+        <li<%= sidebar_current("docs-cf-datasource") %>>
+          <a href="#">Data Sources</a>
+          <ul class="nav nav-visible">
+            <li<%= sidebar_current("docs-cf-datasource-app") %>>
+              <a href="/docs/providers/cloudfoundry/d/app.html">cloudfoundry_app</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-info") %>>
+              <a href="/docs/providers/cloudfoundry/d/info.html">cloudfoundry_info</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-stack") %>>
+              <a href="/docs/providers/cloudfoundry/d/stack.html">cloudfoundry_stack</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-router-group") %>>
+              <a href="/docs/providers/cloudfoundry/d/router_group.html">cloudfoundry_router_group</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-domain") %>>
+              <a href="/docs/providers/cloudfoundry/d/domain.html">cloudfoundry_domain</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-route") %>>
+              <a href="/docs/providers/cloudfoundry/d/route.html">cloudfoundry_route</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-asg") %>>
+              <a href="/docs/providers/cloudfoundry/d/asg.html">cloudfoundry_asg</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-org-quota") %>>
+              <a href="/docs/providers/cloudfoundry/d/org_quota.html">cloudfoundry_org_quota</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-space-quota") %>>
+              <a href="/docs/providers/cloudfoundry/d/space_quota.html">cloudfoundry_space_quota</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-user") %>>
+              <a href="/docs/providers/cloudfoundry/d/user.html">cloudfoundry_user</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-org") %>>
+              <a href="/docs/providers/cloudfoundry/d/org.html">cloudfoundry_org</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-space") %>>
+              <a href="/docs/providers/cloudfoundry/d/space.html">cloudfoundry_space</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-service") %>>
+              <a href="/docs/providers/cloudfoundry/d/service.html">cloudfoundry_service</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-service-instance") %>>
+              <a href="/docs/providers/cloudfoundry/d/service_instance.html">cloudfoundry_service_instance</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-service-key") %>>
+              <a href="/docs/providers/cloudfoundry/d/service_key.html">cloudfoundry_service_key</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-datasource-isolation-segment") %>>
+              <a href="/docs/providers/cf/d/isolation_segment.html">cloudfoundry_isolation_segment</a>
+            </li>
+          </ul>
+        </li>
 
-			<li<%= sidebar_current("docs-cf-resource") %>>
-				<a href="#">Resources</a>
-				<ul class="nav nav-visible">
-					<li<%= sidebar_current("docs-cf-resource-config") %>>
-					<a href="/docs/providers/cloudfoundry/r/config.html">cloudfoundry_config</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-user") %>>
-					<a href="/docs/providers/cloudfoundry/r/user.html">cloudfoundry_user</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-domain") %>>
-					<a href="/docs/providers/cloudfoundry/r/domain.html">cloudfoundry_domain</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-evg") %>>
-					<a href="/docs/providers/cloudfoundry/r/evg.html">cloudfoundry_evg</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-asg") %>>
-					<a href="/docs/providers/cloudfoundry/r/asg.html">cloudfoundry_asg</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-default-asg") %>>
-					<a href="/docs/providers/cloudfoundry/r/default_asg.html">cloudfoundry_default_asg</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-org-quota") %>>
-					<a href="/docs/providers/cloudfoundry/r/org_quota.html">cloudfoundry_org_quota</a>
-					</li>
-          <li<%= sidebar_current("docs-cf-resource-space-quota") %>>
-					<a href="/docs/providers/cloudfoundry/r/space_quota.html">cloudfoundry_space_quota</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-org") %>>
-					<a href="/docs/providers/cloudfoundry/r/org.html">cloudfoundry_org</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-space") %>>
-					<a href="/docs/providers/cloudfoundry/r/space.html">cloudfoundry_space</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-service-broker") %>>
-					<a href="/docs/providers/cloudfoundry/r/service_broker.html">cloudfoundry_service_broker</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-service-access") %>>
-					<a href="/docs/providers/cloudfoundry/r/service_plan_access.html">cloudfoundry_service_plan_access</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-service-instance") %>>
-					<a href="/docs/providers/cloudfoundry/r/service_instance.html">cloudfoundry_service_instance</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-service-key") %>>
-					<a href="/docs/providers/cloudfoundry/r/service_key.html">cloudfoundry_service_key</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-user-provided-service") %>>
-					<a href="/docs/providers/cloudfoundry/r/user_provided_service.html">cloudfoundry_user_provided_service</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-buildpack") %>>
-					<a href="/docs/providers/cloudfoundry/r/buildpack.html">cloudfoundry_buildpack</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-route") %>>
-					<a href="/docs/providers/cloudfoundry/r/route.html">cloudfoundry_route</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-app") %>>
-					<a href="/docs/providers/cloudfoundry/r/app.html">cloudfoundry_app</a>
-					</li>
-                                        <li<%= sidebar_current("docs-cf-resource-isolation-segment") %>>
-					<a href="/docs/providers/cloudfoundry/r/isolation_segment.html">cloudfoundry_isolation_segment</a>
-					</li>
-					<li<%= sidebar_current("docs-cf-resource-isolation-segment-entitlement") %>>
-					<a href="/docs/providers/cloudfoundry/r/isolation_segment_entitlement.html">cloudfoundry_isolation_segment_entitlement</a>
-					</li>
-					<!--
+        <li<%= sidebar_current("docs-cf-resource") %>>
+          <a href="#">Resources</a>
+          <ul class="nav nav-visible">
+            <li<%= sidebar_current("docs-cf-resource-feature-flags") %>>
+              <a href="/docs/providers/cloudfoundry/r/feature_flag.html.html">cloudfoundry_feature_flags</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-user") %>>
+              <a href="/docs/providers/cloudfoundry/r/user.html">cloudfoundry_user</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-domain") %>>
+              <a href="/docs/providers/cloudfoundry/r/domain.html">cloudfoundry_domain</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-evg") %>>
+              <a href="/docs/providers/cloudfoundry/r/evg.html">cloudfoundry_evg</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-asg") %>>
+              <a href="/docs/providers/cloudfoundry/r/asg.html">cloudfoundry_asg</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-default-asg") %>>
+              <a href="/docs/providers/cloudfoundry/r/default_asg.html">cloudfoundry_default_asg</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-org-quota") %>>
+              <a href="/docs/providers/cloudfoundry/r/org_quota.html">cloudfoundry_org_quota</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-space-quota") %>>
+              <a href="/docs/providers/cloudfoundry/r/space_quota.html">cloudfoundry_space_quota</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-org") %>>
+              <a href="/docs/providers/cloudfoundry/r/org.html">cloudfoundry_org</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-org-users") %>>
+              <a href="/docs/providers/cloudfoundry/r/org_users.html">cloudfoundry_org_users</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-space") %>>
+              <a href="/docs/providers/cloudfoundry/r/space.html">cloudfoundry_space</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-space-users") %>>
+              <a href="/docs/providers/cloudfoundry/r/space_users.html">cloudfoundry_space_users</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-service-broker") %>>
+              <a href="/docs/providers/cloudfoundry/r/service_broker.html">cloudfoundry_service_broker</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-service-access") %>>
+              <a href="/docs/providers/cloudfoundry/r/service_plan_access.html">cloudfoundry_service_plan_access</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-service-instance") %>>
+              <a href="/docs/providers/cloudfoundry/r/service_instance.html">cloudfoundry_service_instance</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-service-key") %>>
+              <a href="/docs/providers/cloudfoundry/r/service_key.html">cloudfoundry_service_key</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-user-provided-service") %>>
+              <a href="/docs/providers/cloudfoundry/r/user_provided_service.html">cloudfoundry_user_provided_service</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-buildpack") %>>
+              <a href="/docs/providers/cloudfoundry/r/buildpack.html">cloudfoundry_buildpack</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-route") %>>
+              <a href="/docs/providers/cloudfoundry/r/route.html">cloudfoundry_route</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-app") %>>
+              <a href="/docs/providers/cloudfoundry/r/app.html">cloudfoundry_app</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-isolation-segment") %>>
+              <a href="/docs/providers/cloudfoundry/r/isolation_segment.html">cloudfoundry_isolation_segment</a>
+            </li>
+            <li<%= sidebar_current("docs-cf-resource-isolation-segment-entitlement") %>>
+              <a href="/docs/providers/cloudfoundry/r/isolation_segment_entitlement.html">cloudfoundry_isolation_segment_entitlement</a>
+            </li>
+            <!--
 					<li<%= sidebar_current("docs-cf-resource-service-binding") %>>
 					<a href="/docs/providers/cloudfoundry/r/service_binding.html">cloudfoundry_service_binding</a>
 					</li>
 					-->
-				</ul>
-			</li>
+          </ul>
+        </li>
 
-		</ul>
-	</div>
+      </ul>
+    </div>
 
-<% end %>
+  <% end %>
 
-<%= yield %>
+  <%= yield %>
 <% end %>

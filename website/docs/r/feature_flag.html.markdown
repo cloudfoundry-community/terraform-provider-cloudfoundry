@@ -1,12 +1,12 @@
 ---
 layout: "cloudfoundry"
-page_title: "Cloud Foundry: cloudfoundry_org"
-sidebar_current: "docs-cf-resource-config"
+page_title: "Cloud Foundry: cloudfoundry_feature_flags"
+sidebar_current: "docs-cf-resource-feature-flags"
 description: |-
   Provides a Cloud Foundry configuration resource.
 ---
 
-# cloudfoundry\_config
+# cloudfoundry\_feature\_flags
 
 Provides a Cloud Foundry configuration resource for managing Cloud Foundry [feature](https://docs.cloudfoundry.org/adminguide/listing-feature-flags.html) flags.
 
