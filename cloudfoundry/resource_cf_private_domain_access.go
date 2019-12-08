@@ -1,10 +1,9 @@
 package cloudfoundry
 
 import (
-	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 func resourcePrivateDomainAccess() *schema.Resource {
@@ -13,7 +12,7 @@ func resourcePrivateDomainAccess() *schema.Resource {
 		Read:   resourcePrivateDomainAccessRead,
 		Delete: resourcePrivateDomainAccessDelete,
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourcePrivateDomainAccessRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -31,93 +30,53 @@ func resourcePrivateDomainAccess() *schema.Resource {
 	}
 }
 
-// PrivateDomainAccessImport -
-// Checks that user-given ID matches <guid>/<guid> format
-func PrivateDomainAccessImport(d *schema.ResourceData, meta interface{}) (res []*schema.ResourceData, err error) {
-	// session := meta.(*cfapi.Session)
-	// if session == nil {
-	// 	err = fmt.Errorf("client is nil")
-	// 	return
-	// }
-	// dm := session.DomainManager()
-	id := d.Id()
-
-	// var org, domain string
-	// if org, domain, err = parseID(id); err != nil {
-	if _, _, err = parseID(id); err != nil {
-		return
-	}
-
-	// var found bool
-	// found, err = dm.HasPrivateDomainAccess(org, domain)
-	// if err != nil {
-	// 	return
-	// }
-
-	// if !found {
-	// 	err = fmt.Errorf("organization '%s' has no access to private domain '%s'", org, domain)
-	// 	return
-	// }
-	return schema.ImportStatePassthrough(d, meta)
-}
-
-func resourcePrivateDomainAccessCreate(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
+func resourcePrivateDomainAccessCreate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 	domain := d.Get("domain").(string)
 	org := d.Get("org").(string)
-
-	dm := session.DomainManager()
-	if err = dm.CreatePrivateDomainAccess(org, domain); err != nil {
-		return
+	_, err := session.ClientV2.SetOrganizationPrivateDomain(domain, org)
+	if err != nil {
+		return err
 	}
 
 	d.SetId(computeID(org, domain))
 	return nil
 }
 
-func resourcePrivateDomainAccessRead(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+func resourcePrivateDomainAccessRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
 	id := d.Id()
 	// id in read hook comes from create or import callback which ensure id's validity
-	var org, domain string
-	org, domain, _ = parseID(id)
+	orgGuid, domainGuid, _ := parseID(id)
 
-	dm := session.DomainManager()
-	var found bool
-	if found, err = dm.HasPrivateDomainAccess(org, domain); err != nil || !found {
-		d.SetId("")
+	found := false
+	domains, _, err := session.ClientV2.GetOrganizationPrivateDomains(orgGuid)
+	if err != nil {
 		return err
 	}
+	for _, domain := range domains {
+		if domain.GUID == domainGuid {
+			found = true
+			break
+		}
+	}
+	if !found {
+		d.SetId("")
+		return nil
+	}
 
-	d.Set("org", org)
-	d.Set("domain", domain)
+	d.Set("org", orgGuid)
+	d.Set("domain", domainGuid)
 	return nil
 }
 
-func resourcePrivateDomainAccessDelete(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+func resourcePrivateDomainAccessDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	dm := session.DomainManager()
 	id := d.Id()
 
-	// id in read hook comes from create or import callback which ensure id's validity
-	var org, domain string
-	org, domain, _ = parseID(id)
-
-	return dm.DeletePrivateDomainAccess(org, domain)
+	org, domain, _ := parseID(id)
+	_, err := session.ClientV2.DeleteOrganizationPrivateDomain(org, domain)
+	return err
 }
-
-// Local Variables:
-// ispell-local-dictionary: "american"
-// End:

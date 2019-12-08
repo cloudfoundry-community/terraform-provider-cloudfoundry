@@ -2,38 +2,36 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 const configResource = `
 resource "cloudfoundry_feature_flags" "ff" {
-	feature_flags{
-		route_creation = "disabled"
-		task_creation = "enabled"
-		env_var_visibility = "disabled"
+	feature_flags {
+		user_org_creation = "enabled"
+		private_domain_creation = "disabled"
 	}
 }
 `
 
 const configResourceUpdate = `
 resource "cloudfoundry_feature_flags" "ff" {
-	feature_flags{
-		route_creation = "enabled"
-		task_creation = "disabled"
-		env_var_visibility = "enabled"
+	feature_flags {
+		user_org_creation = "disabled"
+		private_domain_creation = "enabled"
 	}
 }
 `
 
-func TestAccConfig_normal(t *testing.T) {
+func TestAccResConfig_normal(t *testing.T) {
 
 	resConfig := "cloudfoundry_feature_flags.ff"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
@@ -45,15 +43,15 @@ func TestAccConfig_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckConfig(resConfig),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.user_org_creation", "disabled"),
+							resConfig, "feature_flags.0.user_org_creation", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.private_domain_creation", "enabled"),
+							resConfig, "feature_flags.0.private_domain_creation", "disabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.app_bits_upload", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.app_scaling", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.route_creation", "disabled"),
+							resConfig, "feature_flags.0.route_creation", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.service_instance_creation", "enabled"),
 						resource.TestCheckResourceAttr(
@@ -65,13 +63,15 @@ func TestAccConfig_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.task_creation", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.env_var_visibility", "disabled"),
+							resConfig, "feature_flags.0.env_var_visibility", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.space_scoped_private_broker_creation", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.space_developer_env_var_visibility", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.service_instance_sharing", "disabled"),
+							resConfig, "feature_flags.0.service_instance_sharing", "enabled"),
+						resource.TestCheckResourceAttr(
+							resConfig, "feature_flags.0.hide_marketplace_from_unauthenticated_users", "disabled"),
 					),
 				},
 
@@ -98,7 +98,7 @@ func TestAccConfig_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.unset_roles_by_username", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.task_creation", "disabled"),
+							resConfig, "feature_flags.0.task_creation", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.env_var_visibility", "enabled"),
 						resource.TestCheckResourceAttr(
@@ -106,8 +106,15 @@ func TestAccConfig_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.space_developer_env_var_visibility", "enabled"),
 						resource.TestCheckResourceAttr(
-							resConfig, "feature_flags.0.service_instance_sharing", "disabled"),
+							resConfig, "feature_flags.0.service_instance_sharing", "enabled"),
+						resource.TestCheckResourceAttr(
+							resConfig, "feature_flags.0.hide_marketplace_from_unauthenticated_users", "disabled"),
 					),
+				},
+				resource.TestStep{
+					ResourceName:      resConfig,
+					ImportState:       true,
+					ImportStateVerify: true,
 				},
 			},
 		})
@@ -117,43 +124,37 @@ func testAccCheckConfig(resConfig string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) (err error) {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resConfig]
 		if !ok {
 			return fmt.Errorf("'%s' resource not found in terraform state", resConfig)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v", resConfig, rs)
-
 		attributes := rs.Primary.Attributes
 
-		var featureFlags map[string]bool
-		if featureFlags, err = session.GetFeatureFlags(); err != nil {
+		featureFlags, _, err := session.ClientV2.GetConfigFeatureFlags()
+		if err != nil {
 			return
 		}
-
-		session.Log.DebugMessage(
-			"retrieved feature flags: %# v", featureFlags)
-
 		if err := assertListEquals(attributes, "feature_flags", 1,
 			func(values map[string]string, i int) (match bool) {
 
 				if len(values) == len(featureFlags) {
 
 					var (
-						vv interface{}
 						ok bool
 					)
 
 					for k, v := range values {
-
-						if vv, ok = featureFlags[k]; ok {
-							if vv.(bool) {
-								ok = (v == "enabled")
-							} else {
-								ok = (v == "disabled")
+						for _, ff := range featureFlags {
+							if ff.Name == k {
+								if ff.Enabled {
+									ok = (v == "enabled")
+								} else {
+									ok = (v == "disabled")
+								}
+								break
 							}
 						}
 						if !ok {

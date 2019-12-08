@@ -8,9 +8,9 @@ default: build
 release:
 	rm -fr bin
 	mkdir -p bin
-	GOARCH=amd64 GOOS=windows go build -o bin/terraform-provider-cf_windows_amd64.exe
-	GOARCH=amd64 GOOS=linux go build -o bin/terraform-provider-cf_linux_amd64
-	GOARCH=amd64 GOOS=darwin go build -o bin/terraform-provider-cf_darwin_amd64
+	GOARCH=amd64 GOOS=windows go build -o bin/terraform-provider-cloudfoundry_windows_amd64.exe
+	GOARCH=amd64 GOOS=linux go build -o bin/terraform-provider-cloudfoundry_linux_amd64
+	GOARCH=amd64 GOOS=darwin go build -o bin/terraform-provider-cloudfoundry_darwin_amd64
 
 build: check
 	go install
@@ -20,17 +20,15 @@ test: check
 	echo $(TEST) | \
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
-testacc: check
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 180m
+testacc:
+	printf "\e[33mWarning: acceptance platform has passwords changed... will not running acceptance test.\e[0m\n"
+#	TF_ACC=1 go test $(TEST) -v -parallel 20 $(TESTARGS) -timeout 240m
 
 fmt:
 	gofmt -w $(GOFMT_FILES)
 
 check:
-	@gometalinter.v2 --config .gometalinter.json --deadline 120s
-
-vendor-status:
-	@govendor status
+	golangci-lint run
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \
@@ -39,6 +37,10 @@ test-compile:
 		exit 1; \
 	fi
 	go test -c $(TEST) $(TESTARGS)
+
+local-install:
+	go build
+	cp terraform-provider-cloudfoundry ~/.terraform.d/plugins/linux_amd64/terraform-provider-cloudfoundry
 
 website:
 ifeq (,$(wildcard $(GOPATH)/src/$(WEBSITE_REPO)))
@@ -55,4 +57,4 @@ endif
 	@$(MAKE) -C $(GOPATH)/src/$(WEBSITE_REPO) website-provider-test PROVIDER_PATH=$(shell pwd) PROVIDER_NAME=$(PKG_NAME)
 
 
-.PHONY: build test testacc fmt check vendor-status test-compile website website-test
+.PHONY: build test testacc fmt check vendor-status test-compile website website-test local-install

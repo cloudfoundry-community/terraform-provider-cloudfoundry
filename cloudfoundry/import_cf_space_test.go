@@ -22,7 +22,7 @@ func TestAccSpace_importBasic(t *testing.T) {
 					ResourceName:            resourceName,
 					ImportState:             true,
 					ImportStateVerify:       true,
-					ImportStateVerifyIgnore: []string{"staging_asgs"},
+					ImportStateVerifyIgnore: []string{"staging_asgs", "asgs"},
 				},
 			},
 		})

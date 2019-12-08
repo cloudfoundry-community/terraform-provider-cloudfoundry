@@ -1,13 +1,12 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"encoding/json"
-	"fmt"
-	"strings"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/structure"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 func resourceUserProvidedService() *schema.Resource {
@@ -20,7 +19,7 @@ func resourceUserProvidedService() *schema.Resource {
 		Delete: resourceUserProvidedServiceDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceUserProvidedServiceRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -31,6 +30,7 @@ func resourceUserProvidedService() *schema.Resource {
 			},
 			"space": &schema.Schema{
 				Type:     schema.TypeString,
+				ForceNew: true,
 				Required: true,
 			},
 			"syslog_drain_url": &schema.Schema{
@@ -58,29 +58,29 @@ func resourceUserProvidedService() *schema.Resource {
 			"credentials": &schema.Schema{
 				Type:          schema.TypeMap,
 				Optional:      true,
+				Sensitive:     true,
 				ConflictsWith: []string{"credentials_json"},
 			},
 			"credentials_json": &schema.Schema{
 				Type:             schema.TypeString,
 				Optional:         true,
 				ConflictsWith:    []string{"credentials"},
+				Sensitive:        true,
 				DiffSuppressFunc: structure.SuppressJsonDiff,
+				ValidateFunc:     validation.ValidateJsonString,
+			},
+			"tags": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      schema.HashString,
 			},
 		},
 	}
 }
 
-func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
-	var (
-		id          string
-		credentials map[string]interface{}
-	)
+func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
 	name := d.Get("name").(string)
 	space := d.Get("space").(string)
@@ -95,9 +95,10 @@ func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{})
 		routeServiceURL = d.Get("routeServiceURL").(string)
 	}
 
-	credentials = make(map[string]interface{})
+	credentials := make(map[string]interface{})
 	if credsJSON, hasJSON := d.GetOk("credentials_json"); hasJSON {
-		if err = json.Unmarshal([]byte(credsJSON.(string)), &credentials); err != nil {
+		err := json.Unmarshal([]byte(credsJSON.(string)), &credentials)
+		if err != nil {
 			return err
 		}
 	} else {
@@ -106,52 +107,69 @@ func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{})
 		}
 	}
 
-	sm := session.ServiceManager()
+	tagsSchema := d.Get("tags").(*schema.Set)
+	tags := make([]string, 0)
+	for _, tag := range tagsSchema.List() {
+		tags = append(tags, tag.(string))
+	}
 
-	if id, err = sm.CreateUserProvidedService(name, space, credentials, syslogDrainURL, routeServiceURL); err != nil {
+	usi, _, err := session.ClientV2.CreateUserProvidedServiceInstance(ccv2.UserProvidedServiceInstance{
+		Name:            name,
+		SpaceGuid:       space,
+		Tags:            tags,
+		RouteServiceUrl: routeServiceURL,
+		SyslogDrainUrl:  syslogDrainURL,
+		Credentials:     credentials,
+	})
+	if err != nil {
 		return err
 	}
-	session.Log.DebugMessage("New User Provided Service : %# v", id)
 
-	d.SetId(id)
+	d.SetId(usi.GUID)
 
 	return nil
 }
 
-func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	session.Log.DebugMessage("Reading User Provided Service : %s", d.Id())
-
-	sm := session.ServiceManager()
-	var ups cfapi.CCUserProvidedService
-
-	if ups, err = sm.ReadUserProvidedService(d.Id()); err != nil {
-		if strings.Contains(err.Error(), "status code: 404") {
+	ups, _, err := session.ClientV2.GetUserProvidedServiceInstance(d.Id())
+	if err != nil {
+		if IsErrNotFound(err) {
 			d.SetId("")
-			err = nil
+			return nil
 		}
 		return err
 	}
 
 	d.Set("name", ups.Name)
-	d.Set("space", ups.SpaceGUID)
+	d.Set("space", ups.SpaceGuid)
 
-	// should be changed when syslogDrainURL and routeServiceURL will be removed, this will be:
-	// d.Set("syslog_drain_url", ups.SyslogDrainURL)
-	// d.Set("route_service_url", ups.RouteServiceURL)
+	syslogSet := false
 	if _, ok := d.GetOk("syslogDrainURL"); ok {
-		d.Set("syslogDrainURL", ups.SyslogDrainURL)
-	} else {
-		d.Set("syslog_drain_url", ups.SyslogDrainURL)
+		d.Set("syslogDrainURL", ups.SyslogDrainUrl)
+		syslogSet = true
 	}
+	if _, ok := d.GetOk("syslog_drain_url"); ok {
+		d.Set("syslog_drain_url", ups.SyslogDrainUrl)
+		syslogSet = true
+	}
+
+	if !syslogSet && ups.SyslogDrainUrl != "" {
+		d.Set("syslog_drain_url", ups.SyslogDrainUrl)
+	}
+
+	routeServiceSet := false
 	if _, ok := d.GetOk("routeServiceURL"); ok {
-		d.Set("routeServiceURL", ups.RouteServiceURL)
-	} else {
-		d.Set("route_service_url", ups.RouteServiceURL)
+		d.Set("routeServiceURL", ups.RouteServiceUrl)
+		routeServiceSet = true
+	}
+	if _, ok := d.GetOk("route_service_url"); ok {
+		d.Set("route_service_url", ups.RouteServiceUrl)
+		routeServiceSet = true
+	}
+	if !routeServiceSet && ups.RouteServiceUrl != "" {
+		d.Set("route_service_url", ups.RouteServiceUrl)
 	}
 
 	if _, hasJSON := d.GetOk("credentials_json"); hasJSON {
@@ -160,32 +178,18 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) (
 	} else {
 		d.Set("credentials", ups.Credentials)
 	}
-
-	session.Log.DebugMessage("Read User Provided Service : %# v", ups)
-
+	d.Set("tags", ups.Tags)
 	return nil
 }
 
-func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	sm := session.ServiceManager()
-
-	session.Log.DebugMessage("Updating User Provided service %s ", d.Id())
-
-	var (
-		credentials map[string]interface{}
-	)
-
-	id := d.Id()
 	name := d.Get("name").(string)
 	syslogDrainURL := d.Get("syslog_drain_url").(string)
 	routeServiceURL := d.Get("route_service_url").(string)
-
-	//should be removed when syslogDrainURL and routeServiceURL will be removed
+	space := d.Get("space").(string)
+	// should be removed when syslogDrainURL and routeServiceURL will be removed
 	if syslogDrainURL == "" {
 		syslogDrainURL = d.Get("syslogDrainURL").(string)
 	}
@@ -193,9 +197,10 @@ func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{})
 		routeServiceURL = d.Get("routeServiceURL").(string)
 	}
 
-	credentials = make(map[string]interface{})
+	credentials := make(map[string]interface{})
 	if credsJSON, hasJSON := d.GetOk("credentials_json"); hasJSON {
-		if err = json.Unmarshal([]byte(credsJSON.(string)), &credentials); err != nil {
+		err := json.Unmarshal([]byte(credsJSON.(string)), &credentials)
+		if err != nil {
 			return err
 		}
 	} else {
@@ -203,29 +208,25 @@ func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{})
 			credentials[k] = v.(string)
 		}
 	}
-
-	if _, err = sm.UpdateUserProvidedService(id, name, credentials, syslogDrainURL, routeServiceURL); err != nil {
-		return err
+	tagsSchema := d.Get("tags").(*schema.Set)
+	tags := make([]string, 0)
+	for _, tag := range tagsSchema.List() {
+		tags = append(tags, tag.(string))
 	}
-
-	return nil
+	_, _, err := session.ClientV2.UpdateUserProvidedServiceInstance(ccv2.UserProvidedServiceInstance{
+		GUID:            d.Id(),
+		Name:            name,
+		SpaceGuid:       space,
+		Tags:            tags,
+		RouteServiceUrl: routeServiceURL,
+		SyslogDrainUrl:  syslogDrainURL,
+		Credentials:     credentials,
+	})
+	return err
 }
 
-func resourceUserProvidedServiceDelete(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	session.Log.DebugMessage("begin resourceServiceInstanceDelete")
-
-	sm := session.ServiceManager()
-
-	if err = sm.DeleteServiceInstance(d.Id()); err != nil {
-		return err
-	}
-
-	session.Log.DebugMessage("Deleted Service Instance : %s", d.Id())
-
-	return nil
+func resourceUserProvidedServiceDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	_, err := session.ClientV2.DeleteUserProvidedServiceInstance(d.Id())
+	return err
 }

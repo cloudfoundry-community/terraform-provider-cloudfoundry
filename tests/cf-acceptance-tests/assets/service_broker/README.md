@@ -2,6 +2,12 @@
 
 This directory contains an easily configured service broker that can be pushed as a CF app.
 
+### How to run it for test for provider ###
+-------------------
+`ruby setup_new_broker.rb async-broker <your.domain.url.com>`
+
+this will push and register the broker
+
 ### How to push ###
 -------------------
 `cf push async-broker`

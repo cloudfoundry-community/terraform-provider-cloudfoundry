@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+
+require 'webrick'
+require 'json'
+require 'net/http'
+require 'uri'
+
+server = WEBrick::HTTPServer.new :Port => ENV['PORT']
+
+server.mount_proc '/' do |request, response|
+  uri = URI(ENV['FORWARD'])
+  resp_forward = Net::HTTP.get_response(uri)
+  response.body = resp_forward.body
+  response.status = resp_forward.code
+end
+
+server.mount_proc '/env' do |request, response|
+  response.body = JSON.dump(ENV.to_hash)
+end
+
+trap 'INT' do server.shutdown end
+
+server.start

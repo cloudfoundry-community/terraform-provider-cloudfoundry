@@ -1,38 +1,46 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
 	"fmt"
 
-	"code.cloudfoundry.org/cli/cf/errors"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 func TestAccServiceInstance_importBasic(t *testing.T) {
-	resourceName := "cloudfoundry_service_instance.mysql"
+
+	spaceId, _ := defaultTestSpace(t)
+	serviceName1, _, servicePlan := getTestServiceBrokers(t)
+
+	resourceName := "cloudfoundry_service_instance.test-service-instance"
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceInstanceDestroyedImportState([]string{"mysql", "mysql-updated"}, resourceName),
+			PreCheck:  func() { testAccPreCheck(t) },
+			Providers: testAccProviders,
+			CheckDestroy: testAccCheckServiceInstanceDestroyedImportState(
+				[]string{"test-service"},
+				resourceName),
 			Steps: []resource.TestStep{
-
 				resource.TestStep{
-					Config: serviceInstanceResourceCreate,
+					Config: fmt.Sprintf(serviceInstanceResourceCreate,
+						serviceName1, spaceId, servicePlan,
+					),
 				},
-
 				resource.TestStep{
-					ResourceName:      resourceName,
-					ImportState:       true,
-					ImportStateVerify: true,
+					ResourceName:            resourceName,
+					ImportState:             true,
+					ImportStateVerify:       true,
+					ImportStateVerifyIgnore: []string{"recursive_delete"},
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(resourceName),
 						resource.TestCheckResourceAttr(
-							resourceName, "name", "mysql"),
+							resourceName, "name", "test-service-instance"),
 						resource.TestCheckResourceAttr(
 							resourceName, "tags.#", "2"),
 						resource.TestCheckResourceAttr(
@@ -52,7 +60,7 @@ func TestAccServiceInstance_importBasic(t *testing.T) {
 func testAccCheckServiceInstanceDestroyedImportState(names []string, serviceInstanceResource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 		rs, ok := s.RootModule().Resources[serviceInstanceResource]
 		if !ok {
 			return fmt.Errorf("Service instance '%s' not found in terraform state", spaceResource)
@@ -60,17 +68,13 @@ func testAccCheckServiceInstanceDestroyedImportState(names []string, serviceInst
 		spaceID := rs.Primary.Attributes["space"]
 
 		for _, n := range names {
-			session.Log.DebugMessage("checking ServiceInstance is Destroyed %s", n)
-			_, err := session.ServiceManager().FindServiceInstance(n, spaceID)
+			sis, _, err := session.ClientV2.GetServiceInstances(ccv2.FilterByName(n), ccv2.FilterEqual(constant.SpaceGUIDFilter, spaceID))
 			if err != nil {
-				switch err.(type) {
-				case *errors.ModelNotFoundError:
-					continue
-				default:
-					continue
-				}
+				return err
 			}
-			return fmt.Errorf("service instance with name '%s' still exists in cloud foundry", n)
+			if len(sis) > 0 {
+				return fmt.Errorf("service instance with name '%s' still exists in cloud foundry", n)
+			}
 		}
 		return nil
 	}

@@ -1,43 +1,44 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
-
-	"code.cloudfoundry.org/cli/cf/models"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 const serviceDataResource = `
 
-data "cloudfoundry_service" "mysql" {
-    name = "p-mysql"
+data "cloudfoundry_service" "test" {
+    name = "%s"
 }
 `
 
 func TestAccDataSourceService_normal(t *testing.T) {
 
-	ref := "data.cloudfoundry_service.mysql"
+	serviceName1, _, servicePlan := getTestServiceBrokers(t)
 
-	resource.Test(t,
+	ref := "data.cloudfoundry_service.test"
+
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: serviceDataResource,
+					Config: fmt.Sprintf(serviceDataResource,
+						serviceName1),
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceServiceExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "p-mysql"),
+							ref, "name", serviceName1),
 						resource.TestCheckResourceAttrSet(
-							ref, "service_plans.512mb"),
-						resource.TestCheckResourceAttrSet(
-							ref, "service_plans.1gb"),
+							ref, "service_plans."+servicePlan),
 					),
 				},
 			},
@@ -48,30 +49,24 @@ func checkDataSourceServiceExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("service '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		name := rs.Primary.Attributes["name"]
 
-		var (
-			err     error
-			service models.ServiceOffering
-		)
-
-		service, err = session.ServiceManager().FindServiceByName(name)
+		services, _, err := session.ClientV2.GetServices(ccv2.FilterEqual(constant.LabelFilter, name))
 		if err != nil {
 			return err
 		}
-		err = assertSame(id, service.GUID)
+		if len(services) == 0 {
+			return NotFound
+		}
+		err = assertSame(id, services[0].GUID)
 
 		return err
 	}

@@ -1,15 +1,13 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
-
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/repo"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 func resourceBuildpack() *schema.Resource {
-
 	return &schema.Resource{
 
 		Create: resourceBuildpackCreate,
@@ -18,9 +16,10 @@ func resourceBuildpack() *schema.Resource {
 		Delete: resourceBuildpackDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceBuildpackRead),
 		},
-
+		SchemaVersion: 3,
+		MigrateState:  resourceBuildpackMigrateState,
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{
@@ -36,234 +35,134 @@ func resourceBuildpack() *schema.Resource {
 			"enabled": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
-				Computed: true,
+				Default:  true,
 			},
 			"locked": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
+				Default:  false,
+			},
+			"path": &schema.Schema{
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Path to a buildpack zip in the form of unix path or http url",
+			},
+			"source_code_hash": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"filename": {
+				Type:     schema.TypeString,
+				Optional: true,
 				Computed: true,
 			},
-			"url": &schema.Schema{
-				Type:          schema.TypeString,
-				Optional:      true,
-				ConflictsWith: []string{"git", "github_release"},
-			},
-			"git": &schema.Schema{
-				Type:          schema.TypeList,
-				Optional:      true,
-				MaxItems:      1,
-				ConflictsWith: []string{"url", "github_release"},
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"url": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"branch": &schema.Schema{
-							Type:          schema.TypeString,
-							Optional:      true,
-							Default:       "master",
-							ConflictsWith: []string{"git.tag"},
-						},
-						"tag": &schema.Schema{
-							Type:          schema.TypeString,
-							Optional:      true,
-							ConflictsWith: []string{"git.branch"},
-						},
-						"user": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"password": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"key": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
-			},
-			"github_release": &schema.Schema{
-				Type:          schema.TypeList,
-				Optional:      true,
-				MaxItems:      1,
-				ConflictsWith: []string{"url", "git"},
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"owner": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"repo": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"user": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"password": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"version": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"filename": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
-				},
-			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
 
-func resourceBuildpackCreate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceBuildpackCreate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+	name := d.Get("name").(string)
+	position := d.Get("position").(int)
+	locked := d.Get("locked").(bool)
+	enabled := d.Get("enabled").(bool)
+	path := d.Get("path").(string)
 
-	var (
-		name            string
-		position        *int
-		enabled, locked *bool
-
-		path       string
-		repository repo.Repository
-
-		bp cfapi.CCBuildpack
-	)
-	name = d.Get("name").(string)
-	if v, ok := d.GetOk("position"); ok {
-		vv := v.(int)
-		position = &vv
-	}
-	if v, ok := d.GetOk("enabled"); ok {
-		vv := v.(bool)
-		enabled = &vv
-	}
-	if v, ok := d.GetOk("locked"); ok {
-		vv := v.(bool)
-		locked = &vv
-	}
-
-	if v, ok := d.GetOk("url"); ok {
-		path = v.(string)
-	} else {
-		if repository, err = getRepositoryFromConfig(d); err != nil {
-			return err
-		}
-		path = repository.GetPath()
-		defer repository.Clean()
-	}
-	if bp, err = session.BuildpackManager().CreateBuildpack(name, position, enabled, locked, path); err != nil {
+	bp, _, err := session.ClientV2.CreateBuildpack(ccv2.Buildpack{
+		Name:     name,
+		Enabled:  BoolToNullBool(enabled),
+		Locked:   BoolToNullBool(locked),
+		Position: IntToNullInt(position),
+	})
+	if err != nil {
 		return err
 	}
+	err = session.BitsManager.UploadBuildpack(bp.GUID, path)
+	if err != nil {
+		return err
+	}
+	bp, _, err = session.ClientV2.GetBuildpack(bp.GUID)
+	if err != nil {
+		return err
+	}
+	d.SetId(bp.GUID)
+	d.Set("position", bp.Position.Value)
+	d.Set("enabled", bp.Enabled.Value)
+	d.Set("locked", bp.Locked.Value)
+	d.Set("filename", bp.Filename)
 
-	d.SetId(bp.ID)
-	d.Set("position", bp.Position)
-	d.Set("enabled", bp.Enabled)
-	d.Set("locked", bp.Locked)
-
-	return err
+	err = metadataCreate(buildpackMetadata, d, meta)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+	session := meta.(*managers.Session)
 
-	id := d.Id()
-	bpm := session.BuildpackManager()
-
-	var bp cfapi.CCBuildpack
-	if bp, err = bpm.ReadBuildpack(id); err != nil {
+	bp, _, err := session.ClientV2.GetBuildpack(d.Id())
+	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 
 	d.Set("name", bp.Name)
-	d.Set("position", bp.Position)
-	d.Set("enabled", bp.Enabled)
-	d.Set("locked", bp.Locked)
+	d.Set("position", bp.Position.Value)
+	d.Set("enabled", bp.Enabled.Value)
+	d.Set("locked", bp.Locked.Value)
+	d.Set("filename", bp.Filename)
 
+	err = metadataRead(buildpackMetadata, d, meta, false)
+	if err != nil {
+		return err
+	}
 	return err
 }
 
 func resourceBuildpackUpdate(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
 
-	id := d.Id()
-	bpm := session.BuildpackManager()
-
-	var (
-		name            string
-		position        *int
-		enabled, locked *bool
-
-		path       string
-		repository repo.Repository
-
-		bp cfapi.CCBuildpack
-	)
-
-	update := false
-
-	name = *getChangedValueString("name", &update, d)
-	position = getChangedValueInt("position", &update, d)
-	enabled = getChangedValueBool("enabled", &update, d)
-	locked = getChangedValueBool("locked", &update, d)
-
-	if update {
-		if bp, err = bpm.UpdateBuildpack(id, name, position, enabled, locked); err != nil {
-			return
-		}
-		d.Set("position", bp.Position)
-		d.Set("enabled", bp.Enabled)
-		d.Set("locked", bp.Locked)
-	} else {
-		bp.Name = name
-		bp.Position = position
-		bp.Enabled = enabled
-		bp.Locked = locked
-	}
-	if d.HasChange("url") || d.HasChange("git") || d.HasChange("github_release") {
-
-		if v, ok := d.GetOk("url"); ok {
-			path = v.(string)
-		} else {
-			if repository, err = getRepositoryFromConfig(d); err != nil {
-				return err
-			}
-			path = repository.GetPath()
-			defer repository.Clean()
-		}
-		if bp, err = session.BuildpackManager().UploadBuildpackBits(bp, path); err != nil {
+	if d.HasChange("name") || d.HasChange("position") || d.HasChange("locked") || d.HasChange("enabled") {
+		name := d.Get("name").(string)
+		position := d.Get("position").(int)
+		locked := d.Get("locked").(bool)
+		enabled := d.Get("enabled").(bool)
+		_, _, err := session.ClientV2.UpdateBuildpack(ccv2.Buildpack{
+			GUID:     d.Id(),
+			Name:     name,
+			Enabled:  BoolToNullBool(enabled),
+			Locked:   BoolToNullBool(locked),
+			Position: IntToNullInt(position),
+		})
+		if err != nil {
 			return err
 		}
 	}
-	return err
+
+	if d.HasChange("path") || d.HasChange("source_code_hash") || d.HasChange("filename") {
+		return session.BitsManager.UploadBuildpack(d.Id(), d.Get("path").(string))
+	}
+	err = metadataUpdate(buildpackMetadata, d, meta)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func resourceBuildpackDelete(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceBuildpackDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
-	err = session.BuildpackManager().DeleteBuildpack(d.Id())
+	_, err := session.ClientV2.DeleteBuildpack(d.Id())
 	return err
 }

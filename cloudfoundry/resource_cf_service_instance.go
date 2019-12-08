@@ -3,13 +3,15 @@ package cloudfoundry
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
+	"github.com/hashicorp/terraform/helper/validation"
 	"time"
 
-	"code.cloudfoundry.org/cli/cf/terminal"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 func resourceServiceInstance() *schema.Resource {
@@ -44,57 +46,55 @@ func resourceServiceInstance() *schema.Resource {
 			"space": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"json_params": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validation.ValidateJsonString,
 			},
 			"tags": &schema.Schema{
 				Type:     schema.TypeList,
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
+			"recursive_delete": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 		},
 	}
 }
 
-func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
-	var (
-		id     string
-		tags   []string
-		params map[string]interface{}
-	)
 	name := d.Get("name").(string)
 	servicePlan := d.Get("service_plan").(string)
 	space := d.Get("space").(string)
 	jsonParameters := d.Get("json_params").(string)
-
+	tags := make([]string, 0)
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
 	}
 
+	params := make(map[string]interface{})
 	if len(jsonParameters) > 0 {
-		if err = json.Unmarshal([]byte(jsonParameters), &params); err != nil {
+		err := json.Unmarshal([]byte(jsonParameters), &params)
+		if err != nil {
 			return err
 		}
 	}
-
-	sm := session.ServiceManager()
-
-	if id, err = sm.CreateServiceInstance(name, servicePlan, space, params, tags); err != nil {
+	si, _, err := session.ClientV2.CreateServiceInstance(space, servicePlan, name, params, tags)
+	if err != nil {
 		return err
 	}
 	stateConf := &resource.StateChangeConf{
 		Pending:        resourceServiceInstancePendingStates,
 		Target:         resourceServiceInstanceSuccessStates,
-		Refresh:        resourceServiceInstanceStateFunc(id, "create", meta),
+		Refresh:        resourceServiceInstanceStateFunc(si.GUID, "create", meta),
 		Timeout:        d.Timeout(schema.TimeoutCreate),
 		PollInterval:   30 * time.Second,
 		Delay:          5 * time.Second,
@@ -106,29 +106,19 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) (er
 		return err
 	}
 
-	session.Log.DebugMessage("New Service Instance : %# v", id)
-
-	d.SetId(id)
+	d.SetId(si.GUID)
 
 	return nil
 }
 
-func resourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	session.Log.DebugMessage("Reading Service Instance : %s", terminal.EntityNameColor(d.Id()))
-
-	sm := session.ServiceManager()
-	var serviceInstance cfapi.CCServiceInstance
-
-	serviceInstance, err = sm.ReadServiceInstance(d.Id())
+	serviceInstance, _, err := session.ClientV2.GetServiceInstance(d.Id())
 	if err != nil {
-		if strings.Contains(err.Error(), "status code: 404") {
+		if IsErrNotFound(err) {
 			d.SetId("")
-			err = nil
+			return nil
 		}
 		return err
 	}
@@ -147,20 +137,14 @@ func resourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) (err 
 		d.Set("tags", nil)
 	}
 
-	session.Log.DebugMessage("Read Service Instance : %# v", serviceInstance)
-
 	return nil
 }
 
-func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
+func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
-	sm := session.ServiceManager()
-
-	session.Log.DebugMessage("begin resourceServiceInstanceUpdate")
 
 	// Enable partial state mode
 	// We need to explicitly set state updates ourselves or
@@ -181,7 +165,8 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 	jsonParameters := d.Get("json_params").(string)
 
 	if len(jsonParameters) > 0 {
-		if err = json.Unmarshal([]byte(jsonParameters), &params); err != nil {
+		err := json.Unmarshal([]byte(jsonParameters), &params)
+		if err != nil {
 			return err
 		}
 	}
@@ -190,7 +175,14 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 		tags = append(tags, v.(string))
 	}
 
-	if _, err = sm.UpdateServiceInstance(id, name, servicePlan, params, tags); err != nil {
+	_, _, err := session.ClientV2.UpdateServiceInstance(ccv2.ServiceInstance{
+		GUID:            id,
+		Name:            name,
+		ServicePlanGUID: servicePlan,
+		Parameters:      params,
+		Tags:            tags,
+	})
+	if err != nil {
 		return err
 	}
 
@@ -201,7 +193,7 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 		Timeout:        d.Timeout(schema.TimeoutUpdate),
 		PollInterval:   30 * time.Second,
 		Delay:          5 * time.Second,
-		NotFoundChecks: 3, // if we don't find the service instance in CF during an update, something is definately wrong
+		NotFoundChecks: 3, // if we don't find the service instance in CF during an update, something is definitely wrong
 	}
 	// Wait, catching any errors
 	if _, err = stateConf.WaitForState(); err != nil {
@@ -213,24 +205,21 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) (er
 	return nil
 }
 
-func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
+func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 	id := d.Id()
 
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	session.Log.DebugMessage("begin resourceServiceInstanceDelete")
-
-	sm := session.ServiceManager()
-
-	if err = sm.DeleteServiceInstance(id); err != nil {
+	recursiveDelete := d.Get("recursive_delete").(bool)
+	async, _, err := session.ClientV2.DeleteServiceInstance(id, recursiveDelete, session.PurgeWhenDelete)
+	if err != nil {
 		return err
+	}
+	if !async {
+		return nil
 	}
 	stateConf := &resource.StateChangeConf{
 		Pending:      resourceServiceInstancePendingStates,
-		Target:       []string{}, // in case of deletion, the state manager checks for nil object result and a 0 length list of target states
+		Target:       []string{},
 		Refresh:      resourceServiceInstanceStateFunc(id, "delete", meta),
 		Timeout:      d.Timeout(schema.TimeoutDelete),
 		PollInterval: 30 * time.Second,
@@ -241,21 +230,13 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) (er
 		return err
 	}
 
-	session.Log.DebugMessage("Deleted Service Instance : %s", terminal.EntityNameColor(d.Id()))
-
 	return nil
 }
 
 func resourceServiceInstanceImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 
-	if session == nil {
-		return nil, fmt.Errorf("client is nil")
-	}
-
-	sm := session.ServiceManager()
-
-	serviceinstance, err := sm.ReadServiceInstance(d.Id())
+	serviceinstance, _, err := session.ClientV2.GetServiceInstance(d.Id())
 
 	if err != nil {
 		return nil, err
@@ -269,36 +250,31 @@ func resourceServiceInstanceImport(d *schema.ResourceData, meta interface{}) ([]
 	// json_param can't be retrieved from CF, please inject manually if necessary
 	d.Set("json_param", "")
 
-	return ImportStatePassthrough(d, meta)
+	return ImportRead(resourceServiceInstanceRead)(d, meta)
 }
 
 func resourceServiceInstanceStateFunc(serviceInstanceID string, operationType string, meta interface{}) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		session := meta.(*cfapi.Session)
-		sm := session.ServiceManager()
-		var err error
-		var serviceInstance cfapi.CCServiceInstance
-		if serviceInstance, err = sm.ReadServiceInstance(serviceInstanceID); err != nil {
+		session := meta.(*managers.Session)
+		serviceInstance, _, err := session.ClientV2.GetServiceInstance(serviceInstanceID)
+		if err != nil {
 			// We should get a 404 if the resource doesn't exist (eg. it has been deleted)
 			// In this case, the refresh code is expecting a nil object
-			if strings.Contains(err.Error(), "status code: 404") {
+			if IsErrNotFound(err) {
 				return nil, "", nil
-			} else {
-				session.Log.DebugMessage("Error on retrieving the serviceInstance %s", serviceInstanceID)
 			}
 			return nil, "", err
 		}
 
-		if serviceInstance.LastOperation["type"] == operationType {
-			state := fmt.Sprintf("%s", serviceInstance.LastOperation["state"])
-			switch state {
-			case "succeeded":
-				return serviceInstance, state, nil
-			case "failed":
-				session.Log.DebugMessage("service instance with guid=%s async provisioning has failed", serviceInstanceID)
-				return nil, state, fmt.Errorf("%s", serviceInstance.LastOperation["description"])
+		if serviceInstance.LastOperation.Type == operationType {
+			stateStr := string(serviceInstance.LastOperation.State)
+			switch serviceInstance.LastOperation.State {
+			case constant.LastOperationSucceeded:
+				return serviceInstance, stateStr, nil
+			case constant.LastOperationFailed:
+				return nil, stateStr, fmt.Errorf("%s", serviceInstance.LastOperation.Description)
 			}
-			return serviceInstance, state, nil
+			return serviceInstance, stateStr, nil
 		}
 
 		return serviceInstance, "wrong operation", nil

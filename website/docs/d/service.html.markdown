@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry Service.
 ---
 
-# cf\_service
+# cloudfoundry\_service
 
 Gets information on a Cloud Foundry service definition.
 

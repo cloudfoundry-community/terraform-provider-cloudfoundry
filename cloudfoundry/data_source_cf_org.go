@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 func dataSourceOrg() *schema.Resource {
@@ -19,31 +20,34 @@ func dataSourceOrg() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
 
-func dataSourceOrgRead(d *schema.ResourceData, meta interface{}) (err error) {
+func dataSourceOrgRead(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
 
-	om := session.OrgManager()
+	name := d.Get("name").(string)
 
-	var (
-		name string
-		org  cfapi.CCOrg
-	)
-
-	name = d.Get("name").(string)
-
-	org, err = om.FindOrg(name)
-
+	orgs, _, err := session.ClientV2.GetOrganizations(ccv2.FilterByName(name))
 	if err != nil {
 		return err
 	}
-	d.SetId(org.ID)
+
+	if len(orgs) == 0 {
+		return NotFound
+	}
+	d.SetId(orgs[0].GUID)
+
+	err = metadataRead(orgMetadata, d, meta, true)
+	if err != nil {
+		return err
+	}
 	return err
 }

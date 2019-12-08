@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry router_group.
 ---
 
-# cf\_router\_group
+# cloudfoundry\_router\_group
 
 Gets information on a particular Cloud Foundry router group. Router groups are used to declare [TCP domains](https://docs.cloudfoundry.org/devguide/deploy-apps/router_groups.html) and need to be referenced when declaring [TCP routes](https://docs.cloudfoundry.org/adminguide/enabling-tcp-routing.html).
 

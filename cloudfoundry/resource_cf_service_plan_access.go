@@ -2,9 +2,9 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 func resourceServicePlanAccess() *schema.Resource {
@@ -37,9 +37,9 @@ func resourceServicePlanAccess() *schema.Resource {
 	}
 }
 
-func resourceServicePlanAccessCreate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceServicePlanAccessCreate(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
@@ -49,19 +49,20 @@ func resourceServicePlanAccessCreate(d *schema.ResourceData, meta interface{}) (
 	org, hasOrg := d.GetOk("org")
 
 	var id string
-	sm := session.ServiceManager()
-
 	if hasOrg {
-		if id, err = sm.CreateServicePlanAccess(plan, org.(string)); err != nil {
-			return
+		spV, _, err := session.ClientV2.CreateServicePlanVisibility(plan, org.(string))
+		if err != nil {
+			return err
 		}
+		id = spV.GUID
 	} else {
 		state := false
 		if hasPublic {
 			state = public.(bool)
 		}
-		if err = sm.UpdateServicePlanVisibility(plan, state); err != nil {
-			return
+		_, err := session.ClientV2.UpdateServicePlan(plan, state)
+		if err != nil {
+			return err
 		}
 		id = plan
 	}
@@ -70,29 +71,30 @@ func resourceServicePlanAccessCreate(d *schema.ResourceData, meta interface{}) (
 	return nil
 }
 
-func resourceServicePlanAccessRead(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+func resourceServicePlanAccessRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
 	_, hasOrg := d.GetOk("org")
 
-	sm := session.ServiceManager()
-
 	if hasOrg {
-		var plan, org string
-		if plan, org, err = sm.ReadServicePlanAccess(d.Id()); err != nil {
-			d.SetId("")
-			return
+		spV, _, err := session.ClientV2.GetServicePlanVisibility(d.Id())
+		if err != nil {
+			if IsErrNotFound(err) {
+				d.SetId("")
+				return nil
+			}
+			return err
 		}
-		d.Set("plan", plan)
-		d.Set("org", org)
+		d.Set("plan", spV.ServicePlanGUID)
+		d.Set("org", spV.OrganizationGUID)
 	} else {
-		var plan cfapi.CCServicePlan
-		if plan, err = sm.ReadServicePlan(d.Id()); err != nil {
-			d.SetId("")
-			return
+		plan, _, err := session.ClientV2.GetServicePlan(d.Id())
+		if err != nil {
+			if IsErrNotFound(err) {
+				d.SetId("")
+				return nil
+			}
+			return err
 		}
 		d.Set("plan", d.Id())
 		d.Set("public", plan.Public)
@@ -101,23 +103,13 @@ func resourceServicePlanAccessRead(d *schema.ResourceData, meta interface{}) (er
 	return nil
 }
 
-func resourceServicePlanAccessDelete(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+func resourceServicePlanAccessDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
 	_, hasOrg := d.GetOk("org")
-	if hasOrg {
-		sm := session.ServiceManager()
-		if err = sm.DeleteServicePlanAccess(d.Id()); err != nil {
-			return err
-		}
+	if !hasOrg {
+		return nil
 	}
-	return nil
+	_, err := session.ClientV2.DeleteServicePlanVisibility(d.Id())
+	return err
 }
-
-// Local Variables:
-// ispell-local-dictionary: "american"
-// End:

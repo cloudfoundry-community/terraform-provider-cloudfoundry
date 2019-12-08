@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry User Provided Service.
 ---
 
-# cf\_user_provided_service
+# cloudfoundry\_user_provided_service
 
 Provides a Cloud Foundry resource for managing Cloud Foundry [User Provided Services](https://docs.cloudfoundry.org/devguide/services/user-provided.html) within spaces.
 
@@ -54,6 +54,7 @@ The following arguments are supported:
 * `credentials_json` - (Optional) Same as `credentials` but in the form of a stringified JSON object. Conflicts with `credentials` and defaults to empty map.
 * `syslog_drain_url` - (Optional) URL to which logs for bound applications will be streamed. Defaults to empty.
 * `route_service_url` - (Optional) URL to which requests for bound routes will be forwarded. Scheme for this URL must be https and defaults to empty
+* `tags` - (optional) List of tag representing the service
 
 ## Attributes Reference
 

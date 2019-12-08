@@ -4,48 +4,48 @@ import (
 	"fmt"
 	"testing"
 
-	"code.cloudfoundry.org/cli/cf/errors"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 const domainResourceShared = `
 
 resource "cloudfoundry_domain" "shared" {
-    sub_domain = "dev"
-	domain = "%s"
+  sub_domain = "dev-res"
+  domain = "%s"
 }
 `
 
 const domainResourceSharedTCP = `
 
 data "cloudfoundry_router_group" "tcp" {
-    name = "default-tcp"
+  name = "default-tcp"
 }
 
 resource "cloudfoundry_domain" "shared-tcp" {
-    sub_domain = "tcp-test"
-	domain = "%s"
-	router_group = "${data.cloudfoundry_router_group.tcp.id}"
+  sub_domain = "tcp-test-res"
+  domain = "%s"
+  router_group = "${data.cloudfoundry_router_group.tcp.id}"
 }
 `
 
 const domainResourcePrivate = `
 
 resource "cloudfoundry_domain" "private" {
-    name = "pcfdev-org.io"
-	org = "%s"
+	name = "%s.%s"
+  org = "%s"
 }
 `
 
-func TestAccSharedDomain_normal(t *testing.T) {
+func TestAccResSharedDomain_normal(t *testing.T) {
 
 	ref := "cloudfoundry_domain.shared"
-	domainname := "dev." + defaultAppDomain()
+	domainname := "dev-res." + defaultAppDomain()
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
@@ -59,21 +59,26 @@ func TestAccSharedDomain_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", domainname),
 						resource.TestCheckResourceAttr(
-							ref, "sub_domain", "dev"),
+							ref, "sub_domain", "dev-res"),
 						resource.TestCheckResourceAttr(
 							ref, "domain", defaultAppDomain()),
 					),
+				},
+				resource.TestStep{
+					ResourceName:      ref,
+					ImportState:       true,
+					ImportStateVerify: true,
 				},
 			},
 		})
 }
 
-func TestAccSharedTCPDomain_normal(t *testing.T) {
+func TestAccResSharedTCPDomain_normal(t *testing.T) {
 
 	ref := "cloudfoundry_domain.shared-tcp"
-	domainname := "tcp-test." + defaultAppDomain()
+	domainname := "tcp-test-res." + defaultAppDomain()
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
@@ -87,7 +92,7 @@ func TestAccSharedTCPDomain_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", domainname),
 						resource.TestCheckResourceAttr(
-							ref, "sub_domain", "tcp-test"),
+							ref, "sub_domain", "tcp-test-res"),
 						resource.TestCheckResourceAttr(
 							ref, "domain", defaultAppDomain()),
 						resource.TestCheckResourceAttr(
@@ -98,29 +103,33 @@ func TestAccSharedTCPDomain_normal(t *testing.T) {
 		})
 }
 
-func TestAccPrivateDomain_normal(t *testing.T) {
+func TestAccResPrivateDomain_normal(t *testing.T) {
 
 	ref := "cloudfoundry_domain.private"
-	domainname := "pcfdev-org.io"
-	orgID := defaultPcfDevOrgID()
 
-	resource.Test(t,
+	domain := "io"
+	subDomain := "test-domain-res"
+
+	orgID, _ := defaultTestOrg(t)
+
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckPrivateDomainDestroy(domainname),
+			CheckDestroy: testAccCheckPrivateDomainDestroy(domain),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(domainResourcePrivate, orgID),
+					Config: fmt.Sprintf(domainResourcePrivate,
+						subDomain, domain, orgID),
 					Check: resource.ComposeTestCheckFunc(
 						checkPrivateDomainExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "pcfdev-org.io"),
+							ref, "name", subDomain+"."+domain),
 						resource.TestCheckResourceAttr(
-							ref, "sub_domain", "pcfdev-org"),
+							ref, "sub_domain", subDomain),
 						resource.TestCheckResourceAttr(
-							ref, "domain", "io"),
+							ref, "domain", domain),
 						resource.TestCheckResourceAttr(
 							ref, "org", orgID),
 					),
@@ -133,29 +142,27 @@ func checkShareDomainExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("domain '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 		name := attributes["name"]
 
-		dm := session.DomainManager()
-		domainFields, err := dm.FindSharedByName(name)
+		dm := session.ClientV2
+		domains, _, err := dm.GetSharedDomains(ccv2.FilterByName(name))
 		if err != nil {
 			return err
 		}
-
-		if id != domainFields.GUID {
-			return fmt.Errorf("expecting domain guid to be '%s' but got '%session'", id, domainFields.GUID)
+		if len(domains) == 0 {
+			return NotFound
+		}
+		if id != domains[0].GUID {
+			return fmt.Errorf("expecting domain guid to be '%s' but got '%session'", id, domains[0].GUID)
 		}
 		return nil
 	}
@@ -165,32 +172,27 @@ func checkPrivateDomainExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("domain '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 		name := attributes["name"]
 
-		dm := session.DomainManager()
-		domainFields, err := dm.FindPrivateByName(name)
+		dm := session.ClientV2
+		domains, _, err := dm.GetPrivateDomains(ccv2.FilterByName(name))
 		if err != nil {
 			return err
 		}
-
-		if id != domainFields.GUID {
-			return fmt.Errorf("expecting domain guid to be '%s' but got '%session'", id, domainFields.GUID)
+		if len(domains) == 0 {
+			return NotFound
 		}
-		if err := assertEquals(attributes, "org", domainFields.OwningOrganizationGUID); err != nil {
-			return err
+		if id != domains[0].GUID {
+			return fmt.Errorf("expecting domain guid to be '%s' but got '%session'", id, domains[0].GUID)
 		}
 		return nil
 	}
@@ -199,29 +201,29 @@ func checkPrivateDomainExists(resource string) resource.TestCheckFunc {
 func testAccCheckSharedDomainDestroy(domainname string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
-
-		session := testAccProvider.Meta().(*cfapi.Session)
-		_, err := session.DomainManager().FindSharedByName(domainname)
-		switch err.(type) {
-		case *errors.ModelNotFoundError:
-			return nil
+		session := testAccProvider.Meta().(*managers.Session)
+		domains, _, err := session.ClientV2.GetSharedDomains(ccv2.FilterByName(domainname))
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("shared domain with name '%s' still exists in cloud foundry", domainname)
+		if len(domains) > 0 {
+			return fmt.Errorf("shared domain with name '%s' still exists in cloud foundry", domainname)
+		}
+		return nil
 	}
 }
 
 func testAccCheckPrivateDomainDestroy(domainname string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
-		if _, err := session.DomainManager().FindPrivateByName(domainname); err != nil {
-			switch err.(type) {
-			case *errors.ModelNotFoundError:
-				return nil
-			default:
-				return err
-			}
+		session := testAccProvider.Meta().(*managers.Session)
+		domains, _, err := session.ClientV2.GetPrivateDomains(ccv2.FilterByName(domainname))
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("domain with name '%s' still exists in cloud foundry", domainname)
+		if len(domains) > 0 {
+			return fmt.Errorf("shared domain with name '%s' still exists in cloud foundry", domainname)
+		}
+		return nil
 	}
 }

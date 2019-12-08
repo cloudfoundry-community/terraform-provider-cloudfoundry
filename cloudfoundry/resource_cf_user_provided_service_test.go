@@ -1,14 +1,14 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
-
-	"code.cloudfoundry.org/cli/cf/errors"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 const userProvidedServiceResourceCreate = `
@@ -116,10 +116,11 @@ resource "cloudfoundry_user_provided_service" "complex" {
   credentials_json = "{ \"cnx\": { \"host\": \"127.0.0.1\", \"ports\": [ 8088 ] } }"
   syslog_drain_url = "http://localhost/syslog"
   route_service_url = "https://localhost/route"
+  tags = ["mytag"]
 }
 `
 
-func TestAccUserProvidedService_normal(t *testing.T) {
+func TestAccResUserProvidedService_normal(t *testing.T) {
 
 	ref := "cloudfoundry_user_provided_service.mq"
 
@@ -161,7 +162,7 @@ func TestAccUserProvidedService_normal(t *testing.T) {
 		})
 }
 
-func TestAccUserProvidedService_complex(t *testing.T) {
+func TestAccResUserProvidedService_complex(t *testing.T) {
 	ref := "cloudfoundry_user_provided_service.complex"
 	resource.Test(t,
 		resource.TestCase{
@@ -191,6 +192,7 @@ func TestAccUserProvidedService_complex(t *testing.T) {
 						resource.TestCheckResourceAttr(ref, "syslog_drain_url", "http://localhost/syslog"),
 						resource.TestCheckResourceAttr(ref, "route_service_url", "https://localhost/route"),
 						resource.TestCheckNoResourceAttr(ref, "credentials"),
+						resource.TestCheckResourceAttr(ref, "tags.#", "1"),
 					),
 				},
 			},
@@ -199,34 +201,23 @@ func TestAccUserProvidedService_complex(t *testing.T) {
 
 func testAccCheckUserProvidedServiceExists(resource string) resource.TestCheckFunc {
 
-	return func(s *terraform.State) (err error) {
+	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("user provided service '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 
-		var (
-			serviceInstance cfapi.CCUserProvidedService
-		)
-
-		sm := session.ServiceManager()
-		if serviceInstance, err = sm.ReadUserProvidedService(id); err != nil {
-			return
+		_, _, err := session.ClientV2.GetUserProvidedServiceInstance(id)
+		if err != nil {
+			return err
 		}
-		session.Log.DebugMessage(
-			"retrieved user provided service for resource '%s' with id '%s': %# v",
-			resource, id, serviceInstance)
 
-		return
+		return nil
 	}
 }
 
@@ -234,24 +225,19 @@ func testAccCheckUserProvidedServiceDestroyed(name string, spaceResource string)
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[spaceResource]
 		if !ok {
 			return fmt.Errorf("space '%s' not found in terraform state", spaceResource)
 		}
-
-		session.Log.DebugMessage("checking User Provided Service is Destroyed %s", name)
-
-		if _, err := session.ServiceManager().FindServiceInstance(name, rs.Primary.ID); err != nil {
-			switch err.(type) {
-			case *errors.ModelNotFoundError:
-				return nil
-
-			default:
-				return err
-			}
+		svcs, _, err := session.ClientV2.GetServiceInstances(ccv2.FilterByName(name), ccv2.FilterEqual(constant.SpaceGUIDFilter, rs.Primary.ID))
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("user provided service with name '%s' still exists in cloud foundry", name)
+		if len(svcs) > 0 {
+			return fmt.Errorf("user provided service with name '%s' still exists in cloud foundry", name)
+		}
+		return nil
 	}
 }

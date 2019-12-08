@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry target.
 ---
 
-# cf\_info
+# cloudfoundry\_info
 
 Gets information on a Cloud Foundry target.
 

@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry Space.
 ---
 
-# cf\_space
+# cloudfoundry\_space
 
 Gets information on a Cloud Foundry space.
 
@@ -40,3 +40,7 @@ The following attributes are exported:
 * `org` - The GUID of the org the space belongs to
 * `org_name` - The name of the org the space belongs to
 * `quota`- The GUID of the space's quota
+* `labels` - Map of labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.
+* `annotations` - Map of annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.

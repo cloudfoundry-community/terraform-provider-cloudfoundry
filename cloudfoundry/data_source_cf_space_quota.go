@@ -1,10 +1,9 @@
 package cloudfoundry
 
 import (
-	"fmt"
-
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 func dataSourceSpaceQuota() *schema.Resource {
@@ -23,29 +22,25 @@ func dataSourceSpaceQuota() *schema.Resource {
 	}
 }
 
-func dataSourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+func dataSourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	qm := session.ClientV2
 
-	var (
-		org    *string
-		name   string
-		quota  cfapi.CCQuota
-	)
-
-	name = d.Get("name").(string)
-	if val, ok := d.GetOk("org"); ok {
-		name := val.(string)
-		org = &name
-	}
-
-	qm := session.QuotaManager()
-	quota, err = qm.FindQuotaByName(cfapi.SpaceQuota, name, org)
+	name := d.Get("name").(string)
+	orgId := d.Get("org").(string)
+	quotas, _, err := qm.GetQuotas(constant.SpaceQuota)
 	if err != nil {
 		return err
 	}
-	d.SetId(quota.ID)
-	return nil
+	for _, quota := range quotas {
+		if quota.Name != name {
+			continue
+		}
+		if orgId != "" && quota.OrganizationGUID != orgId {
+			continue
+		}
+		d.SetId(quota.GUID)
+		return nil
+	}
+	return NotFound
 }

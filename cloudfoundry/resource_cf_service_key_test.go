@@ -2,62 +2,57 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
-
-	"code.cloudfoundry.org/cli/cf/errors"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 const serviceKeyResource = `
-
-data "cloudfoundry_org" "org" {
-    name = "pcfdev-org"
-}
-data "cloudfoundry_space" "space" {
-    name = "pcfdev-space"
-	org = "${data.cloudfoundry_org.org.id}"
-}
-data "cloudfoundry_service" "rabbitmq" {
-    name = "p-rabbitmq"
+data "cloudfoundry_service" "test-service" {
+  name = "%s"
 }
 
-resource "cloudfoundry_service_instance" "rabbitmq" {
-	name = "rabbitmq"
-    space = "${data.cloudfoundry_space.space.id}"
-    service_plan = "${data.cloudfoundry_service.rabbitmq.service_plans["standard"]}"
+resource "cloudfoundry_service_instance" "test-service-instance" {
+	name = "test-service-instance"
+  space = "%s"
+  service_plan = "${data.cloudfoundry_service.test-service.service_plans["%s"]}"
 }
 
-resource "cloudfoundry_service_key" "rabbitmq-key" {
-	name = "rabbitmq-key"
-	service_instance = "${cloudfoundry_service_instance.rabbitmq.id}"
+resource "cloudfoundry_service_key" "test-service-instance-key" {
+	name = "test-service-instance-key"
+	service_instance = "${cloudfoundry_service_instance.test-service-instance.id}"
 
-	params {
+	params = {
 		"key1" = "aaaa"
 		"key2" = "bbbb"
 	}
 }
 `
 
-func TestAccServiceKey_normal(t *testing.T) {
+func TestAccResServiceKey_normal(t *testing.T) {
 
-	ref := "cloudfoundry_service_key.rabbitmq-key"
+	spaceId, _ := defaultTestSpace(t)
+	serviceName1, _, servicePlan := getTestServiceBrokers(t)
+
+	ref := "cloudfoundry_service_key.test-service-instance-key"
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceKeyDestroyed("rabbitmq-key", "cloudfoundry_service_instance.rabbitmq"),
+			PreCheck:  func() { testAccPreCheck(t) },
+			Providers: testAccProviders,
+			CheckDestroy: testAccCheckServiceKeyDestroyed(
+				"test-service-instance-key", ref),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: serviceKeyResource,
+					Config: fmt.Sprintf(serviceKeyResource,
+						serviceName1, spaceId, servicePlan),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceKeyExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "rabbitmq-key"),
+							ref, "name", "test-service-instance-key"),
 					),
 				},
 			},
@@ -66,63 +61,46 @@ func TestAccServiceKey_normal(t *testing.T) {
 
 func testAccCheckServiceKeyExists(resource string) resource.TestCheckFunc {
 
-	return func(s *terraform.State) (err error) {
+	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("service instance '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
-
-		var serviceKey cfapi.CCServiceKey
-
-		sm := session.ServiceManager()
-		if serviceKey, err = sm.ReadServiceKey(id); err != nil {
-			return
+		serviceKey, _, err := session.ClientV2.GetServiceKey(id)
+		if err != nil {
+			return err
 		}
-		session.Log.DebugMessage(
-			"retrieved service instance for resource '%s' with id '%s': %# v",
-			resource, id, serviceKey)
 
 		if err = assertEquals(attributes, "name", serviceKey.Name); err != nil {
 			return err
 		}
 
-		//normalized := normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_")
+		// normalized := normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_")
 		return assertMapEquals("credentials", attributes, serviceKey.Credentials)
 	}
 }
 
-func testAccCheckServiceKeyDestroyed(name, serviceInstance string) resource.TestCheckFunc {
+func testAccCheckServiceKeyDestroyed(name, serviceInstanceKey string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
-		rs, ok := s.RootModule().Resources[serviceInstance]
+		rs, ok := s.RootModule().Resources[serviceInstanceKey]
 		if !ok {
-			return fmt.Errorf("service instance '%s' not found in terraform state", spaceResource)
+			return fmt.Errorf("service instance '%s' not found in terraform state", serviceInstanceKey)
 		}
 
-		session.Log.DebugMessage("checking ServiceKey is Destroyed %s", name)
-
-		if _, err := session.ServiceManager().FindServiceKey(name, rs.Primary.ID); err != nil {
-			switch err.(type) {
-			case *errors.ModelNotFoundError:
-				return nil
-
-			default:
-				return err
-			}
+		_, _, err := session.ClientV2.GetServiceKey(rs.Primary.ID)
+		if err == nil {
+			return fmt.Errorf("service instance with name '%s' still exists in cloud foundry", name)
 		}
-		return fmt.Errorf("service instance with name '%s' still exists in cloud foundry", name)
+		return nil
 	}
 }

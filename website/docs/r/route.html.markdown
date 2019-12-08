@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry route resource.
 ---
 
-# cf\_route
+# cloudfoundry\_route
 
 Provides a Cloud Foundry resource for managing Cloud Foundry application [routes](https://docs.cloudfoundry.org/devguide/deploy-apps/routes-domains.html).
 
@@ -32,8 +32,8 @@ The following arguments are supported:
 
 The following arguments apply only to TCP routes.
 
-- `port` - (Optional, Int) The port to associate with the route for a TCP route. Conflicts with `path` and `random_port`.
-- `random_port` - (Optional, Bool) Set to 'true' to create a random port. Conflicts with `path` and `port` and defaults to false.
+- `port` - (Optional, Int) The port to associate with the route for a TCP route. Conflicts with `random_port`.
+- `random_port` - (Optional, Bool) Set to 'true' to create a random port. Conflicts with `port` and defaults to false.
 
 The following argument applies only to HTTP routes.
 
@@ -41,10 +41,13 @@ The following argument applies only to HTTP routes.
 
 The following maps the route to an application.
 
-- `target` - (Optional) A route mapping that will map this route to an application
-
+- `target` - (Optional, Set) One or more route mapping(s) that will map this route to application(s). Can be repeated multiple times to load balance route traffic among multiple applications.<br/>
+The `target` block supports:
   - `app` - (Required, String) The ID of the [application](/docs/providers/cloudfoundry/r/app.html) to map this route to.
-  - `port` - (Optional, Int) A port that the application will be listening on. If this argument is not provided then the route will be associated with the application's default port.
+  - `port` - (Optional, Int) A port that the application will be listening on. If this argument is not provided then the route will be associated with the application's default port. 
+
+~> **NOTE:** Route mappings can be controlled from either the `cloudfoundry_routes.target` or the `cloudfoundry_app.routes` attributes.  
+~> **NOTE:** Resource only handles `target` previously created by resource (i.e. it does not destroy nor modifies target set by other resources like cloudfoundry_application).
 
 ## Attributes Reference
 

@@ -9,17 +9,25 @@ import (
 )
 
 func TestAccApp_importBasic(t *testing.T) {
-	resourceName := "cloudfoundry_app.spring-music"
+
+	_, orgName := defaultTestOrg(t)
+	_, spaceName := defaultTestSpace(t)
+	serviceName1, serviceName2, servicePlan := getTestServiceBrokers(t)
+
+	resourceName := "cloudfoundry_app.dummy-app"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"spring-music"}),
+			CheckDestroy: testAccCheckAppDestroyed([]string{"dummy-app"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceSpringMusic, defaultAppDomain()),
+					Config: fmt.Sprintf(appResource,
+						defaultAppDomain(),
+						orgName, spaceName,
+						serviceName1, serviceName2, servicePlan, servicePlan, asset("dummy-app.zip")),
 				},
 
 				resource.TestStep{
@@ -28,14 +36,10 @@ func TestAccApp_importBasic(t *testing.T) {
 					ImportStateVerify: true,
 					ImportStateVerifyIgnore: []string{
 						"timeout",
-						"route",
-						"url",
-						"service_binding.0.credentials",
-						"service_binding.1.credentials",
-						"buildpack",
-						"command",
-						"health_check_http_endpoint",
-						"health_check_timeout",
+						"routes",
+						"path",
+						"strategy",
+						"service_binding",
 					},
 				},
 			},

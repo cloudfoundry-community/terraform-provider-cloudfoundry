@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry Service Key.
 ---
 
-# cf\_service\_key
+# cloudfoundry\_service\_key
 
 Provides a Cloud Foundry resource for managing Cloud Foundry [Service Keys](https://docs.cloudfoundry.org/devguide/services/#service-keys).
 
@@ -38,6 +38,7 @@ The following arguments are supported:
 * `name` - (Required) The name of the Service Key in Cloud Foundry.
 * `service_instance` - (Required) The ID of the Service Instance the key should be associated with.
 * `params` - (Optional, Map) A list of key/value parameters used by the service broker to create the binding for the key. By default, no parameters are provided.
+* `json_params` - (Optional, String) Arbitrary parameters in the form of stringified JSON object to pass to the service bind handler.
 
 ## Attributes Reference
 

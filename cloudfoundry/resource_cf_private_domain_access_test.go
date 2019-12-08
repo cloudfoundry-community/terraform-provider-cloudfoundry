@@ -2,11 +2,11 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 const privateDomainAccessResourceCreate = `
@@ -79,7 +79,7 @@ resource "cloudfoundry_domain" "private" {
 }
 `
 
-func TestAccPrivateDomainAccess_normal(t *testing.T) {
+func TestAccResPrivateDomainAccess_normal(t *testing.T) {
 	ref := "cloudfoundry_private_domain_access.access-to-org"
 
 	resource.Test(t,
@@ -114,7 +114,7 @@ func TestAccPrivateDomainAccess_normal(t *testing.T) {
 
 func checkPrivateDomainShare(resource, domain, org string, exists bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		drs, ok := s.RootModule().Resources[domain]
 		if !ok {
@@ -129,10 +129,16 @@ func checkPrivateDomainShare(resource, domain, org string, exists bool) resource
 		orgID := ors.Primary.ID
 		domainID := drs.Primary.ID
 
-		dm := session.DomainManager()
-		found, err := dm.HasPrivateDomainAccess(orgID, domainID)
+		found := false
+		domains, _, err := session.ClientV2.GetOrganizationPrivateDomains(orgID)
 		if err != nil {
 			return err
+		}
+		for _, domain := range domains {
+			if domain.GUID == domainID {
+				found = true
+				break
+			}
 		}
 
 		if !found && exists {
@@ -148,7 +154,6 @@ func checkPrivateDomainShare(resource, domain, org string, exists bool) resource
 			if !ok {
 				return fmt.Errorf("private_domain_access '%s' not found in terraform state", resource)
 			}
-			session.Log.DebugMessage("terraform state for resource '%s': %# v", resource, rs)
 
 			id := rs.Primary.ID
 
@@ -160,7 +165,3 @@ func checkPrivateDomainShare(resource, domain, org string, exists bool) resource
 		return nil
 	}
 }
-
-// Local Variables:
-// ispell-local-dictionary: "american"
-// End:

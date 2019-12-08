@@ -2,77 +2,83 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 const saResource = `
-resource "cloudfoundry_service_broker" "redis" {
-	name = "test-redis"
-	url = "https://redis-broker.%s"
+resource "cloudfoundry_service_broker" "test" {
+	name = "test"
+	url = "%s"
 	username = "%s"
 	password = "%s"
 }
 
-resource "cloudfoundry_service_plan_access" "redis-access" {
-	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+resource "cloudfoundry_service_plan_access" "test-access" {
+	plan = "${cloudfoundry_service_broker.test.service_plans["%s"]}"
 	org = "%s"
 }
 `
 
 const saResourceUpdateTrue = `
-resource "cloudfoundry_service_broker" "redis" {
-	name = "test-redis"
-	url = "https://redis-broker.%s"
+resource "cloudfoundry_service_broker" "test" {
+	name = "test"
+	url = "%s"
 	username = "%s"
 	password = "%s"
 }
 
-resource "cloudfoundry_service_plan_access" "redis-access" {
-	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+resource "cloudfoundry_service_plan_access" "test-access" {
+	plan = "${cloudfoundry_service_broker.test.service_plans["%s"]}"
 	public = true
 }
 `
 
 const saResourceUpdateFalse = `
-resource "cloudfoundry_service_broker" "redis" {
-	name = "test-redis"
-	url = "https://redis-broker.%s"
+resource "cloudfoundry_service_broker" "test" {
+	name = "test"
+	url = "%s"
 	username = "%s"
 	password = "%s"
 }
 
-resource "cloudfoundry_service_plan_access" "redis-access" {
-	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+resource "cloudfoundry_service_plan_access" "test-access" {
+	plan = "${cloudfoundry_service_broker.test.service_plans["%s"]}"
 	public = false
 }
 `
 
 const saResourceError = `
-resource "cloudfoundry_service_broker" "redis" {
-	name = "test-redis"
-	url = "https://redis-broker.%s"
+resource "cloudfoundry_service_broker" "test" {
+	name = "test"
+	url = "%s"
 	username = "%s"
 	password = "%s"
 }
 
-resource "cloudfoundry_service_plan_access" "redis-access" {
-	plan = "${cloudfoundry_service_broker.redis.service_plans["p-redis/shared-vm"]}"
+resource "cloudfoundry_service_plan_access" "test-access" {
+	plan = "${cloudfoundry_service_broker.test.service_plans["%s"]}"
 	org = "%s"
 	public = true
 }
 `
 
-func TestAccServicePlanAccess_normal(t *testing.T) {
-	user, password := getRedisBrokerCredentials()
-	deleteServiceBroker("p-redis")
+func TestAccResServicePlanAccess_normal(t *testing.T) {
+
+	serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword, serviceBrokerPlanPath := getTestBrokerCredentials(t)
+
+	// Ensure any test artifacts from a
+	// failed run are deleted if the exist
+	deleteServiceBroker("test")
+
+	orgID, _ := defaultTestOrg(t)
+	ref := "cloudfoundry_service_plan_access.test-access"
 
 	var servicePlanAccessGUID string
-	ref := "cloudfoundry_service_plan_access.redis-access"
 
 	resource.Test(t,
 		resource.TestCase{
@@ -82,18 +88,26 @@ func TestAccServicePlanAccess_normal(t *testing.T) {
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: fmt.Sprintf(saResource,
-						defaultSysDomain(), user, password, defaultPcfDevOrgID()),
+						serviceBrokerURL,
+						serviceBrokerUser,
+						serviceBrokerPassword,
+						serviceBrokerPlanPath,
+						orgID),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServicePlanAccessExists(ref,
 							func(guid string) {
 								servicePlanAccessGUID = guid
 							}),
 						resource.TestCheckResourceAttrSet(ref, "plan"),
-						resource.TestCheckResourceAttr(ref, "org", defaultPcfDevOrgID()),
+						resource.TestCheckResourceAttr(ref, "org", orgID),
 					),
 				},
 				resource.TestStep{
-					Config: fmt.Sprintf(saResourceUpdateTrue, defaultSysDomain(), user, password),
+					Config: fmt.Sprintf(saResourceUpdateTrue,
+						serviceBrokerURL,
+						serviceBrokerUser,
+						serviceBrokerPassword,
+						serviceBrokerPlanPath),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServicePlan(ref),
 						resource.TestCheckResourceAttrSet(ref, "plan"),
@@ -101,7 +115,11 @@ func TestAccServicePlanAccess_normal(t *testing.T) {
 					),
 				},
 				resource.TestStep{
-					Config: fmt.Sprintf(saResourceUpdateFalse, defaultSysDomain(), user, password),
+					Config: fmt.Sprintf(saResourceUpdateFalse,
+						serviceBrokerURL,
+						serviceBrokerUser,
+						serviceBrokerPassword,
+						serviceBrokerPlanPath),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServicePlan(ref),
 						resource.TestCheckResourceAttrSet(ref, "plan"),
@@ -112,10 +130,15 @@ func TestAccServicePlanAccess_normal(t *testing.T) {
 		})
 }
 
-func TestAccServicePlanAccess_error(t *testing.T) {
-	user, password := getRedisBrokerCredentials()
-	deleteServiceBroker("p-redis")
+func TestAccResServicePlanAccess_error(t *testing.T) {
 
+	serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword, serviceBrokerPlanPath := getTestBrokerCredentials(t)
+
+	// Ensure any test artifacts from a
+	// failed run are deleted if the exist
+	deleteServiceBroker("test")
+
+	orgID, _ := defaultTestOrg(t)
 	var servicePlanAccessGUID string
 
 	resource.Test(t,
@@ -125,7 +148,12 @@ func TestAccServicePlanAccess_error(t *testing.T) {
 			CheckDestroy: testAccCheckServicePlanAccessDestroyed(servicePlanAccessGUID),
 			Steps: []resource.TestStep{
 				resource.TestStep{
-					Config:      fmt.Sprintf(saResourceError, defaultSysDomain(), user, password, defaultPcfDevOrgID()),
+					Config: fmt.Sprintf(saResourceError,
+						serviceBrokerURL,
+						serviceBrokerUser,
+						serviceBrokerPassword,
+						serviceBrokerPlanPath,
+						orgID),
 					ExpectError: regexp.MustCompile("\"org\": conflicts with public"),
 				},
 			},
@@ -137,8 +165,7 @@ func testAccCheckServicePlanAccessExists(resource string,
 
 	return func(s *terraform.State) (err error) {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
-		sm := session.ServiceManager()
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
@@ -150,14 +177,14 @@ func testAccCheckServicePlanAccessExists(resource string,
 
 		setServicePlanAccessGUID(id)
 
-		plan, org, err := sm.ReadServicePlanAccess(id)
+		spv, _, err := session.ClientV2.GetServicePlanVisibility(id)
 		if err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "plan", plan); err != nil {
+		if err := assertEquals(attributes, "plan", spv.ServicePlanGUID); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "org", org); err != nil {
+		if err := assertEquals(attributes, "org", spv.OrganizationGUID); err != nil {
 			return err
 		}
 
@@ -167,8 +194,7 @@ func testAccCheckServicePlanAccessExists(resource string,
 
 func testAccCheckServicePlan(resource string) resource.TestCheckFunc {
 	return func(s *terraform.State) (err error) {
-		session := testAccProvider.Meta().(*cfapi.Session)
-		sm := session.ServiceManager()
+		session := testAccProvider.Meta().(*managers.Session)
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("service access resource '%s' not found in terraform state", rs)
@@ -177,7 +203,7 @@ func testAccCheckServicePlan(resource string) resource.TestCheckFunc {
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		plan, err := sm.ReadServicePlan(id)
+		plan, _, err := session.ClientV2.GetServicePlan(id)
 		if err != nil {
 			return err
 		}
@@ -195,9 +221,9 @@ func testAccCheckServicePlanAccessDestroyed(servicePlanAccessGUID string) resour
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
-		_, _, err := session.ServiceManager().ReadServicePlanAccess(servicePlanAccessGUID)
+		_, _, err := session.ClientV2.GetServicePlanVisibility(servicePlanAccessGUID)
 		if err == nil {
 			return fmt.Errorf("service plan access with guid '%s' still exists in cloud foundry", servicePlanAccessGUID)
 		}

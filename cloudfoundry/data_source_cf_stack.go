@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 func dataSourceStack() *schema.Resource {
@@ -23,32 +24,34 @@ func dataSourceStack() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
 
-func dataSourceStackRead(d *schema.ResourceData, meta interface{}) (err error) {
+func dataSourceStackRead(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
 
-	sm := session.StackManager()
+	sm := session.ClientV2
+	name := d.Get("name").(string)
 
-	var (
-		name  string
-		stack cfapi.CCStack
-	)
-
-	name = d.Get("name").(string)
-
-	stack, err = sm.FindStackByName(name)
+	stacks, _, err := sm.GetStacks(ccv2.FilterByName(name))
 	if err != nil {
 		return err
 	}
-
-	d.SetId(stack.ID)
-	d.Set("description", stack.Description)
+	if len(stacks) == 0 {
+		return NotFound
+	}
+	d.SetId(stacks[0].GUID)
+	d.Set("description", stacks[0].Description)
+	err = metadataRead(stackMetadata, d, meta, true)
+	if err != nil {
+		return err
+	}
 	return err
 }

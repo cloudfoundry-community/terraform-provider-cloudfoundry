@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 func resourceDefaultAsg() *schema.Resource {
@@ -19,7 +20,7 @@ func resourceDefaultAsg() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: func(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 				d.Set("name", d.Id())
-				return ImportStatePassthrough(d, meta)
+				return ImportRead(resourceDefaultAsgRead)(d, meta)
 			},
 		},
 
@@ -41,33 +42,25 @@ func resourceDefaultAsg() *schema.Resource {
 	}
 }
 
-func resourceDefaultAsgCreate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceDefaultAsgCreate(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
+	session := meta.(*managers.Session)
 	name := d.Get("name").(string)
 	asgs := d.Get("asgs").(*schema.Set).List()
 
-	am := session.ASGManager()
+	am := session.ClientV2
 	switch name {
 	case AppStatusRunning:
-		if err = am.UnbindAllFromRunning(); err != nil {
-			return err
-		}
 		for _, g := range asgs {
-			if err = am.BindToRunning(g.(string)); err != nil {
+			_, err := am.BindRunningSecurityGroup(g.(string))
+			if err != nil {
 				return err
 			}
 		}
 	case AppStatusStaging:
-		if err = am.UnbindAllFromStaging(); err != nil {
-			return err
-		}
 		for _, g := range asgs {
-			if err = am.BindToStaging(g.(string)); err != nil {
+			_, err := am.BindStagingSecurityGroup(g.(string))
+			if err != nil {
 				return err
 			}
 		}
@@ -79,85 +72,69 @@ func resourceDefaultAsgCreate(d *schema.ResourceData, meta interface{}) (err err
 	return nil
 }
 
-func resourceDefaultAsgRead(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceDefaultAsgRead(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
-	var asgs []string
-
-	am := session.ASGManager()
+	session := meta.(*managers.Session)
+	var asgs []ccv2.SecurityGroup
+	var err error
+	am := session.ClientV2
+	tfAsgs := d.Get("asgs").(*schema.Set).List()
 	switch d.Get("name").(string) {
 	case AppStatusRunning:
-		if asgs, err = am.Running(); err != nil {
+		asgs, _, err = am.GetRunningSecurityGroups()
+		if err != nil {
 			return err
 		}
 	case AppStatusStaging:
-		if asgs, err = am.Staging(); err != nil {
+		asgs, _, err = am.GetStagingSecurityGroups()
+		if err != nil {
 			return err
 		}
 	}
 
-	tfAsgs := []interface{}{}
-	for _, s := range asgs {
-		tfAsgs = append(tfAsgs, s)
+	finalTfAsgs := intersectSlices(tfAsgs, asgs, func(src, item interface{}) bool {
+		return src.(string) == item.(ccv2.SecurityGroup).GUID
+	})
+	if IsImportState(d) && len(finalTfAsgs) == 0 {
+		for _, asg := range asgs {
+			finalTfAsgs = append(finalTfAsgs, asg.GUID)
+		}
 	}
-	d.Set("asgs", schema.NewSet(resourceStringHash, tfAsgs))
+	d.Set("asgs", schema.NewSet(resourceStringHash, finalTfAsgs))
 	return nil
 }
 
-func resourceDefaultAsgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceDefaultAsgUpdate(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+	session := meta.(*managers.Session)
 
-	var asgs []string
-
-	tfAsgs := d.Get("asgs").(*schema.Set).List()
-
-	am := session.ASGManager()
+	secGroupToDelete, secGroupToAdd := getListChanges(d.GetChange("asgs"))
+	am := session.ClientV2
 	switch d.Get("name").(string) {
 	case AppStatusRunning:
-		if asgs, err = am.Running(); err != nil {
-			return err
-		}
-		for _, s := range tfAsgs {
-			asg := s.(string)
-			if !isStringInList(asgs, asg) {
-				if err = am.BindToRunning(asg); err != nil {
-					return err
-				}
+		for _, secGroup := range secGroupToAdd {
+			_, err := am.BindRunningSecurityGroup(secGroup)
+			if err != nil {
+				return err
 			}
 		}
-		for _, s := range asgs {
-			if !isStringInInterfaceList(tfAsgs, s) {
-				if err = am.UnbindFromRunning(s); err != nil {
-					return err
-				}
+		for _, secGroup := range secGroupToDelete {
+			_, err := am.UnbindRunningSecurityGroup(secGroup)
+			if err != nil {
+				return err
 			}
 		}
 	case AppStatusStaging:
-		if asgs, err = am.Staging(); err != nil {
-			return err
-		}
-		for _, s := range tfAsgs {
-			asg := s.(string)
-			if !isStringInList(asgs, asg) {
-				err = am.BindToStaging(asg)
-				if err != nil {
-					return err
-				}
+		for _, secGroup := range secGroupToAdd {
+			_, err := am.BindStagingSecurityGroup(secGroup)
+			if err != nil {
+				return err
 			}
 		}
-		for _, s := range asgs {
-			if !isStringInInterfaceList(tfAsgs, s) {
-				if err = am.UnbindFromStaging(s); err != nil {
-					return err
-				}
+		for _, secGroup := range secGroupToDelete {
+			_, err := am.UnbindStagingSecurityGroup(secGroup)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -165,23 +142,25 @@ func resourceDefaultAsgUpdate(d *schema.ResourceData, meta interface{}) (err err
 }
 
 func resourceDefaultAsgDelete(d *schema.ResourceData, meta interface{}) (err error) {
+	session := meta.(*managers.Session)
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+	am := session.ClientV2
+	tfAsgs := d.Get("asgs").(*schema.Set).List()
 
-	am := session.ASGManager()
 	switch d.Get("name").(string) {
 	case AppStatusRunning:
-		err = am.UnbindAllFromRunning()
-		if err != nil {
-			return err
+		for _, asg := range tfAsgs {
+			_, err := am.UnbindRunningSecurityGroup(asg.(string))
+			if err != nil {
+				return err
+			}
 		}
 	case AppStatusStaging:
-		err = am.UnbindAllFromStaging()
-		if err != nil {
-			return err
+		for _, asg := range tfAsgs {
+			_, err := am.UnbindStagingSecurityGroup(asg.(string))
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

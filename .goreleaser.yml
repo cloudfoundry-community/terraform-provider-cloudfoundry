@@ -1,0 +1,54 @@
+before:
+  hooks:
+    - go mod download
+builds:
+  - goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+    id: provider
+    main: ./
+    binary: terraform-provider-cloudfoundry
+  - goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+    id: cf-hcl-migration
+    main: ./cf-hcl-migration
+    binary: cf-hcl-migration
+archives:
+  - id: zip-archive-cf-hcl-migration
+    builds: [cf-hcl-migration]
+    name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
+    format: zip
+  - id: binary-archive-cf-hcl-migration
+    builds: [cf-hcl-migration]
+    name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
+    format: binary
+  - id: zip-archive-provider
+    builds: [provider]
+    name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
+    format: zip
+  - id: binary-archive-provider
+    builds: [provider]
+    name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
+    format: binary
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha1
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

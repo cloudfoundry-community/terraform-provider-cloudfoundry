@@ -1,18 +1,19 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 const orgDataResource = `
 
 resource "cloudfoundry_org" "myorg" {
-	name = "myorg"
+	name = "myorg-ds-org"
 }
 
 data "cloudfoundry_org" "dd" {
@@ -24,7 +25,7 @@ func TestAccDataSourceOrg_normal(t *testing.T) {
 
 	ref := "data.cloudfoundry_org.dd"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,
@@ -35,7 +36,7 @@ func TestAccDataSourceOrg_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceOrgExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "myorg"),
+							ref, "name", "myorg-ds-org"),
 					),
 				},
 			},
@@ -46,30 +47,24 @@ func checkDataSourceOrgExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("org '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		name := rs.Primary.Attributes["name"]
 
-		var (
-			err error
-			org cfapi.CCOrg
-		)
-
-		org, err = session.OrgManager().FindOrg(name)
+		orgs, _, err := session.ClientV2.GetOrganizations(ccv2.FilterByName(name))
 		if err != nil {
 			return err
 		}
-		if err := assertSame(id, org.ID); err != nil {
+		if len(orgs) == 0 {
+			return NotFound
+		}
+		if err := assertSame(id, orgs[0].GUID); err != nil {
 			return err
 		}
 

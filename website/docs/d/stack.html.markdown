@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry stack.
 ---
 
-# cf\_stack
+# cloudfoundry\_stack
 
 Gets information on a particular Cloud Foundry [stack](https://docs.cloudfoundry.org/devguide/deploy-apps/stacks.html).
 
@@ -32,3 +32,7 @@ The following attributes are exported:
 
 * `id` - The GUID of the stack
 * `description` - The description of the stack
+* `labels` - Map of labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.
+* `annotations` - Map of annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.

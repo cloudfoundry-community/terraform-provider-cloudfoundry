@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
-	"fmt"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 func resourceOrgQuota() *schema.Resource {
@@ -17,7 +18,7 @@ func resourceOrgQuota() *schema.Resource {
 		Delete: resourceOrgQuotaDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceOrgQuotaRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -76,83 +77,90 @@ func resourceOrgQuota() *schema.Resource {
 }
 
 func resourceOrgQuotaCreate(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	qm := session.QuotaManager()
+	session := meta.(*managers.Session)
+	qm := session.ClientV2
 
-	var id string
-	if id, err = qm.CreateQuota(cfapi.OrgQuota, readOrgQuotaResource(d)); err != nil {
+	var quota ccv2.Quota
+	if quota, _, err = qm.CreateQuota(constant.OrgQuota, readOrgQuotaResource(d)); err != nil {
 		return err
 	}
-	d.SetId(id)
+	d.SetId(quota.GUID)
 	return nil
 }
 
-func resourceOrgQuotaRead(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	qm := session.QuotaManager()
+func resourceOrgQuotaRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	qm := session.ClientV2
 
-	var quota cfapi.CCQuota
-	if quota, err = qm.ReadQuota(cfapi.OrgQuota, d.Id()); err != nil {
+	quota, _, err := qm.GetQuota(constant.OrgQuota, d.Id())
+	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 
 	d.Set("name", quota.Name)
 	d.Set("allow_paid_service_plans", quota.NonBasicServicesAllowed)
 	d.Set("total_services", quota.TotalServices)
-	d.Set("total_service_keys", quota.TotalServiceKeys)
+	d.Set("total_service_keys", quota.TotalServiceKeys.Value)
 	d.Set("total_routes", quota.TotalRoutes)
-	d.Set("total_route_ports", quota.TotalReserveredPorts)
-	d.Set("total_private_domains", quota.TotalPrivateDomains)
-	d.Set("total_memory", quota.MemoryLimit)
-	d.Set("instance_memory", quota.InstanceMemoryLimit)
-	d.Set("total_app_instances", quota.AppInstanceLimit)
-	d.Set("total_app_tasks", quota.AppTaskLimit)
+	d.Set("total_route_ports", quota.TotalReservedRoutePorts.Value)
+	d.Set("total_private_domains", quota.TotalPrivateDomains.Value)
+	d.Set("total_memory", NullByteSizeToInt(quota.MemoryLimit))
+	d.Set("instance_memory", NullByteSizeToInt(quota.InstanceMemoryLimit))
+	d.Set("total_app_instances", quota.AppInstanceLimit.Value)
+	d.Set("total_app_tasks", quota.AppTaskLimit.Value)
 	return nil
 }
 
-func resourceOrgQuotaUpdate(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	qm := session.QuotaManager()
+func resourceOrgQuotaUpdate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	qm := session.ClientV2
 
 	quota := readOrgQuotaResource(d)
-	quota.ID = d.Id()
-	return qm.UpdateQuota(cfapi.OrgQuota, quota)
+	quota.GUID = d.Id()
+	_, _, err := qm.UpdateQuota(constant.OrgQuota, quota)
+	return err
 }
 
-func resourceOrgQuotaDelete(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
+func resourceOrgQuotaDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	qm := session.ClientV2
+	id := d.Id()
+	// remove orgs associated to this quota by setting default quota on it
+	// For context: org quota can't be removed if there is still an org associated on it
+	orgs, _, err := qm.GetOrganizations()
+	if err != nil {
+		return err
 	}
-	qm := session.QuotaManager()
-	return qm.DeleteQuota(cfapi.OrgQuota, d.Id())
+	for _, org := range orgs {
+		if org.QuotaDefinitionGUID != id {
+			continue
+		}
+		_, _, err := qm.UpdateOrganization(org.GUID, org.Name, session.DefaultQuotaGuid())
+		if err != nil {
+			return err
+		}
+	}
+	_, err = qm.DeleteQuota(constant.OrgQuota, id)
+	return err
 }
 
-func readOrgQuotaResource(d *schema.ResourceData) cfapi.CCQuota {
-	quota := cfapi.CCQuota{
-		Name: d.Get("name").(string),
+func readOrgQuotaResource(d *schema.ResourceData) ccv2.Quota {
+	quota := ccv2.Quota{
+		Name:                    d.Get("name").(string),
 		NonBasicServicesAllowed: d.Get("allow_paid_service_plans").(bool),
 		TotalServices:           d.Get("total_services").(int),
-		TotalServiceKeys:        d.Get("total_service_keys").(int),
+		TotalServiceKeys:        IntToNullInt(d.Get("total_service_keys").(int)),
 		TotalRoutes:             d.Get("total_routes").(int),
-		TotalReserveredPorts:    d.Get("total_route_ports").(int),
-		TotalPrivateDomains:     d.Get("total_private_domains").(int),
-		MemoryLimit:             int64(d.Get("total_memory").(int)),
-		InstanceMemoryLimit:     int64(d.Get("instance_memory").(int)),
-		AppInstanceLimit:        d.Get("total_app_instances").(int),
-		AppTaskLimit:            d.Get("total_app_tasks").(int),
-	}
-	if v, ok := d.GetOk("org"); ok {
-		quota.OrgGUID = v.(string)
+		TotalReservedRoutePorts: IntToNullInt(d.Get("total_route_ports").(int)),
+		TotalPrivateDomains:     IntToNullInt(d.Get("total_private_domains").(int)),
+		MemoryLimit:             IntToNullByteSize(d.Get("total_memory").(int)),
+		InstanceMemoryLimit:     IntToNullByteSize(d.Get("instance_memory").(int)),
+		AppInstanceLimit:        IntToNullInt(d.Get("total_app_instances").(int)),
+		AppTaskLimit:            IntToNullInt(d.Get("total_app_tasks").(int)),
 	}
 	return quota
 }

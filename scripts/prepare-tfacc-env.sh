@@ -10,9 +10,9 @@ fi
 
 root_dir=$(cd $(dirname $BASH_SOURCE)/.. && pwd)
 
-opsman_endpoint=${1:-$OPSMAN_ENDPOINT}
-opsman_user=${2:-$OPSMAN_USER}
-opsman_password=${3:-$OPSMAN_PASSWORD}
+opsman_endpoint=$OPSMAN_ENDPOINT
+opsman_user=$OPSMAN_USER
+opsman_password=$OPSMAN_PASSWORD
 
 if [[ -z $opsman_endpoint && -z $opsman_user && -z opsman_password ]]; then
     echo "USAGE: ./prepare-tfacc-env.sh $OPSMAN_ENDPOINT $OPSMAN_USER $OPSMAN_PASSWORD"
@@ -31,8 +31,6 @@ cf_user=$($om_cli credentials -p cf -c .uaa.admin_credentials -f identity)
 cf_password=$($om_cli credentials -p cf -c .uaa.admin_credentials -f password)
 cf_uaa_client_id=$($om_cli credentials -p cf -c .uaa.admin_client_credentials -f identity)
 cf_uaa_client_secret=$($om_cli credentials -p cf -c .uaa.admin_client_credentials -f password)
-cf_test_redis_broker_user=$($om_cli credentials -p p-redis -c .cf-redis-broker.broker_http_auth_credentials -f identity)
-cf_test_redis_broker_password=$($om_cli credentials -p p-redis -c .cf-redis-broker.broker_http_auth_credentials -f password)
 
 cat <<EOF > $root_dir/.tfacc_env
 #!/bin/bash
@@ -45,34 +43,56 @@ export CF_UAA_CLIENT_SECRET=$cf_uaa_client_secret
 export CF_CA_CERT=""
 export CF_SKIP_SSL_VALIDATION=true
 
-export CF_TEST_APP_DOMAIN=$cf_apps_domain
+export TEST_APP_DOMAIN=$cf_apps_domain
+export TEST_DEFAULT_ASG=$TEST_DEFAULT_ASG
+export TEST_ORG_NAME=$TEST_ORG_NAME
+export TEST_SPACE_NAME=$TEST_SPACE_NAME
 
-export CF_TEST_REDIS_BROKER_USER=$cf_test_redis_broker_user
-export CF_TEST_REDIS_BROKER_PASSWORD=$cf_test_redis_broker_password
+export TEST_SERVICE_BROKER_URL=$TEST_SERVICE_BROKER_URL
+export TEST_SERVICE_BROKER_USER=$TEST_SERVICE_BROKER_USER
+export TEST_SERVICE_BROKER_PASSWORD=$TEST_SERVICE_BROKER_PASSWORD
+export TEST_SERVICE_PLAN_PATH=$TEST_SERVICE_PLAN_PATH
 
-export CF_TEST_DEFAULT_ASG=default_security_group
+export TEST_SERVICE_1=$TEST_SERVICE_1
+export TEST_SERVICE_2=$TEST_SERVICE_2
+export TEST_SERVICE_PLAN=$TEST_SERVICE_PLAN
 EOF
 
+chmod +x $root_dir/.tfacc_env
+
 if [[ -n $GITHUB_TOKEN ]]; then
+
+    if [[ "$(uname)" == "Darwin" ]]; then
+        sed -i '' '/  - secure:.*/d' $root_dir/.travis.yml
+    else
+        sed -i '/  - secure:.*/d' $root_dir/.travis.yml
+    fi
+
     travis login --github-token $GITHUB_TOKEN
-    travis encrypt CF_API_URL=https://api.$cf_sys_domain --add --override
+    travis encrypt CF_API_URL=https://api.$cf_sys_domain --add
     travis encrypt CF_USER=$cf_user --add
     travis encrypt CF_PASSWORD=$cf_password --add
     travis encrypt CF_UAA_CLIENT_ID=$cf_uaa_client_id --add
     travis encrypt CF_UAA_CLIENT_SECRET=$cf_uaa_client_secret --add
     travis encrypt CF_CA_CERT="" --add
     travis encrypt CF_SKIP_SSL_VALIDATION=true --add
-    travis encrypt CF_TEST_APP_DOMAIN=$cf_apps_domain --add
-    travis encrypt CF_TEST_REDIS_BROKER_USER=$cf_test_redis_broker_user --add
-    travis encrypt CF_TEST_REDIS_BROKER_PASSWORD=$cf_test_redis_broker_password --add
-    travis encrypt CF_TEST_DEFAULT_ASG=default_security_group --add
-fi
 
-cf login --skip-ssl-validation -a https://api.$cf_sys_domain -u $cf_user -p $cf_password -o system -s system
-cf create-org pcfdev-org >/dev/null 2>&1
-cf target -o pcfdev-org >/dev/null 2>&1
-cf create-space pcfdev-space -o pcfdev-org >/dev/null 2>&1
-cf create-shared-domain tcp.apps.pcf.cf1.tfacc.pcfs.io --router-group default-tcp >/dev/null 2>&1
-cf enable-feature-flag diego_docker >/dev/null 2>&1
+    travis encrypt TEST_APP_DOMAIN=$cf_apps_domain --add
+    travis encrypt TEST_DEFAULT_ASG=$TEST_DEFAULT_ASG --add
+    travis encrypt TEST_ORG_NAME=$TEST_ORG_NAME --add
+    travis encrypt TEST_SPACE_NAME=$TEST_SPACE_NAME --add
+
+    travis encrypt TEST_SERVICE_BROKER_URL=$TEST_SERVICE_BROKER_URL --add
+    travis encrypt TEST_SERVICE_BROKER_USER=$TEST_SERVICE_BROKER_USER --add
+    travis encrypt TEST_SERVICE_BROKER_PASSWORD=$TEST_SERVICE_BROKER_PASSWORD --add
+    travis encrypt TEST_SERVICE_PLAN_PATH=$TEST_SERVICE_PLAN_PATH --add
+
+    travis encrypt TEST_SERVICE_1=$TEST_SERVICE_1 --add
+    travis encrypt TEST_SERVICE_2=$TEST_SERVICE_2 --add
+    travis encrypt TEST_SERVICE_PLAN=$TEST_SERVICE_PLAN --add
+
+    travis encrypt GITHUB_USER=$GITHUB_USER --add
+    travis encrypt GITHUB_TOKEN=$GITHUB_TOKEN --add
+fi
 
 set +xe

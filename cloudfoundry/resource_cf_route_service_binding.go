@@ -2,11 +2,11 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"encoding/json"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
 )
 
 func resourceRouteServiceBinding() *schema.Resource {
@@ -45,59 +45,49 @@ func resourceRouteServiceBindingImport(d *schema.ResourceData, meta interface{})
 	if _, _, err = parseID(id); err != nil {
 		return
 	}
-	return schema.ImportStatePassthrough(d, meta)
+	return ImportRead(resourceRouteServiceBindingRead)(d, meta)
 }
 
-func resourceRouteServiceBindingCreate(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+func resourceRouteServiceBindingCreate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	var (
-		id   string
-		data map[string]interface{}
-	)
+	var data map[string]interface{}
 
 	serviceID := d.Get("service_instance").(string)
 	routeID := d.Get("route").(string)
 	params, okParams := d.GetOk("json_params")
 
 	if okParams {
-		if err = json.Unmarshal([]byte(params.(string)), &data); err != nil {
+		if err := json.Unmarshal([]byte(params.(string)), &data); err != nil {
 			return err
 		}
 	}
-
-	sm := session.ServiceManager()
-
-	if err = sm.CreateRouteServiceBinding(serviceID, routeID, data); err != nil {
+	_, err := session.ClientV2.CreateServiceBindingRoute(serviceID, routeID, data)
+	if err != nil {
 		return err
 	}
 
-	session.Log.DebugMessage("New Route Binding : %# v", id)
 	d.SetId(computeID(serviceID, routeID))
 	return nil
 }
 
-func resourceRouteServiceBindingRead(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	session.Log.DebugMessage("Reading RouteServiceBinding : %s", d.Id())
+func resourceRouteServiceBindingRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
 	serviceID, routeID, err := parseID(d.Id())
 	if err != nil {
 		return err
 	}
-
-	sm := session.ServiceManager()
-
-	found, err := sm.HasRouteServiceBinding(serviceID, routeID)
+	routes, _, err := session.ClientV2.GetServiceBindingRoutes(serviceID)
 	if err != nil {
 		return err
+	}
+	found := false
+	for _, route := range routes {
+		if route.GUID == routeID {
+			found = true
+			break
+		}
 	}
 	if !found {
 		d.SetId("")
@@ -106,25 +96,14 @@ func resourceRouteServiceBindingRead(d *schema.ResourceData, meta interface{}) (
 
 	d.Set("service_instance", serviceID)
 	d.Set("route", routeID)
-	session.Log.DebugMessage("Read Route Binding : %s", d.Id())
 	return nil
 }
 
-func resourceRouteServiceBindingDelete(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	session.Log.DebugMessage("begin resourceRouteServiceBindingDelete")
+func resourceRouteServiceBindingDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
 	serviceID := d.Get("service_instance").(string)
 	routeID := d.Get("route").(string)
-	sm := session.ServiceManager()
-
-	if err = sm.DeleteRouteServiceBinding(serviceID, routeID); err != nil {
-		return err
-	}
-
-	session.Log.DebugMessage("Deleted RouteServiceBinding : %s", d.Id())
-	return nil
+	_, err := session.ClientV2.DeleteServiceBindingRoute(serviceID, routeID)
+	return err
 }

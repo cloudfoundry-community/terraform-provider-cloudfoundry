@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry resource to bind a service instance to a route.
 ---
 
-# cf\_route\_service\_binding
+# cloudfoundry\_route\_service\_binding
 
 Provides a Cloud Foundry resource for [binding](https://docs.cloudfoundry.org/devguide/services/route-binding.html#bind) of service instances to routes.
 

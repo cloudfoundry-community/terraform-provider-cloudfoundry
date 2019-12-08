@@ -6,7 +6,7 @@ description: |-
   Get information on a Cloud Foundry Domain.
 ---
 
-# cf\_domain
+# cloudfoundry\_domain
 
 Gets information on a Cloud Foundry domain.
 
@@ -36,3 +36,4 @@ The following attributes are exported:
 * `name` - The full domain name if not provided as an argument
 * `domain`- The part of the domain name if not provided as an argument
 * `org` - The org if this is a private domain owned by an org
+* `internal` - Flag that sets the domain as an internal domain

@@ -1,10 +1,21 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
-
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cf/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"strings"
+)
+
+const (
+	catalogEndpoint = "/v2/catalog"
 )
 
 func resourceServiceBroker() *schema.Resource {
@@ -17,7 +28,7 @@ func resourceServiceBroker() *schema.Resource {
 		Delete: resourceServiceBrokerDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceServiceBrokerRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -42,134 +53,226 @@ func resourceServiceBroker() *schema.Resource {
 			"space": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				ForceNew: true,
 			},
 			"service_plans": &schema.Schema{
 				Type:     schema.TypeMap,
 				Computed: true,
 			},
+			"services": &schema.Schema{
+				Type:     schema.TypeMap,
+				Computed: true,
+			},
+			"catalog_hash": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Optional: true,
+			},
+			"catalog_change": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Special marker to know and trigger a service broker update, this should not be set to true on your resource declaration",
+			},
+			"fail_when_catalog_not_accessible": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Set to true if you want to see errors when getting service broker catalog",
+			},
 		},
 	}
 }
 
-func resourceServiceBrokerCreate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceServiceBrokerCreate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	var id string
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
-	_, name, url, username, password, space := getSchemaAttributes(d)
-
-	sm := session.ServiceManager()
-
-	if id, err = sm.CreateServiceBroker(name, url, username, password, space); err != nil {
+	// do as first to not try add broker if catalog not accessible
+	err := serviceBrokerUpdateCatalogSignature(d, meta)
+	if err != nil {
 		return err
 	}
-	if err = readServiceDetail(id, sm, d); err != nil {
+
+	sb, _, err := session.ClientV2.CreateServiceBroker(
+		d.Get("name").(string),
+		d.Get("username").(string),
+		d.Get("password").(string),
+		d.Get("url").(string),
+		d.Get("space").(string),
+	)
+	if err != nil {
 		return err
 	}
-	session.Log.DebugMessage("Service detail for service broker: %s:\n%# v\n", name, d.Get("service_plans"))
+	if err = readServiceDetail(sb.GUID, session, d); err != nil {
+		return err
+	}
+	d.SetId(sb.GUID)
 
-	d.SetId(id)
 	return nil
 }
 
-func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
-	var (
-		serviceBroker cfapi.CCServiceBroker
-	)
-
-	sm := session.ServiceManager()
-	if serviceBroker, err = sm.ReadServiceBroker(d.Id()); err != nil {
-		d.SetId("")
-		return err
-	}
-	if err = readServiceDetail(d.Id(), sm, d); err != nil {
-		d.SetId("")
+	// do as first to not try add broker if catalog not accessible
+	err := serviceBrokerUpdateCatalogSignature(d, meta)
+	if err != nil {
 		return err
 	}
 
-	d.Set("name", serviceBroker.Name)
-	d.Set("url", serviceBroker.BrokerURL)
-	d.Set("username", serviceBroker.AuthUserName)
-	d.Set("space", serviceBroker.SpaceGUID)
+	sb, _, err := session.ClientV2.GetServiceBroker(d.Id())
+	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
+		return err
+	}
+	err = readServiceDetail(d.Id(), session, d)
+	if err != nil {
+		return err
+	}
+
+	d.Set("name", sb.Name)
+	d.Set("url", sb.BrokerURL)
+	d.Set("username", sb.AuthUsername)
+	d.Set("space", sb.SpaceGUID)
 
 	return err
 }
 
-func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
-	id, name, url, username, password, space := getSchemaAttributes(d)
-
-	sm := session.ServiceManager()
-	if _, err = sm.UpdateServiceBroker(id, name, url, username, password, space); err != nil {
-		d.SetId("")
+	// do as first to not try add broker if catalog not accessible
+	err := serviceBrokerUpdateCatalogSignature(d, meta)
+	if err != nil {
 		return err
 	}
-	if err = readServiceDetail(id, sm, d); err != nil {
-		d.SetId("")
+
+	_, _, err = session.ClientV2.UpdateServiceBroker(ccv2.ServiceBroker{
+		GUID:         d.Id(),
+		AuthUsername: d.Get("username").(string),
+		AuthPassword: d.Get("password").(string),
+		BrokerURL:    d.Get("url").(string),
+		SpaceGUID:    d.Get("space").(string),
+		Name:         d.Get("name").(string),
+	})
+	if err != nil {
 		return err
 	}
-	session.Log.DebugMessage("Service detail for service broker: %s:\n%# v\n", name, d.Get("service_plans"))
+
+	if err = readServiceDetail(d.Id(), session, d); err != nil {
+		return err
+	}
 
 	return err
 }
 
-func resourceServiceBrokerDelete(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
-	sm := session.ServiceManager()
-	err = sm.DeleteServiceBroker(d.Id())
-	return err
-}
-
-func getSchemaAttributes(d *schema.ResourceData) (id, name, url, username, password, space string) {
-
-	id = d.Id()
-	name = d.Get("name").(string)
-	url = d.Get("url").(string)
-	username = d.Get("username").(string)
-	password = d.Get("password").(string)
-
-	if v, ok := d.GetOk("space"); ok {
-		space = v.(string)
-	}
-	return id, name, url, username, password, space
-}
-
-func readServiceDetail(id string, sm *cfapi.ServiceManager, d *schema.ResourceData) (err error) {
-
-	var (
-		services []cfapi.CCService
-	)
-
-	if services, err = sm.ReadServiceInfo(id); err != nil {
+func resourceServiceBrokerDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	if !session.PurgeWhenDelete {
+		_, err := session.ClientV2.DeleteServiceBroker(d.Id())
 		return err
 	}
 
-	servicePlans := make(map[string]interface{})
-	for _, s := range services {
-		for _, sp := range s.ServicePlans {
-			servicePlans[s.Label+"/"+sp.Name] = sp.ID
+	svcs, _, err := session.ClientV2.GetServices(ccv2.FilterEqual(constant.ServiceBrokerGUIDFilter, d.Id()))
+	if err != nil {
+		return err
+	}
+	for _, svc := range svcs {
+		sis, _, err := session.ClientV2.GetServiceInstances(ccv2.FilterEqual(constant.ServiceGUIDFilter, svc.GUID))
+		if err != nil {
+			return err
+		}
+		for _, si := range sis {
+			_, _, err := session.ClientV2.DeleteServiceInstance(si.GUID, true, true)
+			if err != nil {
+				return err
+			}
 		}
 	}
-	d.Set("service_plans", servicePlans)
+	_, err = session.ClientV2.DeleteServiceBroker(d.Id())
+	return err
+}
+
+func readServiceDetail(id string, session *managers.Session, d *schema.ResourceData) error {
+	services, _, err := session.ClientV2.GetServices(ccv2.FilterEqual(constant.ServiceBrokerGUIDFilter, id))
+	if err != nil {
+		return err
+	}
+
+	servicePlansTf := make(map[string]interface{})
+	servicesTf := make(map[string]interface{})
+	for _, s := range services {
+		servicesTf[s.Label] = s.GUID
+		servicePlans, _, err := session.ClientV2.GetServicePlans(ccv2.FilterEqual(constant.ServiceGUIDFilter, s.GUID))
+		if err != nil {
+			return err
+		}
+		for _, sp := range servicePlans {
+			servicePlansTf[s.Label+"/"+sp.Name] = sp.GUID
+		}
+	}
+	d.Set("service_plans", servicePlansTf)
+	d.Set("services", servicesTf)
 
 	return err
+}
+
+func serviceBrokerUpdateCatalogSignature(d *schema.ResourceData, meta interface{}) error {
+	signature, err := serviceBrokerCatalogSignature(d, meta)
+	if err != nil && d.Get("fail_when_catalog_not_accessible").(bool) {
+		return fmt.Errorf("Error when getting catalog signature: %s", err.Error())
+	}
+	if err != nil {
+		log.Printf(
+			"[WARN] skipping generating catalog sha1, error during request creation: %s",
+			err.Error(),
+		)
+		return nil
+	}
+	previousSignature := d.Get("catalog_hash")
+	d.Set("catalog_hash", signature)
+	if d.IsNewResource() {
+		return nil
+	}
+	d.Set("catalog_change", previousSignature != signature)
+	return nil
+}
+
+func serviceBrokerCatalogSignature(d *schema.ResourceData, meta interface{}) (string, error) {
+	client := meta.(*managers.Session).HttpClient
+	catalogUrl := d.Get("url").(string)
+	if strings.HasSuffix(catalogUrl, "/") {
+		catalogUrl = strings.TrimSuffix(catalogUrl, "/")
+	}
+	catalogUrl += catalogEndpoint
+	req, err := http.NewRequest("GET", catalogUrl, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("X-Broker-API-Version", "2.11")
+	req.SetBasicAuth(d.Get("username").(string), d.Get("password").(string))
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println(resp.StatusCode)
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("Status code: %s, Body: %s ", resp.Status, string(bodyBytes))
+	}
+
+	h := sha1.New()
+	_, err = h.Write(bodyBytes)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(h.Sum(nil)), nil
 }
