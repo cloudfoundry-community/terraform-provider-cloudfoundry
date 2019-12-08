@@ -13,7 +13,6 @@ before_install:
   - mkdir -p .cf-cli
   - curl -LSs "https://cli.run.pivotal.io/stable?release=linux64-binary&version=6.43.0" | tar -zvx -C .cf-cli/ -- cf
   - export PATH="$(pwd)/.cf-cli:$PATH"
-install:
   - export GO111MODULE=on
 jobs:
   include:
