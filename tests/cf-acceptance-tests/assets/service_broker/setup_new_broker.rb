@@ -106,7 +106,7 @@ end
 uniquify_config
 push_broker(broker_name, domain)
 
-url = "http://#{broker_name}.#{domain}"
+url = "https://#{broker_name}.#{domain}"
 
 output = create_service_broker(broker_name, url)
 if broker_already_exists?(output)

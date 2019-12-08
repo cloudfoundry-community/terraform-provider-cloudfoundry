@@ -1,14 +1,14 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/uaa"
 	"fmt"
-
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 func resourceUser() *schema.Resource {
-
 	return &schema.Resource{
 
 		Create: resourceUserCreate,
@@ -17,14 +17,14 @@ func resourceUser() *schema.Resource {
 		Delete: resourceUserDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceUserRead),
 		},
 
 		Schema: map[string]*schema.Schema{
-
 			"name": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
+				Type:             schema.TypeString,
+				Required:         true,
+				DiffSuppressFunc: CaseDifference,
 			},
 			"password": &schema.Schema{
 				Type:      schema.TypeString,
@@ -38,12 +38,16 @@ func resourceUser() *schema.Resource {
 				Default:  "uaa",
 			},
 			"given_name": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				Computed:         true,
+				DiffSuppressFunc: CaseDifference,
 			},
 			"family_name": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:             schema.TypeString,
+				Optional:         true,
+				Computed:         true,
+				DiffSuppressFunc: CaseDifference,
 			},
 			"email": &schema.Schema{
 				Type:     schema.TypeString,
@@ -51,62 +55,158 @@ func resourceUser() *schema.Resource {
 				Optional: true,
 			},
 			"groups": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Optional:   true,
+				Computed:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 		},
 	}
 }
 
 func resourceUserCreate(d *schema.ResourceData, meta interface{}) error {
-
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
 
-	name := d.Get("name").(string)
+	username := d.Get("name").(string)
 	password := d.Get("password").(string)
 	origin := d.Get("origin").(string)
 	givenName := d.Get("given_name").(string)
 	familyName := d.Get("family_name").(string)
 
-	email := name
-	if val, ok := d.GetOk("email"); ok {
-		email = val.(string)
-	} else {
+	email := d.Get("email").(string)
+	if email == "" {
+		email = username
 		d.Set("email", email)
 	}
+	emails := make([]uaa.Email, 0)
+	if email != "" {
+		emails = append(emails, uaa.Email{
+			Value:   email,
+			Primary: true,
+		})
+	}
 
-	um := session.UserManager()
-	user, err := um.CreateUser(name, password, origin, givenName, familyName, email)
+	var name uaa.UserName
+	if givenName != "" || familyName != "" {
+		name = uaa.UserName{
+			GivenName:  givenName,
+			FamilyName: familyName,
+		}
+	}
+	uaam := session.ClientUAA
+	um := session.ClientV2
+
+	userUAA, err := createUaaUserIfNotExists(username, password, origin, &name, emails, uaam)
 	if err != nil {
 		return err
 	}
-	session.Log.DebugMessage("New user created: %# v", user)
 
-	d.SetId(user.ID)
-	return resourceUserUpdate(d, NewResourceMeta{meta})
+	userCF, err := createCFUserIfNotExists(userUAA.ID, um)
+	if err != nil {
+		return err
+	}
+
+	d.SetId(userCF.GUID)
+	return resourceUserUpdate(d, meta)
+}
+
+func createCFUserIfNotExists(ID string, um *ccv2.Client) (ccv2.User, error) {
+	users, _, err := um.GetUsers()
+	if err != nil {
+		return ccv2.User{}, err
+	}
+
+	for _, user := range users {
+		if user.GUID == ID {
+			return user, nil
+		}
+	}
+
+	user, _, err := um.CreateUser(ID)
+	return user, err
+}
+
+func createUaaUserIfNotExists(
+	username string,
+	password string,
+	origin string,
+	name *uaa.UserName,
+	emails []uaa.Email,
+	uaam *uaa.Client,
+) (uaa.User, error) {
+
+	createUser := func() (uaa.User, error) {
+		return uaam.CreateUserFromObject(uaa.User{
+			Username: username,
+			Password: password,
+			Origin:   origin,
+			Name:     *name,
+			Emails:   emails,
+		})
+	}
+
+	// create uaa user if not exists
+	users, err := uaam.GetUsersByUsername(username)
+	if err != nil {
+		if IsErrNotFound(err) {
+			return createUser()
+		}
+		return uaa.User{}, err
+	}
+
+	for _, uaaUser := range users {
+		// warn: GetUsersByUsername only fetch id and username attributes
+		user, err := uaam.GetUser(uaaUser.ID)
+		if err != nil {
+			return uaa.User{}, err
+		}
+		if user.Origin == origin {
+			return user, nil
+		}
+	}
+	return createUser()
 }
 
 func resourceUserRead(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+	session := meta.(*managers.Session)
 
-	um := session.UserManager()
+	umuaa := session.ClientUAA
+	um := session.ClientV2
 	id := d.Id()
 
-	user, err := um.GetUser(id)
+	// 1. check  user exists in CF
+	usersCF, _, err := um.GetUsers()
 	if err != nil {
 		d.SetId("")
 		return err
 	}
-	session.Log.DebugMessage("User with GUID '%s' retrieved: %# v", id, user)
+	found := false
+	for _, user := range usersCF {
+		if user.GUID == id {
+			found = true
+			break
+		}
+	}
+	if !found {
+		d.SetId("")
+		return nil
+	}
+
+	// 2. check  user exists in UAA
+	user, err := umuaa.GetUser(id)
+	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
+		return err
+	}
 
 	d.Set("name", user.Username)
 	d.Set("origin", user.Origin)
@@ -114,88 +214,106 @@ func resourceUserRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("family_name", user.Name.FamilyName)
 	d.Set("email", user.Emails[0].Value)
 
-	var groups []interface{}
-	for _, g := range user.Groups {
-		if !um.IsDefaultGroup(g.Display) {
-			groups = append(groups, g.Display)
-		}
+	tfGroups := d.Get("groups").(*schema.Set).List()
+	groups := user.Groups
+	if !IsImportState(d) {
+		finalGroups := intersectSlices(tfGroups, groups, func(source, item interface{}) bool {
+			return source.(string) == item.(uaa.Group).Name()
+		})
+		d.Set("groups", schema.NewSet(resourceStringHash, finalGroups))
+	} else {
+		d.Set("groups", schema.NewSet(resourceStringHash, objectsToIds(groups, func(object interface{}) string {
+			return object.(uaa.Group).Name()
+		})))
 	}
-	d.Set("groups", schema.NewSet(resourceStringHash, groups))
-
 	return nil
 }
 
 func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
-
-	var (
-		newResource bool
-		session     *cfapi.Session
-	)
-
-	if m, ok := meta.(NewResourceMeta); ok {
-		session = m.meta.(*cfapi.Session)
-		newResource = true
-	} else {
-		session = meta.(*cfapi.Session)
-		if session == nil {
-			return fmt.Errorf("client is nil")
-		}
-		newResource = false
-	}
+	session := meta.(*managers.Session)
 
 	id := d.Id()
-	um := session.UserManager()
+	umuaa := session.ClientUAA
 
-	if !newResource {
+	if !d.IsNewResource() {
 
 		updateUserDetail := false
-		u, _, name := getResourceChange("name", d)
-		updateUserDetail = updateUserDetail || u
-		u, _, givenName := getResourceChange("given_name", d)
-		updateUserDetail = updateUserDetail || u
-		u, _, familyName := getResourceChange("family_name", d)
-		updateUserDetail = updateUserDetail || u
-		u, _, email := getResourceChange("email", d)
-		updateUserDetail = updateUserDetail || u
+		name := d.Get("name").(string)
+		if d.HasChange("name") {
+			updateUserDetail = true
+		}
+		givenName := d.Get("given_name").(string)
+		if d.HasChange("given_name") {
+			updateUserDetail = true
+		}
+		familyName := d.Get("family_name").(string)
+		if d.HasChange("family_name") {
+			updateUserDetail = true
+		}
+
+		var username uaa.UserName
+		if givenName != "" || familyName != "" {
+			username = uaa.UserName{
+				GivenName:  givenName,
+				FamilyName: familyName,
+			}
+		}
+
+		emails := []uaa.Email{
+			{
+				Value:   d.Get("email").(string),
+				Primary: true,
+			},
+		}
+
+		if d.HasChange("email") {
+			updateUserDetail = true
+		}
+
 		if updateUserDetail {
-			user, err := um.UpdateUser(id, name, givenName, familyName, email)
+			_, err := umuaa.UpdateUser(uaa.User{
+				ID:       id,
+				Username: name,
+				Emails:   emails,
+				Name:     username,
+				Origin:   d.Get("origin").(string),
+			})
 			if err != nil {
 				return err
 			}
-			session.Log.DebugMessage("User updated: %# v", user)
 		}
 
 		updatePassword, oldPassword, newPassword := getResourceChange("password", d)
 		if updatePassword {
-			err := um.ChangePassword(id, oldPassword, newPassword)
+			err := umuaa.ChangeUserPassword(id, oldPassword, newPassword)
 			if err != nil {
 				return err
 			}
-			session.Log.DebugMessage("Password for user with id '%s' and name %s' updated.", id, name)
 		}
 	}
 
 	old, new := d.GetChange("groups")
 	rolesToDelete, rolesToAdd := getListChanges(old, new)
 
-	if len(rolesToDelete) > 0 || len(rolesToAdd) > 0 {
-		err := um.UpdateRoles(id, rolesToDelete, rolesToAdd, d.Get("origin").(string))
+	for _, r := range rolesToDelete {
+		err := umuaa.DeleteMemberByName(id, r)
 		if err != nil {
 			return err
 		}
 	}
 
+	for _, r := range rolesToAdd {
+		err := umuaa.AddMemberByName(id, d.Get("origin").(string), r)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func resourceUserDelete(d *schema.ResourceData, meta interface{}) error {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
+	session := meta.(*managers.Session)
 	id := d.Id()
-	um := session.UserManager()
-	return um.Delete(id)
+	umuaa := session.ClientUAA
+	return umuaa.DeleteUser(id)
 }

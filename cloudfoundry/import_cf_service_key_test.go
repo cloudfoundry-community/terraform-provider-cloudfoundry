@@ -8,9 +8,7 @@ import (
 )
 
 func TestAccServiceKey_importBasic(t *testing.T) {
-
-	_, orgName := defaultTestOrg(t)
-	_, spaceName := defaultTestSpace(t)
+	spaceId, _ := defaultTestSpace(t)
 	serviceName1, _, servicePlan := getTestServiceBrokers(t)
 
 	resourceName := "cloudfoundry_service_key.test-service-instance-key"
@@ -26,8 +24,7 @@ func TestAccServiceKey_importBasic(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceKeyResource,
-						orgName, spaceName,
-						serviceName1, servicePlan),
+						serviceName1, spaceId, servicePlan),
 				},
 
 				resource.TestStep{

@@ -12,6 +12,7 @@ Provides a Cloud Foundry resource for registering users. This resource provides 
 functionality to attach additional UAA roles to the user.
 
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions and UAA admin client. See related [uaa documentation](http://docs.cloudfoundry.org/uaa/uaa-user-management.html#creating-users) 
+~> **NOTE:** Create an existing user will not trigger any errors and will lead to retrieve id of existing user and update it.
 
 ## Example Usage
 

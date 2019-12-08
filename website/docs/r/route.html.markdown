@@ -32,8 +32,8 @@ The following arguments are supported:
 
 The following arguments apply only to TCP routes.
 
-- `port` - (Optional, Int) The port to associate with the route for a TCP route. Conflicts with `path` and `random_port`.
-- `random_port` - (Optional, Bool) Set to 'true' to create a random port. Conflicts with `path` and `port` and defaults to false.
+- `port` - (Optional, Int) The port to associate with the route for a TCP route. Conflicts with `random_port`.
+- `random_port` - (Optional, Bool) Set to 'true' to create a random port. Conflicts with `port` and defaults to false.
 
 The following argument applies only to HTTP routes.
 
@@ -46,8 +46,8 @@ The `target` block supports:
   - `app` - (Required, String) The ID of the [application](/docs/providers/cloudfoundry/r/app.html) to map this route to.
   - `port` - (Optional, Int) A port that the application will be listening on. If this argument is not provided then the route will be associated with the application's default port. 
 
-~> **NOTE:** Route mappings can be controlled from either the `cloudfoundry_routes.target` or the `cloudfoundry_app.routes` attributes. Using both syntaxes will cause conflicts and result in unpredictable behavior.  
-
+~> **NOTE:** Route mappings can be controlled from either the `cloudfoundry_routes.target` or the `cloudfoundry_app.routes` attributes.  
+~> **NOTE:** Resource only handles `target` previously created by resource (i.e. it does not destroy nor modifies target set by other resources like cloudfoundry_application).
 
 ## Attributes Reference
 

@@ -1,37 +1,41 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const stackDataResource = `
 
 data "cloudfoundry_stack" "s" {
-    name = "cflinuxfs2"
+    name = "%s"
 }
 `
 
 func TestAccDataSourceStack_normal(t *testing.T) {
-
+	defaultStacks, _, err := testSession().ClientV2.GetStacks()
+	if err != nil {
+		panic(err)
+	}
 	ref := "data.cloudfoundry_stack.s"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: stackDataResource,
+					Config: fmt.Sprintf(stackDataResource, defaultStacks[0].Name),
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceStackExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "cflinuxfs2"),
+							ref, "name", defaultStacks[0].Name),
 					),
 				},
 			},
@@ -42,34 +46,28 @@ func checkDataSourceStackExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("stack '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		name := rs.Primary.Attributes["name"]
 		description := rs.Primary.Attributes["description"]
 
-		var (
-			err   error
-			stack cfapi.CCStack
-		)
-
-		stack, err = session.StackManager().FindStackByName(name)
+		stacks, _, err := session.ClientV2.GetStacks(ccv2.FilterByName(name))
 		if err != nil {
 			return err
 		}
-		if err := assertSame(id, stack.ID); err != nil {
+		if len(stacks) == 0 {
+			return NotFound
+		}
+		if err := assertSame(id, stacks[0].GUID); err != nil {
 			return err
 		}
-		if err := assertSame(description, stack.Description); err != nil {
+		if err := assertSame(description, stacks[0].Description); err != nil {
 			return err
 		}
 

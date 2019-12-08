@@ -19,7 +19,7 @@ The following example creates a Cloud Foundry buildpack .
 ```
 resource "cloudfoundry_buildpack" "tomee" {
     name = "tomcat-enterprise-edition"
-    path = "https://github.com/cloudfoundry-community/tomee-buildpack"
+    path = "https://github.com/cloudfoundry-community/tomee-buildpack/releases/download/v3.17/tomee-buildpack-v3.17.zip"
     position = "12"
     enable = true
 }
@@ -33,31 +33,40 @@ The following arguments are supported:
 * `position` - (Optional, Number) Specifies where to place the buildpack in the detection priority list. For more information, see the [Buildpack Detection](https://docs.cloudfoundry.org/buildpacks/detection.html) topic. When not provided, cloudfoundry assigns a default buildpack position.
 * `enabled` - (Optional, Boolean) Specifies whether to allow apps to be pushed with the buildpack, and defaults to true.
 * `locked` - (Optional, Boolean) Specifies whether buildpack is locked to prevent further updates, and defaults to false.
+* `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.
+* `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.
 
 ### Buildpack location
 
-One of the following arguments must be declared to locate buildpack source or archive to be uploaded.
+* `path` - (Required) An uri or path to target a zip file. this can be in the form of unix path (`/my/path.zip`) or url path (`http://zip.com/my.zip`)
+* `source_code_hash` - (Optional) Used to trigger updates. Must be set to a base64-encoded SHA256 hash of the path specified. The usual way to set this is `${base64sha256(file("file.zip"))}`, 
+where "file.zip" is the local filename of the lambda function source archive.
 
-* `url` - (Optional, String) Specifies the location of the buildpack to upload from. It can be a URL to a zip file, a github repository or a local directory via "`file://...`".
+~> **NOTE:** [terraform-provider-zipper](https://github.com/ArthurHlt/terraform-provider-zipper) 
+can create zip file from `tar.gz`, `tar.bz2`, `folder location`, `git repo` locally or remotely and provide `source_code_hash`.
 
-* `git` - (Optional, String) The git location to pull the builpack source directly from source control.
+Example Usage with zipper: 
 
-  - `url` - (Required, String) The git URL for the application repository.
-  - `branch` - (Optional, String) The branch of from which the repository contents should be retrieved.
-  - `tag` - (Optional, String) The version tag of the contents to retrieve.
-  - `user` - (Optional, String) Git user for accessing a private repo.
-  - `password` - (Optional, String) Git password for accessing a private repo.
-  - `key` - (Optional, String) The git private key to access a private repo via SSH.
+```
+provider "zipper" {
+  skip_ssl_validation = false
+}
 
-      > Arguments "`tag`" and "`branch`" are mutually exclusive. If a git SSH "`key`" is provided and it is protected the "`password`" argument should be used as the key's password.
+resource "zipper_file" "fixture" {
+  source = "https://github.com/cloudfoundry-community/tomee-buildpack.git#v3.17"
+  output_path = "path/to/tomee-buildpack_v3.17.zip"
+}
 
-* `github_release` - (Optional, String) The Buildpack archive published as a github release.
-  - `owner` - (Required, String) The github owner or organization name.
-  - `repo` - (Required, String) The repository containing the release.
-  - `user` - (Optional, String) Github user to use to access Github.
-  - `password` - (Optional, String) Github password/personal token to use to access Github.
-  - `version` - (Optional, String) The version or tag of the release.
-  - `filename` - (Required, String) The name of the published file. The values `zipball` or `tarball` will download the published  source archive.
+resource "cloudfoundry_buildpack" "tomee" {
+    name = "tomcat-enterprise-edition"
+    path = "${zipper_file.fixture.output_path}"
+    source_code_hash = "${zipper_file.fixture.output_sha}"
+    position = "12"
+    enable = true
+}
+```
 
 ## Attributes Reference
 

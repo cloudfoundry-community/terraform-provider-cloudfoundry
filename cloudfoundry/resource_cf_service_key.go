@@ -1,11 +1,10 @@
 package cloudfoundry
 
 import (
-	"fmt"
-	"strings"
-
+	"encoding/json"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
+	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 func resourceServiceKey() *schema.Resource {
@@ -17,7 +16,7 @@ func resourceServiceKey() *schema.Resource {
 		Delete: resourceServiceKeyDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceServiceKeyRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -33,9 +32,19 @@ func resourceServiceKey() *schema.Resource {
 				ForceNew: true,
 			},
 			"params": &schema.Schema{
-				Type:     schema.TypeMap,
-				Optional: true,
-				ForceNew: true,
+				Type:          schema.TypeMap,
+				Optional:      true,
+				ForceNew:      true,
+				Sensitive:     true,
+				ConflictsWith: []string{"params_json"},
+			},
+			"params_json": &schema.Schema{
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+				Sensitive:     true,
+				ConflictsWith: []string{"params"},
+				ValidateFunc:  validation.ValidateJsonString,
 			},
 			"credentials": &schema.Schema{
 				Type:     schema.TypeMap,
@@ -45,64 +54,50 @@ func resourceServiceKey() *schema.Resource {
 	}
 }
 
-func resourceServiceKeyCreate(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+func resourceServiceKeyCreate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
 	name := d.Get("name").(string)
 	serviceInstance := d.Get("service_instance").(string)
 	params := d.Get("params").(map[string]interface{})
+	paramJson := d.Get("params_json").(string)
+	if len(params) == 0 && paramJson != "" {
+		err := json.Unmarshal([]byte(paramJson), &params)
+		if err != nil {
+			return err
+		}
+	}
 
-	sm := session.ServiceManager()
-	var serviceKey cfapi.CCServiceKey
-
-	if serviceKey, err = sm.CreateServiceKey(name, serviceInstance, params); err != nil {
+	serviceKey, _, err := session.ClientV2.CreateServiceKey(serviceInstance, name, params)
+	if err != nil {
 		return err
 	}
-	session.Log.DebugMessage("Created Service Key: %# v", serviceKey)
 
 	d.Set("credentials", normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_"))
-	d.SetId(serviceKey.ID)
+	d.SetId(serviceKey.GUID)
 	return nil
 }
 
-func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	session.Log.DebugMessage("Reading Service Key with ID: %s", d.Id())
-
-	sm := session.ServiceManager()
-	var serviceKey cfapi.CCServiceKey
-
-	if serviceKey, err = sm.ReadServiceKey(d.Id()); err != nil {
-		if strings.Contains(err.Error(), "status code: 404") {
+	serviceKey, _, err := session.ClientV2.GetServiceKey(d.Id())
+	if err != nil {
+		if IsErrNotFound(err) {
 			d.SetId("")
-			err = nil
+			return nil
 		}
 		return err
 	}
 	d.Set("name", serviceKey.Name)
-	d.Set("service_instance", serviceKey.ServiceGUID)
+	d.Set("service_instance", serviceKey.ServiceInstanceGUID)
 	d.Set("credentials", normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_"))
-
-	session.Log.DebugMessage("Read Service Instance : %# v", serviceKey)
 	return nil
 }
 
-func resourceServiceKeyDelete(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceServiceKeyDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	session.Log.DebugMessage("Reading Service Key with ID: %s", d.Id())
-
-	err = session.ServiceManager().DeleteServiceKey(d.Id())
+	_, err := session.ClientV2.DeleteServiceKey(d.Id())
 	return err
 }

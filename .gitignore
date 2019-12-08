@@ -4,7 +4,6 @@
 example.tf
 terraform.tfplan
 terraform.tfstate
-bin/
 release/
 modules-dev/
 website/.vagrant
@@ -28,7 +27,9 @@ website/node_modules
 .*.env.json
 .envrc
 .tfacc_env
-
+/cloudfoundry/cfapi
+*.after
+/cf-hcl-migration/cf-hcl-migration
 
 website/vendor
 /terraform-provider-cloudfoundry

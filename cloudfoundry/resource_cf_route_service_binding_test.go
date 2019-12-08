@@ -3,16 +3,12 @@ package cloudfoundry
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 	"text/template"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
-	git "gopkg.in/src-d/go-git.v4"
 )
 
 const routeBindingResourceCommon = `
@@ -40,12 +36,13 @@ resource "cloudfoundry_app" "basic-auth-broker" {
   space = "${data.cloudfoundry_space.space.id}"
   memory = "128"
   disk_quota = "256"
-  url = "file://{{ .CloneDir }}/servicebroker"
-  route {
-    default_route = "${cloudfoundry_route.basic-auth-broker.id}"
+  path = "{{ .BrokerPath }}"
+  routes {
+    route = "${cloudfoundry_route.basic-auth-broker.id}"
   }
-  environment {
+  environment = {
     BROKER_CONFIG_PATH = "config.yml"
+	ROUTE_SERVICE_URL = "https://basic-auth-broker.{{ .Domain }}"
   }
   timeout = 300
 }
@@ -75,9 +72,9 @@ resource "cloudfoundry_app" "basic-auth-router" {
   space = "${data.cloudfoundry_space.space.id}"
   memory = "128"
   disk_quota = "256"
-  url = "file://{{ .CloneDir }}/routeserver"
-  route {
-    default_route = "${cloudfoundry_route.basic-auth-router.id}"
+  path = "{{ .ServerPath }}"
+  routes {
+	route = "${cloudfoundry_route.basic-auth-router.id}"
   }
   timeout = 300
 }
@@ -89,20 +86,21 @@ resource "cloudfoundry_service_instance" "basic-auth" {
   service_plan = "${cloudfoundry_service_broker.basic-auth.service_plans["p-basic-auth/reverse-name"]}"
 }
 
-resource "cloudfoundry_route" "php-app" {
+resource "cloudfoundry_route" "dummy-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
-  hostname = "php-app"
+  hostname = "dummy-app"
 }
 
-resource "cloudfoundry_app" "php-app" {
-  name = "php-app"
+resource "cloudfoundry_app" "dummy-app" {
+  name = "dummy-app"
+  buildpack = "binary_buildpack"
   space = "${data.cloudfoundry_space.space.id}"
   memory = "128"
   disk_quota = "256"
-  url = "file://{{ .BaseDir }}/tests/phpapp"
-  route {
-    default_route = "${cloudfoundry_route.php-app.id}"
+  path = "{{ .DummyAppPath }}"
+  routes {
+    route = "${cloudfoundry_route.dummy-app.id}"
   }
   timeout = 300
 }
@@ -111,74 +109,51 @@ resource "cloudfoundry_app" "php-app" {
 const routeBindingResourceCreate = `
 resource "cloudfoundry_route_service_binding" "route-bind" {
   service_instance = "${cloudfoundry_service_instance.basic-auth.id}"
-  route = "${cloudfoundry_route.php-app.id}"
+  route = "${cloudfoundry_route.dummy-app.id}"
 }
 `
 
 const routeBindingResourceUpdate = `
-resource "cloudfoundry_route" "php-app-other" {
+resource "cloudfoundry_route" "dummy-app-other" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
-  hostname = "php-app-other"
+  hostname = "dummy-app-other"
 }
 
 resource "cloudfoundry_route_service_binding" "route-bind" {
   service_instance = "${cloudfoundry_service_instance.basic-auth.id}"
-  route = "${cloudfoundry_route.php-app-other.id}"
+  route = "${cloudfoundry_route.dummy-app-other.id}"
 }
 `
 
 const routeBindingResourceDelete = `
-resource "cloudfoundry_route" "php-app-other" {
+resource "cloudfoundry_route" "dummy-app-other" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
-  hostname = "php-app-other"
+  hostname = "dummy-app-other"
 }
 `
 
-const routeServiceBrokerCfgYml = `---
-basic_auth_service_broker:
-  route_service_url: "https://basic-auth-router.{{ .Domain }}"
-  broker_username: "admin"
-  broker_password: "letmein"
-`
-
-func TestAccRouteServiceBinding_normal(t *testing.T) {
-	dir, err := ioutil.TempDir("", "git-clone")
-	if err != nil {
-		t.Fatal("unable to create temporary directory")
-	}
-
-	url := "https://github.com/mevansam/cf-basic-auth-route-service.git"
-	_, err = git.PlainClone(dir, false, &git.CloneOptions{
-		URL:      url,
-		Progress: os.Stdout,
-	})
-	if err != nil {
-		t.Fatalf("unable to clone repository '%s'", url)
-	}
-
-	tpl, _ := template.New("sql").Parse(routeServiceBrokerCfgYml)
-	buf := &bytes.Buffer{}
-	tpl.Execute(buf, map[string]interface{}{
-		"Domain": defaultAppDomain(),
-	})
-	err = ioutil.WriteFile(dir+"/servicebroker/config.yml", buf.Bytes(), 0666)
-
+func TestAccResRouteServiceBinding_normal(t *testing.T) {
 	_, orgName := defaultTestOrg(t)
 	_, spaceName := defaultTestSpace(t)
 
 	ref := "cloudfoundry_route_service_binding.route-bind"
-	tpl, _ = template.New("sql").Parse(routeBindingResourceCommon)
-	buf = &bytes.Buffer{}
-	tpl.Execute(buf, map[string]interface{}{
-		"Domain":   defaultAppDomain(),
-		"Org":      orgName,
-		"Space":    spaceName,
-		"BaseDir":  defaultBaseDir(),
-		"CloneDir": dir,
+	tpl, _ := template.New("sql").Parse(routeBindingResourceCommon)
+	buf := &bytes.Buffer{}
+	err := tpl.Execute(buf, map[string]interface{}{
+		"Domain":       defaultAppDomain(),
+		"Org":          orgName,
+		"Space":        spaceName,
+		"BaseDir":      defaultBaseDir(),
+		"BrokerPath":   asset("route-service-broker.zip"),
+		"ServerPath":   asset("route-service-server.zip"),
+		"DummyAppPath": asset("dummy-app.zip"),
 	})
-	appURL := fmt.Sprintf("http://php-app.%s", defaultAppDomain())
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	appURL := fmt.Sprintf("http://dummy-app.%s", defaultAppDomain())
 
 	resource.Test(t,
 		resource.TestCase{
@@ -188,37 +163,35 @@ func TestAccRouteServiceBinding_normal(t *testing.T) {
 				resource.TestStep{
 					Config: buf.String() + routeBindingResourceCreate,
 					Check: resource.ComposeTestCheckFunc(
-						checkRouteServiceBindingResource(ref, "cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app"),
-						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app", true),
+						checkRouteServiceBindingResource(ref, "cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.dummy-app"),
+						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.dummy-app", true),
 						checkAppResponse(appURL, 401),
 					),
 				},
 				resource.TestStep{
 					Config: buf.String() + routeBindingResourceUpdate,
 					Check: resource.ComposeTestCheckFunc(
-						checkRouteServiceBindingResource(ref, "cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app-other"),
-						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app", false),
-						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app-other", true),
+						checkRouteServiceBindingResource(ref, "cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.dummy-app-other"),
+						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.dummy-app", false),
+						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.dummy-app-other", true),
 						checkAppResponse(appURL, 200),
 					),
 				},
 				resource.TestStep{
 					Config: buf.String() + routeBindingResourceDelete,
 					Check: resource.ComposeTestCheckFunc(
-						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app", false),
-						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.php-app-other", false),
+						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.dummy-app", false),
+						checkRouteServiceBinding("cloudfoundry_service_instance.basic-auth", "cloudfoundry_route.dummy-app-other", false),
 						checkAppResponse(appURL, 200),
 					),
 				},
 			},
 		})
-
-	os.RemoveAll(dir)
 }
 
 func checkAppResponse(url string, code int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resp, err := http.Get(url)
+		resp, err := testSession().HttpClient.Get(url)
 		if err != nil {
 			return err
 		}
@@ -231,7 +204,7 @@ func checkAppResponse(url string, code int) resource.TestCheckFunc {
 
 func checkRouteServiceBinding(serviceName, routeName string, exists bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 		service, okService := s.RootModule().Resources[serviceName]
 		route, okRoute := s.RootModule().Resources[routeName]
 
@@ -243,11 +216,16 @@ func checkRouteServiceBinding(serviceName, routeName string, exists bool) resour
 		}
 		serviceID := service.Primary.ID
 		routeID := route.Primary.ID
-
-		sm := session.ServiceManager()
-		found, err := sm.HasRouteServiceBinding(serviceID, routeID)
+		routes, _, err := session.ClientV2.GetServiceBindingRoutes(serviceID)
 		if err != nil {
 			return err
+		}
+		found := false
+		for _, route := range routes {
+			if route.GUID == routeID {
+				found = true
+				break
+			}
 		}
 		if !found && exists {
 			return fmt.Errorf("unable to find route '%s(%s)' binding to service '%s(%s)'", serviceName, serviceID, routeName, routeID)
@@ -263,7 +241,6 @@ func checkRouteServiceBinding(serviceName, routeName string, exists bool) resour
 
 func checkRouteServiceBindingResource(resource, serviceName, routeName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
 		service, okService := s.RootModule().Resources[serviceName]
 		route, okRoute := s.RootModule().Resources[routeName]
 
@@ -280,7 +257,6 @@ func checkRouteServiceBindingResource(resource, serviceName, routeName string) r
 		if !ok {
 			return fmt.Errorf("route_service_binding '%s' not found in terraform state", resource)
 		}
-		session.Log.DebugMessage("terraform state for resource '%s': %# v", resource, rs)
 
 		id := rs.Primary.ID
 		if id != fmt.Sprintf("%s/%s", serviceID, routeID) {
@@ -290,7 +266,3 @@ func checkRouteServiceBindingResource(resource, serviceName, routeName string) r
 		return nil
 	}
 }
-
-// Local Variables:
-// ispell-local-dictionary: "american"
-// End:

@@ -13,6 +13,7 @@ resource for Cloud Foundry. This resource defines egress rules that can be appli
 stage and run applications.
 
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
+~> **NOTE:** Resource will not override all security group set but rather only manage ASGs defined in the resource.
 
 
 ## Example Usage

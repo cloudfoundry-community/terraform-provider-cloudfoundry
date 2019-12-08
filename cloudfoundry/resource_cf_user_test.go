@@ -2,6 +2,7 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strconv"
 	"testing"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const ldapUserResource = `
@@ -66,7 +66,7 @@ resource "cloudfoundry_user" "empty-group" {
 }
 `
 
-func TestAccUser_LdapOrigin_normal(t *testing.T) {
+func TestAccResUser_LdapOrigin_normal(t *testing.T) {
 
 	ref := "cloudfoundry_user.manager1"
 	username := "manager1@acme.com"
@@ -88,13 +88,15 @@ func TestAccUser_LdapOrigin_normal(t *testing.T) {
 							ref, "origin", "ldap"),
 						resource.TestCheckResourceAttr(
 							ref, "email", username),
+						resource.TestCheckResourceAttr(
+							ref, "groups.#", "0"),
 					),
 				},
 			},
 		})
 }
 
-func TestAccUser_WithGroups_normal(t *testing.T) {
+func TestAccResUser_WithGroups_normal(t *testing.T) {
 
 	ref := "cloudfoundry_user.admin-service-user"
 	username := "cf-admin"
@@ -160,7 +162,7 @@ func TestAccUser_WithGroups_normal(t *testing.T) {
 		})
 }
 
-func TestAccUser_EmptyGroups_normal(t *testing.T) {
+func TestAccResUser_EmptyGroups_normal(t *testing.T) {
 
 	ref := "cloudfoundry_user.empty-group"
 	username := "jdoe"
@@ -182,6 +184,8 @@ func TestAccUser_EmptyGroups_normal(t *testing.T) {
 							ref, "origin", "uaa"),
 						resource.TestCheckResourceAttr(
 							ref, "email", "john.doe@acme.com"),
+						resource.TestCheckResourceAttr(
+							ref, "groups.#", "0"),
 					),
 				},
 
@@ -195,6 +199,8 @@ func TestAccUser_EmptyGroups_normal(t *testing.T) {
 							ref, "origin", "uaa"),
 						resource.TestCheckResourceAttr(
 							ref, "email", "john.doe@acme.com"),
+						resource.TestCheckResourceAttr(
+							ref, "groups.#", "0"),
 					),
 				},
 			},
@@ -205,29 +211,21 @@ func testAccCheckUserExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("user '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		um := session.UserManager()
+		um := session.ClientUAA
 		user, err := um.GetUser(id)
 		if err != nil {
 			return err
 		}
-
-		session.Log.DebugMessage(
-			"retrieved user for resource '%s' with id '%s': %# v",
-			resource, id, user)
 
 		if err = assertEquals(attributes, "name", user.Username); err != nil {
 			return err
@@ -245,13 +243,6 @@ func testAccCheckUserExists(resource string) resource.TestCheckFunc {
 			return err
 		}
 
-		var groups []interface{}
-		for _, g := range user.Groups {
-			if !um.IsDefaultGroup(g.Display) {
-				groups = append(groups, g.Display)
-			}
-		}
-		err = assertSetEquals(attributes, "groups", groups)
 		return err
 	}
 }
@@ -259,9 +250,10 @@ func testAccCheckUserExists(resource string) resource.TestCheckFunc {
 func testAccCheckUserDestroy(username string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
-		um := session.UserManager()
-		if _, err := um.FindByUsername(username); err != nil {
+		session := testAccProvider.Meta().(*managers.Session)
+		um := session.ClientUAA
+		users, err := um.GetUsersByUsername(username)
+		if err != nil {
 			switch err.(type) {
 			case *errors.ModelNotFoundError:
 				return nil
@@ -269,6 +261,9 @@ func testAccCheckUserDestroy(username string) resource.TestCheckFunc {
 				return err
 			}
 		}
-		return fmt.Errorf("user with username '%s' still exists in cloud foundry", username)
+		if len(users) > 0 {
+			return fmt.Errorf("user with username '%s' still exists in cloud foundry", username)
+		}
+		return nil
 	}
 }

@@ -1,14 +1,13 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
-
-	"code.cloudfoundry.org/cli/cf/errors"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const orgResource = `
@@ -93,14 +92,14 @@ resource "cloudfoundry_user" "u5" {
 
 resource "cloudfoundry_org" "org1" {
 	name = "organization-one-updated"
-  quota = "${data.cloudfoundry_org_quota.default.id}"
+    quota = "${data.cloudfoundry_org_quota.default.id}"
 	managers = [ "${cloudfoundry_user.u1.id}" ]
 	billing_managers = [ "${cloudfoundry_user.u2.id}", "${cloudfoundry_user.u3.id}" ]
 	auditors = [ "${cloudfoundry_user.u5.id}" ]
 }
 `
 
-func TestAccOrg_normal(t *testing.T) {
+func TestAccResOrg_normal(t *testing.T) {
 
 	refOrg := "cloudfoundry_org.org1"
 	refQuotaRunway := "cloudfoundry_org_quota.runaway"
@@ -151,52 +150,46 @@ func testAccCheckOrgExists(resOrg, resQuota string, refUserRemoved *string) reso
 
 	return func(s *terraform.State) (err error) {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resOrg]
 		if !ok {
 			return fmt.Errorf("org '%s' not found in terraform state", resOrg)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resOrg, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		var org cfapi.CCOrg
-		om := session.OrgManager()
-		if org, err = om.ReadOrg(id); err != nil {
+		org, _, err := session.ClientV2.GetOrganization(id)
+		if err != nil {
 			return err
 		}
-		session.Log.DebugMessage(
-			"retrieved org for resource '%s' with id '%s': %# v",
-			resOrg, id, org)
 
 		if err = assertEquals(attributes, "name", org.Name); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "quota", org.QuotaGUID); err != nil {
+		if err = assertEquals(attributes, "quota", org.QuotaDefinitionGUID); err != nil {
 			return err
 		}
 
 		rs = s.RootModule().Resources[resQuota]
-		if org.QuotaGUID != rs.Primary.ID {
+		if org.QuotaDefinitionGUID != rs.Primary.ID {
 			return fmt.Errorf("expected org '%s' to be associated with quota '%s' but it was not", resOrg, resQuota)
 		}
 
 		for t, r := range orgRoleMap {
 			var users []interface{}
-			if users, err = om.ListUsers(id, r); err != nil {
+			usersClient, _, err := session.ClientV2.GetOrganizationUsersByRole(r, id)
+			if err != nil {
 				return err
 			}
+			users = UsersToIDs(usersClient)
 			if err = assertSetEquals(attributes, t, users); err != nil {
 				return err
 			}
 		}
 
-		return testUserRemovedFromOrg(refUserRemoved, id, om, s)
+		return testUserRemovedFromOrg(refUserRemoved, id, session, s)
 	}
 }
 
@@ -204,51 +197,48 @@ func testAccCheckOrgDestroyed(orgname string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
-		if _, err := session.OrgManager().FindOrg(orgname); err != nil {
-			switch err.(type) {
-			case *errors.ModelNotFoundError:
-				return nil
-			default:
-				return err
-			}
+		session := testAccProvider.Meta().(*managers.Session)
+		orgs, _, err := session.ClientV2.GetOrganizations(ccv2.FilterByName(orgname))
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("org with name '%s' still exists in cloud foundry", orgname)
+		if len(orgs) > 0 {
+			return fmt.Errorf("org with name '%s' still exists in cloud foundry", orgname)
+		}
+		return nil
 	}
 }
 
 func testUserRemovedFromOrg(
 	refUserRemoved *string,
 	orgID string,
-	om *cfapi.OrgManager,
-	s *terraform.State) (err error) {
+	session *managers.Session,
+	s *terraform.State) error {
 
 	if refUserRemoved != nil {
 
 		rs, found := s.RootModule().Resources[*refUserRemoved]
 		if !found {
-			err = fmt.Errorf("expected user resource '%s' was not found", *refUserRemoved)
-			return
+			return fmt.Errorf("expected user resource '%s' was not found", *refUserRemoved)
 		}
 
-		var users []interface{}
-		if users, err = om.ListUsers(orgID, cfapi.OrgRoleMember); err != nil {
-			return
+		usersClients, _, err := session.ClientV2.GetOrganizationUsers(orgID)
+		if err != nil {
+			return err
 		}
 
 		found = false
-		for _, u := range users {
+		for _, u := range UsersToIDs(usersClients) {
 			if rs.Primary.ID == u {
 				found = true
 				break
 			}
 		}
 		if found {
-			err = fmt.Errorf(
+			return fmt.Errorf(
 				"expected user resource '%s' with if '%s' to be removed from the organization but it was not",
 				*refUserRemoved, rs.Primary.ID)
-			return
 		}
 	}
-	return err
+	return nil
 }

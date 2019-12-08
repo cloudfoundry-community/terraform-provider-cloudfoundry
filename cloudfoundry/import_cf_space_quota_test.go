@@ -10,7 +10,7 @@ func TestAccSpaceQuota_importBasic(t *testing.T) {
 
 	orgID, _ := defaultTestOrg(t)
 
-	resourceName := "cloudfoundry_space_quota.10g-space"
+	resourceName := "cloudfoundry_space_quota.quota10g-space"
 	quotaname := "10g-space"
 
 	resource.Test(t,

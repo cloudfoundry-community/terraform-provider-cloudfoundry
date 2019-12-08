@@ -1,15 +1,14 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strconv"
 	"testing"
 
-	"code.cloudfoundry.org/cli/cf/errors"
-
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const spaceResource = `
@@ -162,10 +161,21 @@ resource "cloudfoundry_space_quota" "dev" {
     total_services = 150
 }
 
+resource "cloudfoundry_space_quota" "dev2" {
+	name = "50g-dev2"
+	org = "${cloudfoundry_org.org1.id}"
+    allow_paid_service_plans = true
+    instance_memory = 1024
+    total_memory = 51200
+    total_app_instances = 100
+    total_routes = 100
+    total_services = 150
+}
+
 resource "cloudfoundry_space" "space1" {
 	name = "space-one-updated"
 	org = "${cloudfoundry_org.org1.id}"
-	quota = "${cloudfoundry_space_quota.dev.id}"
+	quota = "${cloudfoundry_space_quota.dev2.id}"
 	asgs = [ "${cloudfoundry_asg.svc.id}" ]
 	staging_asgs = [ "${cloudfoundry_asg.stg2.id}", "${cloudfoundry_asg.stg3.id}" ]
     managers = [
@@ -183,7 +193,7 @@ resource "cloudfoundry_space" "space1" {
 }
 `
 
-func TestAccSpace_normal(t *testing.T) {
+func TestAccResSpace_normal(t *testing.T) {
 
 	ref := "cloudfoundry_space.space1"
 	refUserRemoved := "cloudfoundry_user.dev3"
@@ -204,6 +214,8 @@ func TestAccSpace_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "asgs.#", "1"),
 						resource.TestCheckResourceAttr(
+							ref, "staging_asgs.#", "2"),
+						resource.TestCheckResourceAttr(
 							ref, "managers.#", "1"),
 						resource.TestCheckResourceAttr(
 							ref, "developers.#", "3"),
@@ -221,6 +233,8 @@ func TestAccSpace_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "asgs.#", "1"),
 						resource.TestCheckResourceAttr(
+							ref, "staging_asgs.#", "2"),
+						resource.TestCheckResourceAttr(
 							ref, "managers.#", "1"),
 						resource.TestCheckResourceAttr(
 							ref, "developers.#", "2"),
@@ -234,127 +248,51 @@ func TestAccSpace_normal(t *testing.T) {
 
 func testAccCheckSpaceExists(resource string, refUserRemoved *string) resource.TestCheckFunc {
 
-	return func(s *terraform.State) (err error) {
-
-		session := testAccProvider.Meta().(*cfapi.Session)
+	return func(s *terraform.State) error {
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("quota '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		var (
-			space cfapi.CCSpace
-
-			runningAsgs, stagingAsgs       []string
-			spaceAsgs                      []interface{}
-			managers, developers, auditors []interface{}
-		)
-
-		sm := session.SpaceManager()
-		if space, err = sm.ReadSpace(id); err != nil {
-			return
+		sm := session.ClientV2
+		space, _, err := sm.GetSpace(id)
+		if err != nil {
+			return err
 		}
-		session.Log.DebugMessage(
-			"retrieved space for resource '%s' with id '%s': %# v",
-			resource, id, space)
 
 		if err = assertEquals(attributes, "name", space.Name); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "org", space.OrgGUID); err != nil {
+		if err = assertEquals(attributes, "org", space.OrganizationGUID); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "quota", space.QuotaGUID); err != nil {
+		if err = assertEquals(attributes, "quota", space.SpaceQuotaDefinitionGUID); err != nil {
 			return err
 		}
 		if err = assertEquals(attributes, "allow_ssh", strconv.FormatBool(space.AllowSSH)); err != nil {
 			return err
 		}
 
-		if runningAsgs, err = session.ASGManager().Running(); err != nil {
-			return err
-		}
-		if spaceAsgs, err = sm.ListASGs(id); err != nil {
-			return
-		}
-		asgs := []interface{}{}
-		for _, a := range spaceAsgs {
-			if !isStringInList(runningAsgs, a.(string)) {
-				asgs = append(asgs, a)
+		for t, r := range typeToSpaceRoleMap {
+			users, _, err := session.ClientV2.GetSpaceUsersByRole(r, id)
+			if err != nil {
+				return err
+			}
+			if err = assertSetEquals(attributes, t, objectsToIds(users, func(object interface{}) string {
+				return object.(ccv2.User).GUID
+			})); err != nil {
+				return err
 			}
 		}
-		session.Log.DebugMessage(
-			"retrieved asgs of space identified resource '%s': %# v",
-			resource, asgs)
 
-		if err = assertSetEquals(attributes, "asgs", asgs); err != nil {
-			return err
-		}
+		err = testUserRemovedFromOrg(refUserRemoved, space.GUID, session, s)
 
-		if stagingAsgs, err = session.ASGManager().Staging(); err != nil {
-			return err
-		}
-		if spaceAsgs, err = sm.ListStagingASGs(id); err != nil {
-			return
-		}
-		asgs = []interface{}{}
-		for _, a := range spaceAsgs {
-			if !isStringInList(stagingAsgs, a.(string)) {
-				asgs = append(asgs, a)
-			}
-		}
-		session.Log.DebugMessage(
-			"retrieved staging asgs of space identified resource '%s': %# v",
-			resource, asgs)
-
-		if err = assertSetEquals(attributes, "staging_asgs", asgs); err != nil {
-			return err
-		}
-
-		if managers, err = sm.ListUsers(id, cfapi.SpaceRoleManager); err != nil {
-			return
-		}
-		session.Log.DebugMessage(
-			"retrieved managers of space identified resource '%s': %# v",
-			resource, managers)
-
-		if err = assertSetEquals(attributes, "managers", managers); err != nil {
-			return err
-		}
-
-		if developers, err = sm.ListUsers(id, cfapi.SpaceRoleDeveloper); err != nil {
-			return
-		}
-		session.Log.DebugMessage(
-			"retrieved developers of space identified resource '%s': %# v",
-			resource, developers)
-
-		if err = assertSetEquals(attributes, "developers", developers); err != nil {
-			return err
-		}
-
-		if auditors, err = sm.ListUsers(id, cfapi.SpaceRoleAuditor); err != nil {
-			return
-		}
-		session.Log.DebugMessage(
-			"retrieved managers of space identified resource '%s': %# v",
-			resource, auditors)
-
-		if err = assertSetEquals(attributes, "auditors", auditors); err != nil {
-			return err
-		}
-
-		err = testUserRemovedFromOrg(refUserRemoved, space.OrgGUID, session.OrgManager(), s)
-
-		return
+		return nil
 	}
 }
 
@@ -362,15 +300,14 @@ func testAccCheckSpaceDestroyed(spacename string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
-		if _, err := session.SpaceManager().FindSpace(spacename); err != nil {
-			switch err.(type) {
-			case *errors.ModelNotFoundError:
-				return nil
-			default:
-				return err
-			}
+		session := testAccProvider.Meta().(*managers.Session)
+		spaces, _, err := session.ClientV2.GetSpaces(ccv2.FilterByName(spacename))
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("space with name '%s' still exists in cloud foundry", spacename)
+		if len(spaces) > 0 {
+			return fmt.Errorf("space with name '%s' still exists in cloud foundry", spacename)
+		}
+		return nil
 	}
 }

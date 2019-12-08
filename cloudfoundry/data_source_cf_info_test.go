@@ -15,7 +15,7 @@ func TestAccDataSourceInfo_normal(t *testing.T) {
 
 	ref := "data.cloudfoundry_info.info"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,
@@ -24,8 +24,6 @@ func TestAccDataSourceInfo_normal(t *testing.T) {
 				resource.TestStep{
 					Config: infoDataResource,
 					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(
-							ref, "api_endpoint", apiURL()),
 						resource.TestCheckResourceAttr(
 							ref, "auth_endpoint", "https://login."+defaultSysDomain()),
 						resource.TestCheckResourceAttr(

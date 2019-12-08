@@ -1,21 +1,22 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const spaceDataResource1 = `
 
 resource "cloudfoundry_org" "org1" {
-	name = "organization-one"
+	name = "organization-ds-space"
 }
 resource "cloudfoundry_space" "space1" {
-	name = "space-one"
+	name = "space-ds-space"
 	org = "${cloudfoundry_org.org1.id}"
 }
 
@@ -41,7 +42,7 @@ func TestAccDataSourceSpace_normal(t *testing.T) {
 	orgID, orgName := defaultTestOrg(t)
 	_, spaceName := defaultTestSpace(t)
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,
@@ -52,9 +53,9 @@ func TestAccDataSourceSpace_normal(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceSpaceExists(ref1),
 						resource.TestCheckResourceAttr(
-							ref1, "name", "space-one"),
+							ref1, "name", "space-ds-space"),
 						resource.TestCheckResourceAttr(
-							ref1, "org_name", "organization-one"),
+							ref1, "org_name", "organization-ds-space"),
 						resource.TestCheckResourceAttrSet(
 							ref1, "org"),
 					),
@@ -80,31 +81,25 @@ func checkDataSourceSpaceExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("space '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		name := rs.Primary.Attributes["name"]
 		org := rs.Primary.Attributes["org"]
 
-		var (
-			err   error
-			space cfapi.CCSpace
-		)
-
-		space, err = session.SpaceManager().FindSpaceInOrg(name, org)
+		spaces, _, err := session.ClientV2.GetSpaces(ccv2.FilterByName(name), ccv2.FilterByOrg(org))
 		if err != nil {
 			return err
 		}
-		if err := assertSame(id, space.ID); err != nil {
+		if len(spaces) == 0 {
+			return NotFound
+		}
+		if err := assertSame(id, spaces[0].GUID); err != nil {
 			return err
 		}
 

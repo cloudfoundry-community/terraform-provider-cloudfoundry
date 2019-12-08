@@ -1,14 +1,14 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
-
-	"code.cloudfoundry.org/cli/cf/models"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const serviceDataResource = `
@@ -24,7 +24,7 @@ func TestAccDataSourceService_normal(t *testing.T) {
 
 	ref := "data.cloudfoundry_service.test"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,
@@ -49,30 +49,24 @@ func checkDataSourceServiceExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("service '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		name := rs.Primary.Attributes["name"]
 
-		var (
-			err     error
-			service models.ServiceOffering
-		)
-
-		service, err = session.ServiceManager().FindServiceByName(name)
+		services, _, err := session.ClientV2.GetServices(ccv2.FilterEqual(constant.LabelFilter, name))
 		if err != nil {
 			return err
 		}
-		err = assertSame(id, service.GUID)
+		if len(services) == 0 {
+			return NotFound
+		}
+		err = assertSame(id, services[0].GUID)
 
 		return err
 	}

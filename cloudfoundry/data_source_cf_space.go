@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func dataSourceSpace() *schema.Resource {
@@ -35,56 +36,59 @@ func dataSourceSpace() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
 
 func dataSourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
 
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
 
-	om := session.OrgManager()
-	sm := session.SpaceManager()
+	name := d.Get("name").(string)
 
-	var (
-		v  interface{}
-		ok bool
-
-		name string
-
-		org   cfapi.CCOrg
-		space cfapi.CCSpace
-	)
-
-	name = d.Get("name").(string)
-
-	if v, ok = d.GetOk("org"); ok {
-		if org, err = om.ReadOrg(v.(string)); err != nil {
-			return err
-		}
-	} else if v, ok = d.GetOk("org_name"); ok {
-		if org, err = om.FindOrg(v.(string)); err != nil {
-			return err
-		}
-	} else {
+	if d.Get("org").(string) == "" && d.Get("org_name").(string) == "" {
 		return fmt.Errorf("You must provide either 'org' or 'org_name' attribute")
 	}
-	space, err = sm.FindSpaceInOrg(name, org.ID)
+
+	orgId := d.Get("org").(string)
+	orgName := d.Get("org_name").(string)
+	if d.Get("org_name").(string) != "" {
+		orgs, _, err := session.ClientV2.GetOrganizations(ccv2.FilterByName(orgName))
+		if err != nil {
+			return err
+		}
+		if len(orgs) == 0 {
+			return fmt.Errorf("Can't found org with name %s", orgName)
+		}
+		orgId = orgs[0].GUID
+	} else {
+		org, _, err := session.ClientV2.GetOrganization(orgId)
+		if err != nil {
+			return err
+		}
+		orgName = org.Name
+	}
+	spaces, _, err := session.ClientV2.GetSpaces(ccv2.FilterByName(name), ccv2.FilterByOrg(orgId))
 	if err != nil {
 		return err
 	}
+	if len(spaces) == 0 {
+		return NotFound
+	}
+	space := spaces[0]
+	d.SetId(space.GUID)
+	d.Set("org_name", orgName)
+	d.Set("org", orgId)
+	d.Set("quota", space.SpaceQuotaDefinitionGUID)
 
-	d.SetId(space.ID)
-	d.Set("org_name", org.Name)
-	d.Set("org", org.ID)
-	d.Set("quota", space.QuotaGUID)
-
+	err = metadataRead(spaceMetadata, d, meta, true)
+	if err != nil {
+		return err
+	}
 	return err
 }
-
-// Local Variables:
-// ispell-local-dictionary: "american"
-// End:

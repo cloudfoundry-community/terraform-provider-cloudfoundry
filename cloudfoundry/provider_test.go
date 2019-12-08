@@ -2,10 +2,8 @@ package cloudfoundry
 
 import (
 	"bytes"
-	"crypto/tls"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,22 +11,29 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 var testAccProviders map[string]terraform.ResourceProvider
 var testAccProvider *schema.Provider
 
-var tstSession *cfapi.Session
+var tstSession *managers.Session
 
 var testOrgID string
 var testOrgName string
 var testSpaceID string
 var testSpaceName string
+
+var helperTest *HelpersTest
 
 func init() {
 
@@ -62,52 +67,58 @@ func testAccEnvironmentSet() bool {
 	password := os.Getenv("CF_PASSWORD")
 	uaaClientID := os.Getenv("CF_UAA_CLIENT_ID")
 	uaaClientSecret := os.Getenv("CF_UAA_CLIENT_SECRET")
-	skipSslValidation := strings.ToLower(os.Getenv("CF_SKIP_SSL_VALIDATION"))
-	githubUser := os.Getenv("GITHUB_USER")
-	githubPassword := os.Getenv("GITHUB_TOKEN")
 
-	if len(endpoint) == 0 ||
-		len(user) == 0 ||
-		len(password) == 0 ||
-		len(uaaClientID) == 0 ||
-		len(uaaClientSecret) == 0 ||
-		len(skipSslValidation) == 0 ||
-		len(githubUser) == 0 ||
-		len(githubPassword) == 0 {
+	if endpoint == "" ||
+		user == "" ||
+		password == "" ||
+		uaaClientID == "" ||
+		uaaClientSecret == "" {
 
 		fmt.Println("CF_API_URL, CF_USER, CF_PASSWORD, CF_UAA_CLIENT_ID, CF_UAA_CLIENT_SECRET, " +
-			"CF_SKIP_SSL_VALIDATION, GITHUB_USER and GITHUB_TOKEN must be set for acceptance tests to work.")
+			" must be set for acceptance tests to work.")
 		return false
 	}
 	return true
 }
 
-func testSession() *cfapi.Session {
+func testSession() *managers.Session {
 
 	if !testAccEnvironmentSet() {
 		panic(fmt.Errorf("ERROR! test CF_* environment variables have not been set"))
 	}
 
 	if tstSession == nil {
-		c := Config{
-			endpoint:        os.Getenv("CF_API_URL"),
-			User:            os.Getenv("CF_USER"),
-			Password:        os.Getenv("CF_PASSWORD"),
-			UaaClientID:     os.Getenv("CF_UAA_CLIENT_ID"),
-			UaaClientSecret: os.Getenv("CF_UAA_CLIENT_SECRET"),
+		c := managers.Config{
+			Endpoint:         os.Getenv("CF_API_URL"),
+			User:             os.Getenv("CF_USER"),
+			Password:         os.Getenv("CF_PASSWORD"),
+			CFClientID:       os.Getenv("CF_CLIENT_ID"),
+			CFClientSecret:   os.Getenv("CF_CLIENT_SECRET"),
+			UaaClientID:      os.Getenv("CF_UAA_CLIENT_ID"),
+			UaaClientSecret:  os.Getenv("CF_UAA_CLIENT_SECRET"),
+			DefaultQuotaName: "default",
 		}
+
 		c.SkipSslValidation, _ = strconv.ParseBool(os.Getenv("CF_SKIP_SSL_VALIDATION"))
 
+		if c.User == "" && c.CFClientID == "" {
+			panic(fmt.Errorf("Couple of user/password or uaa_client_id/uaa_client_secret must be set"))
+		}
+		if c.User != "" && c.CFClientID == "" {
+			c.CFClientID = "cf"
+			c.CFClientSecret = ""
+		}
 		var (
 			err     error
-			session *cfapi.Session
+			session *managers.Session
 		)
 
-		if session, err = c.Client(); err != nil {
+		if session, err = managers.NewSession(c); err != nil {
 			fmt.Printf("ERROR! Error creating a new session: %s\n", err.Error())
 			panic(err.Error())
 		}
 		tstSession = session
+		helperTest = &HelpersTest{tstSession}
 	}
 	return tstSession
 }
@@ -133,20 +144,33 @@ func defaultBaseDir() string {
 	return filepath.Dir(filepath.Dir(file))
 }
 
+func testDir() string {
+	return filepath.Join(defaultBaseDir(), "tests")
+}
+
+func assetDir() string {
+	return filepath.Join(testDir(), "cf-acceptance-tests", "assets")
+}
+
+func asset(a ...string) string {
+	return filepath.Join(assetDir(), filepath.Join(a...))
+}
+
 func defaultTestOrg(t *testing.T) (string, string) {
 
 	testOrgName := os.Getenv("TEST_ORG_NAME")
 	if len(testOrgName) > 0 {
 
 		var (
-			err error
-			org cfapi.CCOrg
+			err  error
+			orgs []ccv2.Organization
 		)
-
-		if org, err = testSession().OrgManager().FindOrg(testOrgName); err != nil {
+		session := testSession()
+		client := session.ClientV2
+		if orgs, _, err = client.GetOrganizations(ccv2.FilterByName(testOrgName)); err != nil {
 			t.Fatal(err.Error())
 		}
-		testOrgID = org.ID
+		testOrgID = orgs[0].GUID
 
 	} else {
 		t.Fatal("Environment variable TEST_ORG_NAME must be set for acceptance tests to work.")
@@ -161,15 +185,19 @@ func defaultTestSpace(t *testing.T) (string, string) {
 	if len(testSpaceName) > 0 {
 
 		var (
-			err   error
-			space cfapi.CCSpace
+			err    error
+			spaces []ccv2.Space
 		)
 		orgID, _ := defaultTestOrg(t)
-
-		if space, err = testSession().SpaceManager().FindSpaceInOrg(testSpaceName, orgID); err != nil {
+		session := testSession()
+		client := session.ClientV2
+		if spaces, _, err = client.GetSpaces(
+			ccv2.FilterByName(testSpaceName),
+			ccv2.FilterEqual(constant.OrganizationGUIDFilter, orgID),
+		); err != nil {
 			t.Fatal(err.Error())
 		}
-		testSpaceID = space.ID
+		testSpaceID = spaces[0].GUID
 
 	} else {
 		t.Fatal("Environment variable TEST_SPACE_NAME must be set for acceptance tests to work.")
@@ -179,13 +207,16 @@ func defaultTestSpace(t *testing.T) (string, string) {
 }
 
 func deleteServiceBroker(name string) {
-
 	session := testSession()
-	sm := session.ServiceManager()
-	serviceBrokerID, err := sm.GetServiceBrokerID(name)
-	if err == nil {
-		sm.ForceDeleteServiceBroker(serviceBrokerID)
+	client := session.ClientV2
+	sbs, _, err := client.GetServiceBrokers(ccv2.FilterByName(name))
+	if err != nil {
+		panic(err)
 	}
+	for _, sb := range sbs {
+		helperTest.ForceDeleteServiceBroker(sb.GUID)
+	}
+
 }
 
 func getTestSecurityGroup() string {
@@ -194,6 +225,24 @@ func getTestSecurityGroup() string {
 		defaultAsg = "public_networks"
 	}
 	return defaultAsg
+}
+
+func getTestDefaultIsolationSegment(t *testing.T) (string, string) {
+	if os.Getenv("TEST_DEFAULT_SEGMENT") != "" {
+		session := testSession()
+		client := session.ClientV3
+		segments, _, err := client.GetIsolationSegments(ccv3.Query{
+			Key:    ccv3.NameFilter,
+			Values: []string{os.Getenv("TEST_DEFAULT_SEGMENT")},
+		})
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		return segments[0].GUID, segments[0].Name
+	}
+	t.Fatal("Environment variable TEST_DEFAULT_SEGMENT must be set for acceptance tests to work.")
+	return "", ""
 }
 
 func getTestBrokerCredentials(t *testing.T) (
@@ -435,43 +484,144 @@ func assertMapEquals(key string, attributes map[string]string, actual map[string
 	return nil
 }
 
-func assertHTTPResponse(url string, expectedStatusCode int, expectedResponses *[]string) (err error) {
+func assertHTTPResponse(url string, expectedStatusCode int, expectedResponses *[]string) error {
 
-	var resp *http.Response
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-
-	if resp, err = client.Get(url); err != nil {
-		return err
-	}
-	if expectedStatusCode != resp.StatusCode {
-		return fmt.Errorf(
-			"expected response status code from url '%s' to be '%d', but actual was: %s",
-			url, expectedStatusCode, resp.Status)
-	}
-	if expectedResponses != nil {
-		in := resp.Body
-		out := bytes.NewBuffer(nil)
-		if _, err = io.Copy(out, in); err != nil {
-			return err
+	client := testSession().HttpClient
+	var finalErr error
+	// this assert is used to get on a route from gorouter
+	// delay and retry is necessary in case of the route not yet registered in gorouter
+	for i := 0; i < 9; i++ {
+		finalErr = nil
+		time.Sleep(1 * time.Second)
+		resp, err := client.Get(url)
+		if err != nil {
+			finalErr = err
+			continue
 		}
-		content := out.String()
+		if expectedStatusCode != resp.StatusCode {
+			finalErr = fmt.Errorf(
+				"expected response status code from url '%s' to be '%d', but actual was: %s",
+				url, expectedStatusCode, resp.Status)
+			continue
+		}
+		if expectedResponses != nil {
+			in := resp.Body
+			out := bytes.NewBuffer(nil)
+			if _, err = io.Copy(out, in); err != nil {
+				finalErr = err
+				continue
+			}
+			content := out.String()
 
-		found := false
-		for _, e := range *expectedResponses {
-			if e == content {
-				found = true
-				break
+			found := false
+			for _, e := range *expectedResponses {
+				if e == content {
+					found = true
+					break
+				}
+			}
+			if !found {
+				finalErr = fmt.Errorf(
+					"expected response from url '%s' to be one of '%v', but actual was '%s'",
+					url, *expectedResponses, content)
+				continue
 			}
 		}
-		if !found {
-			return fmt.Errorf(
-				"expected response from url '%s' to be one of '%v', but actual was '%s'",
-				url, *expectedResponses, content)
-		}
 	}
-	return nil
+
+	return finalErr
+}
+
+func TestMain(m *testing.M) {
+	fmt.Println("Running pre-hook...")
+	// defer and os.Exit are not friends :(
+	clean := make([]func(), 0)
+
+	// Create binary_buildpack if not found in cf
+	// This is used for cloudfoundry_app test and other test needing dummy-app.zip
+	bps, _, err := testSession().ClientV2.GetBuildpacks(ccv2.FilterByName("binary_buildpack"))
+	if err != nil {
+		panic(err)
+	}
+	if len(bps) == 0 {
+		fmt.Println("Creating binary_buildpack ...")
+		bp, _, err := testSession().ClientV2.CreateBuildpack(ccv2.Buildpack{
+			Name:    "binary_buildpack",
+			Enabled: BoolToNullBool(true),
+		})
+		if err != nil {
+			panic(err)
+		}
+		err = testSession().BitsManager.UploadBuildpack(bp.GUID, asset("buildpacks", "binary_buildpack-cached-v1.0.32.zip"))
+		if err != nil {
+			panic(err)
+		}
+		clean = append(clean, func() {
+			fmt.Println("Deleting binary_buildpack ...")
+			_, err := testSession().ClientV2.DeleteBuildpack(bp.GUID)
+			if err != nil {
+				panic(err)
+			}
+		})
+	}
+	fmt.Println("Creating isolation segment segment-acc-tf ...")
+	segment, _, err := testSession().ClientV3.CreateIsolationSegment(ccv3.IsolationSegment{
+		Name: "segment-acc-tf",
+	})
+	if err != nil {
+		panic(err)
+	}
+	os.Setenv("TEST_DEFAULT_SEGMENT", segment.Name)
+	clean = append(clean, func() {
+		fmt.Println("Deleting isolation segment segment-acc-tf ...")
+		_, err := testSession().ClientV3.DeleteIsolationSegment(segment.GUID)
+		if err != nil {
+			panic(err)
+		}
+	})
+	if os.Getenv("TF_ACC_CREATE") != "" {
+		fmt.Println("Creating org tf-acc-org ...")
+		org, _, err := testSession().ClientV2.CreateOrganization("tf-acc-org", "")
+		if err != nil {
+			panic(err)
+		}
+		os.Setenv("TEST_ORG_NAME", org.Name)
+		clean = append(clean, func() {
+			fmt.Println("Deleting org tf-acc-org ...")
+			j, _, err := testSession().ClientV2.DeleteOrganization(org.GUID)
+			if err != nil {
+				panic(err)
+			}
+			_, err = testSession().ClientV2.PollJob(j)
+			if err != nil {
+				panic(err)
+			}
+		})
+
+		fmt.Println("Creating space tf-acc-space ...")
+		space, _, err := testSession().ClientV2.CreateSpace("tf-acc-space", org.GUID)
+		if err != nil {
+			panic(err)
+		}
+		os.Setenv("TEST_SPACE_NAME", space.Name)
+		clean = append(clean, func() {
+			fmt.Println("Deleting space tf-acc-space ...")
+			j, _, err := testSession().ClientV2.DeleteSpace(space.GUID)
+			if err != nil {
+				panic(err)
+			}
+			_, err = testSession().ClientV2.PollJob(j)
+			if err != nil {
+				panic(err)
+			}
+		})
+	}
+	fmt.Println("Finished running pre-hook.")
+	exitCode := m.Run()
+	fmt.Println("Running post-hook...")
+	for i := len(clean) - 1; i >= 0; i-- {
+		clean[i]()
+	}
+	fmt.Println("Finished running post-hook.")
+	os.Exit(exitCode)
 }

@@ -1,10 +1,12 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const protocolICMP = "icmp"
@@ -22,7 +24,7 @@ func resourceAsg() *schema.Resource {
 		Delete: resourceAsgDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceAsgRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -85,40 +87,37 @@ func validateAsgProtocol(v interface{}, k string) (ws []string, errs []error) {
 
 func resourceAsgCreate(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
-	am := session.ASGManager()
-
+	session := meta.(*managers.Session)
+	am := session.ClientV2
 	rules, err := readASGRulesFromConfig(d)
 	if err != nil {
 		return err
 	}
-	id, err := am.CreateASG(d.Get("name").(string), rules)
+	asg, _, err := am.CreateSecurityGroup(ccv2.SecurityGroup{
+		Name:  d.Get("name").(string),
+		Rules: rules,
+	})
 	if err != nil {
 		return err
 	}
-	d.SetId(id)
+	d.SetId(asg.GUID)
 
 	return nil
 }
 
 func resourceAsgRead(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+	session := meta.(*managers.Session)
 
-	am := session.ASGManager()
-	asg, err := am.GetASG(d.Id())
+	am := session.ClientV2
+	asg, _, err := am.GetSecurityGroup(d.Id())
 	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
-
-	session.Log.DebugMessage("Read ASG from CC: %# v", asg)
 
 	d.Set("name", asg.Name)
 
@@ -131,10 +130,15 @@ func resourceAsgRead(d *schema.ResourceData, meta interface{}) error {
 			tfRule["ports"] = r.Ports
 		}
 		if r.Protocol == protocolICMP {
-			tfRule["type"] = r.Type
-			tfRule["code"] = r.Code
+			tfRule["type"] = r.Type.Value
+			tfRule["code"] = r.Code.Value
 		}
-		tfRule["log"] = r.Log
+		if !r.Log.IsSet {
+			tfRule["log"] = false
+		} else {
+			tfRule["log"] = r.Log.Value
+		}
+
 		tfRule["description"] = r.Description
 		tfRules = append(tfRules, tfRule)
 	}
@@ -144,58 +148,54 @@ func resourceAsgRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceAsgUpdate(d *schema.ResourceData, meta interface{}) error {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-
-	am := session.ASGManager()
+	session := meta.(*managers.Session)
+	am := session.ClientV2
 
 	rules, err := readASGRulesFromConfig(d)
 	if err != nil {
 		return err
 	}
-	err = am.UpdateASG(d.Id(), d.Get("name").(string), rules)
+	_, _, err = am.UpdateSecurityGroup(ccv2.SecurityGroup{
+		GUID:  d.Id(),
+		Name:  d.Get("name").(string),
+		Rules: rules,
+	})
 	return err
 }
 
 func resourceAsgDelete(d *schema.ResourceData, meta interface{}) error {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	return session.ASGManager().Delete(d.Id())
+	session := meta.(*managers.Session)
+	_, err := session.ClientV2.DeleteSecurityGroup(d.Id())
+	return err
 }
 
-func readASGRulesFromConfig(d *schema.ResourceData) (rules []cfapi.CCASGRule, err error) {
+func readASGRulesFromConfig(d *schema.ResourceData) (rules []ccv2.SecurityGroupRule, err error) {
 
-	rules = []cfapi.CCASGRule{}
+	rules = []ccv2.SecurityGroupRule{}
 	for _, r := range d.Get("rule").([]interface{}) {
-
 		tfRule := r.(map[string]interface{})
-		asgRule := cfapi.CCASGRule{
+		protocol := strings.ToLower(tfRule["protocol"].(string))
+		asgRule := ccv2.SecurityGroupRule{
 			Protocol:    tfRule["protocol"].(string),
 			Destination: tfRule["destination"].(string),
 		}
 		if v, ok := tfRule["ports"]; ok {
 			asgRule.Ports = v.(string)
 		}
-		if v, ok := tfRule["type"]; ok {
-			asgRule.Type = v.(int)
+		if v, ok := tfRule["type"]; ok && protocol == protocolICMP {
+			asgRule.Type = IntToNullInt(v.(int))
 		}
-		if v, ok := tfRule["code"]; ok {
-			asgRule.Code = v.(int)
+		if v, ok := tfRule["code"]; ok && protocol == protocolICMP {
+			asgRule.Code = IntToNullInt(v.(int))
 		}
 		if v, ok := tfRule["log"]; ok {
-			asgRule.Log = v.(bool)
+			asgRule.Log = BoolToNullBool(v.(bool))
 		}
 		if v, ok := tfRule["description"]; ok {
 			asgRule.Description = v.(string)
 		}
 
-		if asgRule.Protocol != protocolICMP && (asgRule.Type > 0 || asgRule.Code > 0) {
+		if asgRule.Protocol != protocolICMP && (asgRule.Type.IsSet || asgRule.Code.IsSet) {
 			err = fmt.Errorf(
 				"'type' or 'code' arguments are valid only for 'icmp' protocol and not for '%s' protocol",
 				asgRule.Protocol)

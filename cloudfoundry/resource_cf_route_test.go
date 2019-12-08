@@ -1,14 +1,14 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
-
-	"code.cloudfoundry.org/cli/cf/errors"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const routeResource = `
@@ -27,12 +27,9 @@ data "cloudfoundry_space" "space" {
 resource "cloudfoundry_app" "test-app-8080" {
 	name = "test-app"
 	space = "${data.cloudfoundry_space.space.id}"
-	command = "test-app --ports=8080"
 	timeout = 1800
-
-	git {
-		url = "https://github.com/mevansam/test-app.git"
-	}
+	buildpack = "binary_buildpack"
+	path = "%s"
 }
 resource "cloudfoundry_route" "test-app-route" {
 	domain = "${data.cloudfoundry_domain.local.id}"
@@ -61,34 +58,25 @@ data "cloudfoundry_space" "space" {
 resource "cloudfoundry_app" "test-app-8080" {
 	name = "test-app-8080"
 	space = "${data.cloudfoundry_space.space.id}"
-	command = "test-app --ports=8080"
 	timeout = 1800
-
-	git {
-		url = "https://github.com/mevansam/test-app.git"
-	}
+	buildpack = "binary_buildpack"
+	path = "%s"
 }
 resource "cloudfoundry_app" "test-app-8888" {
 	name = "test-app-8888"
 	space = "${data.cloudfoundry_space.space.id}"
 	ports = [ 8888 ]
-	command = "test-app --ports=8888"
 	timeout = 1800
-
-	git {
-		url = "https://github.com/mevansam/test-app.git"
-	}
+	buildpack = "binary_buildpack"
+	path = "%s"
 }
 resource "cloudfoundry_app" "test-app-9999" {
 	name = "test-app-9999"
 	space = "${data.cloudfoundry_space.space.id}"
 	ports = [ 9999 ]
-	command = "test-app --ports=9999"
 	timeout = 1800
-
-	git {
-		url = "https://github.com/mevansam/test-app.git"
-	}
+	buildpack = "binary_buildpack"
+	path = "%s"
 }
 resource "cloudfoundry_route" "test-app-route" {
 	domain = "${data.cloudfoundry_domain.local.id}"
@@ -109,7 +97,7 @@ resource "cloudfoundry_route" "test-app-route" {
 }
 `
 
-func TestAccRoute_normal(t *testing.T) {
+func TestAccResRoute_normal(t *testing.T) {
 
 	_, orgName := defaultTestOrg(t)
 	_, spaceName := defaultTestSpace(t)
@@ -126,12 +114,11 @@ func TestAccRoute_normal(t *testing.T) {
 				resource.TestStep{
 					Config: fmt.Sprintf(routeResource,
 						defaultAppDomain(),
-						orgName, spaceName),
+						orgName, spaceName,
+						appPath),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
-
-							responses := []string{"8080"}
-							if err = assertHTTPResponse("http://test-app-single."+defaultAppDomain()+"/port", 200, &responses); err != nil {
+							if err = assertHTTPResponse("http://test-app-single."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -146,13 +133,13 @@ func TestAccRoute_normal(t *testing.T) {
 				resource.TestStep{
 					Config: fmt.Sprintf(routeResourceUpdate,
 						defaultAppDomain(),
-						orgName, spaceName),
+						orgName, spaceName,
+						appPath, appPath, appPath),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
-							responses := []string{"8080", "8888", "9999"}
 							for i := 1; i <= 9; i++ {
-								if err = assertHTTPResponse("http://test-app-multi."+defaultAppDomain()+"/port", 200, &responses); err != nil {
+								if err = assertHTTPResponse("http://test-app-multi."+defaultAppDomain(), 200, nil); err != nil {
 									return err
 								}
 							}
@@ -170,67 +157,66 @@ func TestAccRoute_normal(t *testing.T) {
 
 func testAccCheckRouteExists(resRoute string, validate func() error) resource.TestCheckFunc {
 
-	return func(s *terraform.State) (err error) {
+	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resRoute]
 		if !ok {
 			return fmt.Errorf("route '%s' not found in terraform state", resRoute)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resRoute, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		var route cfapi.CCRoute
-		rm := session.RouteManager()
-		if route, err = rm.ReadRoute(id); err != nil {
-			return
+		route, _, err := session.ClientV2.GetRoute(id)
+		if err != nil {
+			return err
 		}
-		session.Log.DebugMessage(
-			"retrieved route for resource '%s' with id '%s': %# v",
-			resRoute, id, route)
 
 		if err = assertEquals(attributes, "domain", route.DomainGUID); err != nil {
-			return
+			return err
 		}
 		if err = assertEquals(attributes, "space", route.SpaceGUID); err != nil {
-			return
+			return err
 		}
-		if err = assertEquals(attributes, "hostname", route.Hostname); err != nil {
-			return
+		if err = assertEquals(attributes, "hostname", route.Host); err != nil {
+			return err
 		}
 		if err = assertEquals(attributes, "port", route.Port); err != nil {
-			return
+			return err
 		}
 		if err = assertEquals(attributes, "path", route.Path); err != nil {
-			return
+			return err
 		}
 
-		err = validate()
-		return
+		return validate()
 	}
 }
 
 func testAccCheckRouteDestroyed(hostnames []string, domain string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
-
-		session := testAccProvider.Meta().(*cfapi.Session)
-		for _, h := range hostnames {
-			if _, err := session.RouteManager().FindRoute(domain, &h, nil, nil); err != nil {
-				switch err.(type) {
-				case *errors.ModelNotFoundError:
-					continue
-				default:
-					return err
-				}
+		session := testAccProvider.Meta().(*managers.Session)
+		domains, _, err := session.ClientV2.GetSharedDomains(ccv2.FilterByName(domain))
+		if err != nil || len(domains) == 0 {
+			domains, _, err = session.ClientV2.GetPrivateDomains(ccv2.FilterByName(domain))
+			if err != nil {
+				return err
 			}
-			return fmt.Errorf("route with hostname '%s' and domain '%s' still exists in cloud foundry", h, domain)
+		}
+		if len(domains) == 0 {
+			return fmt.Errorf("Domain %s not found", domain)
+		}
+		domainGuid := domains[0].GUID
+		for _, h := range hostnames {
+			routes, _, err := session.ClientV2.GetRoutes(ccv2.FilterEqual(constant.HostFilter, h), ccv2.FilterEqual(constant.DomainGUIDFilter, domainGuid))
+			if err != nil {
+				return err
+			}
+			if len(routes) > 0 {
+				return fmt.Errorf("route with hostname '%s' and domain '%s' still exists in cloud foundry", h, domain)
+			}
 		}
 		return nil
 	}

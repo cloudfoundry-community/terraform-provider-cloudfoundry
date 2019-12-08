@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
-	"fmt"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func resourceSpaceQuota() *schema.Resource {
@@ -17,7 +18,7 @@ func resourceSpaceQuota() *schema.Resource {
 		Delete: resourceSpaceQuotaDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceSpaceQuotaRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -74,31 +75,27 @@ func resourceSpaceQuota() *schema.Resource {
 	}
 }
 
-func resourceSpaceQuotaCreate(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	qm := session.QuotaManager()
+func resourceSpaceQuotaCreate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	qm := session.ClientV2
 
-	var id string
-	if id, err = qm.CreateQuota(cfapi.SpaceQuota, readSpaceQuotaResource(d)); err != nil {
+	quota, _, err := qm.CreateQuota(constant.SpaceQuota, readSpaceQuotaResource(d))
+	if err != nil {
 		return err
 	}
-	d.SetId(id)
+	d.SetId(quota.GUID)
 	return nil
 }
 
-func resourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	qm := session.QuotaManager()
-
-	var quota cfapi.CCQuota
-	if quota, err = qm.ReadQuota(cfapi.SpaceQuota, d.Id()); err != nil {
+func resourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	qm := session.ClientV2
+	quota, _, err := qm.GetQuota(constant.SpaceQuota, d.Id())
+	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 
@@ -106,53 +103,49 @@ func resourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) (err error
 	d.Set("allow_paid_service_plans", quota.NonBasicServicesAllowed)
 	d.Set("total_services", quota.TotalServices)
 	d.Set("total_routes", quota.TotalRoutes)
-	d.Set("total_route_ports", quota.TotalReserveredPorts)
-	d.Set("total_memory", quota.MemoryLimit)
-	d.Set("total_service_keys", quota.TotalServiceKeys)
-	d.Set("instance_memory", quota.InstanceMemoryLimit)
-	d.Set("total_app_instances", quota.AppInstanceLimit)
-	d.Set("org", quota.OrgGUID)
-	d.Set("total_app_tasks", quota.AppTaskLimit)
+	d.Set("total_route_ports", quota.TotalReservedRoutePorts.Value)
+	d.Set("total_memory", NullByteSizeToInt(quota.MemoryLimit))
+	d.Set("total_service_keys", quota.TotalServiceKeys.Value)
+	d.Set("instance_memory", NullByteSizeToInt(quota.InstanceMemoryLimit))
+	d.Set("total_app_instances", quota.AppInstanceLimit.Value)
+	d.Set("org", quota.OrganizationGUID)
+	d.Set("total_app_tasks", quota.AppTaskLimit.Value)
 
 	return nil
 }
 
-func resourceSpaceQuotaUpdate(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	qm := session.QuotaManager()
+func resourceSpaceQuotaUpdate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	qm := session.ClientV2
 	quota := readSpaceQuotaResource(d)
-	quota.ID = d.Id()
-	return qm.UpdateQuota(cfapi.SpaceQuota, quota)
+	quota.GUID = d.Id()
+	_, _, err := qm.UpdateQuota(constant.SpaceQuota, quota)
+	return err
 }
 
-func resourceSpaceQuotaDelete(d *schema.ResourceData, meta interface{}) (err error) {
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	qm := session.QuotaManager()
-	return qm.DeleteQuota(cfapi.SpaceQuota, d.Id())
+func resourceSpaceQuotaDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	qm := session.ClientV2
+	_, err := qm.DeleteQuota(constant.SpaceQuota, d.Id())
+	return err
 }
 
-func readSpaceQuotaResource(d *schema.ResourceData) cfapi.CCQuota {
-	quota := cfapi.CCQuota{
+func readSpaceQuotaResource(d *schema.ResourceData) ccv2.Quota {
+	quota := ccv2.Quota{
 		Name:                    d.Get("name").(string),
-		AppInstanceLimit:        d.Get("total_app_instances").(int),
-		AppTaskLimit:            d.Get("total_app_tasks").(int),
-		InstanceMemoryLimit:     int64(d.Get("instance_memory").(int)),
-		MemoryLimit:             int64(d.Get("total_memory").(int)),
 		NonBasicServicesAllowed: d.Get("allow_paid_service_plans").(bool),
 		TotalServices:           d.Get("total_services").(int),
-		TotalServiceKeys:        d.Get("total_service_keys").(int),
+		TotalServiceKeys:        IntToNullInt(d.Get("total_service_keys").(int)),
 		TotalRoutes:             d.Get("total_routes").(int),
-		TotalReserveredPorts:    d.Get("total_route_ports").(int),
-		OrgGUID:                 d.Get("org").(string),
+		TotalReservedRoutePorts: IntToNullInt(d.Get("total_route_ports").(int)),
+		MemoryLimit:             IntToNullByteSize(d.Get("total_memory").(int)),
+		InstanceMemoryLimit:     IntToNullByteSize(d.Get("instance_memory").(int)),
+		AppInstanceLimit:        IntToNullInt(d.Get("total_app_instances").(int)),
+		AppTaskLimit:            IntToNullInt(d.Get("total_app_tasks").(int)),
+		OrganizationGUID:        d.Get("org").(string),
 	}
 	if v, ok := d.GetOk("org"); ok {
-		quota.OrgGUID = v.(string)
+		quota.OrganizationGUID = v.(string)
 	}
 	return quota
 }

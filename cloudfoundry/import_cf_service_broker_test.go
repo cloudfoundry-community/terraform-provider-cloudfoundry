@@ -35,7 +35,7 @@ func TestAccServiceBroker_importBasic(t *testing.T) {
 					ResourceName:            resourceName,
 					ImportState:             true,
 					ImportStateVerify:       true,
-					ImportStateVerifyIgnore: []string{"password"},
+					ImportStateVerifyIgnore: []string{"password", "catalog_change", "catalog_hash", "fail_when_catalog_not_accessible"},
 				},
 			},
 		})

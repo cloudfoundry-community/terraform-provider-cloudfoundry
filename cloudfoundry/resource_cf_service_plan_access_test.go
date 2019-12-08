@@ -2,12 +2,12 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const saResource = `
@@ -67,7 +67,7 @@ resource "cloudfoundry_service_plan_access" "test-access" {
 }
 `
 
-func TestAccServicePlanAccess_normal(t *testing.T) {
+func TestAccResServicePlanAccess_normal(t *testing.T) {
 
 	serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword, serviceBrokerPlanPath := getTestBrokerCredentials(t)
 
@@ -130,7 +130,7 @@ func TestAccServicePlanAccess_normal(t *testing.T) {
 		})
 }
 
-func TestAccServicePlanAccess_error(t *testing.T) {
+func TestAccResServicePlanAccess_error(t *testing.T) {
 
 	serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword, serviceBrokerPlanPath := getTestBrokerCredentials(t)
 
@@ -165,8 +165,7 @@ func testAccCheckServicePlanAccessExists(resource string,
 
 	return func(s *terraform.State) (err error) {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
-		sm := session.ServiceManager()
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
@@ -178,14 +177,14 @@ func testAccCheckServicePlanAccessExists(resource string,
 
 		setServicePlanAccessGUID(id)
 
-		plan, org, err := sm.ReadServicePlanAccess(id)
+		spv, _, err := session.ClientV2.GetServicePlanVisibility(id)
 		if err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "plan", plan); err != nil {
+		if err := assertEquals(attributes, "plan", spv.ServicePlanGUID); err != nil {
 			return err
 		}
-		if err := assertEquals(attributes, "org", org); err != nil {
+		if err := assertEquals(attributes, "org", spv.OrganizationGUID); err != nil {
 			return err
 		}
 
@@ -195,8 +194,7 @@ func testAccCheckServicePlanAccessExists(resource string,
 
 func testAccCheckServicePlan(resource string) resource.TestCheckFunc {
 	return func(s *terraform.State) (err error) {
-		session := testAccProvider.Meta().(*cfapi.Session)
-		sm := session.ServiceManager()
+		session := testAccProvider.Meta().(*managers.Session)
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("service access resource '%s' not found in terraform state", rs)
@@ -205,7 +203,7 @@ func testAccCheckServicePlan(resource string) resource.TestCheckFunc {
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		plan, err := sm.ReadServicePlan(id)
+		plan, _, err := session.ClientV2.GetServicePlan(id)
 		if err != nil {
 			return err
 		}
@@ -223,9 +221,9 @@ func testAccCheckServicePlanAccessDestroyed(servicePlanAccessGUID string) resour
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
-		_, _, err := session.ServiceManager().ReadServicePlanAccess(servicePlanAccessGUID)
+		_, _, err := session.ClientV2.GetServicePlanVisibility(servicePlanAccessGUID)
 		if err == nil {
 			return fmt.Errorf("service plan access with guid '%s' still exists in cloud foundry", servicePlanAccessGUID)
 		}

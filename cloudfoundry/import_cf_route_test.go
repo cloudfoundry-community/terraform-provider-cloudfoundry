@@ -25,7 +25,8 @@ func TestAccRoute_importBasic(t *testing.T) {
 				resource.TestStep{
 					Config: fmt.Sprintf(routeResource,
 						defaultAppDomain(),
-						orgName, spaceName),
+						orgName, spaceName,
+						appPath),
 				},
 
 				resource.TestStep{

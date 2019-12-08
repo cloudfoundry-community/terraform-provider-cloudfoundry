@@ -33,6 +33,7 @@ provider "cloudfoundry" {
     uaa_client_id = "admin"
     uaa_client_secret = "${var.uaa_admin_client_secret}"
     skip_ssl_validation = true
+    app_logs_max = 30
 }
 ```
 
@@ -46,8 +47,14 @@ The following arguments are supported:
 * `user` - (Optional) Cloud Foundry user. Defaults to "admin". This can also be specified
   with the `CF_USER` shell environment variable. Unless mentionned explicitly in a resource, CF admin permissions are not required.
 
-* `password` - (Required) Cloud Foundry user's password. This can also be specified
+* `password` - (Optional) Cloud Foundry user's password. This can also be specified
   with the `CF_PASSWORD` shell environment variable.
+
+* `cf_client_id` - (Optional) The cf client ID to make request with a client instead of user. This can also be specified
+  with the `CF_CLIENT_ID` shell environment variable.
+
+* `cf_client_secret` - (Optional) The cf client secret to make request with a client instead of user. This can also be specified
+  with the `CF_CLIENT_SECRET` shell environment variable.
 
 * `uaa_client_id` - (Optional) The UAA admin client ID. Defaults to "admin". This can also be specified
   with the `CF_UAA_CLIENT_ID` shell environment variable.
@@ -57,3 +64,12 @@ The following arguments are supported:
 
 * `skip_ssl_validation` - (Optional) Skip verification of the API endpoint - Not recommended!. Defaults to "false". This can also be specified
   with the `CF_SKIP_SSL_VALIDATION` shell environment variable.
+  
+* `default_quota_name` - (Optional, Default: `default`) Change the name of your default quota . This can also be specified
+  with the `CF_DEFAULT_QUOTA_NAME` shell environment variable.
+  
+* `app_logs_max` - (Optional) Number of logs message which can be see when app creation is errored (-1 means all messages stored). Defaults to "30". This can also be specified
+  with the `CF_APP_LOGS_MAX` shell environment variable.
+  
+* `purge_when_delete` - (Optional) Set to true to purge when deleting a resource (e.g.: service instance, service broker) . This can also be specified
+  with the `CF_PURGE_WHEN_DELETE` shell environment variable.

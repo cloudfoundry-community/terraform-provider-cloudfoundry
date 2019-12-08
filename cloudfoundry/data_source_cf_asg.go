@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func dataSourceAsg() *schema.Resource {
@@ -14,7 +15,6 @@ func dataSourceAsg() *schema.Resource {
 		Read: dataSourceAsgRead,
 
 		Schema: map[string]*schema.Schema{
-
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
@@ -25,17 +25,17 @@ func dataSourceAsg() *schema.Resource {
 
 func dataSourceAsgRead(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
-
-	am := session.ASGManager()
-
-	sg, err := am.Read(d.Get("name").(string))
+	asgs, _, err := session.ClientV2.GetSecurityGroups(ccv2.FilterByName(d.Get("name").(string)))
 	if err != nil {
 		return err
 	}
-	d.SetId(sg.GUID)
+	if len(asgs) == 0 {
+		return NotFound
+	}
+	d.SetId(asgs[0].GUID)
 	return nil
 }

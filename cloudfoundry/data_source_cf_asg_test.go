@@ -2,11 +2,11 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const asgDataResource = `
@@ -21,7 +21,7 @@ func TestAccDataSourceAsg_normal(t *testing.T) {
 	defaultAsg := getTestSecurityGroup()
 	ref := "data.cloudfoundry_asg.public"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
 			Providers: testAccProviders,
@@ -43,21 +43,17 @@ func checkDataSourceAsgExists(resource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("asg '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		asg, err := session.ASGManager().GetASG(id)
+		asg, _, err := session.ClientV2.GetSecurityGroup(id)
 		if err != nil {
 			return err
 		}

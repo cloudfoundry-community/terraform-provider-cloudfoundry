@@ -2,9 +2,10 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 func dataSourceInfo() *schema.Resource {
@@ -14,27 +15,7 @@ func dataSourceInfo() *schema.Resource {
 		Read: dataSourceInfoRead,
 
 		Schema: map[string]*schema.Schema{
-
-			"skip_ssl_validation": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-
-			"user": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"password": &schema.Schema{
-				Type:      schema.TypeString,
-				Computed:  true,
-				Sensitive: true,
-			},
-
 			"api_version": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"api_endpoint": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -51,8 +32,9 @@ func dataSourceInfo() *schema.Resource {
 				Computed: true,
 			},
 			"logging_endpoint": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:       schema.TypeString,
+				Computed:   true,
+				Deprecated: "Not exists anymore in new cloud foundry",
 			},
 			"doppler_endpoint": &schema.Schema{
 				Type:     schema.TypeString,
@@ -64,23 +46,22 @@ func dataSourceInfo() *schema.Resource {
 
 func dataSourceInfoRead(d *schema.ResourceData, meta interface{}) error {
 
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
 
-	info := session.Info()
-	d.Set("skip_ssl_validation", info.SkipSslValidation)
-	d.Set("user", info.User)
-	d.Set("password", info.Password)
-
-	d.Set("api_version", info.APIVersion)
-	d.Set("api_endpoint", info.APIEndpoint)
-	d.Set("auth_endpoint", info.AuthorizationEndpoint)
-	d.Set("uaa_endpoint", info.TokenEndpoint)
-	d.Set("routing_endpoint", info.RoutingAPIEndpoint)
-	d.Set("logging_endpoint", info.LoggregatorEndpoint)
-	d.Set("doppler_endpoint", info.DopplerEndpoint)
+	info := session.ClientV3.Info
+	infoV2, _, err := session.ClientV2.Info()
+	if err != nil {
+		return err
+	}
+	d.Set("api_version", info.CloudControllerAPIVersion())
+	d.Set("auth_endpoint", infoV2.AuthorizationEndpoint)
+	d.Set("uaa_endpoint", info.UAA())
+	d.Set("routing_endpoint", info.Routing())
+	d.Set("logging_endpoint", strings.Replace(info.Logging(), "doppler", "loggregator", 1))
+	d.Set("doppler_endpoint", info.Logging())
 
 	d.SetId("info")
 	return nil

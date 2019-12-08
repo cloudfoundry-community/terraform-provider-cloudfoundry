@@ -1,10 +1,9 @@
 package cloudfoundry
 
 import (
-	"fmt"
-
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 func resourceSpace() *schema.Resource {
@@ -17,7 +16,7 @@ func resourceSpace() *schema.Resource {
 		Delete: resourceSpaceDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceSpaceImport,
+			State: ImportRead(resourceSpaceRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -37,7 +36,7 @@ func resourceSpace() *schema.Resource {
 			"allow_ssh": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
-				Default:  true,
+				Computed: true,
 			},
 			"isolation_segment": &schema.Schema{
 				Type:     schema.TypeString,
@@ -56,263 +55,255 @@ func resourceSpace() *schema.Resource {
 				Set:      resourceStringHash,
 			},
 			"managers": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Deprecated: "Use resource cloudfoundry_space_users instead",
+				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 			"developers": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Deprecated: "Use resource cloudfoundry_space_users instead",
+				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
 			"auditors": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Set:      resourceStringHash,
+				Deprecated: "Use resource cloudfoundry_space_users instead",
+				Type:       schema.TypeSet,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Computed:   true,
+				Optional:   true,
+				Elem:       &schema.Schema{Type: schema.TypeString},
+				Set:        resourceStringHash,
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
 
-var typeToSpaceRoleMap = map[string]cfapi.SpaceRole{
-	"managers":   cfapi.SpaceRoleManager,
-	"developers": cfapi.SpaceRoleDeveloper,
-	"auditors":   cfapi.SpaceRoleAuditor,
-}
+func resourceSpaceCreate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
-func resourceSpaceCreate(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
+	name := d.Get("name").(string)
+	org := d.Get("org").(string)
+	quota := d.Get("quota").(string)
+	allowSSH := true
+	// if user does explicitly set allow_ssh
+	// it set allow the user value
+	if allow, ok := d.GetOk("allow_ssh"); ok {
+		allowSSH = allow.(bool)
 	}
 
-	var (
-		name, org, quota string
-		allowSSH         bool
-		asgs             []interface{}
-	)
-	name = d.Get("name").(string)
-	org = d.Get("org").(string)
-	if v, ok := d.GetOk("quota"); ok {
-		quota = v.(string)
-	}
-	if v, ok := d.GetOk("asgs"); ok {
-		asgs = v.(*schema.Set).List()
-	}
-	allowSSH = d.Get("allow_ssh").(bool)
-
-	var id string
-
-	sm := session.SpaceManager()
-	if id, err = sm.CreateSpace(name, org, quota, allowSSH, asgs); err != nil {
+	sm := session.ClientV2
+	space, _, err := sm.CreateSpaceFromObject(ccv2.Space{
+		Name:                     name,
+		OrganizationGUID:         org,
+		AllowSSH:                 allowSSH,
+		SpaceQuotaDefinitionGUID: quota,
+	})
+	if err != nil {
 		return err
 	}
-	d.SetId(id)
-
-	err = resourceSpaceUpdate(d, NewResourceMeta{meta})
+	d.SetId(space.GUID)
+	err = resourceSpaceUpdate(d, meta)
+	if err != nil {
+		return err
+	}
+	err = metadataCreate(spaceMetadata, d, meta)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func resourceSpaceRead(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
 	id := d.Id()
-	sm := session.SpaceManager()
+	sm := session.ClientV2
 
-	var (
-		space cfapi.CCSpace
-
-		runningAsgs     []string
-		spaceAsgs, asgs []interface{}
-	)
-
-	if space, err = sm.ReadSpace(id); err != nil {
+	space, _, err := sm.GetSpace(id)
+	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 	d.Set("name", space.Name)
-	d.Set("org", space.OrgGUID)
-	d.Set("quota", space.QuotaGUID)
+	d.Set("org", space.OrganizationGUID)
+	d.Set("quota", space.SpaceQuotaDefinitionGUID)
 	d.Set("allow_ssh", space.AllowSSH)
 
-	var users []interface{}
 	for t, r := range typeToSpaceRoleMap {
-		if users, err = sm.ListUsers(id, r); err != nil {
-			return
+		users, _, err := sm.GetSpaceUsersByRole(r, id)
+		if err != nil {
+			return err
 		}
-		d.Set(t, schema.NewSet(resourceStringHash, users))
+		tfUsers := d.Get(t).(*schema.Set).List()
+		if !IsImportState(d) {
+			finalUsers := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
+				return source.(string) == item.(ccv2.User).GUID
+			})
+			d.Set(t, schema.NewSet(resourceStringHash, finalUsers))
+		} else {
+			d.Set(t, schema.NewSet(resourceStringHash, objectsToIds(users, func(object interface{}) string {
+				return object.(ccv2.User).GUID
+			})))
+		}
 	}
 
-	if runningAsgs, err = session.ASGManager().Running(); err != nil {
-		return err
+	runningAsgs, _, err := session.ClientV2.GetSpaceSecurityGroups(d.Id())
+	if err != nil {
+		return nil
 	}
-	if spaceAsgs, err = sm.ListASGs(id); err != nil {
-		return err
+	if !IsImportState(d) {
+		finalRunningAsg := intersectSlices(d.Get("asgs").(*schema.Set).List(), runningAsgs, func(source, item interface{}) bool {
+			return source.(string) == item.(ccv2.SecurityGroup).GUID
+		})
+		d.Set("asgs", schema.NewSet(resourceStringHash, finalRunningAsg))
+	} else {
+		d.Set("asgs", schema.NewSet(resourceStringHash, objectsToIds(runningAsgs, func(object interface{}) string {
+			return object.(ccv2.SecurityGroup).GUID
+		})))
 	}
-	for _, a := range spaceAsgs {
-		if !isStringInList(runningAsgs, a.(string)) {
-			asgs = append(asgs, a)
-		}
-	}
-	d.Set("asgs", schema.NewSet(resourceStringHash, asgs))
 
-	segment, err := sm.GetSpaceSegment(id)
+	stagingAsgs, _, err := session.ClientV2.GetSpaceStagingSecurityGroups(d.Id())
+	if err != nil {
+		return nil
+	}
+	if !IsImportState(d) {
+		finalStagingAsg := intersectSlices(d.Get("staging_asgs").(*schema.Set).List(), stagingAsgs, func(source, item interface{}) bool {
+			return source.(string) == item.(ccv2.SecurityGroup).GUID
+		})
+		d.Set("staging_asgs", schema.NewSet(resourceStringHash, finalStagingAsg))
+	} else {
+		d.Set("staging_asgs", schema.NewSet(resourceStringHash, objectsToIds(stagingAsgs, func(object interface{}) string {
+			return object.(ccv2.SecurityGroup).GUID
+		})))
+	}
+
+	segment, _, err := session.ClientV3.GetSpaceIsolationSegment(d.Id())
 	if err != nil {
 		return err
 	}
-	d.Set("isolation_segment", segment)
+	d.Set("isolation_segment", segment.GUID)
+
+	err = metadataRead(spaceMetadata, d, meta, false)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
-
-	var (
-		newResource bool
-		session     *cfapi.Session
-	)
-
-	if m, ok := meta.(NewResourceMeta); ok {
-		session = m.meta.(*cfapi.Session)
-		newResource = true
-	} else {
-		session = meta.(*cfapi.Session)
-		if session == nil {
-			return fmt.Errorf("client is nil")
-		}
-		newResource = false
-	}
+	session := meta.(*managers.Session)
 
 	spaceID := d.Id()
 	orgID := d.Get("org").(string)
-
-	om := session.OrgManager()
-	sm := session.SpaceManager()
-
-	if !newResource {
-
-		var asgs []interface{}
-
-		space := cfapi.CCSpace{
-			ID:   spaceID,
-			Name: d.Get("name").(string),
-
-			OrgGUID: orgID,
-
-			AllowSSH: d.Get("allow_ssh").(bool),
+	if !d.IsNewResource() {
+		_, _, err := session.ClientV2.UpdateSpace(ccv2.Space{
+			GUID:             spaceID,
+			Name:             d.Get("name").(string),
+			OrganizationGUID: orgID,
+			AllowSSH:         d.Get("allow_ssh").(bool),
+		})
+		if err != nil {
+			return err
 		}
-		if v, ok := d.GetOk("quota"); ok {
-			space.QuotaGUID = v.(string)
+		if d.HasChange("quota") {
+			_, err := session.ClientV2.SetSpaceQuota(spaceID, d.Get("quota").(string))
+			if err != nil {
+				return err
+			}
 		}
-		if v, ok := d.GetOk("asgs"); ok {
-			asgs = v.(*schema.Set).List()
-		}
+	}
 
-		if err = sm.UpdateSpace(space, asgs); err != nil {
+	removeAsgs, addAsgs := getListChanges(d.GetChange("asgs"))
+	for _, asgID := range removeAsgs {
+		_, err = session.ClientV2.DeleteSecurityGroupSpace(asgID, spaceID)
+		if err != nil {
+			return err
+		}
+	}
+	for _, asgID := range addAsgs {
+		_, err = session.ClientV2.UpdateSecurityGroupSpace(asgID, spaceID)
+		if err != nil {
 			return err
 		}
 	}
 
-	old, new := d.GetChange("staging_asgs")
-	remove, add := getListChanges(old, new)
-	for _, asgID := range remove {
-		if err = sm.RemoveStagingASG(spaceID, asgID); err != nil {
+	removeStagingAsgs, addStagingAsgs := getListChanges(d.GetChange("staging_asgs"))
+	for _, asgID := range removeStagingAsgs {
+		_, err = session.ClientV2.DeleteSecurityGroupStagingSpace(asgID, spaceID)
+		if err != nil {
 			return err
 		}
 	}
-	for _, asgID := range add {
-		if err = sm.AddStagingASG(spaceID, asgID); err != nil {
+	for _, asgID := range addStagingAsgs {
+		_, err = session.ClientV2.UpdateSecurityGroupStagingSpace(asgID, spaceID)
+		if err != nil {
 			return err
 		}
 	}
-
-	usersRemoved := make(map[string]bool)
-	usersAdded := make(map[string]bool)
 
 	for t, r := range typeToSpaceRoleMap {
-		old, new := d.GetChange(t)
-		remove, add := getListChanges(old, new)
-
+		remove, add := getListChanges(d.GetChange(t))
 		for _, uid := range remove {
-			session.Log.DebugMessage("Removing user '%s' from space '%s' with role '%s'.", uid, spaceID, r)
-			if err = sm.RemoveUser(spaceID, uid, r); err != nil {
+			_, err = session.ClientV2.DeleteSpaceUserByRole(r, spaceID, uid)
+			if err != nil {
 				return err
 			}
 		}
 		for _, uid := range add {
-			session.Log.DebugMessage("Adding user '%s' to space '%s' with role '%s'.", uid, spaceID, r)
-			if err = om.AddUser(orgID, uid, cfapi.OrgRoleMember); err != nil {
+			err = addOrNothingUserInOrgBySpace(session.ClientV2, orgID, uid)
+			if err != nil {
 				return err
 			}
-			if err = sm.AddUser(spaceID, uid, r); err != nil {
-				return err
-			}
-		}
-
-		for _, r := range remove {
-			usersRemoved[r] = true
-		}
-		for _, r := range add {
-			usersAdded[r] = true
-		}
-	}
-
-	orgUsers := make(map[string]bool)
-	for _, r := range []cfapi.OrgRole{
-		cfapi.OrgRoleManager,
-		cfapi.OrgRoleBillingManager,
-		cfapi.OrgRoleAuditor} {
-
-		var uu []interface{}
-		if uu, err = om.ListUsers(orgID, r); err != nil {
-			return err
-		}
-		for _, u := range uu {
-			orgUsers[u.(string)] = true
-		}
-	}
-	for u := range usersRemoved {
-
-		_, isOrgUser := orgUsers[u]
-		_, isSpaceUser := usersAdded[u]
-
-		if !isOrgUser && !isSpaceUser {
-
-			session.Log.DebugMessage(
-				"Removing user '%s' from org '%s' as he/she no longer has an assigned role within the org.",
-				u, orgID)
-
-			if err = om.RemoveUser(orgID, u, cfapi.OrgRoleMember); err != nil {
+			_, err = session.ClientV2.UpdateSpaceUserByRole(r, spaceID, uid)
+			if err != nil {
 				return err
 			}
 		}
 	}
 
 	segID := d.Get("isolation_segment").(string)
-	err = sm.SetSpaceSegment(spaceID, segID)
+	if segID != "" && d.IsNewResource() {
+		_, _, err := session.ClientV3.UpdateSpaceIsolationSegmentRelationship(spaceID, segID)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !d.IsNewResource() && d.HasChange("isolation_segment") {
+		_, _, err := session.ClientV3.UpdateSpaceIsolationSegmentRelationship(spaceID, segID)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = metadataUpdate(spaceMetadata, d, meta)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func resourceSpaceDelete(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
+func resourceSpaceDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	j, _, err := session.ClientV2.DeleteSpace(d.Id())
+	if err != nil {
+		return err
 	}
-
-	err = session.SpaceManager().DeleteSpace(d.Id())
+	_, err = session.ClientV2.PollJob(j)
+	if err != nil {
+		return err
+	}
 	return err
 }

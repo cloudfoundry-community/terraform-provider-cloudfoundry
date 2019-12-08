@@ -2,11 +2,11 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const evgRunningResource = `
@@ -65,12 +65,25 @@ resource "cloudfoundry_evg" "staging" {
 }
 `
 
-func TestAccRunningEvg_normal(t *testing.T) {
+var defaultLenStagingEvg int
+var defaultLenRunningEvg int
+
+func TestAccResunningEvg_normal(t *testing.T) {
+	evg, _, err := testSession().ClientV2.GetEnvVarGroupRunning()
+	if err != nil {
+		panic(err)
+	}
+	defaultLenRunningEvg = len(evg)
+	evg, _, err = testSession().ClientV2.GetEnvVarGroupStaging()
+	if err != nil {
+		panic(err)
+	}
+	defaultLenStagingEvg = len(evg)
 
 	ref := "cloudfoundry_evg.running"
 	name := "running"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
@@ -96,6 +109,11 @@ func TestAccRunningEvg_normal(t *testing.T) {
 					),
 				},
 				resource.TestStep{
+					ResourceName:      ref,
+					ImportState:       true,
+					ImportStateVerify: true,
+				},
+				resource.TestStep{
 					Config: evgRunningResourceUpdated,
 					Check: resource.ComposeTestCheckFunc(
 						checkEvgExists(ref),
@@ -119,12 +137,12 @@ func TestAccRunningEvg_normal(t *testing.T) {
 		})
 }
 
-func TestAccStagingEvg_normal(t *testing.T) {
+func TestAccResStagingEvg_normal(t *testing.T) {
 
 	ref := "cloudfoundry_evg.staging"
 	name := "staging"
 
-	resource.Test(t,
+	resource.ParallelTest(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
@@ -167,32 +185,34 @@ func TestAccStagingEvg_normal(t *testing.T) {
 
 func checkEvgExists(resource string) resource.TestCheckFunc {
 
-	return func(s *terraform.State) (err error) {
+	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("asg '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		session.Log.DebugMessage(
-			"terraform state for attributes '%s': %# v",
-			resource, attributes)
-
-		variables, err := session.EVGManager().GetEVG(id)
+		var variables map[string]string
+		var err error
+		switch id {
+		case AppStatusRunning:
+			variables, _, err = session.ClientV2.GetEnvVarGroupRunning()
+		case AppStatusStaging:
+			variables, _, err = session.ClientV2.GetEnvVarGroupStaging()
+		}
 		if err != nil {
 			return err
 		}
-
-		if err := assertMapEquals("variables", attributes, variables); err != nil {
+		variablesInterface := make(map[string]interface{})
+		for k, v := range variables {
+			variablesInterface[k] = v
+		}
+		if err := assertMapEquals("variables", attributes, variablesInterface); err != nil {
 			return err
 		}
 		return nil
@@ -201,13 +221,24 @@ func checkEvgExists(resource string) resource.TestCheckFunc {
 
 func testAccCheckEvgDestroy(name string) resource.TestCheckFunc {
 
-	return func(s *terraform.State) (err error) {
-		session := testAccProvider.Meta().(*cfapi.Session)
-		variables, err := session.EVGManager().GetEVG(name)
+	return func(s *terraform.State) error {
+		session := testAccProvider.Meta().(*managers.Session)
+
+		var variables map[string]string
+		var defaultLen int
+		var err error
+		switch name {
+		case AppStatusRunning:
+			variables, _, err = session.ClientV2.GetEnvVarGroupRunning()
+			defaultLen = defaultLenRunningEvg
+		case AppStatusStaging:
+			variables, _, err = session.ClientV2.GetEnvVarGroupStaging()
+			defaultLen = defaultLenStagingEvg
+		}
 		if err != nil {
 			return err
 		}
-		if len(variables) > 0 {
+		if len(variables) != defaultLen {
 			return fmt.Errorf("%s variables are not empty", name)
 		}
 		return nil

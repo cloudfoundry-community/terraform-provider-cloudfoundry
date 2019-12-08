@@ -8,12 +8,11 @@ description: |-
 
 # cloudfoundry\_isolation\_segment
 
-(Experimental) Provides a Cloud Foundry resource for managing Cloud Foundry
+Provides a Cloud Foundry resource for managing Cloud Foundry
 [isolation segment](http://v3-apidocs.cloudfoundry.org/version/3.53.0/index.html#isolation-segments).
 
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
-
-~> **NOTE:** This resource is experimental and subject to breaking changes.
+~> **NOTE:** Resource will only modify entitlement managed by itself (do not destroy or affect previous entitlement set outside of terraform).
 
 See `cloudfoundry_isolation_segment_entitlement` resource to assign the segment to one-or-more
 origanizations.
@@ -41,6 +40,10 @@ The following arguments are supported:
   the placement_tags section of the Diego manifest file. If the names do not match, Cloud Foundry
   fails to place apps in the isolation segment when apps are started or restarted in the space
   assigned to the isolation segment.
+ * `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+ Works only on cloud foundry with api >= v3.63.
+ * `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+ Works only on cloud foundry with api >= v3.63.
 
 
 ## Attributes Reference

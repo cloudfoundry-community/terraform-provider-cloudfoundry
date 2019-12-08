@@ -2,17 +2,19 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"os"
-	"regexp"
 	"testing"
 
-	"code.cloudfoundry.org/cli/cf/errors"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
+
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
-const appResourceJavaSpringTemplate = `
+const appResourceTemplate = `
 
 data "cloudfoundry_domain" "local" {
   name = "%s"
@@ -31,10 +33,10 @@ data "cloudfoundry_service" "s2" {
 	name = "%s"
 }
 
-resource "cloudfoundry_route" "java-spring" {
+resource "cloudfoundry_route" "dummy-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
-  hostname = "java-spring"
+  hostname = "dummy-app"
 }
 resource "cloudfoundry_service_instance" "db" {
   name = "db"
@@ -47,20 +49,20 @@ resource "cloudfoundry_service_instance" "fs1" {
 	service_plan = "${data.cloudfoundry_service.s2.service_plans.%s}"
 }
 %%s
-resource "cloudfoundry_app" "java-spring" {
-  name = "java-spring"
+resource "cloudfoundry_app" "dummy-app" {
+  name = "dummy-app"
+  buildpack = "binary_buildpack"
   space = "${data.cloudfoundry_space.space.id}"
-  memory = "768"
+  memory = "64"
   disk_quota = "512"
   timeout = 1800
-
-	url = "file://../tests/cf-acceptance-tests/assets/java-spring/java-spring.jar"
+  path = "%s"
 	
 %%s
 }
 `
 
-const appResourceJavaSpring = `
+const appResource = `
 
 data "cloudfoundry_domain" "local" {
 	name = "%s"
@@ -79,10 +81,10 @@ data "cloudfoundry_service" "s2" {
 	name = "%s"
 }
 
-resource "cloudfoundry_route" "java-spring" {
+resource "cloudfoundry_route" "dummy-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
-  hostname = "java-spring"
+  hostname = "dummy-app"
 }
 resource "cloudfoundry_service_instance" "db" {
   name = "db"
@@ -94,14 +96,15 @@ resource "cloudfoundry_service_instance" "fs1" {
 	space = "${data.cloudfoundry_space.space.id}"
 	service_plan = "${data.cloudfoundry_service.s2.service_plans.%s}"
 }
-resource "cloudfoundry_app" "java-spring" {
-  name = "java-spring"
+resource "cloudfoundry_app" "dummy-app" {
+  name = "dummy-app"
+  buildpack = "binary_buildpack"
   space = "${data.cloudfoundry_space.space.id}"
-  memory = "768"
+  memory = "64"
   disk_quota = "512"
   timeout = 1800
 
-  url = "file://../tests/cf-acceptance-tests/assets/java-spring/java-spring.jar"
+  path = "%s"
 
   service_binding {
     service_instance = "${cloudfoundry_service_instance.db.id}"
@@ -110,18 +113,47 @@ resource "cloudfoundry_app" "java-spring" {
     service_instance = "${cloudfoundry_service_instance.fs1.id}"
   }
 
-  route {
-    default_route = "${cloudfoundry_route.java-spring.id}"
+  routes {
+    route = "${cloudfoundry_route.dummy-app.id}"
   }
 
-  environment {
+  environment = {
     TEST_VAR_1 = "testval1"
     TEST_VAR_2 = "testval2"
   }
 }
 `
 
-const appResourceJavaSpringUpdate = `
+const appResourceBlueGreen = `
+
+data "cloudfoundry_domain" "local" {
+	name = "%s"
+}
+
+resource "cloudfoundry_route" "dummy-app" {
+  domain = "${data.cloudfoundry_domain.local.id}"
+  space = "%s"
+  hostname = "dummy-app"
+}
+
+resource "cloudfoundry_app" "dummy-app" {
+  name = "dummy-app"
+  buildpack = "binary_buildpack"
+  space = "%s"
+  memory = "64"
+  disk_quota = "512"
+  timeout = 1800
+  strategy = "blue-green"
+  source_code_hash = "%s"
+  path = "%s"
+
+  routes {
+    route = "${cloudfoundry_route.dummy-app.id}"
+  }
+}
+`
+
+const appResourceUpdate = `
 
 data "cloudfoundry_domain" "local" {
 	name = "%s"
@@ -140,10 +172,10 @@ data "cloudfoundry_service" "s2" {
 	name = "%s"
 }
 
-resource "cloudfoundry_route" "java-spring" {
+resource "cloudfoundry_route" "dummy-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
-  hostname = "java-spring"
+  hostname = "dummy-app"
 }
 resource "cloudfoundry_service_instance" "db" {
   name = "db"
@@ -160,86 +192,34 @@ resource "cloudfoundry_service_instance" "fs2" {
     space = "${data.cloudfoundry_space.space.id}"
     service_plan = "${data.cloudfoundry_service.s2.service_plans.%s}"
 }
-resource "cloudfoundry_app" "java-spring" {
-  name = "java-spring-updated"
+resource "cloudfoundry_app" "dummy-app" {
+  name = "dummy-app-updated"
+  buildpack = "binary_buildpack"
   space = "${data.cloudfoundry_space.space.id}"
   instances ="2"
-  memory = "1024"
+  memory = "128"
   disk_quota = "1024"
   timeout = 1800
 
-  url = "file://../tests/cf-acceptance-tests/assets/java-spring/java-spring.jar"
+  path = "%s"
 
   service_binding {
     service_instance = "${cloudfoundry_service_instance.db.id}"
   }
   service_binding {
-    service_instance = "${cloudfoundry_service_instance.fs2.id}"
-  }
-  service_binding {
     service_instance = "${cloudfoundry_service_instance.fs1.id}"
   }
-
-  route {
-    default_route = "${cloudfoundry_route.java-spring.id}"
+  service_binding {
+    service_instance = "${cloudfoundry_service_instance.fs2.id}"
   }
 
-  environment {
+  routes {
+    route = "${cloudfoundry_route.dummy-app.id}"
+  }
+
+  environment = {
     TEST_VAR_1 = "testval1"
     TEST_VAR_2 = "testval2"
-  }
-}
-`
-
-const appResourceWithMultiplePorts = `
-
-data "cloudfoundry_domain" "local" {
-	name = "%s"
-}
-data "cloudfoundry_org" "org" {
-	name = "%s"
-}
-data "cloudfoundry_space" "space" {
-	name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
-}
-
-resource "cloudfoundry_app" "test-app" {
-  name = "test-app"
-  space = "${data.cloudfoundry_space.space.id}"
-  timeout = 1800
-  ports = [ 8888, 9999 ]
-  buildpack = "binary_buildpack"
-  command = "chmod 0755 test-app && ./test-app --ports=8888,9999"
-  health_check_type = "process"
-
-  github_release {
-    owner = "mevansam"
-    repo = "test-app"
-    filename = "test-app"
-    version = "v0.0.1"
-    user = "%s"
-    password = "%s"
-  }
-}
-resource "cloudfoundry_route" "test-app-8888" {
-  domain = "${data.cloudfoundry_domain.local.id}"
-  space = "${data.cloudfoundry_space.space.id}"
-  hostname = "test-app-8888"
-
-  target {
-    app = "${cloudfoundry_app.test-app.id}"
-    port = 8888
-  }
-}
-resource "cloudfoundry_route" "test-app-9999" {
-  domain = "${data.cloudfoundry_domain.local.id}"
-  space = "${data.cloudfoundry_space.space.id}"
-  hostname = "test-app-9999"
-
-  target {
-    app = "${cloudfoundry_app.test-app.id}"
-    port = 9999
   }
 }
 `
@@ -282,7 +262,7 @@ data "cloudfoundry_org" "org" {
 	name = "%s"
 }
 data "cloudfoundry_space" "space" {
-	name = "%s"
+  name = "%s"
   org = "${data.cloudfoundry_org.org.id}"
 }
 
@@ -290,18 +270,17 @@ resource "cloudfoundry_route" "test-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
   hostname = "test-app"
-	target = {app = "${cloudfoundry_app.test-app.id}"}
+  target {
+    app = "${cloudfoundry_app.test-app.id}"
+  }
 }
 resource "cloudfoundry_app" "test-app" {
   name = "test-app"
   space = "${data.cloudfoundry_space.space.id}"
-  command = "test-app --ports=8080"
   timeout = 1800
-	memory = "512"
-
-  git {
-    url = "https://github.com/mevansam/test-app.git"
-  }
+  buildpack = "binary_buildpack"
+  memory = "64"
+  path = "%s"
 }
 `
 
@@ -321,230 +300,27 @@ resource "cloudfoundry_route" "test-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
   hostname = "test-app"
-	target = {app = "${cloudfoundry_app.test-app.id}"}
+  target {
+    app = "${cloudfoundry_app.test-app.id}"
+  }
 }
 resource "cloudfoundry_app" "test-app" {
   name = "test-app"
   space = "${data.cloudfoundry_space.space.id}"
-  command = "test-app --ports=8080"
   timeout = 1800
-	memory = "1024"
+  buildpack = "binary_buildpack"
+  memory = "128"
 
-  git {
-    url = "https://github.com/mevansam/test-app.git"
-  }
+  path = "%s"
 }
 `
 
-const createManyJavaSpringApps = `
+var appPath = asset("dummy-app.zip")
 
-data "cloudfoundry_domain" "java-spring-domain" {
-  name = "%s"
-}
-
-data "cloudfoundry_org" "org" {
-  name = "%s"
-}
-data "cloudfoundry_space" "space" {
-  name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
-}
-
-resource "cloudfoundry_route" "java-spring-route-1" {
-  domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
-  space = "${data.cloudfoundry_space.space.id}"
-  hostname = "java-spring-1"
-  depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
-}
-
-resource "cloudfoundry_app" "java-spring-app-1" {
-  name = "java-spring-app-1"
-  url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
-  space = "${data.cloudfoundry_space.space.id}"
-  timeout = 700
-  memory = 512
-  buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
-
-  route {
-    default_route = "${cloudfoundry_route.java-spring-route-1.id}"
-  }
-
-  depends_on = ["cloudfoundry_route.java-spring-route-1"]
-}
-
-resource "cloudfoundry_route" "java-spring-route-2" {
-  domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
-	space = "${data.cloudfoundry_space.space.id}"
-  hostname = "java-spring-2"
-  depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
-}
-
-resource "cloudfoundry_app" "java-spring-app-2" {
-	name = "java-spring-app-2"
-  url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
-  space = "${data.cloudfoundry_space.space.id}"
-  timeout = 700
-	memory = 512
-	buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
-
-  route {
-    default_route = "${cloudfoundry_route.java-spring-route-2.id}"
-  }
-
-  depends_on = ["cloudfoundry_route.java-spring-route-2"]
-}
-
-resource "cloudfoundry_route" "java-spring-route-3" {
-  domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
-	space = "${data.cloudfoundry_space.space.id}"
-  hostname = "java-spring-3"
-  depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
-}
-
-resource "cloudfoundry_app" "java-spring-app-3" {
-	name = "java-spring-app-3"
-  url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
-  space = "${data.cloudfoundry_space.space.id}"
-  timeout = 700
-	memory = 512
-	buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
-
-  route {
-    default_route = "${cloudfoundry_route.java-spring-route-3.id}"
-  }
-
-  depends_on = ["cloudfoundry_route.java-spring-route-3"]
-}
-
-resource "cloudfoundry_route" "java-spring-route-4" {
-  domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
-	space = "${data.cloudfoundry_space.space.id}"
-  hostname = "java-spring-4"
-  depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
-}
-
-resource "cloudfoundry_app" "java-spring-app-4" {
-	name = "java-spring-app-4"
-  url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
-  space = "${data.cloudfoundry_space.space.id}"
-  timeout = 700
-	memory = 512
-	buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
-
-  route {
-    default_route = "${cloudfoundry_route.java-spring-route-4.id}"
-  }
-
-  depends_on = ["cloudfoundry_route.java-spring-route-4"]
-}
-
-resource "cloudfoundry_route" "java-spring-route-5" {
-  domain = "${data.cloudfoundry_domain.java-spring-domain.id}"
-	space = "${data.cloudfoundry_space.space.id}"
-  hostname = "java-spring-5"
-  depends_on = ["data.cloudfoundry_domain.java-spring-domain"]
-}
-
-resource "cloudfoundry_app" "java-spring-app-5" {
-	name = "java-spring-app-5"
-  url = "file://../tests/cf-acceptance-tests/assets/java-spring/"
-  space = "${data.cloudfoundry_space.space.id}"
-  timeout = 700
-	memory = 512
-	buildpack = "https://github.com/cloudfoundry/java-buildpack.git"
-
-  route {
-    default_route = "${cloudfoundry_route.java-spring-route-5.id}"
-  }
-
-  depends_on = ["cloudfoundry_route.java-spring-route-5"]
-}
-`
-
-// If the PR is not applied, after running this test many times, it should crash with this error
-// === RUN   TestAccApp_reproduceIssue88
-// Application downloaded to: ../tests/cf-acceptance-tests/assets/java-spring/
-// Application downloaded to: ../tests/cf-acceptance-tests/assets/java-spring/
-// fatal error: concurrent map read and map write
-//
-// goroutine 1542 [running]:
-// ...
-// created by github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry.resourceAppCreate
-// .../golang/src/github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/resource_cf_app.go:421 +0x1ac4
-
-func TestAccApp_reproduceIssue88(t *testing.T) {
+func TestAccResAppVersions_app1(t *testing.T) {
 
 	_, orgName := defaultTestOrg(t)
 	_, spaceName := defaultTestSpace(t)
-
-	refApp1 := "cloudfoundry_app.java-spring-app-1"
-	refApp2 := "cloudfoundry_app.java-spring-app-2"
-	refApp3 := "cloudfoundry_app.java-spring-app-3"
-	refApp4 := "cloudfoundry_app.java-spring-app-4"
-	refApp5 := "cloudfoundry_app.java-spring-app-5"
-
-	failRegExp, _ := regexp.Compile("app java-spring-app-[0-9] failed to start")
-
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring-app-`", "java-spring-app-2", "java-spring-app-3", "java-spring-app-4", "java-spring-app-5"}),
-			Steps: []resource.TestStep{
-
-				resource.TestStep{
-					Config: fmt.Sprintf(createManyJavaSpringApps,
-						defaultAppDomain(),
-						orgName, spaceName),
-					Check: resource.ComposeAggregateTestCheckFunc(
-						testAccCheckAppExists(refApp1, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring-1."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						testAccCheckAppExists(refApp2, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						testAccCheckAppExists(refApp3, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring-3."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						testAccCheckAppExists(refApp4, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring-4."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						testAccCheckAppExists(refApp5, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring-5."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-					),
-					// the jar in the test is enough big, and allows us to test for the failure
-					ExpectError: failRegExp,
-				},
-			},
-		})
-}
-
-func TestAccAppVersions_app1(t *testing.T) {
-
-	_, orgName := defaultTestOrg(t)
-	_, spaceName := defaultTestSpace(t)
-
 	refRoute := "cloudfoundry_route.test-app"
 
 	resource.Test(t,
@@ -555,7 +331,7 @@ func TestAccAppVersions_app1(t *testing.T) {
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(multipleVersion, defaultAppDomain(), orgName, spaceName),
+					Config: fmt.Sprintf(multipleVersion, defaultAppDomain(), orgName, spaceName, appPath),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
@@ -568,7 +344,7 @@ func TestAccAppVersions_app1(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(multipleVersionUpdate, defaultAppDomain(), orgName, spaceName),
+					Config: fmt.Sprintf(multipleVersionUpdate, defaultAppDomain(), orgName, spaceName, appPath),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
@@ -583,40 +359,42 @@ func TestAccAppVersions_app1(t *testing.T) {
 		})
 }
 
-func TestAccApp_app1(t *testing.T) {
+func TestAccResApp_app1(t *testing.T) {
 
 	_, orgName := defaultTestOrg(t)
 	spaceID, spaceName := defaultTestSpace(t)
 	serviceName1, serviceName2, servicePlan := getTestServiceBrokers(t)
 
-	refApp := "cloudfoundry_app.java-spring"
+	refApp := "cloudfoundry_app.dummy-app"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
+			CheckDestroy: testAccCheckAppDestroyed([]string{"dummy-app"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceJavaSpring,
+					Config: fmt.Sprintf(appResource,
 						defaultAppDomain(),
 						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
+						serviceName1, serviceName2, servicePlan, servicePlan,
+						appPath,
+					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
+						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
+						resource.TestCheckResourceAttr(refApp, "memory", "64"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
 						resource.TestCheckResourceAttrSet(refApp, "stack"),
 						resource.TestCheckResourceAttr(refApp, "environment.%", "2"),
@@ -629,24 +407,26 @@ func TestAccApp_app1(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(appResourceJavaSpringUpdate,
+					Config: fmt.Sprintf(appResourceUpdate,
 						defaultAppDomain(),
 						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan, servicePlan),
+						serviceName1, serviceName2, servicePlan, servicePlan, servicePlan,
+						appPath,
+					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring-updated"),
+						resource.TestCheckResourceAttr(refApp, "name", "dummy-app-updated"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "2"),
-						resource.TestCheckResourceAttr(refApp, "memory", "1024"),
+						resource.TestCheckResourceAttr(refApp, "memory", "128"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "1024"),
 						resource.TestCheckResourceAttrSet(refApp, "stack"),
 						resource.TestCheckResourceAttr(refApp, "environment.%", "2"),
@@ -660,366 +440,189 @@ func TestAccApp_app1(t *testing.T) {
 			},
 		})
 }
-func TestAccApp_app2(t *testing.T) {
 
-	_, orgName := defaultTestOrg(t)
-	spaceID, spaceName := defaultTestSpace(t)
-
-	refApp := "cloudfoundry_app.test-app"
-
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"test-app"}),
-			Steps: []resource.TestStep{
-
-				resource.TestStep{
-					Config: fmt.Sprintf(appResourceWithMultiplePorts,
-						defaultAppDomain(),
-						orgName, spaceName,
-						os.Getenv("GITHUB_USER"), os.Getenv("GITHUB_TOKEN")),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
-							responses := []string{"8888"}
-							if err = assertHTTPResponse("https://test-app-8888."+defaultAppDomain()+"/port", 200, &responses); err != nil {
-								return err
-							}
-							responses = []string{"9999"}
-							if err = assertHTTPResponse("https://test-app-9999."+defaultAppDomain()+"/port", 200, &responses); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "test-app"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "2"),
-						resource.TestCheckResourceAttr(refApp, "ports.8888", "8888"),
-						resource.TestCheckResourceAttr(refApp, "ports.9999", "9999"),
-					),
-				},
-			},
-		})
-}
-
-func TestApp_OldStyleRoutes_failLiveStage(t *testing.T) {
-
-	_, orgName := defaultTestOrg(t)
-	_, spaceName := defaultTestSpace(t)
-	serviceName1, serviceName2, servicePlan := getTestServiceBrokers(t)
-
-	resource.Test(t,
-		resource.TestCase{
-			IsUnitTest:   true,
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
-			Steps: []resource.TestStep{
-
-				resource.TestStep{
-					PlanOnly:    true,
-					ExpectError: regexp.MustCompile("\\[REMOVED\\] Support for the non-default route has been removed."),
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						``,
-						`route {
-              live_route = "${cloudfoundry_route.java-spring.id}"
-            }`,
-					),
-				},
-
-				resource.TestStep{
-					PlanOnly:    true,
-					ExpectError: regexp.MustCompile("\\[REMOVED\\] Support for the non-default route has been removed."),
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						``,
-						`route {
-              stage_route = "${cloudfoundry_route.java-spring.id}"
-            }`,
-					),
-				},
-			},
-		})
-}
-
-func TestAccApp_NewStyleRoutes_updateTo(t *testing.T) {
+func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 
 	_, orgName := defaultTestOrg(t)
 	spaceID, spaceName := defaultTestSpace(t)
 	serviceName1, serviceName2, servicePlan := getTestServiceBrokers(t)
 
-	refApp := "cloudfoundry_app.java-spring"
+	refApp := "cloudfoundry_app.dummy-app"
 
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:     func() { testAccPreCheck(t) },
 			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
+			CheckDestroy: testAccCheckAppDestroyed([]string{"dummy-app"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
 						defaultAppDomain(),
 						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						``,
-						`route {
-              default_route = "${cloudfoundry_route.java-spring.id}"
-            }`,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckResourceAttr(refApp, "route.#", "1"),
-						resource.TestCheckNoResourceAttr(refApp, "routes.#"),
-					),
-				},
-
-				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
-						defaultAppDomain(), orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
+						serviceName1, serviceName2, servicePlan, servicePlan, appPath),
 						``,
 						`routes {
-              route = "${cloudfoundry_route.java-spring.id}"
+              route = "${cloudfoundry_route.dummy-app.id}"
             }`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
+						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
+						resource.TestCheckResourceAttr(refApp, "memory", "64"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
 						resource.TestCheckResourceAttrSet(refApp, "stack"),
 						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
 						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
 						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
 						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckResourceAttr(refApp, "route.#", "0"),
 						resource.TestCheckResourceAttr(refApp, "routes.#", "1"),
 					),
 				},
-			},
-		})
-}
-
-func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
-
-	_, orgName := defaultTestOrg(t)
-	spaceID, spaceName := defaultTestSpace(t)
-	serviceName1, serviceName2, servicePlan := getTestServiceBrokers(t)
-
-	refApp := "cloudfoundry_app.java-spring"
-
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
-			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
 						defaultAppDomain(),
 						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						``,
-						`route {
-              default_route = "${cloudfoundry_route.java-spring.id}"
-            }`,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckResourceAttr(refApp, "route.#", "1"),
-						resource.TestCheckNoResourceAttr(refApp, "routes.#"),
-					),
-				},
-
-				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						`resource "cloudfoundry_route" "java-spring-2" {
+						serviceName1, serviceName2, servicePlan, servicePlan, appPath),
+						`resource "cloudfoundry_route" "dummy-app-2" {
               domain = "${data.cloudfoundry_domain.local.id}"
               space = "${data.cloudfoundry_space.space.id}"
-              hostname = "java-spring-2"
+              hostname = "dummy-app-2"
             }`,
 						`routes {
-              route = "${cloudfoundry_route.java-spring.id}"
+              route = "${cloudfoundry_route.dummy-app.id}"
             }
             routes {
-              route = "${cloudfoundry_route.java-spring-2.id}"
+              route = "${cloudfoundry_route.dummy-app-2.id}"
             }`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
-							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
+						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
+						resource.TestCheckResourceAttr(refApp, "memory", "64"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
 						resource.TestCheckResourceAttrSet(refApp, "stack"),
 						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
 						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
 						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
 						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckResourceAttr(refApp, "route.#", "0"),
 						resource.TestCheckResourceAttr(refApp, "routes.#", "2"),
 					),
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
 						defaultAppDomain(),
 						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						`resource "cloudfoundry_route" "java-spring-2" {
+						serviceName1, serviceName2, servicePlan, servicePlan, appPath),
+						`resource "cloudfoundry_route" "dummy-app-2" {
               domain = "${data.cloudfoundry_domain.local.id}"
               space = "${data.cloudfoundry_space.space.id}"
-              hostname = "java-spring-2"
+              hostname = "dummy-app-2"
             }`,
 						`routes {
-              route = "${cloudfoundry_route.java-spring.id}"
+              route = "${cloudfoundry_route.dummy-app.id}"
             }`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
-							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 404, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 404, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
+						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
+						resource.TestCheckResourceAttr(refApp, "memory", "64"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
 						resource.TestCheckResourceAttrSet(refApp, "stack"),
 						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
 						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
 						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
 						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckResourceAttr(refApp, "route.#", "0"),
 						resource.TestCheckResourceAttr(refApp, "routes.#", "1"),
 					),
 				},
 
 				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
+					Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
 						defaultAppDomain(),
 						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						`resource "cloudfoundry_route" "java-spring-2" {
+						serviceName1, serviceName2, servicePlan, servicePlan, appPath),
+						`resource "cloudfoundry_route" "dummy-app-2" {
               domain = "${data.cloudfoundry_domain.local.id}"
               space = "${data.cloudfoundry_space.space.id}"
-              hostname = "java-spring-2"
+              hostname = "dummy-app-2"
             }
-            resource "cloudfoundry_route" "java-spring-3" {
+            resource "cloudfoundry_route" "dummy-app-3" {
               domain = "${data.cloudfoundry_domain.local.id}"
               space = "${data.cloudfoundry_space.space.id}"
-              hostname = "java-spring-3"
+              hostname = "dummy-app-3"
             }`,
 						`routes {
-              route = "${cloudfoundry_route.java-spring-2.id}"
+              route = "${cloudfoundry_route.dummy-app-2.id}"
             }
             routes {
-              route = "${cloudfoundry_route.java-spring-3.id}"
+              route = "${cloudfoundry_route.dummy-app-3.id}"
             }`,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 404, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 404, nil); err != nil {
 								return err
 							}
-							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
-							if err = assertHTTPResponse("https://java-spring-3."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app-3."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
+						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
+						resource.TestCheckResourceAttr(refApp, "memory", "64"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
 						resource.TestCheckResourceAttrSet(refApp, "stack"),
 						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
 						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
 						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
 						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckResourceAttr(refApp, "route.#", "0"),
 						resource.TestCheckResourceAttr(refApp, "routes.#", "2"),
 					),
 				},
@@ -1027,253 +630,7 @@ func TestAccApp_NewStyleRoutes_updateToAndmore(t *testing.T) {
 		})
 }
 
-func TestAccApp_NewStyleRoutes_Create(t *testing.T) {
-
-	_, orgName := defaultTestOrg(t)
-	spaceID, spaceName := defaultTestSpace(t)
-	serviceName1, serviceName2, servicePlan := getTestServiceBrokers(t)
-
-	refApp := "cloudfoundry_app.java-spring"
-
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
-			Steps: []resource.TestStep{
-
-				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						``,
-						`routes {
-              route = "${cloudfoundry_route.java-spring.id}"
-            }`,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckNoResourceAttr(refApp, "route.#"),
-						resource.TestCheckResourceAttr(refApp, "routes.#", "1"),
-					),
-				},
-			},
-		})
-}
-
-func TestAccApp_NewStyleRoutes_Change(t *testing.T) {
-
-	_, orgName := defaultTestOrg(t)
-	spaceID, spaceName := defaultTestSpace(t)
-	serviceName1, serviceName2, servicePlan := getTestServiceBrokers(t)
-
-	refApp := "cloudfoundry_app.java-spring"
-
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
-			Steps: []resource.TestStep{
-
-				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						``,
-						`routes {
-              route = "${cloudfoundry_route.java-spring.id}"
-            }`,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckNoResourceAttr(refApp, "route.#"),
-						resource.TestCheckResourceAttr(refApp, "routes.#", "1"),
-					),
-				},
-
-				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						`resource "cloudfoundry_route" "java-spring-2" {
-              domain = "${data.cloudfoundry_domain.local.id}"
-              space = "${data.cloudfoundry_space.space.id}"
-              hostname = "java-spring-2"
-            }`,
-						`routes {
-              route = "${cloudfoundry_route.java-spring-2.id}"
-            }`,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 404, nil); err != nil {
-								return err
-							}
-							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckNoResourceAttr(refApp, "route.#"),
-						resource.TestCheckResourceAttr(refApp, "routes.#", "1"),
-					),
-				},
-			},
-		})
-}
-
-func TestAccApp_NewStyleRoutes_Add(t *testing.T) {
-
-	_, orgName := defaultTestOrg(t)
-	spaceID, spaceName := defaultTestSpace(t)
-	serviceName1, serviceName2, servicePlan := getTestServiceBrokers(t)
-
-	refApp := "cloudfoundry_app.java-spring"
-
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"java-spring"}),
-			Steps: []resource.TestStep{
-
-				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						``,
-						`routes {
-              route = "${cloudfoundry_route.java-spring.id}"
-            }`,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckNoResourceAttr(refApp, "route.#"),
-						resource.TestCheckResourceAttr(refApp, "routes.#", "1"),
-					),
-				},
-
-				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceJavaSpringTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan),
-						`resource "cloudfoundry_route" "java-spring-2" {
-              domain = "${data.cloudfoundry_domain.local.id}"
-              space = "${data.cloudfoundry_space.space.id}"
-              hostname = "java-spring-2"
-            }`,
-						`routes {
-              route = "${cloudfoundry_route.java-spring.id}"
-            }
-            routes {
-              route = "${cloudfoundry_route.java-spring-2.id}"
-            }`,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
-
-							if err = assertHTTPResponse("https://java-spring."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							if err = assertHTTPResponse("https://java-spring-2."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "java-spring"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "768"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckNoResourceAttr(refApp, "route.#"),
-						resource.TestCheckResourceAttr(refApp, "routes.#", "2"),
-					),
-				},
-			},
-		})
-}
-
-func TestAccApp_dockerApp(t *testing.T) {
+func TestAccResApp_dockerApp(t *testing.T) {
 
 	_, orgName := defaultTestOrg(t)
 	spaceID, spaceName := defaultTestSpace(t)
@@ -1321,39 +678,116 @@ func TestAccApp_dockerApp(t *testing.T) {
 		})
 }
 
-func testAccCheckAppExists(resApp string, validate func() error) resource.TestCheckFunc {
+func TestAccResApp_app_bluegreen(t *testing.T) {
 
-	return func(s *terraform.State) (err error) {
+	spaceID, _ := defaultTestSpace(t)
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+	refApp := "cloudfoundry_app.dummy-app"
+	appDeploy := &appdeployers.AppDeploy{}
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
+			Providers:    testAccProviders,
+			CheckDestroy: testAccCheckAppDestroyed([]string{"dummy-app"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceBlueGreen,
+						defaultAppDomain(),
+						spaceID, spaceID,
+						"1",
+						appPath,
+					),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckAppExistsInject(refApp, appDeploy, func() (err error) {
+
+							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+					),
+				},
+
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceBlueGreen,
+						defaultAppDomain(),
+						spaceID, spaceID,
+						"2",
+						appPath,
+					),
+					Check: resource.ComposeTestCheckFunc(
+						func(s *terraform.State) error {
+							err := assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil)
+							if err != nil {
+								return err
+							}
+							rs, ok := s.RootModule().Resources[refApp]
+							if !ok {
+								return fmt.Errorf("app '%s' not found in terraform state", refApp)
+							}
+
+							id := rs.Primary.ID
+							if id == appDeploy.App.GUID {
+								return fmt.Errorf("After blue green deployment, app must have changed but GUID are the same between previous and update")
+							}
+							return nil
+						},
+					),
+				},
+			},
+		})
+}
+
+func testAccCheckAppExistsInject(resApp string, appDeploy *appdeployers.AppDeploy, validate func() error) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resApp]
 		if !ok {
 			return fmt.Errorf("app '%s' not found in terraform state", resApp)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resApp, rs)
+		id := rs.Primary.ID
+
+		app, _, err := session.ClientV2.GetApplication(id)
+		if err != nil {
+			return err
+		}
+
+		serviceBindings, _, err := session.ClientV2.GetServiceBindings(ccv2.FilterEqual(constant.AppGUIDFilter, id))
+		if err != nil {
+			return err
+		}
+
+		routeMappings, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.AppGUIDFilter, id))
+		if err != nil {
+			return err
+		}
+		appDeploy.App = app
+		appDeploy.ServiceBindings = serviceBindings
+		appDeploy.Mappings = routeMappings
+		return validate()
+	}
+}
+func testAccCheckAppExists(resApp string, validate func() error) resource.TestCheckFunc {
+
+	return func(s *terraform.State) error {
+
+		session := testAccProvider.Meta().(*managers.Session)
+
+		rs, ok := s.RootModule().Resources[resApp]
+		if !ok {
+			return fmt.Errorf("app '%s' not found in terraform state", resApp)
+		}
 
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		var (
-			app             cfapi.CCApp
-			routeMappings   []map[string]interface{}
-			serviceBindings []map[string]interface{}
-		)
-
-		am := session.AppManager()
-		rm := session.RouteManager()
-
-		if app, err = am.ReadApp(id); err != nil {
+		app, _, err := session.ClientV2.GetApplication(id)
+		if err != nil {
 			return err
 		}
-		session.Log.DebugMessage(
-			"retrieved app for resource '%s' with id '%s': %# v",
-			resApp, id, app)
 
 		if err = assertEquals(attributes, "name", app.Name); err != nil {
 			return err
@@ -1361,142 +795,100 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 		if err = assertEquals(attributes, "space", app.SpaceGUID); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "instances", app.Instances); err != nil {
+		if err = assertEquals(attributes, "instances", app.Instances.Value); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "memory", app.Memory); err != nil {
+		if err = assertEquals(attributes, "memory", app.Memory.Value); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "disk_quota", app.DiskQuota); err != nil {
+		if err = assertEquals(attributes, "disk_quota", app.DiskQuota.Value); err != nil {
 			return err
 		}
 		if err = assertEquals(attributes, "stack", app.StackGUID); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "buildpack", app.Buildpack); err != nil {
+		if err = assertEquals(attributes, "buildpack", app.Buildpack.Value); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "command", app.Command); err != nil {
+		if err = assertEquals(attributes, "command", app.Command.Value); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "enable_ssh", app.EnableSSH); err != nil {
+		if err = assertEquals(attributes, "enable_ssh", app.EnableSSH.Value); err != nil {
 			return err
 		}
 		if err = assertEquals(attributes, "health_check_http_endpoint", app.HealthCheckHTTPEndpoint); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "health_check_type", app.HealthCheckType); err != nil {
+		if err = assertEquals(attributes, "health_check_type", string(app.HealthCheckType)); err != nil {
 			return err
 		}
 		if err = assertEquals(attributes, "health_check_timeout", app.HealthCheckTimeout); err != nil {
 			return err
 		}
-		if err = assertMapEquals("environment", attributes, *app.Environment); err != nil {
+		envVars := make(map[string]interface{})
+		for k, v := range app.EnvironmentVariables {
+			envVars[k] = v
+		}
+		if err = assertMapEquals("environment", attributes, envVars); err != nil {
 			return err
 		}
-
-		if serviceBindings, err = am.ReadServiceBindingsByApp(id); err != nil {
+		serviceBindings, _, err := session.ClientV2.GetServiceBindings(ccv2.FilterEqual(constant.AppGUIDFilter, id))
+		if err != nil {
 			return err
 		}
-		session.Log.DebugMessage(
-			"retrieved service bindings for app with id '%s': %# v",
-			id, serviceBindings)
-
 		if err = assertListEquals(attributes, "service_binding", len(serviceBindings),
 			func(values map[string]string, i int) (match bool) {
-				var binding map[string]interface{}
-
-				serviceInstanceID := values["service_instance"]
-				binding = nil
-
+				found := false
 				for _, b := range serviceBindings {
-					if serviceInstanceID == b["service_instance"] {
-						binding = b
+					if values["service_instance"] == b.ServiceInstanceGUID {
+						found = true
 						break
 					}
 				}
-
-				if binding != nil && values["binding_id"] == binding["binding_id"] {
-					return true
-				}
-				return false
+				return found
 
 			}); err != nil {
 			return err
 		}
-
-		if routeMappings, err = rm.ReadRouteMappingsByApp(id); err != nil {
-			return
+		routeMappingsC, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.AppGUIDFilter, id))
+		if err != nil {
+			return err
 		}
-		session.Log.DebugMessage(
-			"retrieved routes for app with id '%s': %# v",
-			id, routeMappings)
-
+		routeMappings := make([]map[string]interface{}, 0)
+		for _, mapping := range routeMappingsC {
+			curMapping := make(map[string]interface{})
+			curMapping["route"] = mapping.RouteGUID
+			curMapping["port"] = mapping.AppPort
+			routeMappings = append(routeMappings, curMapping)
+		}
 		if err = validateRouteMappings(attributes, routeMappings); err != nil {
-			return
+			return err
 		}
 
-		err = validate()
-		return
+		return validate()
 	}
 }
 
 func validateRouteMappings(attributes map[string]string, routeMappings []map[string]interface{}) (err error) {
-
-	var (
-		routeID, mappingID string
-		mapping            map[string]interface{}
-
-		ok bool
-	)
-
-	if _, isOldStyle := attributes["route.0.default_route"]; isOldStyle {
-		routeKey := "route.0.default_route"
-		routeMappingKey := "route.0.default_route_mapping_id"
-
-		if routeID, ok = attributes[routeKey]; ok && len(routeID) > 0 {
-			if mappingID, ok = attributes[routeMappingKey]; !ok || len(mappingID) == 0 {
-				return fmt.Errorf("default route '%s' does not have a corresponding mapping id in the state", routeID)
-			}
-
-			mapping = nil
-			for _, r := range routeMappings {
-				if mappingID == r["mapping_id"] {
-					mapping = r
-					break
-				}
-			}
-			if mapping == nil {
-				return fmt.Errorf("unable to find route mapping with id '%s' for route '%s'", mappingID, routeID)
-			}
-			if routeID != mapping["route"] {
-				return fmt.Errorf("route mapping with id '%s' does not map to route '%s'", mappingID, routeID)
-			}
-		}
+	entity := resourceApp()
+	reader := &schema.MapFieldReader{
+		Schema: entity.Schema,
+		Map:    schema.BasicMapReader(attributes),
+	}
+	result, err := reader.ReadField([]string{"routes"})
+	if err != nil {
 		return err
-	} else if _, isNewStyle := attributes["routes.0.route"]; isNewStyle {
-
-		for i := 0; true; i++ {
-			if routeID, ok := attributes[fmt.Sprintf("routes.%d.route", i)]; !ok {
-				break
-			} else {
-				if mappingID, ok := attributes[fmt.Sprintf("routes.%d.mapping_id", i)]; !ok {
-					return fmt.Errorf("Route with no mapping ID recored (routes.%d.route=%s)", i, routeID)
-				} else {
-					for _, r := range routeMappings {
-						if mappingID == r["mapping_id"] {
-							mapping = r
-							break
-						}
-					}
-					if mapping == nil {
-						return fmt.Errorf("unable to find route mapping with id '%s' for route '%s'", mappingID, routeID)
-					}
-					if routeID != mapping["route"] {
-						return fmt.Errorf("route mapping with id '%s' does not map to route '%s'", mappingID, routeID)
-					}
-				}
-			}
+	}
+	routesTf := getListOfStructs(result.Value)
+	for _, routeTf := range routesTf {
+		match := func(object interface{}) bool {
+			routeMapping := object.(map[string]interface{})
+			return routeTf["route"] == routeMapping["route"]
+		}
+		if !isInSlice(routeMappings, match) {
+			return fmt.Errorf("unable to find route mapping for route '%s' and port '%d' matching cf mapping",
+				routeTf["route"], routeTf["port"],
+			)
 		}
 	}
 	return nil
@@ -1506,17 +898,16 @@ func testAccCheckAppDestroyed(apps []string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 		for _, a := range apps {
-			if _, err := session.AppManager().FindApp(a); err != nil {
-				switch err.(type) {
-				case *errors.ModelNotFoundError:
-					continue
-				default:
-					return err
-				}
+			apps, _, err := session.ClientV2.GetApplications(ccv2.FilterByName(a))
+			if err != nil {
+				return err
 			}
-			return fmt.Errorf("app with name '%s' still exists in cloud foundry", a)
+			if len(apps) > 0 {
+				_, err := session.ClientV2.DeleteApplication(apps[0].GUID)
+				return err
+			}
 		}
 		return nil
 	}

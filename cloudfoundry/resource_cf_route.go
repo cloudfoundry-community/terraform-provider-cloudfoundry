@@ -2,12 +2,13 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 func resourceRoute() *schema.Resource {
@@ -20,7 +21,7 @@ func resourceRoute() *schema.Resource {
 		Delete: resourceRouteDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportStatePassthrough,
+			State: ImportRead(resourceRouteRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -28,6 +29,7 @@ func resourceRoute() *schema.Resource {
 			"domain": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"space": &schema.Schema{
 				Type:     schema.TypeString,
@@ -41,27 +43,33 @@ func resourceRoute() *schema.Resource {
 				Type:          schema.TypeInt,
 				Optional:      true,
 				Computed:      true,
-				ConflictsWith: []string{"path", "random_port"},
+				ConflictsWith: []string{"random_port"},
 			},
 			"random_port": &schema.Schema{
 				Type:          schema.TypeBool,
 				Optional:      true,
 				ForceNew:      true,
-				ConflictsWith: []string{"path", "port"},
+				ConflictsWith: []string{"port"},
 			},
 			"path": &schema.Schema{
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"port"},
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
 			},
 			"endpoint": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
 			},
 			"target": &schema.Schema{
-				Type:     schema.TypeSet,
-				Set:      routeTargetHash,
+				Type: schema.TypeSet,
+				Set: func(v interface{}) int {
+					elem := v.(map[string]interface{})
+					return hashcode.String(fmt.Sprintf(
+						"%s-%d",
+						elem["app"],
+						elem["port"],
+					))
+				},
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -74,10 +82,6 @@ func resourceRoute() *schema.Resource {
 							Optional: true,
 							Default:  8080,
 						},
-						"mapping_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
 					},
 				},
 			},
@@ -85,52 +89,26 @@ func resourceRoute() *schema.Resource {
 	}
 }
 
-func routeTargetHash(d interface{}) int {
+func resourceRouteCreate(d *schema.ResourceData, meta interface{}) error {
 
-	a := d.(map[string]interface{})["app"].(string)
-
-	p := ""
-	if v, ok := d.(map[string]interface{})["port"]; ok {
-		p = strconv.Itoa(v.(int))
-	}
-
-	return hashcode.String(a + p)
-}
-
-func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
+	session := meta.(*managers.Session)
 	if session == nil {
 		return fmt.Errorf("client is nil")
 	}
+	port := types.NullInt{}
+	if v, ok := d.GetOk("port"); ok {
+		port.Value = v.(int)
+		port.IsSet = true
+	}
 
-	route := cfapi.CCRoute{
+	route, _, err := session.ClientV2.CreateRoute(ccv2.Route{
 		DomainGUID: d.Get("domain").(string),
 		SpaceGUID:  d.Get("space").(string),
-	}
-
-	if v, ok := d.GetOk("hostname"); ok {
-		vv := v.(string)
-		route.Hostname = &vv
-	}
-	if v, ok := d.GetOk("port"); ok {
-		vv := v.(int)
-		route.Port = &vv
-	}
-	if v, ok := d.GetOk("path"); ok {
-		vv := v.(string)
-		route.Path = &vv
-	}
-
-	randomPort := false
-	if v, ok := d.GetOk("random_port"); ok {
-		randomPort = v.(bool)
-	}
-
-	rm := session.RouteManager()
-
-	// Create route
-	if route, err = rm.CreateRoute(route, randomPort); err != nil {
+		Host:       d.Get("hostname").(string),
+		Path:       d.Get("path").(string),
+		Port:       port,
+	}, d.Get("random_port").(bool))
+	if err != nil {
 		return err
 	}
 	// Delete route if an error occurs
@@ -139,7 +117,7 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
 		if *e == nil {
 			return
 		}
-		err = rm.DeleteRoute(route.ID)
+		_, err = session.ClientV2.DeleteRoute(route.GUID)
 		if err != nil {
 			panic(err)
 		}
@@ -151,32 +129,26 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) (err error) {
 
 	if v, ok := d.GetOk("target"); ok {
 		var t interface{}
-		if t, err = addTargets(route.ID, getListOfStructs(v.(*schema.Set).List()), rm, session.Log); err != nil {
+		if t, err = addTargets(route.GUID, getListOfStructs(v.(*schema.Set).List()), session); err != nil {
 			return err
 		}
 		d.Set("target", t)
-		session.Log.DebugMessage("Mapped route targets: %# v", d.Get("target"))
 	}
 
-	d.SetId(route.ID)
+	d.SetId(route.GUID)
 	return err
 }
 
-func resourceRouteRead(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
+func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
 	id := d.Id()
-	rm := session.RouteManager()
 
-	var route cfapi.CCRoute
-	if route, err = rm.ReadRoute(id); err != nil {
-		if strings.Contains(err.Error(), "status code: 404") {
+	route, _, err := session.ClientV2.GetRoute(id)
+	if err != nil {
+		if IsErrNotFound(err) {
 			d.SetId("")
-			err = nil
+			return nil
 		}
 		return err
 	}
@@ -184,160 +156,167 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) (err error) {
 		return err
 	}
 
-	if _, ok := d.GetOk("target"); ok || IsImportState(d) {
-		var mappings []map[string]interface{}
-		if mappings, err = rm.ReadRouteMappingsByRoute(id); err != nil {
-			return err
+	if _, ok := d.GetOk("target"); !ok && !IsImportState(d) {
+		return nil
+	}
+	mappingsTf := make([]map[string]interface{}, 0)
+	tfTargets := d.Get("target").(*schema.Set).List()
+	mappings, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.RouteGUIDFilter, d.Id()))
+	if err != nil {
+		return err
+	}
+	if IsImportState(d) {
+		for _, mapping := range mappings {
+			mappingsTf = append(mappingsTf, map[string]interface{}{
+				"app":  mapping.AppGUID,
+				"port": mapping.AppPort,
+			})
 		}
-		if len(mappings) > 0 {
-			d.Set("target", mappings)
+		if len(mappingsTf) > 0 {
+			d.Set("target", mappingsTf)
+		}
+		return nil
+	}
+
+	final := make([]map[string]interface{}, 0)
+	for _, tfTarget := range tfTargets {
+		inside := false
+		tmpT := tfTarget.(map[string]interface{})
+		for _, mapping := range mappings {
+			if mapping.AppGUID == tmpT["app"] && mapping.AppPort == tmpT["port"] {
+				inside = true
+				tmpT["port"] = mapping.AppPort
+				tmpT["app"] = mapping.AppGUID
+				break
+			}
+		}
+		if inside {
+			final = append(final, tmpT)
 		}
 	}
+	d.Set("target", final)
 	return nil
 }
 
-func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
+func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+	port := types.NullInt{}
+	if v, ok := d.GetOk("port"); ok {
+		port.Value = v.(int)
+		port.IsSet = true
 	}
-	rm := session.RouteManager()
-
-	route := cfapi.CCRoute{
-		ID: d.Id(),
-	}
-
-	update := false
-	route.DomainGUID = *getChangedValueString("domain", &update, d)
-	route.SpaceGUID = *getChangedValueString("space", &update, d)
-	route.Hostname = getChangedValueString("hostname", &update, d)
-
-	if update {
-		if route, err = rm.UpdateRoute(route); err != nil {
+	if d.HasChange("domain") || d.HasChange("space") || d.HasChange("hostname") {
+		route, _, err := session.ClientV2.UpdateRoute(ccv2.Route{
+			GUID:       d.Id(),
+			DomainGUID: d.Get("domain").(string),
+			SpaceGUID:  d.Get("space").(string),
+			Host:       d.Get("hostname").(string),
+			Path:       d.Get("path").(string),
+			Port:       port,
+		})
+		if err != nil {
 			return err
 		}
-		if err = setRouteArguments(session, route, d); err != nil {
+		err = setRouteArguments(session, route, d)
+		if err != nil {
 			return err
 		}
 	}
 
 	if d.HasChange("target") {
 		old, new := d.GetChange("target")
-		session.Log.DebugMessage("Old route mappings state:: %# v", old)
-		session.Log.DebugMessage("New route mappings state:: %# v", new)
-
-		if err = removeTargets(getListOfStructs(old.(*schema.Set).List()), rm, session.Log); err != nil {
+		remove, add := getListMapChanges(old, new, func(source, item map[string]interface{}) bool {
+			return source["app"] == item["app"] && source["port"] == item["port"]
+		})
+		err := removeTargets(d.Id(), remove, session)
+		if err != nil {
 			return err
 		}
 
-		var t interface{}
-		if t, err = addTargets(route.ID, getListOfStructs(new.(*schema.Set).List()), rm, session.Log); err != nil {
+		t, err := addTargets(d.Id(), add, session)
+		if err != nil {
 			return err
 		}
 		d.Set("target", t)
-		session.Log.DebugMessage("Updated route target mappings: %# v", d.Get("target"))
 	}
 	return nil
 }
 
-func resourceRouteDelete(d *schema.ResourceData, meta interface{}) (err error) {
-
-	session := meta.(*cfapi.Session)
-	if session == nil {
-		return fmt.Errorf("client is nil")
-	}
-	rm := session.RouteManager()
+func resourceRouteDelete(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
 
 	if targets, ok := d.GetOk("target"); ok {
-		err = removeTargets(getListOfStructs(targets.(*schema.Set).List()), rm, session.Log)
+		err := removeTargets(d.Id(), getListOfStructs(targets.(*schema.Set).List()), session)
 		if err != nil {
 			return err
 		}
 	}
-	if err = rm.DeleteRoute(d.Id()); err != nil {
-		return err
-	}
-	return nil
+	_, err := session.ClientV2.DeleteRoute(d.Id())
+	return err
 }
 
-func setRouteArguments(session *cfapi.Session, route cfapi.CCRoute, d *schema.ResourceData) (err error) {
+func setRouteArguments(session *managers.Session, route ccv2.Route, d *schema.ResourceData) (err error) {
 
 	d.Set("domain", route.DomainGUID)
 	d.Set("space", route.SpaceGUID)
-	if route.Hostname != nil {
-		d.Set("hostname", route.Hostname)
+	d.Set("hostname", route.Host)
+	if route.Port.IsSet {
+		d.Set("port", route.Port.Value)
 	}
-	if route.Port != nil {
-		d.Set("port", route.Port)
-	}
-	if route.Path != nil {
-		d.Set("path", route.Path)
-	}
+	d.Set("path", route.Path)
 
-	domain, err := session.DomainManager().FindDomain(route.DomainGUID)
-	if err != nil {
-		return err
+	domain, _, err := session.ClientV2.GetSharedDomain(route.DomainGUID)
+	if err != nil || domain.GUID == "" {
+		domain, _, err = session.ClientV2.GetPrivateDomain(route.DomainGUID)
+		if err != nil {
+			return err
+		}
 	}
-	if route.Port != nil && *route.Port > 0 {
-		d.Set("endpoint", fmt.Sprintf("%s:%d", domain.Name, *route.Port))
-	} else if route.Path == nil || len(*route.Path) == 0 {
-		d.Set("endpoint", fmt.Sprintf("%s.%s", *route.Hostname, domain.Name))
-	} else {
-		d.Set("endpoint", fmt.Sprintf("%s.%s/%s", *route.Hostname, domain.Name, *route.Path))
+	port := ""
+	if route.Port.IsSet && route.Port.Value > 0 && domain.RouterGroupGUID != "" {
+		port = fmt.Sprintf(":%d", route.Port.Value)
 	}
-
+	endpoint := fmt.Sprintf("%s.%s%s", route.Host, domain.Name, port)
+	if route.Path != "" {
+		endpoint += "/" + route.Path
+	}
+	d.Set("endpoint", endpoint)
 	return nil
 }
 
-func addTargets(
-	id string,
-	add []map[string]interface{},
-	rm *cfapi.RouteManager,
-	log *cfapi.Logger) (targets []map[string]interface{}, err error) {
-
-	var (
-		appID, mappingID string
-		port             *int
-	)
+func addTargets(id string, add []map[string]interface{}, session *managers.Session) ([]map[string]interface{}, error) {
+	targets := make([]map[string]interface{}, 0)
 
 	for _, t := range add {
-
-		appID = t["app"].(string)
-		port = nil
+		appID := t["app"].(string)
+		port := 8080
 		if v, ok := t["port"]; ok {
-			vv := v.(int)
-			port = &vv
+			port = v.(int)
 		}
-		if mappingID, err = rm.CreateRouteMapping(id, appID, port); err != nil {
+		_, _, err := session.ClientV2.CreateRouteMapping(appID, id, port)
+		if err != nil {
 			return targets, err
 		}
-		t["mapping_id"] = mappingID
 		targets = append(targets, t)
-
-		log.DebugMessage("Created route mapping with id '%s' to app instance '%s'.", mappingID, appID)
 	}
 	return targets, nil
 }
 
-func removeTargets(
-	delete []map[string]interface{},
-	rm *cfapi.RouteManager,
-	log *cfapi.Logger) error {
+func removeTargets(id string, delete []map[string]interface{}, session *managers.Session) error {
 
 	for _, t := range delete {
-
-		appID := t["app"].(string)
-		mappingID := t["mapping_id"].(string)
-		log.DebugMessage("Deleting route mapping with id '%s' to app instance '%s'.", mappingID, appID)
-
-		if len(mappingID) > 0 {
-			log.DebugMessage("Deleting route mapping with id '%s' to app instance '%s'.", mappingID, appID)
-			if err := rm.DeleteRouteMapping(mappingID); err != nil {
+		mappings, _, err := session.ClientV2.GetRouteMappings(filterAppGuid(t["app"].(string)), filterRouteGuid(id))
+		if err != nil {
+			return err
+		}
+		for _, mapping := range mappings {
+			if mapping.AppPort != t["port"] {
+				continue
+			}
+			_, err := session.ClientV2.DeleteRouteMapping(mapping.GUID)
+			if err != nil && !IsErrNotFound(err) {
 				return err
 			}
-		} else {
-			log.DebugMessage("Ignoring mapping app instance '%s' as no corresponding mapping id was found.", appID)
 		}
 	}
 	return nil

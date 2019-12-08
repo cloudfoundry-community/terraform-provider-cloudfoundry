@@ -4,87 +4,56 @@ import (
 	"fmt"
 	"testing"
 
-	"code.cloudfoundry.org/cli/cf/errors"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/cfapi"
 )
 
 const serviceInstanceResourceCreate = `
-
-data "cloudfoundry_org" "org" {
-  name = "%s"
-}
-data "cloudfoundry_space" "space" {
-  name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
-}
 data "cloudfoundry_service" "test-service" {
   name = "%s"
 }
 
 resource "cloudfoundry_service_instance" "test-service-instance" {
   name = "test-service-instance"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   service_plan = "${data.cloudfoundry_service.test-service.service_plans["%s"]}"
   tags = [ "tag-1" , "tag-2" ]
 }
 `
 
 const serviceInstanceResourceUpdate = `
-
-data "cloudfoundry_org" "org" {
-  name = "%s"
-}
-data "cloudfoundry_space" "space" {
-  name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
-}
 data "cloudfoundry_service" "test-service" {
   name = "%s"
 }
 
 resource "cloudfoundry_service_instance" "test-service-instance" {
   name = "test-service-instance-updated"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   service_plan = "${data.cloudfoundry_service.test-service.service_plans["%s"]}"
   tags = [ "tag-2", "tag-3", "tag-4" ]
 }
 `
 
 const serviceInstanceResourceAsyncCreate = `
-
-data "cloudfoundry_org" "org" {
-  name = "%s"
-}
-data "cloudfoundry_space" "space" {
-  name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
-}
 data "cloudfoundry_service" "fake-service" {
-  name = "fake-service"
-  depends_on = ["cloudfoundry_service_broker.fake-service-broker"]
+  name = "${keys(cloudfoundry_service_broker.fake-service-broker.services)[0]}"
 }
 
 resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-plan" {
   name = "fake-service-instance-with-fake-plan"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   service_plan = "${data.cloudfoundry_service.fake-service.service_plans["fake-plan"]}"
   depends_on = ["cloudfoundry_service_broker.fake-service-broker"]
 }
 
 resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-async-plan" {
   name = "fake-service-instance-with-fake-async-plan"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   service_plan = "${data.cloudfoundry_service.fake-service.service_plans["fake-async-plan"]}"
-  depends_on = ["cloudfoundry_service_broker.fake-service-broker"]
-}
-
-resource "cloudfoundry_service_instance" "fake-service-instance-with-fake-async-only-plan" {
-  name = "fake-service-instance-with-fake-async-only-plan"
-  space = "${data.cloudfoundry_space.space.id}"
-  service_plan = "${data.cloudfoundry_service.fake-service.service_plans["fake-async-only-plan"]}"
   depends_on = ["cloudfoundry_service_broker.fake-service-broker"]
 }
 
@@ -99,18 +68,18 @@ data "cloudfoundry_domain" "fake-service-broker-domain" {
 
 resource "cloudfoundry_route" "fake-service-broker-route" {
   domain = "${data.cloudfoundry_domain.fake-service-broker-domain.id}"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   hostname = "fake-service-broker"
 }
 
 resource "cloudfoundry_app" "fake-service-broker" {
   name = "fake-service-broker"
-  url = "file://../tests/cf-acceptance-tests/assets/service_broker/"
-  space = "${data.cloudfoundry_space.space.id}"
+  path = "file://../tests/cf-acceptance-tests/assets/cats-service-broker.zip"
+  space = "%s"
   timeout = 700
 
-  route {
-    default_route = "${cloudfoundry_route.fake-service-broker-route.id}"
+  routes {
+    route = "${cloudfoundry_route.fake-service-broker-route.id}"
   }
 }
 
@@ -119,15 +88,14 @@ resource "cloudfoundry_service_broker" "fake-service-broker" {
   url = "http://fake-service-broker.%s"
   username = "admin"
   password = "admin"
-  space = "${data.cloudfoundry_space.space.id}"
+  space = "%s"
   depends_on = ["cloudfoundry_app.fake-service-broker"]
 }
 `
 
-func TestAccServiceInstance_normal(t *testing.T) {
+func TestAccResServiceInstance_normal(t *testing.T) {
 
-	_, orgName := defaultTestOrg(t)
-	_, spaceName := defaultTestSpace(t)
+	spaceId, _ := defaultTestSpace(t)
 	serviceName1, _, servicePlan := getTestServiceBrokers(t)
 
 	ref := "cloudfoundry_service_instance.test-service-instance"
@@ -145,7 +113,7 @@ func TestAccServiceInstance_normal(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceCreate,
-						orgName, spaceName, serviceName1, servicePlan,
+						serviceName1, spaceId, servicePlan,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(ref),
@@ -162,7 +130,7 @@ func TestAccServiceInstance_normal(t *testing.T) {
 
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceUpdate,
-						orgName, spaceName, serviceName1, servicePlan,
+						serviceName1, spaceId, servicePlan,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(ref),
@@ -182,16 +150,13 @@ func TestAccServiceInstance_normal(t *testing.T) {
 		})
 }
 
-func TestAccServiceInstances_withFakePlans(t *testing.T) {
+func TestAccResServiceInstances_withFakePlans(t *testing.T) {
 
-	_, orgName := defaultTestOrg(t)
-	_, spaceName := defaultTestSpace(t)
+	spaceId, _ := defaultTestSpace(t)
 	appDomain := defaultAppDomain()
 
 	refFakePlan := "cloudfoundry_service_instance.fake-service-instance-with-fake-plan"
 	refFakeAsyncPlan := "cloudfoundry_service_instance.fake-service-instance-with-fake-async-plan"
-	refFakeAsyncOnlyPlan := "cloudfoundry_service_instance.fake-service-instance-with-fake-async-only-plan"
-
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
@@ -199,15 +164,14 @@ func TestAccServiceInstances_withFakePlans(t *testing.T) {
 			CheckDestroy: testAccCheckServiceInstanceDestroyed(
 				[]string{
 					"fake-service-instance-with-fake-plan",
-					"fake-service-instance-with-fake-async-plan",
-					"fake-service-instance-with-fake-async-only-plan"},
+					"fake-service-instance-with-fake-async-plan"},
 				refFakePlan),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceAsyncCreate,
-						orgName, spaceName,
-						fmt.Sprintf(fakeServiceBroker, appDomain, appDomain),
+						spaceId, spaceId,
+						fmt.Sprintf(fakeServiceBroker, appDomain, spaceId, spaceId, appDomain, spaceId),
 					),
 					Check: resource.ComposeTestCheckFunc(
 						// test fake-plan
@@ -216,18 +180,7 @@ func TestAccServiceInstances_withFakePlans(t *testing.T) {
 						// test fake-async-plan
 						testAccCheckServiceInstanceExists(refFakeAsyncPlan),
 						resource.TestCheckResourceAttr(refFakeAsyncPlan, "name", "fake-service-instance-with-fake-async-plan"),
-						// test fake-async-only-plan
-						testAccCheckServiceInstanceExists(refFakeAsyncOnlyPlan),
-						resource.TestCheckResourceAttr(refFakeAsyncOnlyPlan, "name", "fake-service-instance-with-fake-async-only-plan"),
 					),
-					// ExpectNonEmptyPlan to avoid the following bug in the test
-					// --- FAIL: TestAccServiceBroker_async (174.55s)
-					//testing.go:513: Step 0 error: After applying this step and refreshing, the plan was not empty:
-					//  DIFF:
-					//  CREATE: data.cloudfoundry_service.fake-service
-					//    name:            "" => "fake-service"
-					//    service_plans.%: "" => "<computed>"
-					ExpectNonEmptyPlan: true,
 				},
 			},
 		})
@@ -235,32 +188,20 @@ func TestAccServiceInstances_withFakePlans(t *testing.T) {
 
 func testAccCheckServiceInstanceExists(resource string) resource.TestCheckFunc {
 
-	return func(s *terraform.State) (err error) {
+	return func(s *terraform.State) error {
 
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 
 		rs, ok := s.RootModule().Resources[resource]
 		if !ok {
 			return fmt.Errorf("service instance '%s' not found in terraform state", resource)
 		}
 
-		session.Log.DebugMessage(
-			"terraform state for resource '%s': %# v",
-			resource, rs)
-
 		id := rs.Primary.ID
-
-		var (
-			serviceInstance cfapi.CCServiceInstance
-		)
-
-		sm := session.ServiceManager()
-		if serviceInstance, err = sm.ReadServiceInstance(id); err != nil {
+		_, _, err := session.ClientV2.GetServiceInstance(id)
+		if err != nil {
 			return err
 		}
-		session.Log.DebugMessage(
-			"retrieved service instance for resource '%s' with id '%s': %# v",
-			resource, id, serviceInstance)
 
 		return nil
 	}
@@ -269,23 +210,20 @@ func testAccCheckServiceInstanceExists(resource string) resource.TestCheckFunc {
 func testAccCheckServiceInstanceDestroyed(names []string, testResource string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
-		session := testAccProvider.Meta().(*cfapi.Session)
+		session := testAccProvider.Meta().(*managers.Session)
 		rs, ok := s.RootModule().Resources[testResource]
 		if !ok {
 			return fmt.Errorf("the service instance '%s' not found in terraform state", testResource)
 		}
 
 		for _, n := range names {
-			session.Log.DebugMessage("checking ServiceInstance is Destroyed %s", n)
-			if _, err := session.ServiceManager().FindServiceInstance(n, rs.Primary.ID); err != nil {
-				switch err.(type) {
-				case *errors.ModelNotFoundError:
-					return nil
-				default:
-					continue
-				}
+			sis, _, err := session.ClientV2.GetServiceInstances(ccv2.FilterByName(n), ccv2.FilterEqual(constant.SpaceGUIDFilter, rs.Primary.Attributes["space"]))
+			if err != nil {
+				return err
 			}
-			return fmt.Errorf("service instance with name '%s' still exists in cloud foundry", n)
+			if len(sis) > 0 {
+				return fmt.Errorf("service instance with name '%s' still exists in cloud foundry", n)
+			}
 		}
 		return nil
 	}

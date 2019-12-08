@@ -20,17 +20,15 @@ test: check
 	echo $(TEST) | \
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
-testacc: check
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 240m
+testacc:
+	printf "\e[33mWarning: acceptance platform has passwords changed... will not running acceptance test.\e[0m\n"
+#	TF_ACC=1 go test $(TEST) -v -parallel 20 $(TESTARGS) -timeout 240m
 
 fmt:
 	gofmt -w $(GOFMT_FILES)
 
 check:
-	@gometalinter.v2 --config .gometalinter.json --deadline 900s
-
-vendor-status:
-	@govendor status
+	golangci-lint run
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \

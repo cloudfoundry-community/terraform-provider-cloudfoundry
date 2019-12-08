@@ -31,3 +31,7 @@ The following arguments are supported:
 The following attributes are exported:
 
 * `id` - The GUID of the organization
+* `labels` - Map of labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.
+* `annotations` - Map of annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
+Works only on cloud foundry with api >= v3.63.
