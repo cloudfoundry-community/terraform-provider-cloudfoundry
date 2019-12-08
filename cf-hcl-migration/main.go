@@ -249,11 +249,9 @@ func migrateBitsGithub(item *ast.ObjectItem) (*url.URL, error) {
 		return url.Parse(fmt.Sprintf("https://glare.now.sh/%s/%s/zip", owner, repo))
 	} else if filename == "tarball" {
 		return url.Parse(fmt.Sprintf("https://glare.now.sh/%s/%s/tar", owner, repo))
-	} else {
-		return url.Parse(fmt.Sprintf("https://glare.now.sh/%s/%s/%s", owner, repo, filename))
 	}
 
-	return nil, nil
+	return url.Parse(fmt.Sprintf("https://glare.now.sh/%s/%s/%s", owner, repo, filename))
 }
 
 func unquote(s string) string {
