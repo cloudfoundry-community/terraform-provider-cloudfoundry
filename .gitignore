@@ -30,6 +30,7 @@ website/node_modules
 .tfacc_env
 /cloudfoundry/cfapi
 *.after
+/cf-hcl-migration/cf-hcl-migration
 
 website/vendor
 /terraform-provider-cloudfoundry

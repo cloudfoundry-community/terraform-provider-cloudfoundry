@@ -181,7 +181,6 @@ func migrateBitsStateV2toV3(is *terraform.InstanceState, meta interface{}) (*ter
 	if u == nil {
 		return is, nil
 	}
-	log.Println("totoitti " + is.Attributes["name"] + " " + u.String())
 	is.Attributes["source_code_hash"] = ""
 	if (u.Scheme == "http" || u.Scheme == "https") && filepath.Ext(u.Path) == ".zip" {
 		is.Attributes["path"] = u.String()

@@ -96,6 +96,21 @@ $ make testacc
 Migration
 ---------
 
+## 0.9.9 to 0.10.0
+
+**Terraform version 0.11.14 at least is required**
+
+1. *(Optional)* Migrate to terraform >= 0.12.x and follow migration step: https://www.terraform.io/upgrade-guides/0-12.html
+2. Download `cf-hcl-migration` tool in the [release 0.10.0](https://github.com/cloudfoundry-community/terraform-provider-cf/releases/tag/0.10.0).
+this tool only change your tf files for preparing migration made by the provider.
+3. Run `cf-hcl-migration ./` tool on the root folder of your terraform files.
+4. Run `cf-hcl-migration <module path>` tool on the root folder of your terraform files.
+**This tool migrate your terraform file config for only `cloudfoundry_app` and `cloudfoundry_buildpack` resource to change to new upload style
+if your `tf` files doesn't use those resources no need to run this tool**
+5. Run `terraform apply` in the root folder of your terraform.
+
+## < 0.9.9 to 0.9.9
+
 See the script in `scripts/migration` to migrate from versions below 0.9.9
 
 Support
