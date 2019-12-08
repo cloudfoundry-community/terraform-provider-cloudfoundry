@@ -1,4 +1,4 @@
-Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/cloudfoundry-community/terraform-provider-cf.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/terraform-provider-cf)
+# Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/cloudfoundry-community/terraform-provider-cf.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/terraform-provider-cf)
 
 
 Overview
