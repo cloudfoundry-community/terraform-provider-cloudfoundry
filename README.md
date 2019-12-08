@@ -1,5 +1,5 @@
-Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/mevansam/terraform-provider-cloudfoundry.svg?branch=master)](https://travis-ci.org/mevansam/terraform-provider-cloudfoundry)
-================================
+Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/cloudfoundry-community/terraform-provider-cf.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/terraform-provider-cf)
+
 
 Overview
 --------
@@ -131,5 +131,5 @@ Terraform Links
 ---------------
 
 - Website: https://www.terraform.io
-- [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)
+- [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.svg)](https://gitter.im/hashicorp-terraform/Lobby)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
