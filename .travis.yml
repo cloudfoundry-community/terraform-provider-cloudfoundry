@@ -33,8 +33,7 @@ jobs:
       script: travis_wait 360 scripts/build.sh
       if: type = pull_request AND fork = false OR branch = dev OR branch = master
     - stage: deploy
-      script: travis_wait 360 scripts/build.sh
-      if: branch = master
+      script: echo "only for deploy"
       deploy:
         provider: script
         skip_cleanup: true
