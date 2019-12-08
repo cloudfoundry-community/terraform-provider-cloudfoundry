@@ -35,8 +35,6 @@ jobs:
     - stage: deploy
       script:
         - rm -Rf .cf-cli
-        - git add .
-        - git commit -m "no trigger goreleaser"
       deploy:
         provider: script
         skip_cleanup: true
