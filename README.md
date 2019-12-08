@@ -4,13 +4,14 @@ Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/mevansam
 Overview
 --------
 
-This Terraform provider plugin allows you to configure a Cloud Foundry environment declaratively using [HCL](https://github.com/hashicorp/hcl). The online documentation for the Terraform Cloud Foundry resource is available on the [wiki](https://github.com/mevansam/terraform-provider-cloudfoundry/wiki).
+This Terraform provider plugin allows you to configure a Cloud Foundry environment declaratively using [HCL](https://github.com/hashicorp/hcl). 
+The online documentation for the Terraform Cloud Foundry resource is available on the [wiki](https://github.com/cloudfoundry-community/terraform-provider-cf/wiki).
 
 Requirements
 ------------
 
--	[Terraform](https://www.terraform.io/downloads.html) 0.11.x
--	[Go](https://golang.org/doc/install) 1.9 (to build the provider plugin)
+-	[Terraform](https://www.terraform.io/downloads.html) >= 0.11.14
+-	[Go](https://golang.org/doc/install) 1.12 (to build the provider plugin)
 
 Building The Provider
 ---------------------
