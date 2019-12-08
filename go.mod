@@ -40,5 +40,4 @@ require (
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/tedsuo/rata v1.0.0 // indirect
 	github.com/vito/go-interact v1.0.0 // indirect
-	github.com/whilp/git-urls v0.0.0-20160530060445-31bac0d230fa
 )

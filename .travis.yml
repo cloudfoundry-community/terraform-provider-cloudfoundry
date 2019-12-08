@@ -33,7 +33,10 @@ jobs:
       script: travis_wait 360 scripts/build.sh
       if: type = pull_request AND fork = false OR branch = dev OR branch = master
     - stage: deploy
-      script: echo "only for deploy"
+      script:
+        - rm -Rf .cf-cli
+        - git add .
+        - git commit -m "no trigger goreleaser"
       deploy:
         provider: script
         skip_cleanup: true

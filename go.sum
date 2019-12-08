@@ -16,10 +16,6 @@ dmitri.shuralyov.com/html/belt v0.0.0-20180602232347-f7d459c86be0/go.mod h1:JLBr
 dmitri.shuralyov.com/service/change v0.0.0-20181023043359-a85b471d5412/go.mod h1:a1inKt/atXimZ4Mv927x+r7UpyzRUf4emIoiiSC2TN4=
 dmitri.shuralyov.com/state v0.0.0-20180228185332-28bcc343414c/go.mod h1:0PRwlb0D6DFvNNtx+9ybjezNCa8XF0xaYcETyp6rHWU=
 git.apache.org/thrift.git v0.0.0-20180902110319-2566ecd5d999/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
-github.com/ArthurHlt/zipper v1.3.0 h1:cdEd6XxiXQdYaAUrWPEAo3pM0drRJys/7otkm9R+7A4=
-github.com/ArthurHlt/zipper v1.3.0/go.mod h1:LPdN7hjWm8Qxamff2PIShHi7nhWfKtAf9XS3altHE90=
-github.com/ArthurHlt/zipper v1.3.1 h1:HCYsri7CaX163bRm/WOgyr7wH0e/avJn28dPSgEvUcw=
-github.com/ArthurHlt/zipper v1.3.1/go.mod h1:LPdN7hjWm8Qxamff2PIShHi7nhWfKtAf9XS3altHE90=
 github.com/ArthurHlt/zipper v1.3.2 h1:jyVSo7AG37grX0sWPEVFs+fVm6eCR4cFr8VZEpWNO5I=
 github.com/ArthurHlt/zipper v1.3.2/go.mod h1:LPdN7hjWm8Qxamff2PIShHi7nhWfKtAf9XS3altHE90=
 github.com/Azure/azure-sdk-for-go v21.3.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
