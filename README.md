@@ -122,6 +122,13 @@ if your `tf` files doesn't use those resources no need to run this tool**
 
 See the script in `scripts/migration` to migrate from versions below 0.9.9
 
+Update doc
+----------
+
+You must update doc for resource and data sources in [website/docs](/website/docs).
+
+For updating wiki please run `scripts/update-wiki.sh` this will create/update wiki files from [website/docs](/website/docs) and push it in the wiki.
+
 Support
 -------
 
