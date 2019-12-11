@@ -13,8 +13,8 @@ cat <<EOF >_Sidebar.md
 ### Data Sources ###
 
 EOF
-for file in $cwd/website/docs/d/*.markdown; do
-  finalname=$(basename $file | sed 's/\.html\.markdown//')
+for file in $cwd/docs/data-sources/*.md; do
+  finalname=$(basename $file | sed 's/\.md//')
   sed '/^---/,/---/d' "$file" >"datasource_${finalname}.md"
   echo "* [cloudfoundry_${finalname}](datasource_${finalname})" >>_Sidebar.md
 done
@@ -22,12 +22,12 @@ echo "" >>_Sidebar.md
 echo "### Resources ###" >>_Sidebar.md
 echo "" >>_Sidebar.md
 
-for file in $cwd/website/docs/r/*.markdown; do
-  finalname=$(basename $file | sed 's/\.html\.markdown//')
+for file in $cwd/docs/resources/*.md; do
+  finalname=$(basename $file | sed 's/\.md//')
   sed '/^---/,/---/d' "$file" >"resource_${finalname}.md"
   echo "* [cloudfoundry_${finalname}](resource_${finalname})" >>_Sidebar.md
 done
-sed '/^---/,/---/d' $cwd/website/docs/index.html.markdown >provider_config.md
+cp $cwd/docs/index.md ./provider_config.md
 
 git add .
 git commit -m "update wiki"
