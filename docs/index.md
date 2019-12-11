@@ -16,7 +16,7 @@ Use the navigation to the left to read about the available resources.
 
 ## Example Usage
 
-```
+```hcl
 # Set the variable values in *.tfvars file
 # or using -var="api_url=..." CLI option
 

@@ -118,11 +118,12 @@ The `route` block supports:
 
 ```hcl
 resource "cloudfoundry_app" "java-spring" {
-[...]
+# [...]
  routes = [
     { route = "${cloudfoundry_route.java-spring.id}" },
     { route = "${cloudfoundry_route.java-spring-2.id}" }
   ]
+}
 ```
 
 ### Environment Variables
@@ -147,6 +148,6 @@ The following attributes are exported along with any defaults for the inputs att
 
 The current App can be imported using the `app` GUID, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_app.spring-music a-guid
 ```

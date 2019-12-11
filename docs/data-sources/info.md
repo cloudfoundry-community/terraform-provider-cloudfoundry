@@ -12,7 +12,7 @@ Gets information on a Cloud Foundry target.
 
 ## Example Usage
 
-```
+```hcl
 data "cloudfoundry_info" "info" {}
 ```
 

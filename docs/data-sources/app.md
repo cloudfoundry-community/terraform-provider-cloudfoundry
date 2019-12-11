@@ -12,7 +12,7 @@ Gets information on a Cloud Foundry application.
 
 ## Example Usage
 
-```
+```hcl
 data "cloudfoundry_app" "my-app" {
     name_or_id = "my-app"
     space      = "space-id"

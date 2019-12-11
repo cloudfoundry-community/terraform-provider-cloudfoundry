@@ -16,7 +16,7 @@ Provides a resource for managing shared or private
 The following is an example of a shared domain for a sub-domain of the default application domain 
 retrieved via a [domain data source](/docs/providers/cloudfoundry/d/domain.html).
 
-```
+```hcl
 resource "cloudfoundry_domain" "shared" {
   sub_domain = "dev"
   domain = "${data.cloudfoundry_domain.apps.domain}"
@@ -26,7 +26,7 @@ resource "cloudfoundry_domain" "shared" {
 
 The following example creates a private domain owned by the Org referenced by `cloudfoundry_org.pcfdev-org.id`.
 
-```
+```hcl
 resource "cloudfoundry_domain" "private" {
   name = "pcfdev-org.io"
   org = "${cloudfoundry_org.pcfdev-org.id}"
@@ -64,6 +64,6 @@ The following attributes are exported:
 
 An existing Domain can be imported using its Domain Guid, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_domain.private a-guid
 ```

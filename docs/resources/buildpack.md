@@ -16,7 +16,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry admin [buildpacks](
 
 The following example creates a Cloud Foundry buildpack .
 
-```
+```hcl
 resource "cloudfoundry_buildpack" "tomee" {
     name = "tomcat-enterprise-edition"
     path = "https://github.com/cloudfoundry-community/tomee-buildpack/releases/download/v3.17/tomee-buildpack-v3.17.zip"
@@ -49,7 +49,7 @@ can create zip file from `tar.gz`, `tar.bz2`, `folder location`, `git repo` loca
 
 Example Usage with zipper: 
 
-```
+```hcl
 provider "zipper" {
   skip_ssl_validation = false
 }
@@ -78,6 +78,6 @@ The following attributes are exported:
 
 The current buildpack can be imported using the `buildpack` guid, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_buildpack.tomee a-guid
 ```

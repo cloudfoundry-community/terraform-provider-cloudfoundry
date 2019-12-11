@@ -14,7 +14,7 @@ Provides a Cloud Foundry resource for [binding](https://docs.cloudfoundry.org/de
 
 The following example binds a specific route to the given service instance.
 
-```
+```hcl
 resource "cloudfoundry_route_service_binding" "route-bind" {
   service_instance = "${cloudfoundry_service_instance.myservice.id}"
   route            = "${cloudfoundry_route.myroute.id}"
@@ -39,6 +39,6 @@ terraform files after import will lead to the recreation of the resource.
 
 E.g.
 
-```
+```bash
 $ terraform import cloudfoundry_route_service_binding.mybind <service-guid>/<route-guid>
 ```

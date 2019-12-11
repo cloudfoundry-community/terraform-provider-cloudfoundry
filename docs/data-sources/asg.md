@@ -12,7 +12,7 @@ Gets information on a Cloud Foundry application security group.
 
 ## Example Usage
 
-```
+```hcl
 data "cloudfoundry_asg" "public" {
     name = "public_networks"
 }

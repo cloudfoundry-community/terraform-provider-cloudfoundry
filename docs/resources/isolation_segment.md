@@ -25,7 +25,7 @@ origanizations.
 
 The following example creates an isolation segment named `public_exposure`
 
-```
+```hcl
 resource "cloudfoundry_isolation_segment" "public" {
   name = "public_exposure"
 }
@@ -56,6 +56,6 @@ The following attributes are exported:
 
 An existing segment can be imported using its guid, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_isolation_segment.s1 a-guid
 ```

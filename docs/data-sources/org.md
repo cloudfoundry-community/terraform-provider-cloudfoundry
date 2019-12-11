@@ -14,7 +14,7 @@ Gets information on a Cloud Foundry organization.
 
 The following example looks up an organization named 'myorg'. 
 
-```
+```hcl
 data "cloudfoundry_org" "o" {
     name = "myorg"    
 }

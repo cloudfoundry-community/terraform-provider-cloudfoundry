@@ -15,7 +15,7 @@ Gets information on a Cloud Foundry org quota.
 The following example looks up a quota named 'myquota'
 identified by its name.
 
-```
+```hcl
 data "cloudfoundry_org_quota" "q" {
     name = "myquota"
 }

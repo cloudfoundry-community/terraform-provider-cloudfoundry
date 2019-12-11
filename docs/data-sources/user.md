@@ -14,7 +14,7 @@ Gets information on a Cloud Foundry user.
 
 The following example looks up an user named 'myuser'. 
 
-```
+```hcl
 data "cloudfoundry_user" "myuser" {
     name = "myuser"    
 }

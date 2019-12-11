@@ -18,7 +18,7 @@ Provides a Cloud Foundry resource to manage org [quotas](https://docs.cloudfound
 
 The following example creates a quota, and applies it to an Org.
 
-```
+```hcl
 resource "cloudfoundry_org_quota" "large" {
     name = "large"
     allow_paid_service_plans = false
@@ -61,6 +61,6 @@ The following attributes are exported:
 
 A Quota can be imported using its guid, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_org_quota.10g a-guid
 ```

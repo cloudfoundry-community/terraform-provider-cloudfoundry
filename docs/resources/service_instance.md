@@ -14,7 +14,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [Service Instances]
 
 The following is a Service Instance created in the referenced space with the specified service plan.
 
-```
+```hcl
 data "cloudfoundry_service" "redis" {
     name = "p-redis"
 }
@@ -47,7 +47,7 @@ The following attributes are exported:
 
 An existing Service Instance can be imported using its guid, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_service.redis a-guid
 ```
 

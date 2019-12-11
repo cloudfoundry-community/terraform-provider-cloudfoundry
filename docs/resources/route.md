@@ -14,7 +14,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry application [routes
 
 The following example creates an route for an application.
 
-```
+```hcl
 resource "cloudfoundry_route" "default" {
     domain = "${data.cloudfoundry_domain.apps.domain.id}"
     space = "${data.cloudfoundry_space.dev.id}"
@@ -60,6 +60,6 @@ The following attributes are exported along with any defaults for the inputs att
 
 The current Route can be imported using the `route`, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_route.default a-guid
 ```

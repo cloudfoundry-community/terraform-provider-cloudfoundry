@@ -14,7 +14,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [Service Keys](http
 
 The following creates a Service Key for the referenced Service Instance.
 
-```
+```hcl
 data "cloudfoundry_service" "redis" {
     name = "p-redis"
 }
@@ -51,6 +51,6 @@ The following attributes are exported:
 
 An existing Service Key can be imported using its guid , e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_service_key.redis1-key1 a-guid
 ```

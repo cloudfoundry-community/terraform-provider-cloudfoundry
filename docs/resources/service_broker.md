@@ -18,7 +18,7 @@ Provides a Cloud Foundry resource for managing [service brokers](https://docs.cl
 
 The following example registers a service broker.
 
-```
+```hcl
 resource "cloudfoundry_service_broker" "mysql" {
 	name = "test-mysql"
 	url = "http://mysql-broker.local.pcfdev.io"
@@ -50,6 +50,6 @@ The following attributes are exported:
 
 An existing Service Broker can be imported using its guid, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_service_broker.mysql a-guid
 ```

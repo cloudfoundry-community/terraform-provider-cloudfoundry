@@ -12,7 +12,7 @@ Gets information on a Cloud Foundry route.
 
 ## Example Usage
 
-```
+```hcl
 data "cloudfoundry_route" "my-route" {
     domain   = "domain-id"
     hostname = "my-host"

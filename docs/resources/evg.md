@@ -17,7 +17,7 @@ Provides a resource for modifying the running or staging [environment variable g
 
 The example below shows how to add environment variables to the running environment variable group.
 
-```
+```hcl
 resource "cloudfoundry_evg" "running" {
 
 	name = "running"
@@ -42,6 +42,6 @@ The following arguments are supported:
 
 The current Evg can be imported using the `evg` name (either `running` or `staging` constant) e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_evg.private <running/staging>
 ```

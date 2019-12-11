@@ -21,7 +21,7 @@ The following is an example of giving an organization access to a private [domai
 domain is retrieved via a [domain data source](/docs/providers/cloudfoundry/d/domain.html)
 and the organization via an [org data source)(/docs/providers/cloudfoundry/d/org.html).
 
-```
+```hcl
 resource "cloudfoundry_private_domain_access" "shared-to-my-org" {
   domain = "${data.cloudfoundry_domain.domain.id}"
   org    = "${data.cloudfoundry_org.my-org.id}"
@@ -39,6 +39,6 @@ The following arguments are supported:
 
 An existing CF private domain access can be imported using the combined `<org-guid>/<domain-guid>' identifier, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_private_domain_access.my-access 84f5ba83-1728-481f-9a62-72d109e4be74/c8eba5e6-5a21-45ee-ae0a-59b1f650888a
 ```

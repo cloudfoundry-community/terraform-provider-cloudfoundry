@@ -20,7 +20,7 @@ stage and run applications.
 
 Basic usage
 
-```
+```hcl
 resource "cloudfoundry_asg" "messaging" {
 
 	name = "rmq-service"
@@ -64,7 +64,7 @@ The following attributes are exported:
 
 The current Asg can be imported using the `asg` guid, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_asg.messaging a-guid
 ```
 

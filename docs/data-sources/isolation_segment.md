@@ -14,7 +14,7 @@ Gets information on a Cloud Foundry Isolation segment.
 
 The following example looks up a segment named 'public-exposure'.
 
-```
+```hcl
 data "cloudfoundry_isolation_segment" "public" {
     name = "public_exposure"
 }

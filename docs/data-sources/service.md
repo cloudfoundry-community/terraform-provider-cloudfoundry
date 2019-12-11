@@ -14,7 +14,7 @@ Gets information on a Cloud Foundry service definition.
 
 The following example looks up a service definition named 'p-redis', globally. 
 
-```
+```hcl
 data "cloudfoundry_service" "redis" {
     name = "p-redis"    
 }
@@ -22,7 +22,7 @@ data "cloudfoundry_service" "redis" {
 
 The following example looks up a service named 'p-redis', registered as a space-scoped service within the specified Space id
 
-```
+```hcl
 data "cloudfoundry_service" "redis" {
     name = "p-redis"  
     space = "${cloudfoundry_space.dev.id}"  

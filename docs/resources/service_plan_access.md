@@ -12,7 +12,6 @@ Provides a Cloud Foundry resource for managing [access](https://docs.cloudfoundr
 to service plans published by Cloud Foundry [service brokers](https://docs.cloudfoundry.org/services/).
 
 ~> **NOTE:** Multiple instances of this resource can be used to share a given service plan with multiple orgs.
-
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
 
 
@@ -22,7 +21,7 @@ to service plans published by Cloud Foundry [service brokers](https://docs.cloud
 The first example enables access to a specific plan of a given service broker to all organizations.
 The second example gives access to a specific org.
 
-```
+```hcl
 resource "cloudfoundry_service_plan_access" "org1-mysql-512mb" {
     plan = "${cloudfoundry_service_broker.mysql.service_plans["p-mysql/512mb"]}"
     public = true
@@ -58,6 +57,6 @@ Otherwise, the import would fail.
 
 E.g.
 
-```
+```bash
 $ terraform import cloudfoundry_service_plan_access.org1-mysql-512mb a-guid
 ```

@@ -20,7 +20,7 @@ and an organization.
 
 The following example entitles the segment `public` to organizations `org1` and `org2`
 
-```
+```hcl
 resource "cloudfoundry_isolation_segment_entitlement" "public" {
   segment = "${data.cloudfoundry_isolation_segment.public.id}"
   orgs = [

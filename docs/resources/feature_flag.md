@@ -17,7 +17,7 @@ Provides a Cloud Foundry configuration resource for managing Cloud Foundry [feat
 
 The following is an example updates Cloud Foundry feature flags. Each of the flags will also be computed from current settings and exported if not changed.
 
-```
+```hcl
 resource "cloudfoundry_feature_flags" "config" {
 
   feature_flags {
@@ -63,6 +63,6 @@ When not provided, optional fields are filled with their actual value in Cloud F
 
 The current Config can be imported using the `config` constant, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_feature_flags.config config
 ```

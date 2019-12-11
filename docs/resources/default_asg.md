@@ -18,7 +18,7 @@ Provides a resource for modifying the default staging or running
 The following example shows how to apply [application security groups](/docs/providers/cloudfoundry/r/asg.html)
 defined elsewhere in the Terraform configuration, to the default running set.  
 
-```
+```hcl
 resource "cloudfoundry_default_asg" "running" {
     name = "running"
     asgs = [ "${cloudfoundry_asg.messaging.id}", "${cloudfoundry_asg.services.id}" ]
@@ -36,6 +36,6 @@ The following arguments are supported:
 
 The current Default Asg can be imported using the `name` (either `running` or `staging` constant) e.g. 
 
-```
+```bash
 $ terraform import cloudfoundry_default_asg.running <running/staging>
 ```

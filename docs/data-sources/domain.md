@@ -14,7 +14,7 @@ Gets information on a Cloud Foundry domain.
 
 The following example looks up a name in the current deployment with the host name `local` within the local application domain.
 
-```
+```hcl
 data "cloudfoundry_domain" "l" {
     sub_domain = "local"
 }

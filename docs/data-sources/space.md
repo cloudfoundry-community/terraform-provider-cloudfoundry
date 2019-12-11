@@ -14,7 +14,7 @@ Gets information on a Cloud Foundry space.
 
 The following example looks up a space named 'myspace' within an organization 'myorg' which has been previously provisioned thru Terraform.
 
-```
+```hcl
 data "cloudfoundry_space" "s" {
     name = "myspace"
     org = "${cloudfoundry_org.myorg.id}"

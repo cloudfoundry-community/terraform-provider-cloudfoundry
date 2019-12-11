@@ -12,7 +12,7 @@ Gets information on a Cloud Foundry service instance.
 
 ## Example Usage
 
-```
+```hcl
 data "cloudfoundry_service_instance" "my-instance" {
     name_or_id = "my-service-instance"
     space      = "space-id"

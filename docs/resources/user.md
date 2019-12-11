@@ -18,7 +18,7 @@ functionality to attach additional UAA roles to the user.
 
 The following example creates a user and attaches additional UAA roles to grant administrator rights to that user.
 
-```
+```hcl
 resource "cloudfoundry_user" "admin-service-user" {
     
     name = "cf-admin"
@@ -54,6 +54,6 @@ The following attributes are exported:
 
 An existing User can be imported using its guid, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_user.admin-service-user a-guid
 ```

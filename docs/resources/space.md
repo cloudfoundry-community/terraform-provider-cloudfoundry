@@ -17,7 +17,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [spaces](https://do
 
 The following is a Space created within the referenced Org. All referenced users must have been added as a member to the owning Org (see [related CF doc](https://docs.cloudfoundry.org/concepts/roles.html#users) for additional context)
 
-```
+```hcl
 resource "cloudfoundry_space" "s1" {
     name = "space-one"
     org = "${cloudfoundry_org.o1.id}"
@@ -53,6 +53,6 @@ The following attributes are exported:
 
 An existing Space can be imported using its guid, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_space.s1 a-guid
 ```

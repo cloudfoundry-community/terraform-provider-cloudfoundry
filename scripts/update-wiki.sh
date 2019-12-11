@@ -27,7 +27,8 @@ for file in $cwd/docs/resources/*.md; do
   sed '/^---/,/---/d' "$file" >"resource_${finalname}.md"
   echo "* [cloudfoundry_${finalname}](resource_${finalname})" >>_Sidebar.md
 done
-cp $cwd/docs/index.md ./provider_config.md
+
+sed '/^---/,/---/d' "$cwd/docs/index.md" >provider_config.md
 
 git add .
 git commit -m "update wiki"

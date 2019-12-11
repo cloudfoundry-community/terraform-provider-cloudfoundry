@@ -12,7 +12,7 @@ Gets information on a Cloud Foundry service key.
 
 ## Example Usage
 
-```
+```hcl
 data "cloudfoundry_service_key" "my-key" {
     name             = "my-service-key"
     service_instance = "service-instance-id"

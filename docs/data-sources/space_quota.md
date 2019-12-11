@@ -14,7 +14,7 @@ Gets information on a Cloud Foundry space quota.
 
 The following example looks up a space quota named 'myquota'
 
-```
+```hcl
 data "cloudfoundry_space_quota" "q" {
   name = "myquota"
 }

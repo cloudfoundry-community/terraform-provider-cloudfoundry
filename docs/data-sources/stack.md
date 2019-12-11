@@ -14,7 +14,7 @@ Gets information on a particular Cloud Foundry [stack](https://docs.cloudfoundry
 
 The following example looks up a stack named 'my_custom_stack'. 
 
-```
+```hcl
 data "cloudfoundry_stack" "mystack" {
     name = "my_custom_stack"
 }

@@ -16,7 +16,7 @@ access between applications via [container-to-container networking](https://docs
 
 The following creates container to container access policy between the given applications.
 
-```
+```hcl
 resource "cf_network_policy" "my-policy" {
 
     policy {
@@ -55,6 +55,6 @@ The following attributes are exported along with any defaults for the inputs att
 
 The current Network policy can be imported using the `network_policy`, e.g.
 
-```
+```bash
 $ terraform import cf_network_policy.my-policy a-guid
 ```

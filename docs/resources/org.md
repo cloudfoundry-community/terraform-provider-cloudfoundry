@@ -17,7 +17,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [organizations](htt
 
 The following example creates an org with a specific org-wide quota.
 
-```
+```hcl
 resource "cloudfoundry_org" "o1" {
     name = "organization-one"
     quota = "${cloudfoundry_quota.runaway.id}"
@@ -46,6 +46,6 @@ The following attributes are exported:
 
 An existing Organization can be imported using its guid, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_org.o1 a-guid
 ```

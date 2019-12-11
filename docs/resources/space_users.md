@@ -17,7 +17,7 @@ Provides a Cloud Foundry resource for managing Cloud Foundry [space](https://doc
 
 The following example creates an org with a specific org-wide quota.
 
-```
+```hcl
 resource "cloudfoundry_space_users" "su1" {
     space    = "space-id"
     managers = [
@@ -49,6 +49,6 @@ The following arguments are supported:
 
 An existing Users list can be imported using its space guid, e.g.
 
-```
+```bash
 $ terraform import cloudfoundry_space_users.su1 space-guid
 ```
