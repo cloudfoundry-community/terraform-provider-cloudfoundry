@@ -129,12 +129,12 @@ func (s BlueGreenV2) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				if appDeploy.App.DockerImage == "" {
-					appResp := ctx["app_response"].(AppDeployResponse)
-					err := s.bitsManager.CopyApp(appDeploy.App.GUID, appResp.App.GUID)
-					return ctx, err
+				if appDeploy.App.DockerImage != "" {
+					return ctx, nil
 				}
-				return ctx, nil
+				appResp := ctx["app_response"].(AppDeployResponse)
+				err := s.bitsManager.CopyApp(appDeploy.App.GUID, appResp.App.GUID)
+				return ctx, err
 			},
 			ReversePrevious: defaultReverse,
 		},
