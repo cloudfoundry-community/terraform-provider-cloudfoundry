@@ -50,6 +50,9 @@ The following arguments are supported:
 * `password` - (Optional) Cloud Foundry user's password. This can also be specified
   with the `CF_PASSWORD` shell environment variable.
 
+* `sso_passcode` - (Optional) A passcode provided by UAA single sign on. The equivalent of `cf login --sso-passcode`. This can also be specified
+  with the `CF_SSO_PASSCODE` shell environment variable.
+
 * `cf_client_id` - (Optional) The cf client ID to make request with a client instead of user. This can also be specified
   with the `CF_CLIENT_ID` shell environment variable.
 
