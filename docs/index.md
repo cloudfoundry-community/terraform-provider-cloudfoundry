@@ -50,6 +50,9 @@ The following arguments are supported:
 * `password` - (Optional) Cloud Foundry user's password. This can also be specified
   with the `CF_PASSWORD` shell environment variable.
 
+* `sso_passcode` - (Optional) A passcode provided by UAA single sign on. The equivalent of `cf login --sso-passcode`. This can also be specified
+  with the `CF_SSO_PASSCODE` shell environment variable.
+
 * `cf_client_id` - (Optional) The cf client ID to make request with a client instead of user. This can also be specified
   with the `CF_CLIENT_ID` shell environment variable.
 
@@ -73,3 +76,6 @@ The following arguments are supported:
   
 * `purge_when_delete` - (Optional) Set to true to purge when deleting a resource (e.g.: service instance, service broker) . This can also be specified
   with the `CF_PURGE_WHEN_DELETE` shell environment variable.
+
+* `store_tokens_path` - (Optional) Path to a file to store tokens used for login. (this is useful for sso, this avoid
+  requiring each time sso passcode) . This can also be specified with the `CF_STORE_TOKENS_PATH` shell environment variable.
