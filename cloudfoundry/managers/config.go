@@ -14,4 +14,5 @@ type Config struct {
 	AppLogsMax        int
 	PurgeWhenDelete   bool
 	DefaultQuotaName  string
+	StoreTokensPath   string
 }

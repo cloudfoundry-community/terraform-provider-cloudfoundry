@@ -76,6 +76,12 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("CF_PURGE_WHEN_DELETE", false),
 				Description: "Set to true to purge when deleting a resource (e.g.: service instance, service broker)",
 			},
+			"store_tokens_path": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("CF_STORE_TOKENS_PATH", ""),
+				Description: "Path to a file to store tokens used for login. (this is useful for sso, this avoid requiring each time sso passcode)",
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -142,6 +148,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		SkipSslValidation: d.Get("skip_ssl_validation").(bool),
 		AppLogsMax:        d.Get("app_logs_max").(int),
 		DefaultQuotaName:  d.Get("default_quota_name").(string),
+		StoreTokensPath:   d.Get("store_tokens_path").(string),
 	}
 	return managers.NewSession(c)
 }

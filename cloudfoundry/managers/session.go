@@ -1,6 +1,16 @@
 package managers
 
 import (
+	"crypto/tls"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
 	"code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/cfnetv1"
 	netWrapper "code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/wrapper"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
@@ -14,23 +24,10 @@ import (
 	uaaWrapper "code.cloudfoundry.org/cli/api/uaa/wrapper"
 	"code.cloudfoundry.org/cli/command/translatableerror"
 	"code.cloudfoundry.org/cli/util/configv3"
-	"crypto/tls"
-	"encoding/json"
-	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/bits"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
-	"io/ioutil"
-	"net"
-	"net/http"
-	"os"
-	"strings"
-	"time"
-)
-
-const (
-	CF_TOKENS_FILE = ".cf-tokens"
 )
 
 // Session - wraps the available clients from CF cli
@@ -75,6 +72,10 @@ type Session struct {
 type CFTokens struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
+}
+
+func (t CFTokens) IsSet() bool {
+	return t.AccessToken != ""
 }
 
 // NewSession -
@@ -211,58 +212,35 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	// Obtain access and refresh tokens
 	var accessToken string
 	var refreshToken string
-	loadedTokens := false
+	var errType string
 
-	// Check if the tokens are stored in local file
-	if _, err := os.Stat(CF_TOKENS_FILE); err == nil {
-		data, err := ioutil.ReadFile(CF_TOKENS_FILE)
-		if err != nil {
-			return fmt.Errorf("Error loading CF tokens: %s", err)
-		}
-
-		var cfTokens CFTokens
-		if err := json.Unmarshal(data, &cfTokens); err != nil {
-			return fmt.Errorf("Error unmarshalling CF tokens: %s", err)
-		}
-
-		// Try refreshing token
-		if refreshedTokens, err := uaaClient.RefreshAccessToken(cfTokens.RefreshToken); err == nil {
-			accessToken = refreshedTokens.AccessToken
-			refreshToken = refreshedTokens.RefreshToken
-			loadedTokens = true
-		}
+	tokFromStore := s.loadTokFromStoreIfNeed(configSess.StoreTokensPath, uaaClient.RefreshAccessToken)
+	if tokFromStore.IsSet() {
+		accessToken = tokFromStore.AccessToken
+		refreshToken = tokFromStore.RefreshToken
+	} else if configSess.SSOPasscode != "" {
+		// try connecting with SSO passcode to retrieve access token and refresh token
+		accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
+			"passcode": configSess.SSOPasscode,
+		}, "", constant.GrantTypePassword)
+		errType = "SSO passcode"
+	} else if config.CFUsername() != "" {
+		// try connecting with pair given on uaa to retrieve access token and refresh token
+		accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
+			"username": config.CFUsername(),
+			"password": config.CFPassword(),
+		}, "", constant.GrantTypePassword)
+		errType = "username/password"
+	} else if config.UAAOAuthClient() != "cf" {
+		accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
+			"client_id":     config.UAAOAuthClient(),
+			"client_secret": config.UAAOAuthClientSecret(),
+		}, "", constant.GrantTypeClientCredentials)
+		errType = "client_id/client_secret"
 	}
-
-	// If refreshing the token failed, attempt with usual login methods
-	if accessToken == "" {
-		var err error
-		var errType string
-		if configSess.SSOPasscode != "" {
-			// try connecting with SSO passcode to retrieve access token and refresh token
-			accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
-				"passcode": configSess.SSOPasscode,
-			}, "", constant.GrantTypePassword)
-			errType = "SSO passcode"
-		} else if config.CFUsername() != "" {
-			// try connecting with pair given on uaa to retrieve access token and refresh token
-			accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
-				"username": config.CFUsername(),
-				"password": config.CFPassword(),
-			}, "", constant.GrantTypePassword)
-			errType = "username/password"
-		} else if config.UAAOAuthClient() != "cf" {
-			accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
-				"client_id":     config.UAAOAuthClient(),
-				"client_secret": config.UAAOAuthClientSecret(),
-			}, "", constant.GrantTypeClientCredentials)
-			errType = "client_id/client_secret"
-		}
-		if err != nil {
-			return fmt.Errorf("Error when authenticate on cf using %s: %s", errType, err)
-		}
-		loadedTokens = true
+	if err != nil {
+		return fmt.Errorf("Error when authenticate on cf using %s: %s", errType, err)
 	}
-
 	if accessToken == "" {
 		return fmt.Errorf("A pair of username/password, a pair of client_id/client_secret, or a SSO passcode must be set.")
 	}
@@ -270,20 +248,11 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	config.SetAccessToken(fmt.Sprintf("bearer %s", accessToken))
 	config.SetRefreshToken(refreshToken)
 
-	// Write access and refresh tokens to file
-	data, err := json.Marshal(&CFTokens{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	})
+	// Write access and refresh tokens to file if needed
+	err = s.saveTokToStoreIfNeed(configSess.StoreTokensPath, accessToken, refreshToken)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal CF tokens: %s", err)
+		fmt.Errorf("Error when trying to save tokens to %s: %s", configSess.StoreTokensPath, err.Error())
 	}
-
-	err = ioutil.WriteFile(CF_TOKENS_FILE, data, 0644)
-	if err != nil {
-		return fmt.Errorf("Failed to write CF tokens: %s", err)
-	}
-
 	// -------------------------
 	// assign uaa client to request wrappers
 	uaaAuthWrapper.SetClient(uaaClient)
@@ -311,14 +280,9 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 
 		var accessTokenSess string
 		var refreshTokenSess string
-		if configSess.SSOPasscode != "" || loadedTokens {
+		if configUaa.UAAOAuthClient() == "cf" {
 			accessTokenSess = accessToken
 			refreshTokenSess = refreshToken
-		} else if configUaa.UAAOAuthClient() == "cf" {
-			accessTokenSess, refreshTokenSess, err = uaaClientSess.Authenticate(map[string]string{
-				"username": config.CFUsername(),
-				"password": config.CFPassword(),
-			}, "", constant.GrantTypePassword)
 		} else {
 			accessTokenSess, refreshTokenSess, err = uaaClientSess.Authenticate(map[string]string{
 				"client_id":     configUaa.UAAOAuthClient(),
@@ -440,6 +404,40 @@ func (s *Session) loadDefaultQuotaGuid(quotaName string) error {
 	}
 	s.defaultQuotaGuid = quotas[0].GUID
 	return nil
+}
+
+func (s *Session) loadTokFromStoreIfNeed(storePath string, refresher func(refreshToken string) (uaa.RefreshedTokens, error)) CFTokens {
+	if storePath == "" {
+		return CFTokens{}
+	}
+	b, err := ioutil.ReadFile(storePath)
+	if err != nil {
+		return CFTokens{}
+	}
+	var tokens CFTokens
+	err = json.Unmarshal(b, &tokens)
+	if err != nil {
+		return CFTokens{}
+	}
+	refreshed, err := refresher(tokens.RefreshToken)
+	if err != nil {
+		return CFTokens{}
+	}
+	return CFTokens{
+		AccessToken:  refreshed.AccessToken,
+		RefreshToken: refreshed.RefreshToken,
+	}
+}
+
+func (s *Session) saveTokToStoreIfNeed(storePath, accessToken, refreshToken string) error {
+	if storePath == "" {
+		return nil
+	}
+	b, _ := json.MarshalIndent(CFTokens{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, "", "  ")
+	return ioutil.WriteFile(storePath, b, 0644)
 }
 
 // IsDefaultGroup -

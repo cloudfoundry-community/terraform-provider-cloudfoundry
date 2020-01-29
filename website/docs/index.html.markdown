@@ -76,3 +76,6 @@ The following arguments are supported:
   
 * `purge_when_delete` - (Optional) Set to true to purge when deleting a resource (e.g.: service instance, service broker) . This can also be specified
   with the `CF_PURGE_WHEN_DELETE` shell environment variable.
+
+* `store_tokens_path` - (Optional) Path to a file to store tokens used for login. (this is useful for sso, this avoid
+  requiring each time sso passcode) . This can also be specified with the `CF_STORE_TOKENS_PATH` shell environment variable.
