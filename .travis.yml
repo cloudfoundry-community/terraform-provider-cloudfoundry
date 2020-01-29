@@ -13,12 +13,12 @@ before_install:
   - mkdir -p .cf-cli
   - curl -LSs "https://cli.run.pivotal.io/stable?release=linux64-binary&version=6.43.0" | tar -zvx -C .cf-cli/ -- cf
   - export PATH="$(pwd)/.cf-cli:$PATH"
-install:
-  - GO111MODULE=on go install github.com/golangci/golangci-lint/cmd/golangci-lint
   - export GO111MODULE=on
 jobs:
   include:
     - stage: testlint
+      install:
+        - GO111MODULE=on go install github.com/golangci/golangci-lint/cmd/golangci-lint
       script: travis_wait 360 scripts/build.sh
     - stage: testds
       script: travis_wait 360 scripts/build.sh
@@ -33,8 +33,8 @@ jobs:
       script: travis_wait 360 scripts/build.sh
       if: type = pull_request AND fork = false OR branch = dev OR branch = master
     - stage: deploy
-      script: travis_wait 360 scripts/build.sh
-      if: branch = master
+      script:
+        - rm -Rf .cf-cli
       deploy:
         provider: script
         skip_cleanup: true

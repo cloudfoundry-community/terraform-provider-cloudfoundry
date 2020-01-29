@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-REPO_NAME="/terraform-provider-cf"
-NAME="/terraform-provider-cloudfoundry"
+REPO_NAME="terraform-provider-cf"
+NAME="terraform-provider-cloudfoundry"
 OS=""
 OWNER="cloudfoundry-community"
 : "${TMPDIR:=${TMP:-$(
@@ -76,7 +76,7 @@ fi
 chmod +x "$FILEOUTPUT"
 mkdir -p ${HOME}/.terraform.d/plugins/${OS}_${ARCH}
 if [[ "$OS" == "windows" ]]; then
-  mv "$FILEOUTPUT" "${HOME}/.terraform.d/plugins/${OS}_${ARCH}/${NAME}"
+  mv "$FILEOUTPUT" "${HOME}/.terraform.d/plugins/${OS}_${ARCH}/${NAME}.exe"
 else
   mv "$FILEOUTPUT" "${HOME}/.terraform.d/plugins/${OS}_${ARCH}/${NAME}"
 fi
