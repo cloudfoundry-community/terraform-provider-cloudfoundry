@@ -251,7 +251,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	// Write access and refresh tokens to file if needed
 	err = s.saveTokToStoreIfNeed(configSess.StoreTokensPath, accessToken, refreshToken)
 	if err != nil {
-		fmt.Errorf("Error when trying to save tokens to %s: %s", configSess.StoreTokensPath, err.Error())
+		return fmt.Errorf("Error when trying to save tokens to %s: %s", configSess.StoreTokensPath, err.Error())
 	}
 	// -------------------------
 	// assign uaa client to request wrappers
