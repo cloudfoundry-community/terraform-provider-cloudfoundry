@@ -1,3 +1,5 @@
+// This program was used for migrating tf files from version 0.9.9 to 0.10.0
+// this is no longer useful but i let the code because it can be useful some other day to know how to do
 package main
 
 import (
