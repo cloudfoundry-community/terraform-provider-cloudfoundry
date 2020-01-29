@@ -444,8 +444,8 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("enable_ssh") {
 		appUpdate.EnableSSH = BoolToNullBool(d.Get("enable_ssh").(bool))
 	}
-	if d.HasChange("stopped") && !d.Get("stopped").(bool) {
-		appUpdate.State = constant.ApplicationStopped
+	if d.HasChange("stopped") {
+		appUpdate.State = getApplicationState(d.Get("stopped").(bool))
 	}
 	if d.HasChange("docker_image") {
 		appUpdate.DockerImage = d.Get("docker_image").(string)
@@ -584,4 +584,12 @@ func resourceAppDelete(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 	_, err := session.ClientV2.DeleteApplication(d.Id())
 	return err
+}
+
+func getApplicationState(stopped bool) constant.ApplicationState {
+	if stopped {
+		return constant.ApplicationStopped
+	} else {
+		return constant.ApplicationStarted
+	}
 }
