@@ -28,6 +28,11 @@ func Provider() terraform.ResourceProvider {
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CF_PASSWORD", ""),
 			},
+			"sso_passcode": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("CF_SSO_PASSCODE", ""),
+			},
 			"cf_client_id": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -129,6 +134,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		Endpoint:          strings.TrimSuffix(d.Get("api_url").(string), "/"),
 		User:              d.Get("user").(string),
 		Password:          d.Get("password").(string),
+		SSOPasscode:       d.Get("sso_passcode").(string),
 		CFClientID:        d.Get("cf_client_id").(string),
 		CFClientSecret:    d.Get("cf_client_secret").(string),
 		UaaClientID:       d.Get("uaa_client_id").(string),

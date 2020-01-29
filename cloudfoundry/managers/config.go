@@ -5,6 +5,7 @@ type Config struct {
 	Endpoint          string
 	User              string
 	Password          string
+	SSOPasscode       string
 	CFClientID        string
 	CFClientSecret    string
 	UaaClientID       string
