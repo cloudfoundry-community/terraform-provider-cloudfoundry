@@ -87,6 +87,7 @@ func Provider() terraform.ResourceProvider {
 			"cloudfoundry_isolation_segment": dataSourceIsolationSegment(),
 			"cloudfoundry_space":             dataSourceSpace(),
 			"cloudfoundry_service_instance":  dataSourceServiceInstance(),
+			"cloudfoundry_user_provided_service_instance":  dataSourceUserProvidedServiceInstance(),
 			"cloudfoundry_service_key":       dataSourceServiceKey(),
 			"cloudfoundry_service":           dataSourceService(),
 			"cloudfoundry_app":               dataSourceApp(),
