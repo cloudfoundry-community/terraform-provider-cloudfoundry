@@ -26,10 +26,14 @@ func dataSourceService() *schema.Resource {
 				Optional: true,
 				Default:  "",
 			},
-			"service_broker": &schema.Schema{
+			"service_broker_guid": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "",
+			},
+			"service_broker_name": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"service_plans": &schema.Schema{
 				Type:     schema.TypeMap,
@@ -44,7 +48,7 @@ func dataSourceServiceRead(d *schema.ResourceData, meta interface{}) error {
 
 	name := d.Get("name").(string)
 	space := d.Get("space").(string)
-	serviceBroker := d.Get("service_broker").(string)
+	serviceBrokerGUID := d.Get("service_broker_guid").(string)
 
 	filters := []ccv2.Filter{
 		ccv2.FilterEqual(constant.LabelFilter, name),
@@ -52,8 +56,8 @@ func dataSourceServiceRead(d *schema.ResourceData, meta interface{}) error {
 	if space != "" {
 		filters = append(filters, ccv2.FilterBySpace(space))
 	}
-	if serviceBroker != "" {
-		filters = append(filters, ccv2.FilterEqual(constant.ServiceBrokerGUIDFilter, serviceBroker))
+	if serviceBrokerGUID != "" {
+		filters = append(filters, ccv2.FilterEqual(constant.ServiceBrokerGUIDFilter, serviceBrokerGUID))
 	}
 	services, _, err := session.ClientV2.GetServices(filters...)
 	if err != nil {
@@ -64,8 +68,8 @@ func dataSourceServiceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	service := services[0]
 	d.SetId(service.GUID)
-	if serviceBroker == "" {
-		d.Set("service_broker", service.ServiceBrokerName)
+	if serviceBrokerGUID == "" {
+		d.Set("service_broker_name", service.ServiceBrokerName)
 	}
 
 	servicePlans, _, err := session.ClientV2.GetServicePlans(ccv2.FilterEqual(constant.ServiceGUIDFilter, service.GUID))
