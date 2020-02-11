@@ -7,11 +7,11 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
-func dataSourceUserProvidedServiceInstance() *schema.Resource {
+func dataSourceUserProvidedService() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceUserProvidedServiceInstanceRead,
+		Read: dataSourceUserProvidedServiceRead,
 
 		Schema: map[string]*schema.Schema{
 			"space": &schema.Schema{
@@ -22,6 +22,18 @@ func dataSourceUserProvidedServiceInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"credentials": &schema.Schema{
+				Type:     schema.TypeMap,
+				Computed: true,
+			},
+			"route_service_url": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"syslog_drain_url": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			"tags": &schema.Schema{
 				Type:     schema.TypeList,
 				Computed: true,
@@ -31,18 +43,18 @@ func dataSourceUserProvidedServiceInstance() *schema.Resource {
 	}
 }
 
-func dataSourceUserProvidedServiceInstanceRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 
 	var (
 		name            string
 		space           string
-		serviceInstance ccv2.ServiceInstance
+		serviceInstance ccv2.UserProvidedServiceInstance
 	)
 
 	name = d.Get("name").(string)
 	space = d.Get("space").(string)
-	serviceInstances, _, err := session.ClientV2.GetUserProvidedServiceInstances(ccv2.FilterByName(name), ccv2.FilterEqual(constant.SpaceGUIDFilter, space))
+	serviceInstances, _, err := session.ClientV2.GetUserProvServiceInstances(ccv2.FilterByName(name), ccv2.FilterEqual(constant.SpaceGUIDFilter, space))
 	if err != nil {
 		return err
 	}
@@ -53,6 +65,9 @@ func dataSourceUserProvidedServiceInstanceRead(d *schema.ResourceData, meta inte
 
 	d.SetId(serviceInstance.GUID)
 	d.Set("name", serviceInstance.Name)
+	d.Set("credentials", serviceInstance.Credentials)
+	d.Set("route_service_url", serviceInstance.RouteServiceUrl)
+	d.Set("syslog_drain_url", serviceInstance.SyslogDrainUrl)
 	d.Set("tags", serviceInstance.Tags)
 
 	return nil
