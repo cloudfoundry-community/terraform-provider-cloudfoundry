@@ -1,8 +1,8 @@
 module github.com/terraform-providers/terraform-provider-cloudfoundry
 
-go 1.12
+go 1.13
 
-replace code.cloudfoundry.org/cli => github.com/cloudfoundry-community/cloudfoundry-cli v0.0.1-complete-api
+replace code.cloudfoundry.org/cli => github.com/cloudfoundry-community/cloudfoundry-cli v0.0.2-complete-api
 
 require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20180906201452-2aa6f33b730c // indirect
@@ -40,5 +40,4 @@ require (
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/tedsuo/rata v1.0.0 // indirect
 	github.com/vito/go-interact v1.0.0 // indirect
-	github.com/whilp/git-urls v0.0.0-20160530060445-31bac0d230fa
 )
