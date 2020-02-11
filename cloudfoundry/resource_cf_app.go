@@ -1,17 +1,18 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform/helper/hashcode"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 	"log"
 	"reflect"
 	"strings"
 	"time"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"github.com/hashicorp/terraform/helper/hashcode"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
@@ -444,8 +445,12 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("enable_ssh") {
 		appUpdate.EnableSSH = BoolToNullBool(d.Get("enable_ssh").(bool))
 	}
-	if d.HasChange("stopped") && !d.Get("stopped").(bool) {
-		appUpdate.State = constant.ApplicationStopped
+	if d.HasChange("stopped") {
+		state := constant.ApplicationStarted
+		if d.Get("stopped").(bool) {
+			state = constant.ApplicationStopped
+		}
+		appUpdate.State = state
 	}
 	if d.HasChange("docker_image") {
 		appUpdate.DockerImage = d.Get("docker_image").(string)

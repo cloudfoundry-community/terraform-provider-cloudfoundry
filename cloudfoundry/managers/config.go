@@ -5,6 +5,7 @@ type Config struct {
 	Endpoint          string
 	User              string
 	Password          string
+	SSOPasscode       string
 	CFClientID        string
 	CFClientSecret    string
 	UaaClientID       string
@@ -13,4 +14,5 @@ type Config struct {
 	AppLogsMax        int
 	PurgeWhenDelete   bool
 	DefaultQuotaName  string
+	StoreTokensPath   string
 }
