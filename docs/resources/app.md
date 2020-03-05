@@ -38,7 +38,7 @@ The following arguments are supported:
 * `command` - (Optional, String) A custom start command for the application. This overrides the start command provided by the buildpack.
 * `enable_ssh` - (Optional, Boolean) Whether to enable or disable SSH access to the container. Default is `true` unless disabled globally.
 * `timeout` - (Optional, Number) Max wait time for app instance startup, in seconds
-* `stopped` - (Optional, Boolean) Defines the desired application state. Set to `false` to have the application remain in a stopped state. Default is `false`, i.e. application will be started.
+* `stopped` - (Optional, Boolean) Defines the desired application state. Set to `true` to have the application remain in a stopped state. Default is `false`, i.e. application will be started.
 * `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
 Works only on cloud foundry with api >= v3.63.
 * `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
