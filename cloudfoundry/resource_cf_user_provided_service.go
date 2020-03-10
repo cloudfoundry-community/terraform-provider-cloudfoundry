@@ -1,8 +1,9 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"encoding/json"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/structure"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
@@ -67,7 +68,7 @@ func resourceUserProvidedService() *schema.Resource {
 				ConflictsWith:    []string{"credentials"},
 				Sensitive:        true,
 				DiffSuppressFunc: structure.SuppressJsonDiff,
-				ValidateFunc:     validation.ValidateJsonString,
+				ValidateFunc:     validation.StringIsJSON,
 			},
 			"tags": &schema.Schema{
 				Type:     schema.TypeSet,
