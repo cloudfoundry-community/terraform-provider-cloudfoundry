@@ -16,7 +16,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 	if d.IsNewResource() {
 		// if user does not explicitly set allow_ssh
 		// it set allow ssh to true only during creation
-		if _, ok := d.GetOk("allow_ssh"); !ok {
+		if _, ok := d.GetOk("enable_ssh"); !ok {
 			enableSSH = true
 		}
 	}
