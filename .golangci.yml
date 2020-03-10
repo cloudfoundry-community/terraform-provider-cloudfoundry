@@ -1,4 +1,9 @@
 issues:
+  exclude-rules:
+    # Exclude issues bypassing staticcheck.conf
+    - linters:
+        - staticcheck
+      text: "SA1019:"
   max-per-linter: 0
   max-same-issues: 0
 
