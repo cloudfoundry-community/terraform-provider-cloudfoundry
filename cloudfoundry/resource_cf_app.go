@@ -11,11 +11,10 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"github.com/hashicorp/terraform/helper/hashcode"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 )
 
 // schema.BasicMapReader
@@ -223,21 +222,35 @@ func resourceApp() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"id_bg": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			labelsKey:      labelsSchema(),
 			annotationsKey: annotationsSchema(),
 		},
 
-		CustomizeDiff: func(diff *schema.ResourceDiff, v interface{}) error {
-			if !diff.HasChange("docker_image") && !diff.HasChange("path") {
+		CustomizeDiff: func(diff *schema.ResourceDiff, meta interface{}) error {
+			if diff.HasChange("docker_image") || diff.HasChange("path") {
+				oldImg, newImg := diff.GetChange("docker_image")
+				oldPath, newPath := diff.GetChange("path")
+				if oldImg == "" && newImg != "" && newPath == "" {
+					return diff.ForceNew("docker_image")
+				}
+				if oldPath == "" && newPath != "" && newImg == "" {
+					return diff.ForceNew("path")
+				}
 				return nil
 			}
-			oldImg, newImg := diff.GetChange("docker_image")
-			oldPath, newPath := diff.GetChange("path")
-			if oldImg == "" && newImg != "" && newPath == "" {
-				return diff.ForceNew("docker_image")
+			if diff.Id() == "" {
+				return nil
 			}
-			if oldPath == "" && newPath != "" && newImg == "" {
-				return diff.ForceNew("path")
+			session := meta.(*managers.Session)
+			deployer := session.Deployer.Strategy(diff.Get("strategy").(string))
+			if IsAppRestageNeeded(diff) ||
+				(deployer.IsCreateNewApp() && IsAppRestartNeeded(diff)) ||
+				(deployer.IsCreateNewApp() && IsAppCodeChange(diff)) {
+				diff.SetNewComputed("id_bg")
 			}
 
 			return nil
@@ -298,6 +311,9 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 		}
 		return err
 	}
+	if idBg, ok := d.GetOk("id_bg"); !ok || idBg == "" {
+		d.Set("id_bg", d.Id())
+	}
 	mappings, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.AppGUIDFilter, d.Id()))
 	if err != nil {
 		return err
@@ -322,6 +338,9 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	d.Partial(true)
 	d.SetPartial("docker_credentials")
 	session := meta.(*managers.Session)
+	defer func() {
+		d.Set("id_bg", d.Id())
+	}()
 	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
 
 	if d.HasChange("routes") {
@@ -531,11 +550,11 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func IsAppCodeChange(d *schema.ResourceData) bool {
+func IsAppCodeChange(d ResourceChanger) bool {
 	return d.HasChange("path") || d.HasChange("source_code_hash")
 }
 
-func IsAppUpdateOnly(d *schema.ResourceData) bool {
+func IsAppUpdateOnly(d ResourceChanger) bool {
 	if IsAppCodeChange(d) || IsAppRestageNeeded(d) || IsAppRestartNeeded(d) {
 		return false
 	}
@@ -543,13 +562,13 @@ func IsAppUpdateOnly(d *schema.ResourceData) bool {
 		d.HasChange("enable_ssh") || d.HasChange("stopped")
 }
 
-func IsAppRestageNeeded(d *schema.ResourceData) bool {
+func IsAppRestageNeeded(d ResourceChanger) bool {
 	return d.HasChange("buildpack") || d.HasChange("stack") ||
 		d.HasChange("docker_image") || d.HasChange("service_binding") ||
 		d.HasChange("environment")
 }
 
-func IsAppRestartNeeded(d *schema.ResourceData) bool {
+func IsAppRestartNeeded(d ResourceChanger) bool {
 	return d.HasChange("memory") || d.HasChange("disk_quota") ||
 		d.HasChange("command") || d.HasChange("health_check_http_endpoint") ||
 		d.HasChange("health_check_type")

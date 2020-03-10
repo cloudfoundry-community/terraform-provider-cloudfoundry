@@ -2,11 +2,12 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
 	"github.com/hashicorp/terraform/terraform"
-	"log"
 )
 
 func schemaOldApp() map[string]*schema.Schema {
