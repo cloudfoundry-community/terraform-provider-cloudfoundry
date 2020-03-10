@@ -3,7 +3,7 @@ package cloudfoundry
 import (
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 )
 
 func TestAccUserProvidedService_importBasic(t *testing.T) {
