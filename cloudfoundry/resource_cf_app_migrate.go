@@ -150,7 +150,7 @@ func migrateAppStateV2toV3(is *terraform.InstanceState, meta interface{}) (*terr
 	}
 	if result.Exists {
 		oldRoute := getListOfStructs(result.Value)
-		if oldRoute[0]["default_route_mapping_id"].(string) != "" {
+		if len(oldRoute) > 0 && oldRoute[0]["default_route_mapping_id"].(string) != "" {
 			routes = append(routes, map[string]interface{}{
 				"route": oldRoute[0]["default_route_mapping_id"].(string),
 				"port":  ports[0],
