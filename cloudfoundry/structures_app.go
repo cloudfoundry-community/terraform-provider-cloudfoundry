@@ -1,13 +1,14 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 	"time"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 )
 
 func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, error) {
@@ -181,4 +182,8 @@ func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppD
 	}
 	d.Set("routes", finalMappings)
 
+}
+
+type ResourceChanger interface {
+	HasChange(key string) bool
 }

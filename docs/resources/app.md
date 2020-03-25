@@ -143,6 +143,8 @@ resource "cloudfoundry_app" "java-spring" {
 The following attributes are exported along with any defaults for the inputs attributes.
 
 * `id` - The GUID of the application
+* `id_bg` - The GUID of the application updated by resource when strategy is blue-green. 
+This allow change a resource linked to app resource id to be updated when app will be recreated.
 
 ## Import
 
@@ -150,4 +152,43 @@ The current App can be imported using the `app` GUID, e.g.
 
 ```bash
 $ terraform import cloudfoundry_app.spring-music a-guid
+```
+
+## Update resource using blue green app id
+
+This is an example of usage of `id_bg` attribute to update your resource on a changing app id by blue-green:
+
+```hcl
+resource "cloudfoundry_app" "test-app-bg" {
+    space            = "apaceid"
+    buildpack        = "abuildpack"
+    name             = "test-app-bg"
+    path             = "myapp.zip"
+    strategy         = "blue-green-v2"
+    routes {
+      route = "arouteid"
+    }
+}
+
+resource "cloudfoundry_app" "test-app-bg2" {
+  space            = "apaceid"
+  buildpack        = "abuildpack"
+  name             = "test-app-bg2"
+  path             = "myapp.zip"
+  strategy         = "blue-green-v2"
+  routes {
+    route = "arouteid"
+  }
+}
+
+resource "cloudfoundry_network_policy" "my-policy" {
+  policy {
+    destination_app = cloudfoundry_app.test-app-bg2.id_bg
+    port            = "8080"
+    protocol        = "tcp"
+    source_app      = cloudfoundry_app.test-app-bg.id_bg
+  }
+}
+
+# When you change either test-app-bg or test-app-bg2 this will affect my-policy to be updated because it use `id_bg` instead of id
 ```
