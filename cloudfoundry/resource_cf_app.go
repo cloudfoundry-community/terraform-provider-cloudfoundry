@@ -380,7 +380,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		})
 
 		for _, r := range remove {
-			bindings, _, err := session.ClientV2.GetRouteMappings(filterAppGuid(d.Id()), filterServiceInstanceGuid(r["service_instance"].(string)))
+			bindings, _, err := session.ClientV2.GetServiceBindings(filterAppGuid(d.Id()), filterServiceInstanceGuid(r["service_instance"].(string)))
 			if err != nil {
 				return err
 			}
