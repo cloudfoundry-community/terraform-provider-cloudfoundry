@@ -2,11 +2,12 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform/helper/hashcode"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
-	"github.com/hashicorp/terraform/terraform"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func schemaOldApp() map[string]*schema.Schema {
@@ -150,7 +151,7 @@ func migrateAppStateV2toV3(is *terraform.InstanceState, meta interface{}) (*terr
 	}
 	if result.Exists {
 		oldRoute := getListOfStructs(result.Value)
-		if oldRoute[0]["default_route_mapping_id"].(string) != "" {
+		if len(oldRoute) > 0 && oldRoute[0]["default_route_mapping_id"].(string) != "" {
 			routes = append(routes, map[string]interface{}{
 				"route": oldRoute[0]["default_route_mapping_id"].(string),
 				"port":  ports[0],

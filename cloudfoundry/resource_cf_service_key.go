@@ -2,8 +2,9 @@ package cloudfoundry
 
 import (
 	"encoding/json"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
@@ -44,7 +45,7 @@ func resourceServiceKey() *schema.Resource {
 				ForceNew:      true,
 				Sensitive:     true,
 				ConflictsWith: []string{"params"},
-				ValidateFunc:  validation.ValidateJsonString,
+				ValidateFunc:  validation.StringIsJSON,
 			},
 			"credentials": &schema.Schema{
 				Type:     schema.TypeMap,

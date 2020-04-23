@@ -4,8 +4,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/ArthurHlt/zipper"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"io"
 	"io/ioutil"
@@ -171,7 +171,7 @@ func migrateBitsStateV2toV3(is *terraform.InstanceState, meta interface{}) (*ter
 	}
 	addContents := getListOfStructs(result.Value)
 	if len(addContents) > 0 {
-		return is, fmt.Errorf("add_content attribute can't be migrate, please fixeit in other way and remove from terraform.tfstate add_content attributes")
+		log.Printf("[WARN] Non-empty add_content attribute found. Skipping, but you might wanna migrate it's contentns manually: %#v", addContents)
 	}
 
 	u, err := migrateBitsUrl(rawUrl, git, github)
