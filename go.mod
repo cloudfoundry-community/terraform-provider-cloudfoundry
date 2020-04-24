@@ -1,6 +1,6 @@
 module github.com/terraform-providers/terraform-provider-cloudfoundry
 
-go 1.13
+go 1.14
 
 replace code.cloudfoundry.org/cli => github.com/cloudfoundry-community/cloudfoundry-cli v0.0.2-complete-api
 
