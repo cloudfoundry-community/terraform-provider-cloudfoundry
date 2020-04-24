@@ -1,6 +1,8 @@
 package cloudfoundry
 
 import (
+	"strings"
+
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -27,7 +29,7 @@ func dataSourceUserRead(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 	um := session.ClientV2
 
-	name := d.Get("name").(string)
+	name := strings.ToLower(d.Get("name").(string))
 
 	users, _, err := um.GetUsers()
 	if err != nil {
@@ -35,7 +37,7 @@ func dataSourceUserRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	for _, user := range users {
-		if user.Username == name {
+		if strings.ToLower(user.Username) == name {
 			d.SetId(user.GUID)
 			return nil
 		}
