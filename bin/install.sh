@@ -21,7 +21,7 @@ else
   VERSION=$PROVIDER_CF_VERSION
 fi
 
-echo "Installing ${NAME}-${VERSION}..."
+echo "Installing ${NAME}_${VERSION}..."
 if [[ "$OSTYPE" == "linux-gnu" || "$(uname -s)" == "Linux" ]]; then
   OS="linux"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
@@ -76,9 +76,9 @@ fi
 chmod +x "$FILEOUTPUT"
 mkdir -p ${HOME}/.terraform.d/plugins/${OS}_${ARCH}
 if [[ "$OS" == "windows" ]]; then
-  mv "$FILEOUTPUT" "${HOME}/.terraform.d/plugins/${OS}_${ARCH}/${NAME}.exe"
+  mv "$FILEOUTPUT" "${HOME}/.terraform.d/plugins/${OS}_${ARCH}/${NAME}_${VERSION}.exe"
 else
-  mv "$FILEOUTPUT" "${HOME}/.terraform.d/plugins/${OS}_${ARCH}/${NAME}"
+  mv "$FILEOUTPUT" "${HOME}/.terraform.d/plugins/${OS}_${ARCH}/${NAME}_${VERSION}"
 fi
 
-echo "${NAME}-${VERSION} has been installed."
+echo "${NAME}_${VERSION} has been installed."
