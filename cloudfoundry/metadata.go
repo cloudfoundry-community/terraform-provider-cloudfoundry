@@ -1,7 +1,6 @@
 package cloudfoundry
 
 import (
-	"bytes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"encoding/json"
 	"fmt"
@@ -18,20 +17,21 @@ type MetadataRequest struct {
 }
 
 type Metadata struct {
-	Labels      map[string]string `json:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty"`
+	Labels      map[string]*string `json:"labels,omitempty"`
+	Annotations map[string]*string `json:"annotations,omitempty"`
 }
 
 const (
 	labelsKey      = "labels"
 	annotationsKey = "annotations"
 
-	orgMetadata       metadataType = "organizations"
-	spaceMetadata     metadataType = "spaces"
-	buildpackMetadata metadataType = "buildpacks"
-	appMetadata       metadataType = "apps"
-	stackMetadata     metadataType = "stacks"
-	segmentMetadata   metadataType = "isolation_segments"
+	orgMetadata           metadataType = "organizations"
+	spaceMetadata         metadataType = "spaces"
+	buildpackMetadata     metadataType = "buildpacks"
+	appMetadata           metadataType = "apps"
+	stackMetadata         metadataType = "stacks"
+	segmentMetadata       metadataType = "isolation_segments"
+	serviceBrokerMetadata metadataType = "service_brokers"
 )
 
 func labelsSchema() *schema.Schema {
@@ -51,13 +51,13 @@ func annotationsSchema() *schema.Schema {
 }
 
 func metadataCreate(t metadataType, d *schema.ResourceData, meta interface{}) error {
-	if !isMetadataApiCompat(meta) {
+	if !isMetadataAPICompat(t, meta) {
 		return nil
 	}
 	return metadataUpdate(t, d, meta)
 }
 
-func isMetadataApiCompat(meta interface{}) bool {
+func isMetadataAPICompat(t metadataType, meta interface{}) bool {
 	apiVersion := meta.(*managers.Session).ClientV3.CloudControllerAPIVersion()
 	v, err := semver.Parse(apiVersion)
 	if err != nil {
@@ -65,61 +65,52 @@ func isMetadataApiCompat(meta interface{}) bool {
 		// we set true anyway, it will only do the calls to api but not fail if endpoint is not found in crud
 		return true
 	}
+
 	expectedRange := semver.MustParseRange(">=3.63.0")
+	if t == serviceBrokerMetadata {
+		expectedRange = semver.MustParseRange(">=3.71.0")
+	}
 	return expectedRange(v)
 }
 
-func metadataUpdate(t metadataType, d *schema.ResourceData, meta interface{}) error {
-	if !isMetadataApiCompat(meta) {
-		return nil
+func resourceToMetadata(d *schema.ResourceData) Metadata {
+	return Metadata{
+		Labels:      resourceToPayload(d, labelsKey),
+		Annotations: resourceToPayload(d, annotationsKey),
 	}
-	metadata := resourceMetadataToMetadata(d)
-	if len(metadata.Labels) == 0 && len(metadata.Annotations) == 0 &&
-		!d.HasChange(labelsKey) && !d.HasChange(annotationsKey) {
-		return nil
+}
+
+// resourceToPayload - create metadata update payload from resource state
+//
+// note: we *should* construct payload in a way where only new/changed value
+//       are present, but re-giving existing values clarifies the code
+//
+// 1. construct payload as requested by "new" value
+// 2. find delete keys and create { "key" : nil } in payload
+//    ie: keys existing in "old" but not in "new"
+func resourceToPayload(d *schema.ResourceData, key string) map[string]*string {
+	res := map[string]*string{}
+	old, new := d.GetChange(key)
+	oldV := mapInterfaceToMapString(old.(map[string]interface{}))
+	newV := mapInterfaceToMapString(new.(map[string]interface{}))
+
+	// 1.
+	for key, val := range newV {
+		res[key] = &val
 	}
 
-	oldMetadata, err := metadataRetrieve(t, d, meta)
-	if err != nil {
-		return err
+	// 2.
+	for key := range oldV {
+		if _, ok := newV[key]; !ok {
+			res[key] = nil
+		}
 	}
 
-	metadata = mergeMetadata(oldMetadata, metadata)
-
-	b, err := json.Marshal(metadata)
-	if err != nil {
-		return err
-	}
-	client := meta.(*managers.Session).RawClient
-	req, err := client.NewRequest("PUT", pathMetadata(t, d), ioutil.NopCloser(bytes.NewBuffer(b)))
-	if err != nil {
-		return err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err := resp.Body.Close()
-		if err != nil {
-			panic(err)
-		}
-	}()
-	if resp.StatusCode != 200 && resp.StatusCode != 404 {
-		b, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-		return ccerror.RawHTTPStatusError{
-			StatusCode:  resp.StatusCode,
-			RawResponse: b,
-		}
-	}
-	return nil
+	return res
 }
 
 func metadataRead(t metadataType, d *schema.ResourceData, meta interface{}, forceRead bool) error {
-	if !isMetadataApiCompat(meta) {
+	if !isMetadataAPICompat(t, meta) {
 		return nil
 	}
 	_, hasLabels := d.GetOk(labelsKey)
@@ -127,7 +118,8 @@ func metadataRead(t metadataType, d *schema.ResourceData, meta interface{}, forc
 	if !hasAnnotations && !hasLabels && !forceRead && !IsImportState(d) {
 		return nil
 	}
-	metadata := resourceMetadataToMetadata(d)
+
+	metadata := resourceToMetadata(d)
 	oldMetadata, err := metadataRetrieve(t, d, meta)
 	if err != nil {
 		return err
@@ -166,29 +158,52 @@ func metadataRead(t metadataType, d *schema.ResourceData, meta interface{}, forc
 	return nil
 }
 
-func resourceMetadataToMetadata(d *schema.ResourceData) Metadata {
-	labels := mapInterfaceToMapString(d.Get(labelsKey).(map[string]interface{}))
-	annotations := mapInterfaceToMapString(d.Get(annotationsKey).(map[string]interface{}))
-	return Metadata{
-		Labels:      labels,
-		Annotations: annotations,
-	}
-}
-
-func mergeMetadata(o Metadata, n Metadata) Metadata {
-	labels := o.Labels
-	for k, v := range n.Labels {
-		labels[k] = v
+func metadataUpdate(t metadataType, d *schema.ResourceData, meta interface{}) error {
+	if !isMetadataAPICompat(t, meta) {
+		return nil
 	}
 
-	annotations := o.Annotations
-	for k, v := range n.Annotations {
-		annotations[k] = v
+	metadata := resourceToMetadata(d)
+	if len(metadata.Labels) == 0 && len(metadata.Annotations) == 0 {
+		return nil
 	}
-	return Metadata{
-		Labels:      labels,
-		Annotations: annotations,
+
+	b, err := json.Marshal(MetadataRequest{Metadata: metadata})
+	if err != nil {
+		return err
 	}
+
+	client := meta.(*managers.Session).RawClient
+	endpoint := pathMetadata(t, d)
+	req, err := client.NewRequest("PATCH", endpoint, b)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	if resp.StatusCode != 200 && resp.StatusCode != 404 && resp.StatusCode != 202 {
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return ccerror.RawHTTPStatusError{
+			StatusCode:  resp.StatusCode,
+			RawResponse: b,
+		}
+	}
+	return nil
 }
 
 func metadataRetrieve(t metadataType, d *schema.ResourceData, meta interface{}) (Metadata, error) {
@@ -197,20 +212,24 @@ func metadataRetrieve(t metadataType, d *schema.ResourceData, meta interface{}) 
 	if err != nil {
 		return Metadata{}, err
 	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return Metadata{}, err
 	}
+
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
 			panic(err)
 		}
 	}()
+
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return Metadata{}, err
 	}
+
 	if resp.StatusCode != 200 {
 		if resp.StatusCode == 404 {
 			return Metadata{}, nil
@@ -220,6 +239,7 @@ func metadataRetrieve(t metadataType, d *schema.ResourceData, meta interface{}) 
 			RawResponse: b,
 		}
 	}
+
 	var metadataReq MetadataRequest
 	err = json.Unmarshal(b, &metadataReq)
 	if err != nil {
@@ -231,3 +251,7 @@ func metadataRetrieve(t metadataType, d *schema.ResourceData, meta interface{}) 
 func pathMetadata(t metadataType, d *schema.ResourceData) string {
 	return fmt.Sprintf("/v3/%s/%s", t, d.Id())
 }
+
+// Local Variables:
+// ispell-local-dictionary: "american"
+// End:

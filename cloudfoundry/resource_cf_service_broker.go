@@ -80,6 +80,8 @@ func resourceServiceBroker() *schema.Resource {
 				Default:     false,
 				Description: "Set to true if you want to see errors when getting service broker catalog",
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 	}
 }
@@ -107,6 +109,11 @@ func resourceServiceBrokerCreate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 	d.SetId(sb.GUID)
+
+	err = metadataCreate(serviceBrokerMetadata, d, meta)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -138,7 +145,11 @@ func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("username", sb.AuthUsername)
 	d.Set("space", sb.SpaceGUID)
 
-	return err
+	err = metadataRead(serviceBrokerMetadata, d, meta, false)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -166,7 +177,11 @@ func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	return err
+	err = metadataUpdate(serviceBrokerMetadata, d, meta)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func resourceServiceBrokerDelete(d *schema.ResourceData, meta interface{}) error {
