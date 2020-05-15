@@ -31,9 +31,11 @@ func mapInterfaceToMapString(in map[string]interface{}) map[string]string {
 
 // normalizeMap -
 func normalizeMap(in interface{}, outMap map[string]interface{}, key, delim string) map[string]interface{} {
-
+	if in == nil {
+		outMap[key] = nil
+		return outMap
+	}
 	rt := reflect.TypeOf(in)
-
 	if jsonNum, ok := in.(json.Number); ok {
 		in = jsonNumToValue(jsonNum)
 		rt = reflect.TypeOf(in)
