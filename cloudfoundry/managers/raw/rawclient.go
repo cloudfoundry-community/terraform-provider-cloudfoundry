@@ -1,9 +1,11 @@
 package raw
 
 import (
+	"bytes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -64,15 +66,25 @@ func NewRawClient(config RawClientConfig, wrappers ...ccv3.ConnectionWrapper) *R
 }
 
 // Do - Do the request with given http client and wrappers
-func (c RawClient) Do(req *http.Request) (*http.Response, error) {
+func (c RawClient) Do(req *cloudcontroller.Request) (*http.Response, error) {
 	resp := &cloudcontroller.Response{}
-	err := c.connection.Make(&cloudcontroller.Request{
-		Request: req,
-	}, resp)
+	err := c.connection.Make(req, resp)
 	return resp.HTTPResponse, err
 }
 
 // NewRequest - Create a new request with setting api endpoint to the path
-func (c RawClient) NewRequest(method, path string, body io.ReadCloser) (*http.Request, error) {
-	return http.NewRequest(method, c.apiEndpoint+path, body)
+func (c RawClient) NewRequest(method string, path string, data []byte) (*cloudcontroller.Request, error) {
+	var reader io.ReadSeeker
+	if data != nil {
+		reader = bytes.NewReader(data)
+	}
+
+	url := fmt.Sprintf("%s%s", c.apiEndpoint, path)
+	baseReq, err := http.NewRequest(method, url, reader)
+	if err != nil {
+		return nil, err
+	}
+
+	cfReq := cloudcontroller.NewRequest(baseReq, reader)
+	return cfReq, nil
 }
