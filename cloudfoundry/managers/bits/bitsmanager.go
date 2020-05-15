@@ -51,8 +51,9 @@ func NewBitsManager(clientV2 *ccv2.Client, clientV3 *ccv3.Client, rawClient *raw
 // CopyApp - Copy one app to another by using only api
 func (m BitsManager) CopyApp(origAppGuid string, newAppGuid string) error {
 	path := fmt.Sprintf("/v2/apps/%s/copy_bits", newAppGuid)
-	data := bytes.NewReader([]byte(fmt.Sprintf(`{"source_app_guid":"%s"}`, origAppGuid)))
-	req, err := m.rawClient.NewRequest("POST", path, ioutil.NopCloser(data))
+	data := []byte(fmt.Sprintf(`{"source_app_guid":"%s"}`, origAppGuid))
+
+	req, err := m.rawClient.NewRequest("POST", path, data)
 	if err != nil {
 		return err
 	}
@@ -112,16 +113,17 @@ func (m BitsManager) UploadBuildpack(buildpackGUID string, bpPath string) error 
 		}
 		mpw.Close()
 	}()
-	request, err := m.rawClient.NewRequest("PUT", apiURL, nil)
+
+	req, err := m.rawClient.NewRequest("PUT", apiURL, nil)
 	if err != nil {
 		return err
 	}
 	contentType := fmt.Sprintf("multipart/form-data; boundary=%s", mpw.Boundary())
-	request.Header.Set("Content-Type", contentType)
-	request.ContentLength = m.predictPartBuildpack(baseName, fileSize, mpw.Boundary())
-	request.Body = r
+	req.Header.Set("Content-Type", contentType)
+	req.ContentLength = m.predictPartBuildpack(baseName, fileSize, mpw.Boundary())
+	req.Body = r
 
-	_, err = m.rawClient.Do(request)
+	_, err = m.rawClient.Do(req)
 	if err != nil {
 		panic(err)
 	}
@@ -170,16 +172,16 @@ func (m BitsManager) UploadApp(appGUID string, path string) error {
 		}
 		mpw.Close()
 	}()
-	request, err := m.rawClient.NewRequest("PUT", apiURL, nil)
+	req, err := m.rawClient.NewRequest("PUT", apiURL, nil)
 	if err != nil {
 		return err
 	}
 	contentType := fmt.Sprintf("multipart/form-data; boundary=%s", mpw.Boundary())
-	request.Header.Set("Content-Type", contentType)
-	request.ContentLength = m.predictPartApp(fileSize, mpw.Boundary())
-	request.Body = r
+	req.Header.Set("Content-Type", contentType)
+	req.ContentLength = m.predictPartApp(fileSize, mpw.Boundary())
+	req.Body = r
 
-	_, err = m.rawClient.Do(request)
+	_, err = m.rawClient.Do(req)
 	if err != nil {
 		panic(err)
 	}
