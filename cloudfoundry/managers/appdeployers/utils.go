@@ -1,8 +1,9 @@
 package appdeployers
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 )
 
 func venerableAppName(appName string) string {
@@ -12,6 +13,16 @@ func venerableAppName(appName string) string {
 func clearMappingId(mappings []ccv2.RouteMapping) []ccv2.RouteMapping {
 	for i, mapping := range mappings {
 		mapping.GUID = ""
+		mappings[i] = mapping
+	}
+	return mappings
+}
+
+func rejoinMappingPort(defaultPort int, mappings []ccv2.RouteMapping) []ccv2.RouteMapping {
+	for i, mapping := range mappings {
+		if mapping.AppPort <= 0 {
+			mapping.AppPort = defaultPort
+		}
 		mappings[i] = mapping
 	}
 	return mappings
