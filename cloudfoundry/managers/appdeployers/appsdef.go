@@ -1,8 +1,9 @@
 package appdeployers
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"time"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 )
 
 type AppDeploy struct {
@@ -13,6 +14,10 @@ type AppDeploy struct {
 	BindTimeout     time.Duration
 	StageTimeout    time.Duration
 	StartTimeout    time.Duration
+}
+
+func (a AppDeploy) IsDockerImage() bool {
+	return a.App.DockerImage != ""
 }
 
 type AppDeployResponse struct {

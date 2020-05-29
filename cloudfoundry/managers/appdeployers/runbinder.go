@@ -1,12 +1,13 @@
 package appdeployers
 
 import (
+	"fmt"
+	"time"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
-	"time"
 )
 
 type RunBinder struct {
@@ -34,16 +35,18 @@ func (r RunBinder) MapRoutes(appDeploy AppDeploy) ([]ccv2.RouteMapping, error) {
 			mappings = append(mappings, mappingCur)
 			continue
 		}
-		for _, port := range appDeploy.App.Ports {
-			mapping, _, err := r.client.CreateRouteMapping(appGuid, mappingCur.RouteGUID, port)
-			if err != nil {
-				return mappings, err
-			}
-			// we wait one second after mapping because mapping is an async operation which can take time to complete
-			// mostly due to route emitter to perform its action inside diego
-			time.Sleep(1 * time.Second)
-			mappings = append(mappings, mapping)
+		var port *int
+		if mappingCur.AppPort > 0 {
+			port = &mappingCur.AppPort
 		}
+		mapping, _, err := r.client.CreateRouteMapping(appGuid, mappingCur.RouteGUID, port)
+		if err != nil {
+			return mappings, err
+		}
+		// we wait one second after mapping because mapping is an async operation which can take time to complete
+		// mostly due to route emitter to perform its action inside diego
+		time.Sleep(1 * time.Second)
+		mappings = append(mappings, mapping)
 	}
 	return mappings, nil
 }
@@ -171,23 +174,27 @@ func (r RunBinder) WaitStaging(appDeploy AppDeploy) error {
 	return nil
 }
 
-func (r RunBinder) Start(appDeploy AppDeploy) error {
+func (r RunBinder) Start(appDeploy AppDeploy) (ccv2.Application, error) {
 	_, _, err := r.client.UpdateApplication(ccv2.Application{
 		GUID:  appDeploy.App.GUID,
 		State: constant.ApplicationStarted,
 	})
 	if err != nil {
-		return err
+		return ccv2.Application{}, err
 	}
 	err = r.WaitStaging(appDeploy)
 	if err != nil {
-		return err
+		return ccv2.Application{}, err
 	}
 	err = r.WaitStart(appDeploy)
 	if err != nil {
-		return r.processDeployErr(err, appDeploy)
+		return ccv2.Application{}, r.processDeployErr(err, appDeploy)
 	}
-	return nil
+	app, _, err := r.client.GetApplication(appDeploy.App.GUID)
+	if err != nil {
+		return app, err
+	}
+	return app, nil
 }
 
 func (r RunBinder) Stop(appDeploy AppDeploy) error {
@@ -206,7 +213,7 @@ func (r RunBinder) Restart(appDeploy AppDeploy, stageTimeout time.Duration) erro
 	if err != nil {
 		return err
 	}
-	err = r.Start(appDeploy)
+	_, err = r.Start(appDeploy)
 	if err != nil {
 		return err
 	}

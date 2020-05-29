@@ -195,7 +195,7 @@ func resourceApp() *schema.Resource {
 							Type:         schema.TypeInt,
 							Optional:     true,
 							Computed:     true,
-							ValidateFunc: validation.IntBetween(1024, 65535),
+							ValidateFunc: validation.IntBetween(0, 65535),
 						},
 					},
 				},
@@ -343,6 +343,14 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	}()
 	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
 
+	// if ports has only one member and port under or equal to 1024
+	// this means that we are using not predefined port by user
+	// push back to empty list to make blue-green happy with api
+	ports := d.Get("ports").(*schema.Set).List()
+	if len(ports) == 1 && ports[0].(int) <= 1024 {
+		d.Set("ports", []int{})
+	}
+
 	if d.HasChange("routes") {
 		oldRoutes, newRoutes := d.GetChange("routes")
 		remove, _ := getListMapChanges(oldRoutes, newRoutes, func(source, item map[string]interface{}) bool {
@@ -354,6 +362,10 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 				return err
 			}
 			for _, mapping := range mappings {
+				// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
+				if mapping.AppPort <= 0 {
+					mapping.AppPort = (d.Get("ports").(*schema.Set).List()[0]).(int)
+				}
 				if mapping.AppPort != r["port"] {
 					continue
 				}
@@ -438,7 +450,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 	if d.HasChange("ports") {
 		ports := make([]int, 0)
-		for _, vv := range d.Get("port").(*schema.Set).List() {
+		for _, vv := range d.Get("ports").(*schema.Set).List() {
 			ports = append(ports, vv.(int))
 		}
 		appUpdate.Ports = ports
@@ -564,14 +576,13 @@ func IsAppUpdateOnly(d ResourceChanger) bool {
 
 func IsAppRestageNeeded(d ResourceChanger) bool {
 	return d.HasChange("buildpack") || d.HasChange("stack") ||
-		d.HasChange("docker_image") || d.HasChange("service_binding") ||
-		d.HasChange("environment")
+		d.HasChange("service_binding") || d.HasChange("environment")
 }
 
 func IsAppRestartNeeded(d ResourceChanger) bool {
 	return d.HasChange("memory") || d.HasChange("disk_quota") ||
 		d.HasChange("command") || d.HasChange("health_check_http_endpoint") ||
-		d.HasChange("health_check_type")
+		d.HasChange("docker_image") || d.HasChange("health_check_type")
 }
 
 func isDiffAppParamsBinding(oldBinding, currentBinding map[string]interface{}) (bool, error) {
