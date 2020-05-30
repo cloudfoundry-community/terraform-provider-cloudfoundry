@@ -149,15 +149,30 @@ func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 func addOrNothingUserInOrgBySpace(client *ccv2.Client, orgId, uaaid string) error {
 	orgs, _, err := client.GetUserOrganizations(uaaid)
 	isNotFound := IsErrNotFound(err)
-	if err != nil && !isNotFound {
+	isNotAuthorized := IsErrNotAuthorized(err)
+	if err != nil && !isNotFound && !isNotAuthorized {
 		return err
 	}
 
-	if isInSlice(orgs, func(object interface{}) bool {
+	if !isNotAuthorized && isInSlice(orgs, func(object interface{}) bool {
 		return object.(ccv2.Organization).GUID == orgId
 	}) && !isNotFound {
 		return nil
 	}
+
+	// Fallback for isNotAuthorized case
+	if isNotAuthorized {
+		users, _, err := client.GetOrganizationUsers(orgId)
+		if err != nil {
+			return err
+		}
+		if isInSlice(users, func(object interface{}) bool {
+			return object.(ccv2.User).GUID == uaaid
+		}) {
+			return nil
+		}
+	}
+
 	_, err = client.UpdateOrganizationUserByRole(constant.OrgUser, orgId, uaaid)
 	return err
 }

@@ -65,8 +65,6 @@ github.com/charlievieth/fs v0.0.0-20170613215519-7dc373669fa1 h1:vTlpHKxJqykyKdW
 github.com/charlievieth/fs v0.0.0-20170613215519-7dc373669fa1/go.mod h1:sAoA1zHCH4FJPE2gne5iBiiVG66U7Nyp6JqlOo+FEyg=
 github.com/cheggaaa/pb v1.0.27/go.mod h1:pQciLPpbU0oxA0h+VJYYLxO+XeDQb5pZijXscXHm81s=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/cloudfoundry-community/cloudfoundry-cli v0.0.2-complete-api h1:gAym75FfG1DENlKO8FQLVGB2jZ+mxYUFUU82SzzmkIA=
-github.com/cloudfoundry-community/cloudfoundry-cli v0.0.2-complete-api/go.mod h1:DigEBZwaNy/7RSrQpKuMeADXY5tFaWaieQX+UM8+0fA=
 github.com/cloudfoundry-community/cloudfoundry-cli v0.0.3-complete-api h1:wMOKglbBBxujUN2atoRlBdjjem198HLloe8FojdpKnA=
 github.com/cloudfoundry-community/cloudfoundry-cli v0.0.3-complete-api/go.mod h1:DigEBZwaNy/7RSrQpKuMeADXY5tFaWaieQX+UM8+0fA=
 github.com/cloudfoundry/bosh-cli v5.5.0+incompatible h1:P+hlG8D9xXIi75yqTpFrNBHR3oMWWMPNhj5AwSN2tOU=
