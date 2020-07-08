@@ -80,9 +80,6 @@ func IsErrNotAuthorized(err error) bool {
 	if httpErr, ok := err.(ccerror.RawHTTPStatusError); ok && httpErr.StatusCode == 403 {
 		return true
 	}
-	if httpErr, ok := err.(ccerror.RawHTTPStatusError); ok && httpErr.StatusCode == 403 {
-		return true
-	}
 	if uaaErr, ok := err.(uaa.RawHTTPStatusError); ok && uaaErr.StatusCode == 403 {
 		return true
 	}
@@ -94,9 +91,6 @@ func IsErrNotFound(err error) bool {
 		return true
 	}
 	if _, ok := err.(ccerror.ResourceNotFoundError); ok {
-		return true
-	}
-	if httpErr, ok := err.(ccerror.RawHTTPStatusError); ok && httpErr.StatusCode == 404 {
 		return true
 	}
 	if uaaErr, ok := err.(uaa.RawHTTPStatusError); ok && uaaErr.StatusCode == 404 {
