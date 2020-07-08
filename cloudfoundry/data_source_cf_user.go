@@ -22,9 +22,9 @@ func dataSourceUser() *schema.Resource {
 				Required: true,
 			},
 			"org_id": &schema.Schema{
-				Type: schema.TypeString,
+				Type:        schema.TypeString,
 				Description: "Optionally scope the lookup to organization",
-				Optional: true,
+				Optional:    true,
 			},
 		},
 	}
