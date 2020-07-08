@@ -73,14 +73,24 @@ func UsersToIDs(users []ccv2.User) []interface{} {
 	return ids
 }
 
+func IsErrNotAuthorized(err error) bool {
+	if _, ok := err.(ccerror.ForbiddenError); ok {
+		return true
+	}
+	if httpErr, ok := err.(ccerror.RawHTTPStatusError); ok && httpErr.StatusCode == 403 {
+		return true
+	}
+	if uaaErr, ok := err.(uaa.RawHTTPStatusError); ok && uaaErr.StatusCode == 403 {
+		return true
+	}
+	return false
+}
+
 func IsErrNotFound(err error) bool {
 	if httpErr, ok := err.(ccerror.RawHTTPStatusError); ok && httpErr.StatusCode == 404 {
 		return true
 	}
 	if _, ok := err.(ccerror.ResourceNotFoundError); ok {
-		return true
-	}
-	if httpErr, ok := err.(ccerror.RawHTTPStatusError); ok && httpErr.StatusCode == 404 {
 		return true
 	}
 	if uaaErr, ok := err.(uaa.RawHTTPStatusError); ok && uaaErr.StatusCode == 404 {
