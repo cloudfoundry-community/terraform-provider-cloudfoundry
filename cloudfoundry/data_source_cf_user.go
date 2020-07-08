@@ -1,6 +1,7 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"strings"
 
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
@@ -20,6 +21,11 @@ func dataSourceUser() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"org_id": &schema.Schema{
+				Type: schema.TypeString,
+				Description: "Optionally scope the lookup to organization",
+				Optional: true,
+			},
 		},
 	}
 }
@@ -32,8 +38,29 @@ func dataSourceUserRead(d *schema.ResourceData, meta interface{}) error {
 	name := strings.ToLower(d.Get("name").(string))
 
 	users, _, err := um.GetUsers()
-	if err != nil {
+	isNotAuthorized := IsErrNotAuthorized(err)
+	if err != nil && !isNotAuthorized {
 		return err
+	}
+	if isNotAuthorized { // Fallback for OrgManagers
+		orgID := d.Get("org_id").(string)
+		if orgID == "" {
+			return err
+		}
+		users, _, err := um.GetOrganizationUsers(orgID)
+		if err != nil {
+			return err
+		}
+		if isInSlice(users, func(object interface{}) bool {
+			if user, ok := object.(ccv2.User); ok && user.Username == name {
+				d.SetId(user.GUID)
+				return true
+			}
+			return false
+		}) {
+			return nil
+		}
+		return NotFound
 	}
 
 	for _, user := range users {
