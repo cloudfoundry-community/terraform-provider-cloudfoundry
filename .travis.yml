@@ -14,7 +14,6 @@ before_install:
   - curl -LSs "https://cli.run.pivotal.io/stable?release=linux64-binary&version=6.43.0" | tar -zvx -C .cf-cli/ -- cf
   - export PATH="$(pwd)/.cf-cli:$PATH"
   - export GO111MODULE=on
-  - go install github.com/golangci/golangci-lint/cmd/golangci-lint
 jobs:
   include:
     - stage: testlint
