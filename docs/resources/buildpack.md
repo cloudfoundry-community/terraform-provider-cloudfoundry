@@ -61,8 +61,8 @@ resource "zipper_file" "fixture" {
 
 resource "cloudfoundry_buildpack" "tomee" {
     name = "tomcat-enterprise-edition"
-    path = "${zipper_file.fixture.output_path}"
-    source_code_hash = "${zipper_file.fixture.output_sha}"
+    path = zipper_file.fixture.output_path
+    source_code_hash = zipper_file.fixture.output_sha
     position = "12"
     enable = true
 }

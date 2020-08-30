@@ -25,7 +25,7 @@ The following example looks up a service named 'p-redis', registered as a space-
 ```hcl
 data "cloudfoundry_service" "redis" {
     name = "p-redis"  
-    space = "${cloudfoundry_space.dev.id}"  
+    space = cloudfoundry_space.dev.id
 }
 ```
 
@@ -34,7 +34,7 @@ The following example looks up a service named 'p-redis', registered as a space-
 ```hcl
 data "cloudfoundry_service" "redis" {
     name = "p-redis"  
-    space = "${cloudfoundry_space.dev.id}"
+    space = cloudfoundry_space.dev.id
     service_broker_guid = "5716f06c-b3a2-4e8a-893f-39870b0c9f42"
 }
 ```

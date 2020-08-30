@@ -20,9 +20,9 @@ The following is a Space created within the referenced Org. All referenced users
 ```hcl
 resource "cloudfoundry_space" "s1" {
     name = "space-one"
-    org = "${cloudfoundry_org.o1.id}"
-    quota = "${cloudfoundry_quota.dev.id}"
-    asgs = [ "${cloudfoundry_asg.svc.id}" ]
+    org = cloudfoundry_org.o1.id
+    quota = cloudfoundry_quota.dev.id
+    asgs = [ cloudfoundry_asg.svc.id ]
     allow_ssh = true
 }
 ```

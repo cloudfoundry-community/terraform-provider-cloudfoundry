@@ -26,7 +26,7 @@ resource "cloudfoundry_space_quota" "10g" {
     total_app_instances = 10
     total_routes = 5
     total_services = 20
-    org = "${cloudfoundry_org.myorg.id}"
+    org = cloudfoundry_org.myorg.id
 }
 ```
 

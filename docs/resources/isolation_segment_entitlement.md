@@ -22,10 +22,10 @@ The following example entitles the segment `public` to organizations `org1` and 
 
 ```hcl
 resource "cloudfoundry_isolation_segment_entitlement" "public" {
-  segment = "${data.cloudfoundry_isolation_segment.public.id}"
+  segment = data.cloudfoundry_isolation_segment.public.id
   orgs = [
-    "${data.cloudfloundry_org.org1.id}",
-    "${data.cloudfloundry_org.org2.id}"
+    data.cloudfloundry_org.org1.id,
+    data.cloudfloundry_org.org2.id
   ]
 }
 ```

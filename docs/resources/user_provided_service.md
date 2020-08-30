@@ -17,7 +17,7 @@ The following is a User Provided Service created within the referenced space.
 ```hcl
 resource "cloudfoundry_user_provided_service" "mq" {
   name = "mq-server"
-  space = "${cloudfoundry_space.dev.id}"
+  space = cloudfoundry_space.dev.id
   credentials = {
     "url" = "mq://localhost:9000"
     "username" = "admin"
@@ -27,7 +27,7 @@ resource "cloudfoundry_user_provided_service" "mq" {
 
 resource "cloudfoundry_user_provided_service" "mail" {
   name = "mail-server"
-  space = "${cloudfoundry_space.dev.id}"
+  space = cloudfoundry_space.dev.id
   credentials_json = <<JSON
   {
     "server" : {

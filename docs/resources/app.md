@@ -74,8 +74,8 @@ resource "zipper_file" "fixture" {
 
 resource "cloudfoundry_app" "gobis-server" {
     name = "gobis-server"
-    path = "${zipper_file.fixture.output_path}"
-    source_code_hash = "${zipper_file.fixture.output_sha}"
+    path = zipper_file.fixture.output_path
+    source_code_hash = zipper_file.fixture.output_sha
     buildpack = "go_buildpack"
 }
 ```
@@ -120,8 +120,8 @@ The `route` block supports:
 resource "cloudfoundry_app" "java-spring" {
 # [...]
  routes = [
-    { route = "${cloudfoundry_route.java-spring.id}" },
-    { route = "${cloudfoundry_route.java-spring-2.id}" }
+    { route = cloudfoundry_route.java-spring.id },
+    { route = cloudfoundry_route.java-spring-2.id }
   ]
 }
 ```

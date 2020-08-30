@@ -16,8 +16,8 @@ The following example binds a specific route to the given service instance.
 
 ```hcl
 resource "cloudfoundry_route_service_binding" "route-bind" {
-  service_instance = "${cloudfoundry_service_instance.myservice.id}"
-  route            = "${cloudfoundry_route.myroute.id}"
+  service_instance = cloudfoundry_service_instance.myservice.id
+  route            = cloudfoundry_route.myroute.id
 }
 ```
 
