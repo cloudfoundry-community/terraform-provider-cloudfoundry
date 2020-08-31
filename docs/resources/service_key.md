@@ -21,13 +21,13 @@ data "cloudfoundry_service" "redis" {
 
 resource "cloudfoundry_service_instance" "redis1" {
   name = "pricing-grid"
-  space = "${cloudfoundry_space.dev.id}"
-  service_plan = "${data.cloudfoundry_service.redis.service_plans["shared-vm"]}"
+  space = cloudfoundry_space.dev.id
+  service_plan = data.cloudfoundry_service.redis.service_plans["shared-vm"]
 }
 
 resource "cloudfoundry_service_key" "redis1-key1" {
   name = "pricing-grid-key1"
-  service_instance = "${cloudfoundry_service_instance.redis.id}
+  service_instance = cloudfoundry_service_instance.redis.id
 }
 ```
 

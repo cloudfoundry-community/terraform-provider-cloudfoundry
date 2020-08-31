@@ -16,8 +16,8 @@ The following example creates an route for an application.
 
 ```hcl
 resource "cloudfoundry_route" "default" {
-    domain = "${data.cloudfoundry_domain.apps.domain.id}"
-    space = "${data.cloudfoundry_space.dev.id}"
+    domain = data.cloudfoundry_domain.apps.domain.id
+    space = data.cloudfoundry_space.dev.id
     hostname = "myapp"
 }
 ```

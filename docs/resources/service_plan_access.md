@@ -23,13 +23,13 @@ The second example gives access to a specific org.
 
 ```hcl
 resource "cloudfoundry_service_plan_access" "org1-mysql-512mb" {
-    plan = "${cloudfoundry_service_broker.mysql.service_plans["p-mysql/512mb"]}"
+    plan = cloudfoundry_service_broker.mysql.service_plans["p-mysql/512mb"]
     public = true
 }
 
 resource "cloudfoundry_service_plan_access" "org1-mysql-512mb" {
-    plan = "${cloudfoundry_service_broker.mysql.service_plans["p-mysql/1gb"]}"
-    org = "${cloudfoundry_org.org1.id}"
+    plan = cloudfoundry_service_broker.mysql.service_plans["p-mysql/1gb"]
+    org = cloudfoundry_org.org1.id
 }
 ```
 

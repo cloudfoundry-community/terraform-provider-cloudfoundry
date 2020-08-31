@@ -20,14 +20,14 @@ The following creates container to container access policy between the given app
 resource "cf_network_policy" "my-policy" {
 
     policy {
-        source_app = "${cf_app.app1.id}"
-        destination_app = "${cf_app.app2.id}"
+        source_app = cf_app.app1.id
+        destination_app = cf_app.app2.id
         port = "8080-8090"
     }
 
     policy {
-        source_app = "${cf_app.app1.id}"
-        destination_app = "${cf_app.app3.id}"
+        source_app = cf_app.app1.id
+        destination_app = cf_app.app3.id
         port = "9999"
         protocol = "udp"
     }
