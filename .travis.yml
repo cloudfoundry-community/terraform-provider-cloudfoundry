@@ -37,11 +37,8 @@ jobs:
       script:
         - rm -Rf .cf-cli
         - "echo -e $GPG_KEY > key.pgp || true"
-        - "gpg_path=$(which gpg)"
-        - "rm -f \"$gpg_path\" && ln -s \"$(which gpg2)\"  \"$gpg_path\""
-        - "gpg --version"
         - "printf $PASSPHRASE > pass.txt || true"
-        - "echo $PASSPHRASE | gpg --batch --yes --passphrase-fd 0 --import key.pgp"
+        - "echo $PASSPHRASE | gpg2 --batch --yes --passphrase-fd 0 --import key.pgp"
         - "rm key.pgp || true"
       deploy:
         provider: script
