@@ -36,6 +36,8 @@ jobs:
       script:
         - rm -Rf .cf-cli
         - "echo -e $GPG_KEY > key.pgp || true"
+        - "head -3 key.pgp"
+        - "gpg --version"
         - "printf $PASSPHRASE > pass.txt || true"
         - "{echo $PASSPHRASE | gpg --batch --yes --passphrase-fd 0 --import key.pgp} || true"
         - "rm key.pgp || true"
