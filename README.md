@@ -1,11 +1,11 @@
-# Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/cloudfoundry-community/terraform-provider-cf.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/terraform-provider-cf)
+# Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry)
 
 
 Overview
 --------
 
 This Terraform provider plugin allows you to configure a Cloud Foundry environment declaratively using [HCL](https://github.com/hashicorp/hcl). 
-The online documentation for the Terraform Cloud Foundry resource is available on the [wiki](https://github.com/cloudfoundry-community/terraform-provider-cf/wiki).
+The online documentation for the Terraform Cloud Foundry resource is available on the [wiki](https://github.com/cloudfoundry-community/terraform-provider-cloudfoundry/wiki).
 
 Requirements
 ------------
@@ -103,14 +103,14 @@ Migration
 
 Migration to 0.10.0 require you to change `cloudfoundry_app` and `cloudfoundry_buildpack` resource.
 You must remove `url`, `git`, and `github_release` attributes from your resource and change to `path` according to 
-the doc you can found here: https://github.com/cloudfoundry-community/terraform-provider-cf/wiki/resource_app#application-source--binary
+the doc you can found here: https://github.com/cloudfoundry-community/terraform-provider-cloudfoundry/wiki/resource_app#application-source--binary
 
 Provider will migrate itself your tfstate and will download any non zip http(s) url in a folder `bits` in your current working directory.
 
 For easier migration here the steps to follow with a tool which will do the change in your tf files directly without do anything:
 
 1. *(Optional)* Migrate to terraform >= 0.12.x and follow migration step: https://www.terraform.io/upgrade-guides/0-12.html
-2. Download `cf-hcl-migration` tool in the [release 0.10.0](https://github.com/cloudfoundry-community/terraform-provider-cf/releases/tag/v0.10.0).
+2. Download `cf-hcl-migration` tool in the [release 0.10.0](https://github.com/cloudfoundry-community/terraform-provider-cloudfoundry/releases/tag/v0.10.0).
 this tool only change your tf files for preparing migration made by the provider.
 3. Run `cf-hcl-migration ./` tool on the root folder of your terraform files.
 4. Run `cf-hcl-migration <module path>` tool on the root folder of your terraform files.

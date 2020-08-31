@@ -2,9 +2,9 @@
 
 cwd="$(pwd)"
 pushd "/tmp"
-rm -Rf 'terraform-provider-cf.wiki'
-git clone https://github.com/cloudfoundry-community/terraform-provider-cf.wiki.git
-pushd terraform-provider-cf.wiki
+rm -Rf 'terraform-provider-cloudfoundry.wiki'
+git clone https://github.com/cloudfoundry-community/terraform-provider-cloudfoundry.wiki.git
+pushd terraform-provider-cloudfoundry.wiki
 cat <<EOF >_Sidebar.md
 ## Index ##
 
@@ -34,5 +34,5 @@ git add .
 git commit -m "update wiki"
 git push origin master
 popd
-rm -Rf 'terraform-provider-cf.wiki'
+rm -Rf 'terraform-provider-cloudfoundry.wiki'
 popd
