@@ -36,6 +36,7 @@ jobs:
       if: branch = master OR tag IS present
       script:
         - rm -Rf .cf-cli
+        - "echo -e $GPG_KEY"
         - "echo -e $GPG_KEY > key.pgp || true"
         - "gpg2 --version"
         - "printf $PASSPHRASE > pass.txt || true"
