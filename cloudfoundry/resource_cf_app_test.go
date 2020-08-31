@@ -241,16 +241,15 @@ resource "cloudfoundry_route" "test-docker-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
   hostname = "test-docker-app"
-  target {
-    app = "${cloudfoundry_app.test-docker-app.id}"
-    port = 8080
-  }
 }
 resource "cloudfoundry_app" "test-docker-app" {
   name = "test-docker-app"
   space = "${data.cloudfoundry_space.space.id}"
   docker_image = "cloudfoundry/diego-docker-app:latest"
   timeout = 900
+  routes {
+    route = "${cloudfoundry_route.test-docker-app.id}"
+  }
 }
 `
 
@@ -660,8 +659,6 @@ func TestAccResApp_dockerApp(t *testing.T) {
 							refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(
 							refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(
-							refApp, "ports.8080", "8080"),
 						resource.TestCheckResourceAttr(
 							refApp, "instances", "1"),
 						resource.TestCheckResourceAttrSet(

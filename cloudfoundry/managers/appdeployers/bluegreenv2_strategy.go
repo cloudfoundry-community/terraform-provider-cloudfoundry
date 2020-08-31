@@ -129,7 +129,7 @@ func (s BlueGreenV2) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				if appDeploy.App.DockerImage != "" {
+				if appDeploy.IsDockerImage() {
 					return ctx, nil
 				}
 				appResp := ctx["app_response"].(AppDeployResponse)
@@ -141,12 +141,17 @@ func (s BlueGreenV2) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 		{
 			Forward: func(ctx Context) (Context, error) {
 				appResp := ctx["app_response"].(AppDeployResponse)
-				err := s.runBinder.Start(AppDeploy{
+				app, err := s.runBinder.Start(AppDeploy{
 					App:          appResp.App,
 					StageTimeout: appDeploy.StageTimeout,
 					BindTimeout:  appDeploy.BindTimeout,
 					StartTimeout: appDeploy.StartTimeout,
 				})
+				ctx["app_response"] = AppDeployResponse{
+					App:             app,
+					RouteMapping:    rejoinMappingPort(app.Ports[0], appResp.RouteMapping),
+					ServiceBindings: appResp.ServiceBindings,
+				}
 				return ctx, err
 			},
 			ReversePrevious: defaultReverse,

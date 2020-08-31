@@ -21,16 +21,16 @@ The following example creates an org with a specific org-wide quota.
 resource "cloudfoundry_space_users" "su1" {
     space    = "space-id"
     managers = [
-        "${data.cloudfoundry_user.tl.id}"
+        data.cloudfoundry_user.tl.id
     ]
     developers = [
-        "${data.cloudfoundry_user.tl.id}",
-        "${data.cloudfoundry_user.dev1.id}",
-        "${data.cloudfoundry_user.dev2.id}"
+        data.cloudfoundry_user.tl.id,
+        data.cloudfoundry_user.dev1.id,
+        data.cloudfoundry_user.dev2.id
     ]
     auditors = [
-        "${data.cloudfoundry_user.adr.id}",
-        "${data.cloudfoundry_user.dev3.id}"
+        data.cloudfoundry_user.adr.id,
+        data.cloudfoundry_user.dev3.id
     ]
 }
 ```

@@ -33,12 +33,17 @@ jobs:
       script: travis_wait 360 scripts/build.sh
       if: type = pull_request AND fork = false OR branch = dev OR branch = master
     - stage: deploy
+      if: "branch = master"
       script:
         - rm -Rf .cf-cli
+        - "printf $GPG_KEY > key.pgp"
+        - "printf $PASSPHRASE > pass.txt"
+        - "echo $PASSPHRASE | gpg --batch --yes --passphrase-fd 0 --import key.pgp"
+        - "rm key.pgp"
       deploy:
         provider: script
         skip_cleanup: true
-        script: curl -sL https://git.io/goreleaser | bash
+        script: "curl -sL https://git.io/goreleaser | bash"
         on:
           tags: true
           condition: $TRAVIS_OS_NAME = linux

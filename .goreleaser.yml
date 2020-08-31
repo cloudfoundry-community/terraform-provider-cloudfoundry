@@ -1,32 +1,60 @@
 before:
   hooks:
     - go mod download
+    - go mod tidy
 builds:
-  - goos:
+  - env:
+      # goreleaser does not work with CGO, it could also complicate
+      # usage by users in CI/CD systems like Terraform Cloud where
+      # they are unable to install libraries.
+      - CGO_ENABLED=0
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
+    id: provider
+    ldflags:
+      - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
+    goos:
+      - freebsd
+      - windows
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
-    env:
-      - CGO_ENABLED=0
-    id: provider
-    main: ./
-    binary: terraform-provider-cloudfoundry
+      - '386'
+      - arm
+      - arm64
+    binary: 'terraform-provider-cloudfoundry_{{ .Version }}'
 archives:
-  - id: zip-archive-provider
+  - format: zip
+    id: zip-archive-provider
     builds: [provider]
-    name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
-    format: zip
+    name_template: 'terraform-provider-cloudfoundry_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
   - id: binary-archive-provider
     builds: [provider]
     name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
     format: binary
 checksum:
-  name_template: 'checksums.txt'
-  algorithm: sha1
-snapshot:
-  name_template: "{{ .Tag }}-next"
+  name_template: 'terraform-provider-cloudfoundry_{{ .Version }}_SHA256SUMS'
+  algorithm: sha256
+signs:
+  - artifacts: checksum
+    args:
+      # if you are using this is a GitHub action or some other automated pipeline, you 
+      # need to pass the batch flag to indicate its not interactive.
+      - "--batch"
+      - "--pinentry-mode"
+      - "loopback"
+      - "--passphrase-file=pass.txt"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}" # set this environment variable for your signing key
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+release:
+  # If you want to manually examine the release before its live, uncomment this line:
+  draft: true
 changelog:
   sort: asc
   filters:

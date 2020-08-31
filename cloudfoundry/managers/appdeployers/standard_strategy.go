@@ -114,12 +114,20 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					return ctx, nil
 				}
 				appResp := ctx["app_response"].(AppDeployResponse)
-				err := s.runBinder.Start(AppDeploy{
+				app, err := s.runBinder.Start(AppDeploy{
 					App:          appResp.App,
 					StageTimeout: appDeploy.StageTimeout,
 					BindTimeout:  appDeploy.BindTimeout,
 					StartTimeout: appDeploy.StartTimeout,
 				})
+				if err != nil {
+					return ctx, err
+				}
+				ctx["app_response"] = AppDeployResponse{
+					App:             app,
+					RouteMapping:    rejoinMappingPort(app.Ports[0], appResp.RouteMapping),
+					ServiceBindings: appResp.ServiceBindings,
+				}
 				return ctx, err
 			},
 			ReversePrevious: defaultReverse,

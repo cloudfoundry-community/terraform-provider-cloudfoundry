@@ -78,9 +78,10 @@ func resourceRoute() *schema.Resource {
 							Required: true,
 						},
 						"port": &schema.Schema{
-							Type:     schema.TypeInt,
-							Optional: true,
-							Default:  8080,
+							Type:       schema.TypeInt,
+							ConfigMode: schema.SchemaConfigModeAttr,
+							Optional:   true,
+							Computed:   true,
 						},
 					},
 				},
@@ -167,6 +168,15 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	if IsImportState(d) {
 		for _, mapping := range mappings {
+			// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
+			if mapping.AppPort <= 0 {
+				appID := mapping.AppGUID
+				app, _, err := session.ClientV2.GetApplication(appID)
+				if err != nil {
+					return err
+				}
+				mapping.AppPort = app.Ports[0]
+			}
 			mappingsTf = append(mappingsTf, map[string]interface{}{
 				"app":  mapping.AppGUID,
 				"port": mapping.AppPort,
@@ -183,6 +193,15 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 		inside := false
 		tmpT := tfTarget.(map[string]interface{})
 		for _, mapping := range mappings {
+			// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
+			if mapping.AppPort <= 0 {
+				appID := mapping.AppGUID
+				app, _, err := session.ClientV2.GetApplication(appID)
+				if err != nil {
+					return err
+				}
+				mapping.AppPort = app.Ports[0]
+			}
 			if mapping.AppGUID == tmpT["app"] && mapping.AppPort == tmpT["port"] {
 				inside = true
 				tmpT["port"] = mapping.AppPort
@@ -286,14 +305,21 @@ func setRouteArguments(session *managers.Session, route ccv2.Route, d *schema.Re
 
 func addTargets(id string, add []map[string]interface{}, session *managers.Session) ([]map[string]interface{}, error) {
 	targets := make([]map[string]interface{}, 0)
-
 	for _, t := range add {
 		appID := t["app"].(string)
-		port := 8080
-		if v, ok := t["port"]; ok {
+		var port int
+		// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
+		if v, ok := t["port"]; ok && v.(int) > 0 {
 			port = v.(int)
+		} else {
+			app, _, err := session.ClientV2.GetApplication(appID)
+			if err != nil {
+				return targets, err
+			}
+			port = app.Ports[0]
+			t["port"] = port
 		}
-		_, _, err := session.ClientV2.CreateRouteMapping(appID, id, port)
+		_, _, err := session.ClientV2.CreateRouteMapping(appID, id, &port)
 		if err != nil {
 			return targets, err
 		}
@@ -305,11 +331,21 @@ func addTargets(id string, add []map[string]interface{}, session *managers.Sessi
 func removeTargets(id string, delete []map[string]interface{}, session *managers.Session) error {
 
 	for _, t := range delete {
+		appID := t["app"].(string)
+		app, _, err := session.ClientV2.GetApplication(appID)
+		if err != nil {
+			return err
+		}
+		defaultAppPort := app.Ports[0]
 		mappings, _, err := session.ClientV2.GetRouteMappings(filterAppGuid(t["app"].(string)), filterRouteGuid(id))
 		if err != nil {
 			return err
 		}
 		for _, mapping := range mappings {
+			// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
+			if mapping.AppPort <= 0 {
+				mapping.AppPort = defaultAppPort
+			}
 			if mapping.AppPort != t["port"] {
 				continue
 			}
