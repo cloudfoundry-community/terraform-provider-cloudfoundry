@@ -40,6 +40,7 @@ jobs:
         - "printf $PASSPHRASE > /tmp/pass.txt"
         - "echo $PASSPHRASE | gpg2 --batch --yes --passphrase-fd 0 --import /tmp/key.pgp"
         - "rm /tmp/key.pgp"
+        - "apt-get update && apt-get upgrade gpg2"
       deploy:
         provider: script
         skip_cleanup: true
