@@ -41,7 +41,7 @@ Works only on cloud foundry with api >= v3.63.
 ### Buildpack location
 
 * `path` - (Required) An uri or path to target a zip file. this can be in the form of unix path (`/my/path.zip`) or url path (`http://zip.com/my.zip`)
-* `source_code_hash` - (Optional) Used to trigger updates. Must be set to a base64-encoded SHA256 hash of the path specified. The usual way to set this is `${base64sha256(file("file.zip"))}`, 
+* `source_code_hash` - (Optional) Used to trigger updates. Must be set to a base64-encoded SHA256 hash of the path specified. The usual way to set this is `base64sha256(file("file.zip"))`, 
 where "file.zip" is the local filename of the lambda function source archive.
 
 ~> **NOTE:** [terraform-provider-zipper](https://github.com/ArthurHlt/terraform-provider-zipper) 
