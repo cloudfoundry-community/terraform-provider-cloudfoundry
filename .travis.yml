@@ -33,13 +33,13 @@ jobs:
       script: travis_wait 360 scripts/build.sh
       if: type = pull_request AND fork = false OR branch = dev OR branch = master
     - stage: deploy
+      if: branch = master OR tag IS present
       script:
         - rm -Rf .cf-cli
         - "echo -e $GPG_KEY > key.pgp || true"
-        - "head -3 key.pgp"
-        - "gpg --version"
+        - "gpg2 --version"
         - "printf $PASSPHRASE > pass.txt || true"
-        - "{echo $PASSPHRASE | gpg --batch --yes --passphrase-fd 0 --import key.pgp} || true"
+        - "echo $PASSPHRASE | gpg2 --batch --yes --passphrase-fd 0 --import key.pgp"
         - "rm key.pgp || true"
       deploy:
         provider: script
