@@ -38,7 +38,7 @@ jobs:
         - rm -Rf .cf-cli
         - "echo -e $GPG_KEY > key.pgp || true"
         - "gpg_path=$(which gpg)"
-        - "rm -f \"$gpg_path\" && ln -s \"$(gpg2)\"  \"$gpg_path\""
+        - "rm -f \"$gpg_path\" && ln -s \"$(which gpg2)\"  \"$gpg_path\""
         - "gpg --version"
         - "printf $PASSPHRASE > pass.txt || true"
         - "echo $PASSPHRASE | gpg --batch --yes --passphrase-fd 0 --import key.pgp"
