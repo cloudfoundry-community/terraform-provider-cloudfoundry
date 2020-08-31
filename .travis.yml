@@ -38,8 +38,8 @@ jobs:
         - rm -Rf .cf-cli
         - "echo -e $GPG_KEY > /tmp/key.pgp"
         - "printf $PASSPHRASE > /tmp/pass.txt"
-        - "echo $PASSPHRASE | gpg2 --batch --yes --passphrase-fd 0 --import key.pgp"
-        - "rm key.pgp"
+        - "echo $PASSPHRASE | gpg2 --batch --yes --passphrase-fd 0 --import /tmp/key.pgp"
+        - "rm /tmp/key.pgp"
       deploy:
         provider: script
         skip_cleanup: true
