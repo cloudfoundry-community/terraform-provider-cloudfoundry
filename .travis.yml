@@ -35,10 +35,10 @@ jobs:
     - stage: deploy
       script:
         - rm -Rf .cf-cli
-        - "echo -e $GPG_KEY > key.pgp"
-        - "printf $PASSPHRASE > pass.txt"
-        - "echo $PASSPHRASE | gpg --batch --yes --passphrase-fd 0 --import key.pgp"
-        - "rm key.pgp"
+        - "echo -e $GPG_KEY > key.pgp || true"
+        - "printf $PASSPHRASE > pass.txt || true"
+        - "{echo $PASSPHRASE | gpg --batch --yes --passphrase-fd 0 --import key.pgp} || true"
+        - "rm key.pgp || true"
       deploy:
         provider: script
         skip_cleanup: true
