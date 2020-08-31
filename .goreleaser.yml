@@ -46,7 +46,7 @@ signs:
       - "--batch"
       - "--pinentry-mode"
       - "loopback"
-      - "--passphrase-file=pass.txt"
+      - "--passphrase-file=/tmp/pass.txt"
       - "--local-user"
       - "{{ .Env.GPG_FINGERPRINT }}" # set this environment variable for your signing key
       - "--output"
