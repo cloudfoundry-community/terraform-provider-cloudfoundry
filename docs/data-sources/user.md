@@ -25,6 +25,7 @@ data "cloudfoundry_user" "myuser" {
 The following arguments are supported:
 
 * `name` - (Required) The name of the user to look up
+* `org_id` - (Optional) the org ID where to look for this user. Use this in case you are using an OrgAdmin account.
 
 ## Attributes Reference
 
