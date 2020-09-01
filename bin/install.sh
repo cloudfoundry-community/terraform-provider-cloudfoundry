@@ -48,7 +48,7 @@ fi
 if [[ "$CPUINFO" == "arm"* ]]; then
   ARCH="arm"
 fi
-FILENAME="${NAME}_${VERSION:1}_${OS}_${ARCH}"
+FILENAME="${NAME}_${VERSION}_${OS}_${ARCH}"
 if [[ "$OS" == "windows" ]]; then
   FILENAME="${FILENAME}.exe"
 fi

@@ -24,7 +24,7 @@ builds:
       - '386'
       - arm
       - arm64
-    binary: 'terraform-provider-cloudfoundry_{{ .Version }}'
+    binary: 'terraform-provider-cloudfoundry_v{{ .Version }}'
 archives:
   - format: zip
     id: zip-archive-provider
