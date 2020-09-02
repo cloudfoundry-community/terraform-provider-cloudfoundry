@@ -3,6 +3,7 @@ REPO_NAME="terraform-provider-cloudfoundry"
 NAME="terraform-provider-cloudfoundry"
 OS=""
 OWNER="cloudfoundry-community"
+PROVIDER_CF_VERSION="${PROVIDER_CF_VERSION:-v0.12.3}"
 : "${TMPDIR:=${TMP:-$(
   CDPATH=/var:/
   cd -P tmp
