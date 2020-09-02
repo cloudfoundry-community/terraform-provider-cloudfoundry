@@ -16,7 +16,6 @@ builds:
     goos:
       - freebsd
       - openbsd
-      - solaris
       - windows
       - linux
       - darwin
