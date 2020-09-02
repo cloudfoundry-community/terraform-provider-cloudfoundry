@@ -11,11 +11,12 @@ builds:
     mod_timestamp: '{{ .CommitTimestamp }}'
     flags:
       - -trimpath
-    id: provider
     ldflags:
       - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
     goos:
       - freebsd
+      - openbsd
+      - solaris
       - windows
       - linux
       - darwin
@@ -24,18 +25,19 @@ builds:
       - '386'
       - arm
       - arm64
-    binary: 'terraform-provider-cloudfoundry_v{{ .Version }}'
+    ignore:
+      - goos: darwin
+        goarch: '386'
+      - goos: openbsd
+        goarch: arm
+      - goos: openbsd
+        goarch: arm64
+    binary: '{{ .ProjectName }}_v{{ .Version }}'
 archives:
   - format: zip
-    id: zip-archive-provider
-    builds: [provider]
-    name_template: 'terraform-provider-cloudfoundry_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
-  - id: binary-archive-provider
-    builds: [provider]
-    name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
-    format: binary
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
 checksum:
-  name_template: 'terraform-provider-cloudfoundry_{{ .Version }}_SHA256SUMS'
+  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
   algorithm: sha256
 signs:
   - artifacts: checksum
@@ -57,8 +59,4 @@ signs:
   # If you want to manually examine the release before its live, uncomment this line:
 #  draft: true
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
+  skip: true
