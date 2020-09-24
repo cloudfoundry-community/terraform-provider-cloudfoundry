@@ -146,6 +146,12 @@ The following attributes are exported along with any defaults for the inputs att
 * `id_bg` - The GUID of the application updated by resource when strategy is blue-green. 
 This allow change a resource linked to app resource id to be updated when app will be recreated.
 
+## Timeouts
+
+* App instance startup timeout - see the `timeout` argument.
+* App staging timeout - 15 mins.
+* Service binding timeout - 5 mins.
+
 ## Import
 
 The current App can be imported using the `app` GUID, e.g.
