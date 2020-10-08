@@ -147,6 +147,9 @@ func (s BlueGreenV2) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 					BindTimeout:  appDeploy.BindTimeout,
 					StartTimeout: appDeploy.StartTimeout,
 				})
+				if err != nil {
+					return nil, err
+				}
 				ctx["app_response"] = AppDeployResponse{
 					App:             app,
 					RouteMapping:    rejoinMappingPort(app.Ports[0], appResp.RouteMapping),
