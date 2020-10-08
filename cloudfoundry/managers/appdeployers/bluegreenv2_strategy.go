@@ -148,7 +148,7 @@ func (s BlueGreenV2) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 					StartTimeout: appDeploy.StartTimeout,
 				})
 				if err != nil {
-					return nil, err
+					return ctx, err
 				}
 				ctx["app_response"] = AppDeployResponse{
 					App:             app,
