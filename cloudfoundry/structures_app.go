@@ -45,7 +45,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 	for _, vv := range d.Get("ports").(*schema.Set).List() {
 		ports = append(ports, vv.(int))
 	}
-	if len(ports) == 0 {
+	if len(ports) == 0 && app.DockerImage == "" {
 		ports = []int{8080}
 	}
 	app.Ports = ports
@@ -70,6 +70,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 	for _, r := range getListOfStructs(d.Get("routes")) {
 		mappings = append(mappings, ccv2.RouteMapping{
 			RouteGUID: r["route"].(string),
+			AppPort:   r["port"].(int),
 		})
 	}
 
@@ -155,6 +156,10 @@ func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppD
 	mappingsTf := getListOfStructs(d.Get("routes"))
 	finalMappings := make([]map[string]interface{}, 0)
 	for _, mapping := range appDeploy.RouteMapping {
+		// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
+		if mapping.AppPort <= 0 {
+			mapping.AppPort = appDeploy.App.Ports[0]
+		}
 		if IsImportState(d) {
 			finalMappings = append(finalMappings, map[string]interface{}{
 				"route": mapping.RouteGUID,

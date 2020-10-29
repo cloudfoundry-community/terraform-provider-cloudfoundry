@@ -19,7 +19,7 @@ retrieved via a [domain data source](/docs/providers/cloudfoundry/d/domain.html)
 ```hcl
 resource "cloudfoundry_domain" "shared" {
   sub_domain = "dev"
-  domain = "${data.cloudfoundry_domain.apps.domain}"
+  domain = data.cloudfoundry_domain.apps.domain
   internal = false
 }
 ```
@@ -29,7 +29,7 @@ The following example creates a private domain owned by the Org referenced by `c
 ```hcl
 resource "cloudfoundry_domain" "private" {
   name = "pcfdev-org.io"
-  org = "${cloudfoundry_org.pcfdev-org.id}"
+  org = cloudfoundry_org.pcfdev-org.id
 }
 ```
 

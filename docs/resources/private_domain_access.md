@@ -23,8 +23,8 @@ and the organization via an [org data source)(/docs/providers/cloudfoundry/d/org
 
 ```hcl
 resource "cloudfoundry_private_domain_access" "shared-to-my-org" {
-  domain = "${data.cloudfoundry_domain.domain.id}"
-  org    = "${data.cloudfoundry_org.my-org.id}"
+  domain = data.cloudfoundry_domain.domain.id
+  org    = data.cloudfoundry_org.my-org.id
 }
 ```
 

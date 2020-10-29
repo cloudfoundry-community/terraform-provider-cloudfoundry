@@ -1,17 +1,18 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 const (
@@ -279,7 +280,6 @@ func serviceBrokerCatalogSignature(d *schema.ResourceData, meta interface{}) (st
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(resp.StatusCode)
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("Status code: %s, Body: %s ", resp.Status, string(bodyBytes))
 	}

@@ -17,7 +17,7 @@ The following example looks up a space named 'myspace' within an organization 'm
 ```hcl
 data "cloudfoundry_space" "s" {
     name = "myspace"
-    org = "${cloudfoundry_org.myorg.id}"
+    org = cloudfoundry_org.myorg.id
 }
 ```
 

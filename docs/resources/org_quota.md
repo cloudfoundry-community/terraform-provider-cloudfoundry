@@ -32,7 +32,7 @@ resource "cloudfoundry_org_quota" "large" {
 
 resource "cloudfoundry_org" "o1" {
     name = "organization-one"
-    quota = "${cloudfoundry_org_quota.large.id}"
+    quota = cloudfoundry_org_quota.large.id
 }
 ```
 

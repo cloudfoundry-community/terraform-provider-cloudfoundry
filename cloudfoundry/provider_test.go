@@ -65,16 +65,12 @@ func testAccEnvironmentSet() bool {
 	endpoint := os.Getenv("CF_API_URL")
 	user := os.Getenv("CF_USER")
 	password := os.Getenv("CF_PASSWORD")
-	uaaClientID := os.Getenv("CF_UAA_CLIENT_ID")
-	uaaClientSecret := os.Getenv("CF_UAA_CLIENT_SECRET")
 
 	if endpoint == "" ||
 		user == "" ||
-		password == "" ||
-		uaaClientID == "" ||
-		uaaClientSecret == "" {
+		password == "" {
 
-		fmt.Println("CF_API_URL, CF_USER, CF_PASSWORD, CF_UAA_CLIENT_ID, CF_UAA_CLIENT_SECRET, " +
+		fmt.Println("CF_API_URL, CF_USER, CF_PASSWORD, " +
 			" must be set for acceptance tests to work.")
 		return false
 	}
@@ -88,6 +84,10 @@ func testSession() *managers.Session {
 	}
 
 	if tstSession == nil {
+		quotaName := "default"
+		if os.Getenv("CF_DEFAULT_QUOTA_NAME") != "" {
+			quotaName = os.Getenv("CF_DEFAULT_QUOTA_NAME")
+		}
 		c := managers.Config{
 			Endpoint:         os.Getenv("CF_API_URL"),
 			User:             os.Getenv("CF_USER"),
@@ -96,7 +96,7 @@ func testSession() *managers.Session {
 			CFClientSecret:   os.Getenv("CF_CLIENT_SECRET"),
 			UaaClientID:      os.Getenv("CF_UAA_CLIENT_ID"),
 			UaaClientSecret:  os.Getenv("CF_UAA_CLIENT_SECRET"),
-			DefaultQuotaName: "default",
+			DefaultQuotaName: quotaName,
 		}
 
 		c.SkipSslValidation, _ = strconv.ParseBool(os.Getenv("CF_SKIP_SSL_VALIDATION"))
@@ -568,8 +568,17 @@ func TestMain(m *testing.M) {
 	segment, _, err := testSession().ClientV3.CreateIsolationSegment(ccv3.IsolationSegment{
 		Name: "segment-acc-tf",
 	})
+
 	if err != nil {
-		panic(err)
+		if strings.Contains(err.Error(), "must be unique") {
+			segments, _, err := testSession().ClientV3.GetIsolationSegments(ccv3.Query{Key: ccv3.NameFilter, Values: []string{"segment-acc-tf"}})
+			if err != nil {
+				panic(err)
+			}
+			segment = segments[0]
+		} else {
+			panic(err)
+		}
 	}
 	os.Setenv("TEST_DEFAULT_SEGMENT", segment.Name)
 	clean = append(clean, func() {

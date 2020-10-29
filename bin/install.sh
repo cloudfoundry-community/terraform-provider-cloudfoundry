@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-REPO_NAME="terraform-provider-cf"
+REPO_NAME="terraform-provider-cloudfoundry"
 NAME="terraform-provider-cloudfoundry"
 OS=""
 OWNER="cloudfoundry-community"
+PROVIDER_CF_VERSION="${PROVIDER_CF_VERSION:-v0.12.3}"
 : "${TMPDIR:=${TMP:-$(
   CDPATH=/var:/
   cd -P tmp
@@ -48,7 +49,7 @@ fi
 if [[ "$CPUINFO" == "arm"* ]]; then
   ARCH="arm"
 fi
-FILENAME="${NAME}_${OS}_${ARCH}"
+FILENAME="${NAME}_${VERSION}_${OS}_${ARCH}"
 if [[ "$OS" == "windows" ]]; then
   FILENAME="${FILENAME}.exe"
 fi

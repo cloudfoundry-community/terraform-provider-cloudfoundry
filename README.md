@@ -1,20 +1,25 @@
-# Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/cloudfoundry-community/terraform-provider-cf.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/terraform-provider-cf)
+# Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry)
 
 
 Overview
 --------
 
 This Terraform provider plugin allows you to configure a Cloud Foundry environment declaratively using [HCL](https://github.com/hashicorp/hcl). 
-The online documentation for the Terraform Cloud Foundry resource is available on the [wiki](https://github.com/cloudfoundry-community/terraform-provider-cf/wiki).
 
-Requirements
-------------
 
--	[Terraform](https://www.terraform.io/downloads.html) >= 0.11.14
--	[Go](https://golang.org/doc/install) 1.12 (to build the provider plugin)
+The documentation is available at https://registry.terraform.io/providers/cloudfoundry-community/cloudfoundry
+
+Using the provider
+------------------
+
+See doc at https://registry.terraform.io/providers/cloudfoundry-community/cloudfoundry , if you are under terraform 0.13 you can follow installation doc at https://github.com/cloudfoundry-community/terraform-provider-cloudfoundry/wiki  
 
 Building The Provider
 ---------------------
+
+Requirements:
+- [Terraform](https://www.terraform.io/downloads.html) >= 0.11.14
+- [Go](https://golang.org/doc/install)
 
 Clone repository to: `$GOPATH/src/github.com/terraform-providers/terraform-provider-cloudfoundry`
 
@@ -30,28 +35,22 @@ $ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-cloudfoundry
 $ make build
 ```
 
-Using the provider
-------------------
-
-Download the release binary and copy it to the `$HOME/.terraform.d/plugins/<os>_<arch>/terraform-provider-cloudfoundry`. For example `/home/youruser/.terraform.d/plugins/linux_amd64/terraform-provider-cloudfoundry` for a Linux environment or `/Users/youruser/terraform.d/plugins/darwin_amd64/terraform-provider-cloudfoundry` for a MacOS environment (see https://www.terraform.io/docs/configuration/providers.html#third-party-plugins for more details).
 
 Developing the Provider
 -----------------------
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.8+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
+If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.12+ is *required*). 
 
-Clone this repository to `GOPATH/src/github.com/terraform-providers/terraform-provider-cloudfoundry` as its packaging structure
-has been defined such that it will be compatible with the Terraform provider plugin framwork in 0.10.x.
-
-To compile the provider, run `make build`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
-
-```sh
-$ make build
-...
-$ $GOPATH/bin/terraform-provider-cloudfoundry
-...
+1. git clone this repo
+2. simply run `go build .` for building the provider
+3. add a file at `${HOME}/.terraformrc` and set this content
+```hcl
+providers {
+	cloudfoundry = "path/where/you/have/clone/repo/terraform-provider-cloudfoundry"
+}
 ```
 
+That's override the path where to found provider binary to use your development version. 
 
 Testing the Provider
 --------------------
@@ -93,41 +92,10 @@ make testacc
 ```sh
 $ make testacc
 ```
-
-Migration
----------
-
-## 0.9.9 to 0.10.0
-
-**Terraform version 0.11.14 at least is required**
-
-Migration to 0.10.0 require you to change `cloudfoundry_app` and `cloudfoundry_buildpack` resource.
-You must remove `url`, `git`, and `github_release` attributes from your resource and change to `path` according to 
-the doc you can found here: https://github.com/cloudfoundry-community/terraform-provider-cf/wiki/resource_app#application-source--binary
-
-Provider will migrate itself your tfstate and will download any non zip http(s) url in a folder `bits` in your current working directory.
-
-For easier migration here the steps to follow with a tool which will do the change in your tf files directly without do anything:
-
-1. *(Optional)* Migrate to terraform >= 0.12.x and follow migration step: https://www.terraform.io/upgrade-guides/0-12.html
-2. Download `cf-hcl-migration` tool in the [release 0.10.0](https://github.com/cloudfoundry-community/terraform-provider-cf/releases/tag/v0.10.0).
-this tool only change your tf files for preparing migration made by the provider.
-3. Run `cf-hcl-migration ./` tool on the root folder of your terraform files.
-4. Run `cf-hcl-migration <module path>` tool on the root folder of your terraform files.
-**This tool migrate your terraform file config for only `cloudfoundry_app` and `cloudfoundry_buildpack` resource to change to new upload style
-if your `tf` files doesn't use those resources no need to run this tool**
-5. Run `terraform apply` in the root folder of your terraform.
-
-## < 0.9.9 to 0.9.9
-
-See the script in `scripts/migration` to migrate from versions below 0.9.9
-
 Update doc
 ----------
 
-You must update doc for resource and data sources in [website/docs](/website/docs).
-
-For updating wiki please run `scripts/update-wiki.sh` this will create/update wiki files from [website/docs](/website/docs) and push it in the wiki.
+You must update doc for resource and data sources in [docs](/docs), this will appears in the next release at https://registry.terraform.io/providers/cloudfoundry-community/cloudfoundry.
 
 Support
 -------

@@ -37,7 +37,7 @@ The following arguments are supported:
    * an empty blank string to use built-in buildpacks (i.e. autodetection)
 * `command` - (Optional, String) A custom start command for the application. This overrides the start command provided by the buildpack.
 * `enable_ssh` - (Optional, Boolean) Whether to enable or disable SSH access to the container. Default is `true` unless disabled globally.
-* `timeout` - (Optional, Number) Max wait time for app instance startup, in seconds
+* `timeout` - (Optional, Number) Max wait time for app instance startup, in seconds. Defaults to 60 seconds.
 * `stopped` - (Optional, Boolean) Defines the desired application state. Set to `true` to have the application remain in a stopped state. Default is `false`, i.e. application will be started.
 * `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
 Works only on cloud foundry with api >= v3.63.
@@ -74,8 +74,8 @@ resource "zipper_file" "fixture" {
 
 resource "cloudfoundry_app" "gobis-server" {
     name = "gobis-server"
-    path = "${zipper_file.fixture.output_path}"
-    source_code_hash = "${zipper_file.fixture.output_sha}"
+    path = zipper_file.fixture.output_path
+    source_code_hash = zipper_file.fixture.output_sha
     buildpack = "go_buildpack"
 }
 ```
@@ -120,8 +120,8 @@ The `route` block supports:
 resource "cloudfoundry_app" "java-spring" {
 # [...]
  routes = [
-    { route = "${cloudfoundry_route.java-spring.id}" },
-    { route = "${cloudfoundry_route.java-spring-2.id}" }
+    { route = cloudfoundry_route.java-spring.id },
+    { route = cloudfoundry_route.java-spring-2.id }
   ]
 }
 ```
@@ -145,6 +145,12 @@ The following attributes are exported along with any defaults for the inputs att
 * `id` - The GUID of the application
 * `id_bg` - The GUID of the application updated by resource when strategy is blue-green. 
 This allow change a resource linked to app resource id to be updated when app will be recreated.
+
+## Timeouts
+
+* App instance startup timeout - see the `timeout` argument.
+* App staging timeout - 15 mins.
+* Service binding timeout - 5 mins.
 
 ## Import
 

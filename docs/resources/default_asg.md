@@ -21,7 +21,7 @@ defined elsewhere in the Terraform configuration, to the default running set.
 ```hcl
 resource "cloudfoundry_default_asg" "running" {
     name = "running"
-    asgs = [ "${cloudfoundry_asg.messaging.id}", "${cloudfoundry_asg.services.id}" ]
+    asgs = [ cloudfoundry_asg.messaging.id, cloudfoundry_asg.services.id ]
 }
 ```
 
