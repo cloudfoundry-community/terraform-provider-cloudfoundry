@@ -2,7 +2,7 @@ package cloudfoundry
 
 import (
 	"github.com/hashicorp/go-getter/helper/url"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"io/ioutil"
 	"os"
 	"path/filepath"

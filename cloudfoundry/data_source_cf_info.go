@@ -5,7 +5,7 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceInfo() *schema.Resource {
