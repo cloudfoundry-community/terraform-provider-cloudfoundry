@@ -3,7 +3,8 @@ package cloudfoundry
 import (
 	"fmt"
 	"net/http"
-	"time"
+
+	"github.com/cenkalti/backoff/v4"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
@@ -104,28 +105,28 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) error {
 		port.Value = v.(int)
 		port.IsSet = true
 	}
-	operation := func() (ccv2.Route, error) {
-		route, _, err := session.ClientV2.CreateRoute(ccv2.Route{
+	var route ccv2.Route
+
+	operation := func() error {
+		var err error
+		route, _, err = session.ClientV2.CreateRoute(ccv2.Route{
 			DomainGUID: d.Get("domain").(string),
 			SpaceGUID:  d.Get("space").(string),
 			Host:       d.Get("hostname").(string),
 			Path:       d.Get("path").(string),
 			Port:       port,
 		}, d.Get("random_port").(bool))
-		return route, err
-	}
-	route, err := operation()
-	if err != nil {
-		if unexpected, ok := err.(ccerror.V2UnexpectedResponseError); ok && unexpected.ResponseCode == http.StatusInternalServerError {
-			// Retry one more time
-			time.Sleep(1 * time.Second)
-			route, err = operation()
-			if err != nil {
+		if err != nil {
+			if unexpected, ok := err.(ccerror.V2UnexpectedResponseError); ok && unexpected.ResponseCode == http.StatusInternalServerError {
 				return err
 			}
-		} else {
-			return err
+			return backoff.Permanent(err)
 		}
+		return nil
+	}
+	err := backoff.Retry(operation, backoff.NewExponentialBackOff())
+	if err != nil {
+		return err
 	}
 	// Delete route if an error occurs
 	defer func() {
