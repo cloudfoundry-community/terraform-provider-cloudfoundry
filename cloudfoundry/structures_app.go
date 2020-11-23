@@ -79,21 +79,16 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 		params := r["params"].(map[string]interface{})
 		paramJson := r["params_json"].(string)
 		if len(params) == 0 && paramJson != "" {
-			var p map[string]interface{}
-			err := json.Unmarshal([]byte(paramJson), &p)
+			params := make(map[string]interface{})
+			err := json.Unmarshal([]byte(paramJson), &params)
 			if err != nil {
 				return appdeployers.AppDeploy{}, err
 			}
-			bindings = append(bindings, ccv2.ServiceBinding{
-				ServiceInstanceGUID: r["service_instance"].(string),
-				Parameters:          p,
-			})
-		} else {
-			bindings = append(bindings, ccv2.ServiceBinding{
-				ServiceInstanceGUID: r["service_instance"].(string),
-				Parameters:          params,
-			})
 		}
+		bindings = append(bindings, ccv2.ServiceBinding{
+			ServiceInstanceGUID: r["service_instance"].(string),
+			Parameters:          params,
+		})
 	}
 	return appdeployers.AppDeploy{
 		App:             app,
