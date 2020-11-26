@@ -582,7 +582,8 @@ func IsAppRestageNeeded(d ResourceChanger) bool {
 func IsAppRestartNeeded(d ResourceChanger) bool {
 	return d.HasChange("memory") || d.HasChange("disk_quota") ||
 		d.HasChange("command") || d.HasChange("health_check_http_endpoint") ||
-		d.HasChange("docker_image") || d.HasChange("health_check_type") || d.HasChange("environment")
+		d.HasChange("docker_image") || d.HasChange("health_check_type") ||
+		d.HasChange("environment")
 }
 
 func isDiffAppParamsBinding(oldBinding, currentBinding map[string]interface{}) (bool, error) {
