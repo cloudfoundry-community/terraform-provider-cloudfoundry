@@ -132,12 +132,8 @@ func resourceApp() *schema.Resource {
 				ConflictsWith: []string{"path"},
 			},
 			"service_binding": &schema.Schema{
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Optional: true,
-				Set: func(v interface{}) int {
-					elem := v.(map[string]interface{})
-					return hashcode.String(elem["service_instance"].(string))
-				},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"service_instance": &schema.Schema{
