@@ -79,6 +79,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 		params := r["params"].(map[string]interface{})
 		paramJson := r["params_json"].(string)
 		if len(params) == 0 && paramJson != "" {
+			params = make(map[string]interface{})
 			err := json.Unmarshal([]byte(paramJson), &params)
 			if err != nil {
 				return appdeployers.AppDeploy{}, err
