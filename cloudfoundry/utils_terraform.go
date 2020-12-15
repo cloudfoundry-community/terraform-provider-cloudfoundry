@@ -19,6 +19,9 @@ func getListOfStructs(v interface{}) []map[string]interface{} {
 	}
 	vvv := []map[string]interface{}{}
 	for _, vv := range v.([]interface{}) {
+		if vv == nil {
+			continue
+		}
 		vvv = append(vvv, vv.(map[string]interface{}))
 	}
 	return vvv
