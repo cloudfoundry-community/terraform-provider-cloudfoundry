@@ -97,6 +97,7 @@ func resourceSpaceUsersCreate(d *schema.ResourceData, meta interface{}) error {
 func resourceSpaceUsersRead(d *schema.ResourceData, meta interface{}) error {
 	if IsImportState(d) {
 		d.Set("space", d.Id())
+		d.Set("force", false)
 	}
 	session := meta.(*managers.Session)
 	for t, r := range typeToSpaceRoleMap {

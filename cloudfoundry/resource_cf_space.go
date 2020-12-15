@@ -169,7 +169,10 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
 		})
 		d.Set("asgs", schema.NewSet(resourceStringHash, finalRunningAsg))
 	} else {
-		d.Set("asgs", schema.NewSet(resourceStringHash, objectsToIds(runningAsgs, func(object interface{}) string {
+		finalRunningAsgs, _ := getInSlice(runningAsgs, func(object interface{}) bool {
+			return !object.(ccv2.SecurityGroup).RunningDefault
+		})
+		d.Set("asgs", schema.NewSet(resourceStringHash, objectsToIds(finalRunningAsgs, func(object interface{}) string {
 			return object.(ccv2.SecurityGroup).GUID
 		})))
 	}
@@ -184,7 +187,10 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
 		})
 		d.Set("staging_asgs", schema.NewSet(resourceStringHash, finalStagingAsg))
 	} else {
-		d.Set("staging_asgs", schema.NewSet(resourceStringHash, objectsToIds(stagingAsgs, func(object interface{}) string {
+		finalStagingAsgs, _ := getInSlice(stagingAsgs, func(object interface{}) bool {
+			return !object.(ccv2.SecurityGroup).StagingDefault
+		})
+		d.Set("staging_asgs", schema.NewSet(resourceStringHash, objectsToIds(finalStagingAsgs, func(object interface{}) string {
 			return object.(ccv2.SecurityGroup).GUID
 		})))
 	}
