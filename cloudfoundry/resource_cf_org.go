@@ -2,6 +2,8 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"github.com/hashicorp/go-uuid"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -146,8 +148,13 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 				return err
 			}
 		}
-		for _, uid := range add {
-			_, err = om.UpdateOrganizationUserByRole(r, id, uid)
+		for _, uidOrUsername := range add {
+			byUsername := true
+			_, err := uuid.ParseUUID(uidOrUsername)
+			if err == nil {
+				byUsername = false
+			}
+			err = updateOrgUserByRole(session, r, id, uidOrUsername, byUsername)
 			if err != nil {
 				return err
 			}
@@ -158,6 +165,27 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		return err
 	}
 	return nil
+}
+
+func updateOrgUserByRole(session *managers.Session, role constant.UserRole, guid string, guidOrUsername string, byUsername bool) error {
+	if !byUsername {
+		_, err := session.ClientV2.UpdateOrganizationUserByRole(role, guid, guidOrUsername)
+		if err != nil {
+			return err
+		}
+	}
+	var err error
+	switch role {
+	case constant.OrgAuditor:
+		_, err = session.ClientV2.UpdateOrganizationAuditorByUsername(guid, guidOrUsername)
+	case constant.OrgManager:
+		_, err = session.ClientV2.UpdateOrganizationManagerByUsername(guid, guidOrUsername)
+	case constant.BillingManager:
+		_, err = session.ClientV2.UpdateOrganizationBillingManagerByUsername(guid, guidOrUsername)
+	default:
+		_, err = session.ClientV2.UpdateOrganizationUserByUsername(guid, guidOrUsername)
+	}
+	return err
 }
 
 func resourceOrgDelete(d *schema.ResourceData, meta interface{}) (err error) {

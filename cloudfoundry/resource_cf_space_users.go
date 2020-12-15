@@ -132,12 +132,17 @@ func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 				return err
 			}
 		}
-		for _, uid := range add {
-			err = addOrNothingUserInOrgBySpace(session.ClientV2, space.OrganizationGUID, uid)
+		for _, uidOrUsername := range add {
+			err = addOrNothingUserInOrgBySpace(session.ClientV2, space.OrganizationGUID, uidOrUsername)
 			if err != nil {
 				return err
 			}
-			_, err = session.ClientV2.UpdateSpaceUserByRole(r, spaceId, uid)
+			byUsername := true
+			_, err := uuid.ParseUUID(uidOrUsername)
+			if err == nil {
+				byUsername = false
+			}
+			err = updateSpaceUserByRole(session, r, spaceId, uidOrUsername, byUsername)
 			if err != nil {
 				return err
 			}
@@ -146,8 +151,27 @@ func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func addOrNothingUserInOrgBySpace(client *ccv2.Client, orgId, uaaid string) error {
-	orgs, _, err := client.GetUserOrganizations(uaaid)
+func updateSpaceUserByRole(session *managers.Session, role constant.UserRole, guid string, guidOrUsername string, byUsername bool) error {
+	if !byUsername {
+		_, err := session.ClientV2.UpdateSpaceUserByRole(role, guid, guidOrUsername)
+		if err != nil {
+			return err
+		}
+	}
+	var err error
+	switch role {
+	case constant.SpaceAuditor:
+		_, err = session.ClientV2.UpdateSpaceAuditorByUsername(guid, guidOrUsername)
+	case constant.SpaceManager:
+		_, err = session.ClientV2.UpdateSpaceManagerByUsername(guid, guidOrUsername)
+	default:
+		_, err = session.ClientV2.UpdateSpaceDeveloperByUsername(guid, guidOrUsername)
+	}
+	return err
+}
+
+func addOrNothingUserInOrgBySpace(client *ccv2.Client, orgId, uaaidOrUsername string) error {
+	orgs, _, err := client.GetUserOrganizations(uaaidOrUsername)
 	isNotFound := IsErrNotFound(err)
 	isNotAuthorized := IsErrNotAuthorized(err)
 	if err != nil && !isNotFound && !isNotAuthorized {
@@ -167,13 +191,23 @@ func addOrNothingUserInOrgBySpace(client *ccv2.Client, orgId, uaaid string) erro
 			return err
 		}
 		if isInSlice(users, func(object interface{}) bool {
-			return object.(ccv2.User).GUID == uaaid
+			return object.(ccv2.User).GUID == uaaidOrUsername
 		}) {
 			return nil
 		}
 	}
 
-	_, err = client.UpdateOrganizationUserByRole(constant.OrgUser, orgId, uaaid)
+	byUsername := true
+	_, err = uuid.ParseUUID(uaaidOrUsername)
+	if err == nil {
+		byUsername = false
+	}
+
+	if byUsername {
+		_, err = client.UpdateOrganizationUserByUsername(orgId, uaaidOrUsername)
+		return err
+	}
+	_, err = client.UpdateOrganizationUserByRole(constant.OrgUser, orgId, uaaidOrUsername)
 	return err
 }
 
