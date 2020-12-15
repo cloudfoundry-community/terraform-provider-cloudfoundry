@@ -2,7 +2,7 @@ module github.com/terraform-providers/terraform-provider-cloudfoundry
 
 go 1.14
 
-replace code.cloudfoundry.org/cli => github.com/cloudfoundry-community/cloudfoundry-cli v0.0.6-complete-api
+replace code.cloudfoundry.org/cli => github.com/cloudfoundry-community/cloudfoundry-cli v0.0.7-complete-api
 
 require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20180906201452-2aa6f33b730c // indirect
