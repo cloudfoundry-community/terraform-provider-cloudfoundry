@@ -1,6 +1,8 @@
 package cloudfoundry
 
 import (
+	"strings"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"github.com/hashicorp/go-uuid"
@@ -105,11 +107,20 @@ func resourceSpaceUsersRead(d *schema.ResourceData, meta interface{}) error {
 		tfUsers := d.Get(t).(*schema.Set).List()
 		if !d.Get("force").(bool) && !IsImportState(d) {
 			finalUsers := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
-				return source.(string) == item.(ccv2.User).GUID
+				return source.(string) == item.(ccv2.User).GUID || strings.ToLower(source.(string)) == strings.ToLower(item.(ccv2.User).Username)
 			})
 			d.Set(t, schema.NewSet(resourceStringHash, finalUsers))
 		} else {
+			usersByUsername := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
+				return strings.ToLower(source.(string)) == strings.ToLower(item.(ccv2.User).Username)
+			})
+
 			d.Set(t, schema.NewSet(resourceStringHash, objectsToIds(users, func(object interface{}) string {
+				if isInSlice(usersByUsername, func(userByUsername interface{}) bool {
+					return strings.ToLower(object.(ccv2.User).Username) == strings.ToLower(userByUsername.(string))
+				}) {
+					return object.(ccv2.User).Username
+				}
 				return object.(ccv2.User).GUID
 			})))
 		}
@@ -170,6 +181,25 @@ func updateSpaceUserByRole(session *managers.Session, role constant.UserRole, gu
 	return err
 }
 
+func deleteSpaceUserByRole(session *managers.Session, role constant.UserRole, guid string, guidOrUsername string, byUsername bool) error {
+	if !byUsername {
+		_, err := session.ClientV2.DeleteSpaceUserByRole(role, guid, guidOrUsername)
+		if err != nil {
+			return err
+		}
+	}
+	var err error
+	switch role {
+	case constant.SpaceAuditor:
+		_, err = session.ClientV2.DeleteSpaceAuditorByUsername(guid, guidOrUsername)
+	case constant.SpaceManager:
+		_, err = session.ClientV2.DeleteSpaceManagerByUsername(guid, guidOrUsername)
+	default:
+		_, err = session.ClientV2.DeleteSpaceDeveloperByUsername(guid, guidOrUsername)
+	}
+	return err
+}
+
 func addOrNothingUserInOrgBySpace(client *ccv2.Client, orgId, uaaidOrUsername string) error {
 	orgs, _, err := client.GetUserOrganizations(uaaidOrUsername)
 	isNotFound := IsErrNotFound(err)
@@ -217,7 +247,14 @@ func resourceSpaceUsersDelete(d *schema.ResourceData, meta interface{}) error {
 	for t, r := range typeToSpaceRoleMap {
 		tfUsers := d.Get(t).(*schema.Set).List()
 		for _, uid := range tfUsers {
-			_, err := session.ClientV2.DeleteSpaceUserByRole(r, spaceId, uid.(string))
+			uaaIDOrUsername := uid.(string)
+			byUsername := true
+			_, err := uuid.ParseUUID(uaaIDOrUsername)
+			if err == nil {
+				byUsername = false
+			}
+
+			err = deleteSpaceUserByRole(session, r, spaceId, uaaIDOrUsername, byUsername)
 			if err != nil {
 				return err
 			}
