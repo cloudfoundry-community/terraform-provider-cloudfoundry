@@ -139,7 +139,13 @@ func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 	for t, r := range typeToSpaceRoleMap {
 		remove, add := getListChanges(d.GetChange(t))
 		for _, uid := range remove {
-			_, err = session.ClientV2.DeleteSpaceUserByRole(r, spaceId, uid)
+			byUsername := true
+			_, err = uuid.ParseUUID(uid)
+			if err == nil {
+				byUsername = false
+			}
+
+			err = deleteSpaceUserByRole(session, r, spaceId, uid, byUsername)
 			if err != nil {
 				return err
 			}
