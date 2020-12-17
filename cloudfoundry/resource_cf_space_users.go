@@ -97,6 +97,7 @@ func resourceSpaceUsersCreate(d *schema.ResourceData, meta interface{}) error {
 func resourceSpaceUsersRead(d *schema.ResourceData, meta interface{}) error {
 	if IsImportState(d) {
 		d.Set("space", d.Id())
+		d.Set("force", false)
 	}
 	session := meta.(*managers.Session)
 	for t, r := range typeToSpaceRoleMap {
@@ -138,7 +139,13 @@ func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 	for t, r := range typeToSpaceRoleMap {
 		remove, add := getListChanges(d.GetChange(t))
 		for _, uid := range remove {
-			_, err = session.ClientV2.DeleteSpaceUserByRole(r, spaceId, uid)
+			byUsername := true
+			_, err = uuid.ParseUUID(uid)
+			if err == nil {
+				byUsername = false
+			}
+
+			err = deleteSpaceUserByRole(session, r, spaceId, uid, byUsername)
 			if err != nil {
 				return err
 			}
