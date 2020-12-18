@@ -108,17 +108,17 @@ func resourceSpaceUsersRead(d *schema.ResourceData, meta interface{}) error {
 		tfUsers := d.Get(t).(*schema.Set).List()
 		if !d.Get("force").(bool) && !IsImportState(d) {
 			finalUsers := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
-				return source.(string) == item.(ccv2.User).GUID || strings.ToLower(source.(string)) == strings.ToLower(item.(ccv2.User).Username)
+				return source.(string) == item.(ccv2.User).GUID || strings.EqualFold(source.(string), item.(ccv2.User).Username)
 			})
 			d.Set(t, schema.NewSet(resourceStringHash, finalUsers))
 		} else {
 			usersByUsername := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
-				return strings.ToLower(source.(string)) == strings.ToLower(item.(ccv2.User).Username)
+				return strings.EqualFold(source.(string), item.(ccv2.User).Username)
 			})
 
 			d.Set(t, schema.NewSet(resourceStringHash, objectsToIds(users, func(object interface{}) string {
 				if isInSlice(usersByUsername, func(userByUsername interface{}) bool {
-					return strings.ToLower(object.(ccv2.User).Username) == strings.ToLower(userByUsername.(string))
+					return strings.EqualFold(object.(ccv2.User).Username, userByUsername.(string))
 				}) {
 					return object.(ccv2.User).Username
 				}
