@@ -340,13 +340,18 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	}()
 	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
 
-	// if ports has only one member and port under or equal to 1024
+	// sanitize any empty port under 1024
 	// this means that we are using not predefined port by user
 	// push back to empty list to make blue-green happy with api
 	ports := d.Get("ports").(*schema.Set).List()
-	if len(ports) == 1 && ports[0].(int) <= 1024 {
-		d.Set("ports", []int{})
+	finalPorts := make([]int, 0)
+	for _, port := range ports {
+		if port.(int) <= 1024 {
+			continue
+		}
+		finalPorts = append(finalPorts, port.(int))
 	}
+	d.Set("ports", finalPorts)
 
 	if d.HasChange("routes") {
 		oldRoutes, newRoutes := d.GetChange("routes")
