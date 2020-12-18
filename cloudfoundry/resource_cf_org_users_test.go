@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
@@ -44,7 +45,8 @@ resource "cloudfoundry_org_users" "org_users1" {
     ]
     auditors = [
         "${cloudfoundry_user.adr.id}",
-		"${cloudfoundry_user.dev3.id}"
+		"${cloudfoundry_user.dev3.id}",
+        "username@acme.com"
     ]
 }
 `
@@ -84,6 +86,18 @@ func TestAccResOrgUsers_normal(t *testing.T) {
 	ref := "cloudfoundry_org_users.org_users1"
 	orgId, _ := defaultTestOrg(t)
 	usersMap := make(map[string][]ccv2.User)
+
+	sessions := testSession()
+	user, err := sessions.ClientUAA.CreateUser("username@acme.com", "paasw0rd", "uaa")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer sessions.ClientUAA.DeleteUser(user.ID)
+	err = addOrNothingUserInOrgBySpace(sessions, orgId, user.ID, false)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
@@ -98,7 +112,7 @@ func TestAccResOrgUsers_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "billing_managers.#", "3"),
 						resource.TestCheckResourceAttr(
-							ref, "auditors.#", "2"),
+							ref, "auditors.#", "3"),
 					),
 				},
 

@@ -2,6 +2,7 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
@@ -267,12 +268,17 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 				return err
 			}
 		}
-		for _, uid := range add {
-			err = addOrNothingUserInOrgBySpace(session.ClientV2, orgID, uid)
+		for _, uidOrUsername := range add {
+			byUsername := true
+			_, err := uuid.ParseUUID(uidOrUsername)
+			if err == nil {
+				byUsername = false
+			}
+			err = addOrNothingUserInOrgBySpace(session, orgID, uidOrUsername, byUsername)
 			if err != nil {
 				return err
 			}
-			_, err = session.ClientV2.UpdateSpaceUserByRole(r, spaceID, uid)
+			err = updateSpaceUserByRole(session, r, spaceID, uidOrUsername, byUsername)
 			if err != nil {
 				return err
 			}

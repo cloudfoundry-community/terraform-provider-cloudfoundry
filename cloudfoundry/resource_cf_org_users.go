@@ -179,6 +179,7 @@ func updateOrgUserByRole(session *managers.Session, role constant.UserRole, guid
 		if err != nil {
 			return err
 		}
+		return nil
 	}
 	var err error
 	switch role {
@@ -200,6 +201,7 @@ func deleteOrgUserByRole(session *managers.Session, role constant.UserRole, guid
 		if err != nil {
 			return err
 		}
+		return nil
 	}
 	var err error
 	switch role {

@@ -151,15 +151,16 @@ func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 		}
 		for _, uidOrUsername := range add {
-			err = addOrNothingUserInOrgBySpace(session.ClientV2, space.OrganizationGUID, uidOrUsername)
-			if err != nil {
-				return err
-			}
 			byUsername := true
 			_, err := uuid.ParseUUID(uidOrUsername)
 			if err == nil {
 				byUsername = false
 			}
+			err = addOrNothingUserInOrgBySpace(session, space.OrganizationGUID, uidOrUsername, byUsername)
+			if err != nil {
+				return err
+			}
+
 			err = updateSpaceUserByRole(session, r, spaceId, uidOrUsername, byUsername)
 			if err != nil {
 				return err
@@ -175,6 +176,7 @@ func updateSpaceUserByRole(session *managers.Session, role constant.UserRole, gu
 		if err != nil {
 			return err
 		}
+		return nil
 	}
 	var err error
 	switch role {
@@ -194,6 +196,7 @@ func deleteSpaceUserByRole(session *managers.Session, role constant.UserRole, gu
 		if err != nil {
 			return err
 		}
+		return nil
 	}
 	var err error
 	switch role {
@@ -207,7 +210,8 @@ func deleteSpaceUserByRole(session *managers.Session, role constant.UserRole, gu
 	return err
 }
 
-func addOrNothingUserInOrgBySpace(client *ccv2.Client, orgId, uaaidOrUsername string) error {
+func addOrNothingUserInOrgBySpace(session *managers.Session, orgId, uaaidOrUsername string, byUsername bool) error {
+	client := session.ClientV2
 	orgs, _, err := client.GetUserOrganizations(uaaidOrUsername)
 	isNotFound := IsErrNotFound(err)
 	isNotAuthorized := IsErrNotAuthorized(err)
@@ -233,19 +237,7 @@ func addOrNothingUserInOrgBySpace(client *ccv2.Client, orgId, uaaidOrUsername st
 			return nil
 		}
 	}
-
-	byUsername := true
-	_, err = uuid.ParseUUID(uaaidOrUsername)
-	if err == nil {
-		byUsername = false
-	}
-
-	if byUsername {
-		_, err = client.UpdateOrganizationUserByUsername(orgId, uaaidOrUsername)
-		return err
-	}
-	_, err = client.UpdateOrganizationUserByRole(constant.OrgUser, orgId, uaaidOrUsername)
-	return err
+	return updateOrgUserByRole(session, constant.OrgUser, orgId, uaaidOrUsername, byUsername)
 }
 
 func resourceSpaceUsersDelete(d *schema.ResourceData, meta interface{}) error {
