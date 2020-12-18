@@ -2,6 +2,7 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
@@ -169,7 +170,10 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
 		})
 		d.Set("asgs", schema.NewSet(resourceStringHash, finalRunningAsg))
 	} else {
-		d.Set("asgs", schema.NewSet(resourceStringHash, objectsToIds(runningAsgs, func(object interface{}) string {
+		finalRunningAsgs, _ := getInSlice(runningAsgs, func(object interface{}) bool {
+			return !object.(ccv2.SecurityGroup).RunningDefault
+		})
+		d.Set("asgs", schema.NewSet(resourceStringHash, objectsToIds(finalRunningAsgs, func(object interface{}) string {
 			return object.(ccv2.SecurityGroup).GUID
 		})))
 	}
@@ -184,7 +188,10 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
 		})
 		d.Set("staging_asgs", schema.NewSet(resourceStringHash, finalStagingAsg))
 	} else {
-		d.Set("staging_asgs", schema.NewSet(resourceStringHash, objectsToIds(stagingAsgs, func(object interface{}) string {
+		finalStagingAsgs, _ := getInSlice(stagingAsgs, func(object interface{}) bool {
+			return !object.(ccv2.SecurityGroup).StagingDefault
+		})
+		d.Set("staging_asgs", schema.NewSet(resourceStringHash, objectsToIds(finalStagingAsgs, func(object interface{}) string {
 			return object.(ccv2.SecurityGroup).GUID
 		})))
 	}
@@ -261,12 +268,17 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 				return err
 			}
 		}
-		for _, uid := range add {
-			err = addOrNothingUserInOrgBySpace(session.ClientV2, orgID, uid)
+		for _, uidOrUsername := range add {
+			byUsername := true
+			_, err := uuid.ParseUUID(uidOrUsername)
+			if err == nil {
+				byUsername = false
+			}
+			err = addOrNothingUserInOrgBySpace(session, orgID, uidOrUsername, byUsername)
 			if err != nil {
 				return err
 			}
-			_, err = session.ClientV2.UpdateSpaceUserByRole(r, spaceID, uid)
+			err = updateSpaceUserByRole(session, r, spaceID, uidOrUsername, byUsername)
 			if err != nil {
 				return err
 			}

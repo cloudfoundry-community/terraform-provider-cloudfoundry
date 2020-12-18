@@ -2,6 +2,7 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"github.com/hashicorp/go-uuid"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -146,8 +147,13 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 				return err
 			}
 		}
-		for _, uid := range add {
-			_, err = om.UpdateOrganizationUserByRole(r, id, uid)
+		for _, uidOrUsername := range add {
+			byUsername := true
+			_, err := uuid.ParseUUID(uidOrUsername)
+			if err == nil {
+				byUsername = false
+			}
+			err = updateOrgUserByRole(session, r, id, uidOrUsername, byUsername)
 			if err != nil {
 				return err
 			}

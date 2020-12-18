@@ -61,13 +61,15 @@ github.com/bmatcuk/doublestar v1.2.2 h1:oC24CykoSAB8zd7XgruHo33E0cHJf/WhQA/7BeXj
 github.com/bmatcuk/doublestar v1.2.2/go.mod h1:wiQtGV+rzVYxB7WIlirSN++5HPtPlXEo9MEoZQC/PmE=
 github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40 h1:y4B3+GPxKlrigF1ha5FFErxK+sr6sWxQovRMzwMhejo=
 github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40/go.mod h1:8rLXio+WjiTceGBHIoTvn60HIbs7Hm7bcHjyrSqYB9c=
+github.com/cenkalti/backoff/v4 v4.1.0 h1:c8LkOFQTzuO0WBM/ae5HdGQuZPfPxp7lqBRwQRm4fSc=
+github.com/cenkalti/backoff/v4 v4.1.0/go.mod h1:scbssz8iZGpm3xbr14ovlUdkxfGXNInqkPWOWmG2CLw=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/charlievieth/fs v0.0.0-20170613215519-7dc373669fa1 h1:vTlpHKxJqykyKdW9bkrDJNWeKNuSIAJ0TP/K4lRsz/Q=
 github.com/charlievieth/fs v0.0.0-20170613215519-7dc373669fa1/go.mod h1:sAoA1zHCH4FJPE2gne5iBiiVG66U7Nyp6JqlOo+FEyg=
 github.com/cheggaaa/pb v1.0.27/go.mod h1:pQciLPpbU0oxA0h+VJYYLxO+XeDQb5pZijXscXHm81s=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/cloudfoundry-community/cloudfoundry-cli v0.0.6-complete-api h1:WxZyz7bfC6ELsuujckRv8YE3ur0Chq5zjKPfBKplr14=
-github.com/cloudfoundry-community/cloudfoundry-cli v0.0.6-complete-api/go.mod h1:DigEBZwaNy/7RSrQpKuMeADXY5tFaWaieQX+UM8+0fA=
+github.com/cloudfoundry-community/cloudfoundry-cli v0.0.9-complete-api h1:l2dpn+7jQeROBMI/3ark7GidXYcZzjymxaBTXOyw+MY=
+github.com/cloudfoundry-community/cloudfoundry-cli v0.0.9-complete-api/go.mod h1:DigEBZwaNy/7RSrQpKuMeADXY5tFaWaieQX+UM8+0fA=
 github.com/cloudfoundry/bosh-cli v5.5.0+incompatible h1:P+hlG8D9xXIi75yqTpFrNBHR3oMWWMPNhj5AwSN2tOU=
 github.com/cloudfoundry/bosh-cli v5.5.0+incompatible/go.mod h1:rzIB+e1sn7wQL/TJ54bl/FemPKRhXby5BIMS3tLuWFM=
 github.com/cloudfoundry/bosh-utils v0.0.0-20190518100210-9f9df32d41c3 h1:SbXvMoOwvn5r/uOx3ylQ5pDQxWPaV9dPW5kQ5VpfmUQ=

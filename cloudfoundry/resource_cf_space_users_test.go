@@ -40,7 +40,8 @@ resource "cloudfoundry_space_users" "space_users1" {
     developers = [
         "${cloudfoundry_user.tl.id}",
         "${cloudfoundry_user.dev1.id}",
-		"${cloudfoundry_user.dev2.id}"
+		"${cloudfoundry_user.dev2.id}",
+        "username@acme.com"
     ]
     auditors = [
         "${cloudfoundry_user.adr.id}",
@@ -83,7 +84,20 @@ resource "cloudfoundry_space_users" "space_users1" {
 func TestAccResSpaceUsers_normal(t *testing.T) {
 	ref := "cloudfoundry_space_users.space_users1"
 	spaceId, _ := defaultTestSpace(t)
+	orgId, _ := defaultTestOrg(t)
 	usersMap := make(map[string][]ccv2.User)
+
+	sessions := testSession()
+	user, err := sessions.ClientUAA.CreateUser("username@acme.com", "paasw0rd", "uaa")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer sessions.ClientUAA.DeleteUser(user.ID)
+	err = addOrNothingUserInOrgBySpace(sessions, orgId, user.ID, false)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
 	resource.Test(t,
 		resource.TestCase{
 			PreCheck:  func() { testAccPreCheck(t) },
@@ -96,7 +110,7 @@ func TestAccResSpaceUsers_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "managers.#", "1"),
 						resource.TestCheckResourceAttr(
-							ref, "developers.#", "3"),
+							ref, "developers.#", "4"),
 						resource.TestCheckResourceAttr(
 							ref, "auditors.#", "2"),
 					),
@@ -131,7 +145,7 @@ func TestAccResSpaceUsers_force(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	defer sessions.ClientUAA.DeleteUser(user.ID)
-	err = addOrNothingUserInOrgBySpace(sessions.ClientV2, orgId, user.ID)
+	err = addOrNothingUserInOrgBySpace(sessions, orgId, user.ID, false)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

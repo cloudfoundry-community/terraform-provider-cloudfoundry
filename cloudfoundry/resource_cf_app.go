@@ -89,9 +89,10 @@ func resourceApp() *schema.Resource {
 				Computed: true,
 			},
 			"enable_ssh": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-				Computed: true,
+				Type:       schema.TypeBool,
+				ConfigMode: schema.SchemaConfigModeAttr,
+				Optional:   true,
+				Computed:   true,
 			},
 			"timeout": &schema.Schema{
 				Type:     schema.TypeInt,
@@ -132,12 +133,8 @@ func resourceApp() *schema.Resource {
 				ConflictsWith: []string{"path"},
 			},
 			"service_binding": &schema.Schema{
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Optional: true,
-				Set: func(v interface{}) int {
-					elem := v.(map[string]interface{})
-					return hashcode.String(elem["service_instance"].(string))
-				},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"service_instance": &schema.Schema{
@@ -343,13 +340,18 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	}()
 	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
 
-	// if ports has only one member and port under or equal to 1024
+	// sanitize any empty port under 1024
 	// this means that we are using not predefined port by user
 	// push back to empty list to make blue-green happy with api
 	ports := d.Get("ports").(*schema.Set).List()
-	if len(ports) == 1 && ports[0].(int) <= 1024 {
-		d.Set("ports", []int{})
+	finalPorts := make([]int, 0)
+	for _, port := range ports {
+		if port.(int) <= 1024 {
+			continue
+		}
+		finalPorts = append(finalPorts, port.(int))
 	}
+	d.Set("ports", finalPorts)
 
 	if d.HasChange("routes") {
 		oldRoutes, newRoutes := d.GetChange("routes")
@@ -582,7 +584,8 @@ func IsAppRestageNeeded(d ResourceChanger) bool {
 func IsAppRestartNeeded(d ResourceChanger) bool {
 	return d.HasChange("memory") || d.HasChange("disk_quota") ||
 		d.HasChange("command") || d.HasChange("health_check_http_endpoint") ||
-		d.HasChange("docker_image") || d.HasChange("health_check_type")
+		d.HasChange("docker_image") || d.HasChange("health_check_type") ||
+		d.HasChange("environment")
 }
 
 func isDiffAppParamsBinding(oldBinding, currentBinding map[string]interface{}) (bool, error) {
