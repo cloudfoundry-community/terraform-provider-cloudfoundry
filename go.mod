@@ -29,7 +29,7 @@ require (
 	github.com/hashicorp/go-getter v1.5.0
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hashicorp/hcl v1.0.0
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.2.0
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.4.0
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/mailru/easyjson v0.0.0-20190403194419-1ea4449da983 // indirect
 	github.com/poy/eachers v0.0.0-20181020210610-23942921fe77 // indirect
