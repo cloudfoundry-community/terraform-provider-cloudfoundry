@@ -538,7 +538,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		appDeploy.App = app
 	}
 
-	if IsAppRestageNeeded(d) || (deployer.IsCreateNewApp() && IsAppRestartNeeded(d)) {
+	if !appDeploy.IsDockerImage() && (IsAppRestageNeeded(d) || (deployer.IsCreateNewApp() && IsAppRestartNeeded(d))) {
 		appResp, err := deployer.Restage(appDeploy)
 		if err != nil {
 			return err
