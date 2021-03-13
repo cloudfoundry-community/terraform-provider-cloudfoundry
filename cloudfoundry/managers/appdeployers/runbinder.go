@@ -142,6 +142,9 @@ func (r RunBinder) WaitStart(appDeploy AppDeploy) error {
 			if instance.State == constant.ApplicationInstanceRunning {
 				return true, nil
 			}
+			if instance.State == constant.ApplicationInstanceDown {
+				continue
+			}
 			return true, fmt.Errorf("Instance %d failed with state %s for app %s", i, instance.State, appDeploy.App.Name)
 		}
 
