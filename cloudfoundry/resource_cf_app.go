@@ -237,7 +237,6 @@ func resourceApp() *schema.Resource {
 				if oldPath == "" && newPath != "" && newImg == "" {
 					return diff.ForceNew("path")
 				}
-				return nil
 			}
 			if diff.Id() == "" {
 				return nil
