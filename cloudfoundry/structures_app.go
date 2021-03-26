@@ -119,6 +119,10 @@ func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppD
 	d.Set("health_check_type", string(appDeploy.App.HealthCheckType))
 	d.Set("health_check_timeout", int(appDeploy.App.HealthCheckTimeout))
 	d.Set("environment", appDeploy.App.EnvironmentVariables)
+	// Ensure id_bg is set
+	if idBg, ok := d.GetOk("id_bg"); !ok || idBg == "" {
+		d.Set("id_bg", d.Id())
+	}
 
 	bindingsTf := getListOfStructs(d.Get("service_binding"))
 	finalBindings := make([]map[string]interface{}, 0)
