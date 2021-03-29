@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
@@ -24,6 +25,10 @@ func resourceServiceInstance() *schema.Resource {
 		Update: resourceServiceInstanceUpdate,
 		Delete: resourceServiceInstanceDelete,
 
+		SchemaVersion: 1,
+
+		MigrateState: resourceServiceInstanceMigrateState,
+
 		Importer: &schema.ResourceImporter{
 			State: resourceServiceInstanceImport,
 		},
@@ -35,7 +40,6 @@ func resourceServiceInstance() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
@@ -55,6 +59,16 @@ func resourceServiceInstance() *schema.Resource {
 				Default:      "",
 				ValidateFunc: validation.StringIsJSON,
 			},
+			"replace_on_service_plan_change": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"replace_on_params_change": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 			"tags": &schema.Schema{
 				Type:     schema.TypeList,
 				Optional: true,
@@ -66,6 +80,23 @@ func resourceServiceInstance() *schema.Resource {
 				Default:  false,
 			},
 		},
+		CustomizeDiff: customdiff.All(
+			customdiff.ForceNewIf(
+				"service_plan", func(d *schema.ResourceDiff, meta interface{}) bool {
+					if ok := d.Get("replace_on_service_plan_change").(bool); ok {
+						return true
+					}
+					return false
+				}),
+			customdiff.ForceNewIf(
+				"params", func(d *schema.ResourceDiff, meta interface{}) bool {
+					if ok := d.Get("replace_on_params_change").(bool); ok {
+						return true
+					}
+					return false
+				},
+			),
+		),
 	}
 }
 
