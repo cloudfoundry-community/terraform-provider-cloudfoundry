@@ -1,13 +1,14 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"github.com/blang/semver"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"io/ioutil"
 )
 
 type metadataType string
@@ -96,7 +97,8 @@ func resourceToPayload(d *schema.ResourceData, key string) map[string]*string {
 
 	// 1.
 	for key, val := range newV {
-		res[key] = &val
+		v := val
+		res[key] = &v
 	}
 
 	// 2.
