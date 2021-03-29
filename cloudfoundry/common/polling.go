@@ -22,14 +22,19 @@ func Polling(pollingFunc func() (bool, error), waitTime time.Duration) error {
 
 func PollingWithTimeout(pollingFunc func() (bool, error), waitTime time.Duration, timeout time.Duration) error {
 	stagingStartTime := time.Now()
+	var previousErr error = nil
 	for {
 		if time.Since(stagingStartTime) > timeout {
+			if previousErr != nil {
+				return fmt.Errorf("Timeout of %s reached with a previous error given: %s", timeout, previousErr.Error())
+			}
 			return fmt.Errorf("Timeout of %s reached", timeout)
 		}
 		finished, err := pollingFunc()
-		if err != nil {
+		if err != nil && finished {
 			return err
 		}
+		previousErr = err
 		if finished {
 			break
 		}
