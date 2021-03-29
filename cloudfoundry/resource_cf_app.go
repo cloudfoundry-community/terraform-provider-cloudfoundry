@@ -237,7 +237,6 @@ func resourceApp() *schema.Resource {
 				if oldPath == "" && newPath != "" && newImg == "" {
 					return diff.ForceNew("path")
 				}
-				return nil
 			}
 			if diff.Id() == "" {
 				return nil
@@ -538,7 +537,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		appDeploy.App = app
 	}
 
-	if IsAppRestageNeeded(d) || (deployer.IsCreateNewApp() && IsAppRestartNeeded(d)) {
+	if !appDeploy.IsDockerImage() && (IsAppRestageNeeded(d) || (deployer.IsCreateNewApp() && IsAppRestartNeeded(d))) {
 		appResp, err := deployer.Restage(appDeploy)
 		if err != nil {
 			return err
