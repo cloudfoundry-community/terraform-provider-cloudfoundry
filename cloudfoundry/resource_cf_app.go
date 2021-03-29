@@ -37,7 +37,7 @@ func resourceApp() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: resourceAppImport,
 		},
-		SchemaVersion: 3,
+		SchemaVersion: 4,
 		MigrateState:  resourceAppMigrateState,
 		Schema: map[string]*schema.Schema{
 
@@ -318,6 +318,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return err
 	}
+	bindings = reorderBindings(bindings, d.Get("service_binding").([]interface{}))
 	AppDeployToResourceData(d, appdeployers.AppDeployResponse{
 		App:             app,
 		RouteMapping:    mappings,
@@ -328,6 +329,35 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 	return nil
+}
+
+func getServiceBindingFromList(guid string, bindings []ccv2.ServiceBinding) (ccv2.ServiceBinding, bool) {
+	for _, binding := range bindings {
+		if binding.ServiceInstanceGUID == guid {
+			return binding, true
+		}
+	}
+	return ccv2.ServiceBinding{}, false
+}
+
+func reorderBindings(bindings []ccv2.ServiceBinding, currentBindings []interface{}) []ccv2.ServiceBinding {
+	finalBindings := make([]ccv2.ServiceBinding, 0)
+	for _, currentBindings := range currentBindings {
+		if currentBindings == nil {
+			continue
+		}
+		item := currentBindings.(map[string]interface{})
+		if binding, ok := getServiceBindingFromList(item["service_instance"].(string), bindings); ok {
+			finalBindings = append(finalBindings, binding)
+		}
+	}
+	for _, binding := range bindings {
+		if _, ok := getServiceBindingFromList(binding.ServiceInstanceGUID, finalBindings); ok {
+			continue
+		}
+		finalBindings = append(finalBindings, binding)
+	}
+	return finalBindings
 }
 
 func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
