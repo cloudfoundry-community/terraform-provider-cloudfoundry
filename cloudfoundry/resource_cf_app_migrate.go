@@ -105,9 +105,79 @@ func resourceAppMigrateState(
 	case 2:
 		log.Println("[INFO] Found app Record State v2; migrating from v2 to v3")
 		return migrateAppStateV2toV3(is, meta)
+	case 3:
+		log.Println("[INFO] Found app Record State v3; migrating from v3 to v4")
+		return migrateAppStateV3toV4(is, meta)
 	default:
 		return is, fmt.Errorf("Unexpected schema version: %d", v)
 	}
+}
+
+func migrateAppStateV3toV4(is *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
+	oldSchema := map[string]*schema.Schema{
+		"service_binding": &schema.Schema{
+			Type:     schema.TypeSet,
+			Optional: true,
+			Set: func(v interface{}) int {
+				elem := v.(map[string]interface{})
+				return hashcode.String(elem["service_instance"].(string))
+			},
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"service_instance": &schema.Schema{
+						Type:     schema.TypeString,
+						Required: true,
+					},
+					"params": &schema.Schema{
+						Type:     schema.TypeMap,
+						Optional: true,
+					},
+					"binding_id": &schema.Schema{
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+				},
+			},
+		},
+	}
+
+	reader := &schema.MapFieldReader{
+		Schema: oldSchema,
+		Map:    schema.BasicMapReader(is.Attributes),
+	}
+	result, err := reader.ReadField([]string{"service_binding"})
+	if err != nil {
+		return is, err
+	}
+	bindings := make([]map[string]interface{}, 0)
+	result, err = reader.ReadField([]string{"service_binding"})
+	if err == nil && result.Exists {
+		oldBindings := getListOfStructs(result.Value)
+		for _, b := range oldBindings {
+			bindings = append(bindings, map[string]interface{}{
+				"service_instance": b["service_instance"],
+				"params":           b["params"],
+				"params_json":      b["params_json"],
+			})
+		}
+	}
+
+	is.Attributes = cleanByKeyAttribute("service_binding", is.Attributes)
+
+	writer := schema.MapFieldWriter{
+		Schema: resourceApp().Schema,
+	}
+
+	err = writer.WriteField([]string{"service_binding"}, bindings)
+	if err != nil {
+		return is, err
+	}
+	attr := is.Attributes
+	for k, v := range writer.Map() {
+		attr[k] = v
+	}
+	is.Attributes = attr
+	return is, nil
 }
 
 func migrateAppStateV2toV3(is *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
