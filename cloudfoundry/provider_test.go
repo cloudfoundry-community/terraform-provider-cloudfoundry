@@ -490,26 +490,24 @@ func assertHTTPResponse(url string, expectedStatusCode int, expectedResponses *[
 	var finalErr error
 	// this assert is used to get on a route from gorouter
 	// delay and retry is necessary in case of the route not yet registered in gorouter
-	for i := 0; i < 9; i++ {
+	fn := func(url string, expectedStatusCode int, expectedResponses *[]string) error {
 		finalErr = nil
 		time.Sleep(1 * time.Second)
 		resp, err := client.Get(url)
 		if err != nil {
-			finalErr = err
-			continue
+			return err
 		}
+		defer resp.Body.Close()
 		if expectedStatusCode != resp.StatusCode {
-			finalErr = fmt.Errorf(
+			return fmt.Errorf(
 				"expected response status code from url '%s' to be '%d', but actual was: %s",
 				url, expectedStatusCode, resp.Status)
-			continue
 		}
 		if expectedResponses != nil {
 			in := resp.Body
 			out := bytes.NewBuffer(nil)
 			if _, err = io.Copy(out, in); err != nil {
-				finalErr = err
-				continue
+				return err
 			}
 			content := out.String()
 
@@ -521,17 +519,23 @@ func assertHTTPResponse(url string, expectedStatusCode int, expectedResponses *[
 				}
 			}
 			if !found {
-				finalErr = fmt.Errorf(
+				return fmt.Errorf(
 					"expected response from url '%s' to be one of '%v', but actual was '%s'",
 					url, *expectedResponses, content)
-				continue
 			}
+		}
+		return nil
+	}
+	for i := 0; i < 9; i++ {
+		err := fn(url, expectedStatusCode, expectedResponses)
+		if err != nil {
+			finalErr = err
+			continue
 		}
 	}
 
 	return finalErr
 }
-
 func TestMain(m *testing.M) {
 	fmt.Println("Running pre-hook...")
 	// defer and os.Exit are not friends :(

@@ -2,8 +2,7 @@
 layout: "cloudfoundry"
 page_title: "Cloud Foundry: cloudfoundry_service_instance"
 sidebar_current: "docs-cf-resource-service-instance"
-description: |-
-  Provides a Cloud Foundry Service Instance.
+description: |- Provides a Cloud Foundry Service Instance.
 ---
 
 # cloudfoundry\_service\_instance
@@ -16,12 +15,12 @@ The following is a Service Instance created in the referenced space with the spe
 
 ```hcl
 data "cloudfoundry_service" "redis" {
-    name = "p-redis"
+  name = "p-redis"
 }
 
 resource "cloudfoundry_service_instance" "redis1" {
-  name = "pricing-grid"
-  space = cloudfoundry_space.dev.id
+  name         = "pricing-grid"
+  space        = cloudfoundry_space.dev.id
   service_plan = data.cloudfoundry_service.redis.service_plans["shared-vm"]
 }
 ```
@@ -53,8 +52,11 @@ An existing Service Instance can be imported using its guid, e.g.
 $ terraform import cloudfoundry_service.redis a-guid
 ```
 
-## Timeouts
+### Timeouts
 
-* `create` - Default: 15 mins. Terraform will return an error if the resource was not deployed in the given timeframe.
-* `delete` - Default: 15 mins. Terraform will return an error if the resource was not deleted in the given timeframe.
-* `update` - Default: 15 mins. Terraform will return an error if the resource was not dupdated in the given timeframe.
+`cloudfoundry_service_instance` provides the following
+[Timeouts](https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts) configuration options:
+
+- `create` - (Default `15 minutes`) Used for Creating Instance.
+- `update` - (Default `15 minutes`) Used for Updating Instance.
+- `delete` - (Default `15 minutes`) Used for Destroying Instance.
