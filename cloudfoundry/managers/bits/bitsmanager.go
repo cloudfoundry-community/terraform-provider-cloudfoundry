@@ -61,6 +61,7 @@ func (m BitsManager) CopyApp(origAppGuid string, newAppGuid string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	var j job
 	err = json.NewDecoder(resp.Body).Decode(&j)
 	if err != nil {
@@ -123,10 +124,11 @@ func (m BitsManager) UploadBuildpack(buildpackGUID string, bpPath string) error 
 	req.ContentLength = m.predictPartBuildpack(baseName, fileSize, mpw.Boundary())
 	req.Body = r
 
-	_, err = m.rawClient.Do(req)
+	resp, err := m.rawClient.Do(req)
 	if err != nil {
 		panic(err)
 	}
+	defer resp.Body.Close()
 	return nil
 }
 
@@ -181,10 +183,11 @@ func (m BitsManager) UploadApp(appGUID string, path string) error {
 	req.ContentLength = m.predictPartApp(fileSize, mpw.Boundary())
 	req.Body = r
 
-	_, err = m.rawClient.Do(req)
+	resp, err := m.rawClient.Do(req)
 	if err != nil {
 		panic(err)
 	}
+	defer resp.Body.Close()
 	return nil
 }
 

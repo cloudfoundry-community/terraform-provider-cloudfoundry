@@ -85,7 +85,7 @@ resource "cloudfoundry_app" "fake-service-broker" {
 
 resource "cloudfoundry_service_broker" "fake-service-broker" {
   name = "fake-service-broker"
-  url = "http://fake-service-broker.%s"
+  url = "https://fake-service-broker.%s"
   username = "admin"
   password = "admin"
   space = "%s"

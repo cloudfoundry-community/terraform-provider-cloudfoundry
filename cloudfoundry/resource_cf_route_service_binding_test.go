@@ -200,6 +200,7 @@ func checkAppResponse(url string, code int) resource.TestCheckFunc {
 		if err != nil {
 			return err
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode != code {
 			// on cf without valid certif it has 502 error
 			if resp.StatusCode == 502 {

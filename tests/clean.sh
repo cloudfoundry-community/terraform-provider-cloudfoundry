@@ -11,7 +11,7 @@ if [ -z "$CF_API_URL" ] || [ -z "$CF_USER" ] || [ -z "$CF_PASSWORD" ]; then
 fi
 
 # we have no more shared platform :(
-exit 0
+#exit 0
 
 #set -e # Exit if the login fails (not set or wrongly set!)
 cf api $CF_API_URL --skip-ssl-validation

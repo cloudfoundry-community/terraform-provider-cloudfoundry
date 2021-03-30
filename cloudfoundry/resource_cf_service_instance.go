@@ -26,6 +26,10 @@ func resourceServiceInstance() *schema.Resource {
 		Update: resourceServiceInstanceUpdate,
 		Delete: resourceServiceInstanceDelete,
 
+		SchemaVersion: 1,
+
+		MigrateState: resourceServiceInstanceMigrateState,
+
 		Importer: &schema.ResourceImporter{
 			State: resourceServiceInstanceImport,
 		},
