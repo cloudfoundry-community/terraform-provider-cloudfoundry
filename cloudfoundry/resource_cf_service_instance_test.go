@@ -102,8 +102,8 @@ func TestAccResServiceInstance_normal(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:  func() { testAccPreCheck(t) },
-			Providers: testAccProviders,
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
 			CheckDestroy: testAccCheckServiceInstanceDestroyed(
 				[]string{
 					"test-service",
@@ -159,8 +159,8 @@ func TestAccResServiceInstances_withFakePlans(t *testing.T) {
 	refFakeAsyncPlan := "cloudfoundry_service_instance.fake-service-instance-with-fake-async-plan"
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:  func() { testAccPreCheck(t) },
-			Providers: testAccProviders,
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
 			CheckDestroy: testAccCheckServiceInstanceDestroyed(
 				[]string{
 					"fake-service-instance-with-fake-plan",

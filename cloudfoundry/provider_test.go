@@ -19,10 +19,10 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/hashcode"
 )
 
 var testAccProviders map[string]*schema.Provider
+var testAccProvidersFactories map[string]func() (*schema.Provider, error)
 var testAccProvider *schema.Provider
 
 var tstSession *managers.Session
@@ -35,10 +35,14 @@ var testSpaceName string
 var helperTest *HelpersTest
 
 func init() {
-
 	testAccProvider = Provider()
 	testAccProviders = map[string]*schema.Provider{
 		"cloudfoundry": testAccProvider,
+	}
+	testAccProvidersFactories = map[string]func() (*schema.Provider, error){
+		"cloudfoundry": func() (*schema.Provider, error) {
+			return testAccProvider, nil
+		},
 	}
 }
 
@@ -440,10 +444,11 @@ func assertSetEquals(
 			"expected resource '%s' to have '%d' elements but it has '%d' elements",
 			key, len(expected), n)
 	}
+
 	if n > 0 {
 		found := 0
-		for _, e := range expected {
-			if _, ok := attributes[key+"."+strconv.Itoa(hashcode.String(e.(string)))]; ok {
+		for i, _ := range expected {
+			if _, ok := attributes[key+"."+strconv.Itoa(i)]; ok {
 				found++
 			}
 		}

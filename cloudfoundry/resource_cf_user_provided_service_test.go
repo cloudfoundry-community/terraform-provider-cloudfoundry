@@ -126,9 +126,9 @@ func TestAccResUserProvidedService_normal(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckUserProvidedServiceDestroyed("mq", "cloudfoundry_space.space1"),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckUserProvidedServiceDestroyed("mq", "cloudfoundry_space.space1"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -166,9 +166,9 @@ func TestAccResUserProvidedService_complex(t *testing.T) {
 	ref := "cloudfoundry_user_provided_service.complex"
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckUserProvidedServiceDestroyed("complex", "cloudfoundry_space.space1"),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckUserProvidedServiceDestroyed("complex", "cloudfoundry_space.space1"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

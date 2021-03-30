@@ -66,9 +66,9 @@ func TestAccResAsg_normal(t *testing.T) {
 
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckASGDestroy(asgname),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckASGDestroy(asgname),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

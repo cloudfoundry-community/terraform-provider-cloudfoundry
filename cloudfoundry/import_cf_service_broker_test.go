@@ -21,9 +21,9 @@ func TestAccServiceBroker_importBasic(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceBrokerDestroyed("test"),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckServiceBrokerDestroyed("test"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

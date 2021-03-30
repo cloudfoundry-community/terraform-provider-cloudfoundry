@@ -15,9 +15,9 @@ func TestAccSpaceQuota_importBasic(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckSpaceQuotaResourceDestroy(quotaname, orgID),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckSpaceQuotaResourceDestroy(quotaname, orgID),
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: spaceQuotaResource,

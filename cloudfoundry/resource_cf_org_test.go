@@ -56,7 +56,7 @@ resource "cloudfoundry_org" "org1" {
 const orgResourceUpdate = `
 
 data "cloudfoundry_org_quota" "default" {
-  name = "default"
+  name = "%s"
 }
 
 resource "cloudfoundry_org_quota" "runaway" {
@@ -108,9 +108,9 @@ func TestAccResOrg_normal(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckOrgDestroyed("organization-one-updated"),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckOrgDestroyed("organization-one-updated"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -129,7 +129,7 @@ func TestAccResOrg_normal(t *testing.T) {
 				},
 
 				resource.TestStep{
-					Config: orgResourceUpdate,
+					Config: fmt.Sprintf(orgResourceUpdate, testSession().Config.DefaultQuotaName),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckOrgExists(refOrg, refQuotaDefault, &refUserRemoved),
 						resource.TestCheckResourceAttr(

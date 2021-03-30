@@ -17,8 +17,8 @@ func TestAccDataSourceInfo_normal(t *testing.T) {
 
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:  func() { testAccPreCheck(t) },
-			Providers: testAccProviders,
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

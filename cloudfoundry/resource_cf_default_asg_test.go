@@ -103,9 +103,9 @@ func TestAccResDefaultRunningAsg_normal(t *testing.T) {
 	defaultLenStagingSecGroup = len(asgs)
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckDefaultRunningAsgDestroy,
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckDefaultRunningAsgDestroy,
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

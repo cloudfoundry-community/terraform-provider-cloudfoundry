@@ -40,8 +40,8 @@ func TestAccResServiceKey_normal(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:  func() { testAccPreCheck(t) },
-			Providers: testAccProviders,
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
 			CheckDestroy: testAccCheckServiceKeyDestroyed(
 				"test-service-instance-key", ref),
 			Steps: []resource.TestStep{
