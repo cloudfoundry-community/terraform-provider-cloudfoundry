@@ -3,7 +3,7 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 

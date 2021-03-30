@@ -1,12 +1,13 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/cfnetv1"
 	"fmt"
+
+	"code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/cfnetv1"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/hashcode"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 

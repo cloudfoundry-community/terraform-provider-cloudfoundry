@@ -1,6 +1,7 @@
 package cloudfoundry
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,9 +11,9 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/hashcode"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 )
@@ -171,7 +172,7 @@ func resourceApp() *schema.Resource {
 					))
 				},
 				Elem: &schema.Resource{
-					CustomizeDiff: func(diff *schema.ResourceDiff, i interface{}) error {
+					CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, i interface{}) error {
 
 						if diff.HasChange("port") {
 							return nil
@@ -227,7 +228,7 @@ func resourceApp() *schema.Resource {
 			annotationsKey: annotationsSchema(),
 		},
 
-		CustomizeDiff: func(diff *schema.ResourceDiff, meta interface{}) error {
+		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 			if diff.HasChange("docker_image") || diff.HasChange("path") {
 				oldImg, newImg := diff.GetChange("docker_image")
 				oldPath, newPath := diff.GetChange("path")
@@ -362,7 +363,6 @@ func reorderBindings(bindings []ccv2.ServiceBinding, currentBindings []interface
 
 func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	d.Partial(true)
-	d.SetPartial("docker_credentials")
 	session := meta.(*managers.Session)
 	defer func() {
 		d.Set("id_bg", d.Id())
@@ -461,7 +461,6 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		appDeploy.Mappings = mappings
 	}
-	d.SetPartial("routes")
 
 	if d.HasChange("service_binding") {
 		bindings, err := session.RunBinder.BindServiceInstances(appDeploy)
@@ -470,7 +469,6 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		appDeploy.ServiceBindings = bindings
 	}
-	d.SetPartial("service_binding")
 
 	appUpdate := ccv2.Application{
 		GUID: appDeploy.App.GUID,
@@ -549,21 +547,6 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		if err != nil {
 			return err
 		}
-		d.SetPartial("name")
-		d.SetPartial("ports")
-		d.SetPartial("instances")
-		d.SetPartial("memory")
-		d.SetPartial("disk_quota")
-		d.SetPartial("stack")
-		d.SetPartial("buildpack")
-		d.SetPartial("command")
-		d.SetPartial("enable_ssh")
-		d.SetPartial("stopped")
-		d.SetPartial("docker_image")
-		d.SetPartial("health_check_http_endpoint")
-		d.SetPartial("health_check_type")
-		d.SetPartial("health_check_timeout")
-		d.SetPartial("environment")
 		appDeploy.App = app
 	}
 

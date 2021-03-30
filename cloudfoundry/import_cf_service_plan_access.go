@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceServicePlanAccessImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {

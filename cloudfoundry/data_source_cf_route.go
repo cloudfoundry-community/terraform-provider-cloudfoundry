@@ -7,7 +7,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceRoute() *schema.Resource {
