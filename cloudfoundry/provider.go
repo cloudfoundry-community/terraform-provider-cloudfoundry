@@ -81,6 +81,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("CF_STORE_TOKENS_PATH", ""),
 				Description: "Path to a file to store tokens used for login. (this is useful for sso, this avoid requiring each time sso passcode)",
 			},
+			"force_broker_not_fail_when_catalog_not_accessible": &schema.Schema{
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("CF_FORCE_BROKER_NOT_FAIL_CATALOG", false),
+				Description: "Set to true to not trigger fail on catalog on service broker",
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -137,18 +143,19 @@ func Provider() *schema.Provider {
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	c := managers.Config{
-		Endpoint:          strings.TrimSuffix(d.Get("api_url").(string), "/"),
-		User:              d.Get("user").(string),
-		Password:          d.Get("password").(string),
-		SSOPasscode:       d.Get("sso_passcode").(string),
-		CFClientID:        d.Get("cf_client_id").(string),
-		CFClientSecret:    d.Get("cf_client_secret").(string),
-		UaaClientID:       d.Get("uaa_client_id").(string),
-		UaaClientSecret:   d.Get("uaa_client_secret").(string),
-		SkipSslValidation: d.Get("skip_ssl_validation").(bool),
-		AppLogsMax:        d.Get("app_logs_max").(int),
-		DefaultQuotaName:  d.Get("default_quota_name").(string),
-		StoreTokensPath:   d.Get("store_tokens_path").(string),
+		Endpoint:                  strings.TrimSuffix(d.Get("api_url").(string), "/"),
+		User:                      d.Get("user").(string),
+		Password:                  d.Get("password").(string),
+		SSOPasscode:               d.Get("sso_passcode").(string),
+		CFClientID:                d.Get("cf_client_id").(string),
+		CFClientSecret:            d.Get("cf_client_secret").(string),
+		UaaClientID:               d.Get("uaa_client_id").(string),
+		UaaClientSecret:           d.Get("uaa_client_secret").(string),
+		SkipSslValidation:         d.Get("skip_ssl_validation").(bool),
+		AppLogsMax:                d.Get("app_logs_max").(int),
+		DefaultQuotaName:          d.Get("default_quota_name").(string),
+		StoreTokensPath:           d.Get("store_tokens_path").(string),
+		ForceNotFailBrokerCatalog: d.Get("force_broker_not_fail_when_catalog_not_accessible").(bool),
 	}
 	return managers.NewSession(c)
 }

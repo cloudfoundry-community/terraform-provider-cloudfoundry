@@ -237,12 +237,19 @@ func readServiceDetail(id string, session *managers.Session, d *schema.ResourceD
 }
 
 func serviceBrokerUpdateCatalogSignature(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+
 	signature, err := serviceBrokerCatalogSignature(d, meta)
 	failNotAccessible := d.Get("fail_when_catalog_not_accessible").(bool)
 	if d.HasChange("fail_when_catalog_not_accessible") {
 		_, newFailNotAccessible := d.GetChange("fail_when_catalog_not_accessible")
 		failNotAccessible = newFailNotAccessible.(bool)
 	}
+
+	if session.Config.ForceNotFailBrokerCatalog {
+		failNotAccessible = false
+	}
+
 	if err != nil && failNotAccessible {
 		return fmt.Errorf("Error when getting catalog signature: %s", err.Error())
 	}
