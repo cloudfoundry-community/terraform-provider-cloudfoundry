@@ -1,7 +1,10 @@
 package cloudfoundry
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"reflect"
 	"strings"
 
@@ -133,16 +136,30 @@ func getListMapChanges(old interface{}, new interface{}, match func(source, item
 	return remove, add
 }
 
-// ImportRead -
-func ImportRead(read schema.ReadFunc) schema.StateFunc {
-	return func(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+// ImportReadContext -
+func ImportReadContext(read schema.ReadContextFunc) schema.StateContextFunc {
+	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 		MarkImportState(d)
-		err := read(d, meta)
+		err := DiagsToError(read(ctx, d, meta))
 		if err != nil {
 			return []*schema.ResourceData{}, err
 		}
 		return []*schema.ResourceData{d}, nil
 	}
+}
+
+func DiagsToError(diags diag.Diagnostics) error {
+	if !diags.HasError() {
+		return nil
+	}
+	if len(diags) == 1 {
+		return fmt.Errorf(diags[0].Summary)
+	}
+	var result error
+	for _, dg := range diags {
+		result = multierror.Append(result, fmt.Errorf(dg.Summary))
+	}
+	return result
 }
 
 // MarkImportState -

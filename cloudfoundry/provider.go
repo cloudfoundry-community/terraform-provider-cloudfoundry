@@ -1,6 +1,8 @@
 package cloudfoundry
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -131,11 +133,11 @@ func Provider() *schema.Provider {
 			"cloudfoundry_network_policy":                resourceNetworkPolicy(),
 		},
 
-		ConfigureFunc: providerConfigure,
+		ConfigureContextFunc: providerConfigure,
 	}
 }
 
-func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	c := managers.Config{
 		Endpoint:          strings.TrimSuffix(d.Get("api_url").(string), "/"),
 		User:              d.Get("user").(string),
@@ -150,5 +152,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		DefaultQuotaName:  d.Get("default_quota_name").(string),
 		StoreTokensPath:   d.Get("store_tokens_path").(string),
 	}
-	return managers.NewSession(c)
+	session, err := managers.NewSession(c)
+	return session, diag.FromErr(err)
 }

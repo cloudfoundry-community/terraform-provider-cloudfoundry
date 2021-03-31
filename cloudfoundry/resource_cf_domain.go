@@ -2,7 +2,8 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strings"
 
@@ -13,12 +14,12 @@ func resourceDomain() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceDomainCreate,
-		Read:   resourceDomainRead,
-		Delete: resourceDomainDelete,
+		CreateContext: resourceDomainCreate,
+		ReadContext:   resourceDomainRead,
+		DeleteContext: resourceDomainDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceDomainRead),
+			StateContext: ImportReadContext(resourceDomainRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -74,7 +75,7 @@ func resourceDomain() *schema.Resource {
 	}
 }
 
-func resourceDomainCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceDomainCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 
@@ -88,22 +89,22 @@ func resourceDomainCreate(d *schema.ResourceData, meta interface{}) error {
 
 		domainParts := strings.Split(nameAttr.(string), ".")
 		if len(domainParts) <= 1 {
-			return fmt.Errorf("the 'name' attribute does not contain a sub-domain")
+			return diag.Errorf("the 'name' attribute does not contain a sub-domain")
 		}
 		sd := domainParts[0]
 		dn := strings.Join(domainParts[1:], ".")
 
 		if subDomainOk {
-			return fmt.Errorf("the 'sub_domain' will be computed from the 'name' attribute, so it is not needed here")
+			return diag.Errorf("the 'sub_domain' will be computed from the 'name' attribute, so it is not needed here")
 		}
 		if domainOk {
-			return fmt.Errorf("the 'domain' will be computed from the 'name' attribute, so it is not needed here")
+			return diag.Errorf("the 'domain' will be computed from the 'name' attribute, so it is not needed here")
 		}
 		d.Set("sub_domain", sd)
 		d.Set("domain", dn)
 	} else {
 		if !subDomainOk || !domainOk {
-			return fmt.Errorf("to compute the 'name' both the 'sub_domain' and 'domain' attributes need to be provided")
+			return diag.Errorf("to compute the 'name' both the 'sub_domain' and 'domain' attributes need to be provided")
 		}
 		d.Set("name", subDomainAttr.(string)+"."+domainAttr.(string))
 	}
@@ -121,14 +122,14 @@ func resourceDomainCreate(d *schema.ResourceData, meta interface{}) error {
 		ccDomain, _, err = dm.CreateSharedDomain(name, routerGroup.(string), d.Get("internal").(bool))
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.Set("router_type", ccDomain.RouterGroupType)
 	d.SetId(ccDomain.GUID)
 	return nil
 }
 
-func resourceDomainRead(d *schema.ResourceData, meta interface{}) error {
+func resourceDomainRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	dm := session.ClientV2
@@ -143,7 +144,7 @@ func resourceDomainRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 	domainParts := strings.Split(ccDomain.Name, ".")
 	subDomain := domainParts[0]
@@ -160,11 +161,11 @@ func resourceDomainRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceDomainDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceDomainDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	dm := session.ClientV2
@@ -176,5 +177,5 @@ func resourceDomainDelete(d *schema.ResourceData, meta interface{}) error {
 	} else {
 		_, err = dm.DeleteSharedDomain(id)
 	}
-	return err
+	return diag.FromErr(err)
 }

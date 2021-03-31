@@ -1,7 +1,9 @@
 package cloudfoundry
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/cfnetv1"
 	"github.com/hashicorp/go-uuid"
@@ -15,10 +17,10 @@ func resourceNetworkPolicy() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceNetworkPolicyCreate,
-		Read:   resourceNetworkPolicyRead,
-		Update: resourceNetworkPolicyUpdate,
-		Delete: resourceNetworkPolicyDelete,
+		CreateContext: resourceNetworkPolicyCreate,
+		ReadContext:   resourceNetworkPolicyRead,
+		UpdateContext: resourceNetworkPolicyUpdate,
+		DeleteContext: resourceNetworkPolicyDelete,
 
 		Schema: map[string]*schema.Schema{
 			"policy": &schema.Schema{
@@ -68,18 +70,22 @@ func resourceNetworkPolicy() *schema.Resource {
 	}
 }
 
-func resourceNetworkPolicyCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceNetworkPolicyCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	guid, err := uuid.GenerateUUID()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.SetId(guid)
 	policiesTf := getListOfStructs(d.Get("policy"))
-	return session.NetClient.CreatePolicies(resourceNetworkPoliciesToPolicies(policiesTf))
+	err = session.NetClient.CreatePolicies(resourceNetworkPoliciesToPolicies(policiesTf))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
 }
 
-func resourceNetworkPolicyRead(d *schema.ResourceData, meta interface{}) error {
+func resourceNetworkPolicyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	policiesTf := getListOfStructs(d.Get("policy"))
@@ -95,7 +101,7 @@ func resourceNetworkPolicyRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	policies, err := session.NetClient.ListPolicies(ids...)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	finalPolicies := intersectSlices(policiesTf, policies, func(source, item interface{}) bool {
@@ -118,7 +124,7 @@ func resourceNetworkPolicyRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceNetworkPolicyUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceNetworkPolicyUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	old, now := d.GetChange("policy")
 	remove, add := getListMapChanges(old, now, func(source, item map[string]interface{}) bool {
@@ -130,23 +136,27 @@ func resourceNetworkPolicyUpdate(d *schema.ResourceData, meta interface{}) error
 	if len(remove) > 0 {
 		err := session.NetClient.RemovePolicies(resourceNetworkPoliciesToPolicies(remove))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	if len(add) > 0 {
 		err := session.NetClient.CreatePolicies(resourceNetworkPoliciesToPolicies(add))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	return nil
 }
 
-func resourceNetworkPolicyDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceNetworkPolicyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	policiesTf := getListOfStructs(d.Get("policy"))
-	return session.NetClient.RemovePolicies(resourceNetworkPoliciesToPolicies(policiesTf))
+	err := session.NetClient.RemovePolicies(resourceNetworkPoliciesToPolicies(policiesTf))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
 }
 
 func resourceNetworkPoliciesToPolicies(policiesTf []map[string]interface{}) []cfnetv1.Policy {

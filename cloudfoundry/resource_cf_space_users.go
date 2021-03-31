@@ -1,6 +1,8 @@
 package cloudfoundry
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
@@ -20,13 +22,13 @@ func resourceSpaceUsers() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceSpaceUsersCreate,
-		Read:   resourceSpaceUsersRead,
-		Update: resourceSpaceUsersUpdate,
-		Delete: resourceSpaceUsersDelete,
+		CreateContext: resourceSpaceUsersCreate,
+		ReadContext:   resourceSpaceUsersRead,
+		UpdateContext: resourceSpaceUsersUpdate,
+		DeleteContext: resourceSpaceUsersDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceSpaceUsersRead),
+			StateContext: ImportReadContext(resourceSpaceUsersRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -68,10 +70,10 @@ func resourceSpaceUsers() *schema.Resource {
 	}
 }
 
-func resourceSpaceUsersCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceSpaceUsersCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	session := meta.(*managers.Session)
 	spaceId := d.Get("space").(string)
@@ -80,21 +82,21 @@ func resourceSpaceUsersCreate(d *schema.ResourceData, meta interface{}) error {
 		for _, r := range typeToSpaceRoleMap {
 			users, _, err := session.ClientV2.GetSpaceUsersByRole(r, spaceId)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 			for _, u := range users {
 				_, err := session.ClientV2.DeleteSpaceUserByRole(r, spaceId, u.GUID)
 				if err != nil {
-					return err
+					return diag.FromErr(err)
 				}
 			}
 
 		}
 	}
-	return resourceSpaceUsersUpdate(d, meta)
+	return resourceSpaceUsersUpdate(ctx, d, meta)
 }
 
-func resourceSpaceUsersRead(d *schema.ResourceData, meta interface{}) error {
+func resourceSpaceUsersRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	if IsImportState(d) {
 		d.Set("space", d.Id())
 		d.Set("force", false)
@@ -103,7 +105,7 @@ func resourceSpaceUsersRead(d *schema.ResourceData, meta interface{}) error {
 	for t, r := range typeToSpaceRoleMap {
 		users, _, err := session.ClientV2.GetSpaceUsersByRole(r, d.Get("space").(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		tfUsers := d.Get(t).(*schema.Set).List()
 		if !d.Get("force").(bool) && !IsImportState(d) {
@@ -129,12 +131,12 @@ func resourceSpaceUsersRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceSpaceUsersUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	spaceId := d.Get("space").(string)
 	space, _, err := session.ClientV2.GetSpace(spaceId)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	for t, r := range typeToSpaceRoleMap {
 		remove, add := getListChanges(d.GetChange(t))
@@ -147,7 +149,7 @@ func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 
 			err = deleteSpaceUserByRole(session, r, spaceId, uid, byUsername)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 		for _, uidOrUsername := range add {
@@ -158,12 +160,12 @@ func resourceSpaceUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 			err = addOrNothingUserInOrgBySpace(session, space.OrganizationGUID, uidOrUsername, byUsername)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 
 			err = updateSpaceUserByRole(session, r, spaceId, uidOrUsername, byUsername)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
@@ -240,7 +242,7 @@ func addOrNothingUserInOrgBySpace(session *managers.Session, orgId, uaaidOrUsern
 	return updateOrgUserByRole(session, constant.OrgUser, orgId, uaaidOrUsername, byUsername)
 }
 
-func resourceSpaceUsersDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceSpaceUsersDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	spaceId := d.Get("space").(string)
 	session := meta.(*managers.Session)
 	for t, r := range typeToSpaceRoleMap {
@@ -255,7 +257,7 @@ func resourceSpaceUsersDelete(d *schema.ResourceData, meta interface{}) error {
 
 			err = deleteSpaceUserByRole(session, r, spaceId, uaaIDOrUsername, byUsername)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}

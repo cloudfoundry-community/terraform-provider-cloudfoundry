@@ -3,6 +3,8 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strings"
 
@@ -13,7 +15,7 @@ func dataSourceService() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceServiceRead,
+		ReadContext: dataSourceServiceRead,
 
 		Schema: map[string]*schema.Schema{
 
@@ -43,7 +45,7 @@ func dataSourceService() *schema.Resource {
 	}
 }
 
-func dataSourceServiceRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceServiceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	name := d.Get("name").(string)
@@ -61,10 +63,10 @@ func dataSourceServiceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	services, _, err := session.ClientV2.GetServices(filters...)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if len(services) == 0 {
-		return NotFound
+		return diag.FromErr(NotFound)
 	}
 	service := services[0]
 	d.SetId(service.GUID)
@@ -74,7 +76,7 @@ func dataSourceServiceRead(d *schema.ResourceData, meta interface{}) error {
 
 	servicePlans, _, err := session.ClientV2.GetServicePlans(ccv2.FilterEqual(constant.ServiceGUIDFilter, service.GUID))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	servicePlansTf := make(map[string]interface{})
