@@ -72,7 +72,7 @@ func dataSourceServiceRead(ctx context.Context, d *schema.ResourceData, meta int
 		for _, svc := range services {
 			brk, _, err := session.ClientV2.GetServiceBroker(svc.ServiceBrokerGUID)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 			if brk.SpaceGUID == space {
 				service = svc
