@@ -1,7 +1,9 @@
 package cloudfoundry
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"net/http"
 
 	"github.com/cenkalti/backoff/v4"
@@ -19,13 +21,13 @@ func resourceRoute() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceRouteCreate,
-		Read:   resourceRouteRead,
-		Update: resourceRouteUpdate,
-		Delete: resourceRouteDelete,
+		CreateContext: resourceRouteCreate,
+		ReadContext:   resourceRouteRead,
+		UpdateContext: resourceRouteUpdate,
+		DeleteContext: resourceRouteDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceRouteRead),
+			StateContext: ImportReadContext(resourceRouteRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -94,11 +96,11 @@ func resourceRoute() *schema.Resource {
 	}
 }
 
-func resourceRouteCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceRouteCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 	port := types.NullInt{}
 	if v, ok := d.GetOk("port"); ok {
@@ -126,7 +128,7 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	err := backoff.Retry(operation, backoff.NewExponentialBackOff())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	// Delete route if an error occurs
 	defer func() {
@@ -141,22 +143,22 @@ func resourceRouteCreate(d *schema.ResourceData, meta interface{}) error {
 	}()
 
 	if err = setRouteArguments(session, route, d); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if v, ok := d.GetOk("target"); ok {
 		var t interface{}
 		if t, err = addTargets(route.GUID, getListOfStructs(v.(*schema.Set).List()), session); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		d.Set("target", t)
 	}
 
 	d.SetId(route.GUID)
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
+func resourceRouteRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	id := d.Id()
@@ -167,10 +169,10 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 	if err = setRouteArguments(session, route, d); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if _, ok := d.GetOk("target"); !ok && !IsImportState(d) {
@@ -180,7 +182,7 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 	tfTargets := d.Get("target").(*schema.Set).List()
 	mappings, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.RouteGUIDFilter, d.Id()))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if IsImportState(d) {
 		for _, mapping := range mappings {
@@ -189,7 +191,7 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 				appID := mapping.AppGUID
 				app, _, err := session.ClientV2.GetApplication(appID)
 				if err != nil {
-					return err
+					return diag.FromErr(err)
 				}
 				mapping.AppPort = app.Ports[0]
 			}
@@ -214,7 +216,7 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 				appID := mapping.AppGUID
 				app, _, err := session.ClientV2.GetApplication(appID)
 				if err != nil {
-					return err
+					return diag.FromErr(err)
 				}
 				mapping.AppPort = app.Ports[0]
 			}
@@ -233,7 +235,7 @@ func resourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceRouteUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	port := types.NullInt{}
 	if v, ok := d.GetOk("port"); ok {
@@ -250,11 +252,11 @@ func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) error {
 			Port:       port,
 		})
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		err = setRouteArguments(session, route, d)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
@@ -265,29 +267,29 @@ func resourceRouteUpdate(d *schema.ResourceData, meta interface{}) error {
 		})
 		err := removeTargets(d.Id(), remove, session)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		t, err := addTargets(d.Id(), add, session)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		d.Set("target", t)
 	}
 	return nil
 }
 
-func resourceRouteDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceRouteDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	if targets, ok := d.GetOk("target"); ok {
 		err := removeTargets(d.Id(), getListOfStructs(targets.(*schema.Set).List()), session)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	_, err := session.ClientV2.DeleteRoute(d.Id())
-	return err
+	return diag.FromErr(err)
 }
 
 func setRouteArguments(session *managers.Session, route ccv2.Route, d *schema.ResourceData) (err error) {

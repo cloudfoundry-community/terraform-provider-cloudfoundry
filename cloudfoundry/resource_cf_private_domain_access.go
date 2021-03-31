@@ -1,6 +1,8 @@
 package cloudfoundry
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -8,11 +10,11 @@ import (
 
 func resourcePrivateDomainAccess() *schema.Resource {
 	return &schema.Resource{
-		Create: resourcePrivateDomainAccessCreate,
-		Read:   resourcePrivateDomainAccessRead,
-		Delete: resourcePrivateDomainAccessDelete,
+		CreateContext: resourcePrivateDomainAccessCreate,
+		ReadContext:   resourcePrivateDomainAccessRead,
+		DeleteContext: resourcePrivateDomainAccessDelete,
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourcePrivateDomainAccessRead),
+			StateContext: ImportReadContext(resourcePrivateDomainAccessRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -30,20 +32,20 @@ func resourcePrivateDomainAccess() *schema.Resource {
 	}
 }
 
-func resourcePrivateDomainAccessCreate(d *schema.ResourceData, meta interface{}) error {
+func resourcePrivateDomainAccessCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	domain := d.Get("domain").(string)
 	org := d.Get("org").(string)
 	_, err := session.ClientV2.SetOrganizationPrivateDomain(domain, org)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(computeID(org, domain))
 	return nil
 }
 
-func resourcePrivateDomainAccessRead(d *schema.ResourceData, meta interface{}) error {
+func resourcePrivateDomainAccessRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	id := d.Id()
@@ -53,7 +55,7 @@ func resourcePrivateDomainAccessRead(d *schema.ResourceData, meta interface{}) e
 	found := false
 	domains, _, err := session.ClientV2.GetOrganizationPrivateDomains(orgGuid)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	for _, domain := range domains {
 		if domain.GUID == domainGuid {
@@ -71,12 +73,12 @@ func resourcePrivateDomainAccessRead(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func resourcePrivateDomainAccessDelete(d *schema.ResourceData, meta interface{}) error {
+func resourcePrivateDomainAccessDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	id := d.Id()
 
 	org, domain, _ := parseID(id)
 	_, err := session.ClientV2.DeleteOrganizationPrivateDomain(org, domain)
-	return err
+	return diag.FromErr(err)
 }

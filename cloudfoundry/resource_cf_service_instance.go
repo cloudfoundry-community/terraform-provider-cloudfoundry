@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
@@ -21,17 +22,17 @@ func resourceServiceInstance() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceServiceInstanceCreate,
-		Read:   resourceServiceInstanceRead,
-		Update: resourceServiceInstanceUpdate,
-		Delete: resourceServiceInstanceDelete,
+		CreateContext: resourceServiceInstanceCreate,
+		ReadContext:   resourceServiceInstanceRead,
+		UpdateContext: resourceServiceInstanceUpdate,
+		DeleteContext: resourceServiceInstanceDelete,
 
 		SchemaVersion: 1,
 
 		MigrateState: resourceServiceInstanceMigrateState,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceServiceInstanceImport,
+			StateContext: resourceServiceInstanceImport,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
@@ -101,7 +102,7 @@ func resourceServiceInstance() *schema.Resource {
 	}
 }
 
-func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	name := d.Get("name").(string)
@@ -117,12 +118,12 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) err
 	if len(jsonParameters) > 0 {
 		err := json.Unmarshal([]byte(jsonParameters), &params)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	si, _, err := session.ClientV2.CreateServiceInstance(space, servicePlan, name, params, tags)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	stateConf := &resource.StateChangeConf{
 		Pending:        resourceServiceInstancePendingStates,
@@ -135,8 +136,8 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	// Wait, catching any errors
-	if _, err = stateConf.WaitForState(); err != nil {
-		return err
+	if _, err = stateConf.WaitForStateContext(ctx); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.SetId(si.GUID)
@@ -144,7 +145,7 @@ func resourceServiceInstanceCreate(d *schema.ResourceData, meta interface{}) err
 	return nil
 }
 
-func resourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	serviceInstance, _, err := session.ClientV2.GetServiceInstance(d.Id())
@@ -153,7 +154,7 @@ func resourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) error
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("name", serviceInstance.Name)
@@ -173,10 +174,10 @@ func resourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) error
 	return nil
 }
 
-func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	// Enable partial state mode
@@ -200,7 +201,7 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) err
 	if len(jsonParameters) > 0 {
 		err := json.Unmarshal([]byte(jsonParameters), &params)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
@@ -216,7 +217,7 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) err
 		Tags:            tags,
 	})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	stateConf := &resource.StateChangeConf{
@@ -229,8 +230,8 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) err
 		NotFoundChecks: 3, // if we don't find the service instance in CF during an update, something is definitely wrong
 	}
 	// Wait, catching any errors
-	if _, err = stateConf.WaitForState(); err != nil {
-		return err
+	if _, err = stateConf.WaitForStateContext(ctx); err != nil {
+		return diag.FromErr(err)
 	}
 
 	// We succeeded, disable partial mode
@@ -238,14 +239,14 @@ func resourceServiceInstanceUpdate(d *schema.ResourceData, meta interface{}) err
 	return nil
 }
 
-func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServiceInstanceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	id := d.Id()
 
 	recursiveDelete := d.Get("recursive_delete").(bool)
 	async, _, err := session.ClientV2.DeleteServiceInstance(id, recursiveDelete, session.PurgeWhenDelete)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if !async {
 		return nil
@@ -259,14 +260,14 @@ func resourceServiceInstanceDelete(d *schema.ResourceData, meta interface{}) err
 		Delay:        5 * time.Second,
 	}
 	// Wait, catching any errors
-	if _, err = stateConf.WaitForState(); err != nil {
-		return err
+	if _, err = stateConf.WaitForStateContext(ctx); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceServiceInstanceImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceServiceInstanceImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	session := meta.(*managers.Session)
 
 	serviceinstance, _, err := session.ClientV2.GetServiceInstance(d.Id())
@@ -283,7 +284,7 @@ func resourceServiceInstanceImport(d *schema.ResourceData, meta interface{}) ([]
 	d.Set("replace_on_service_plan_change", false)
 	d.Set("replace_on_params_change", false)
 
-	return ImportRead(resourceServiceInstanceRead)(d, meta)
+	return ImportReadContext(resourceServiceInstanceRead)(ctx, d, meta)
 }
 
 func resourceServiceInstanceStateFunc(serviceInstanceID string, operationType string, meta interface{}) resource.StateRefreshFunc {

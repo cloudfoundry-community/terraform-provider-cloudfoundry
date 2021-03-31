@@ -2,7 +2,8 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -12,7 +13,7 @@ func dataSourceAsg() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceAsgRead,
+		ReadContext: dataSourceAsgRead,
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -23,18 +24,18 @@ func dataSourceAsg() *schema.Resource {
 	}
 }
 
-func dataSourceAsgRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceAsgRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 	asgs, _, err := session.ClientV2.GetSecurityGroups(ccv2.FilterByName(d.Get("name").(string)))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if len(asgs) == 0 {
-		return NotFound
+		return diag.FromErr(NotFound)
 	}
 	d.SetId(asgs[0].GUID)
 	return nil

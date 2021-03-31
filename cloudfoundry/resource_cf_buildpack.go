@@ -2,7 +2,8 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
@@ -10,13 +11,13 @@ import (
 func resourceBuildpack() *schema.Resource {
 	return &schema.Resource{
 
-		Create: resourceBuildpackCreate,
-		Read:   resourceBuildpackRead,
-		Update: resourceBuildpackUpdate,
-		Delete: resourceBuildpackDelete,
+		CreateContext: resourceBuildpackCreate,
+		ReadContext:   resourceBuildpackRead,
+		UpdateContext: resourceBuildpackUpdate,
+		DeleteContext: resourceBuildpackDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceBuildpackRead),
+			StateContext: ImportReadContext(resourceBuildpackRead),
 		},
 		SchemaVersion: 3,
 		MigrateState:  resourceBuildpackMigrateState,
@@ -62,7 +63,7 @@ func resourceBuildpack() *schema.Resource {
 	}
 }
 
-func resourceBuildpackCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceBuildpackCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	name := d.Get("name").(string)
@@ -78,15 +79,15 @@ func resourceBuildpackCreate(d *schema.ResourceData, meta interface{}) error {
 		Position: IntToNullInt(position),
 	})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	err = session.BitsManager.UploadBuildpack(bp.GUID, path)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	bp, _, err = session.ClientV2.GetBuildpack(bp.GUID)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.SetId(bp.GUID)
 	d.Set("position", bp.Position.Value)
@@ -96,12 +97,12 @@ func resourceBuildpackCreate(d *schema.ResourceData, meta interface{}) error {
 
 	err = metadataCreate(buildpackMetadata, d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) error {
+func resourceBuildpackRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 
@@ -111,7 +112,7 @@ func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("name", bp.Name)
@@ -122,15 +123,15 @@ func resourceBuildpackRead(d *schema.ResourceData, meta interface{}) error {
 
 	err = metadataRead(buildpackMetadata, d, meta, false)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceBuildpackUpdate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceBuildpackUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	if d.HasChange("name") || d.HasChange("position") || d.HasChange("locked") || d.HasChange("enabled") {
@@ -146,23 +147,26 @@ func resourceBuildpackUpdate(d *schema.ResourceData, meta interface{}) (err erro
 			Position: IntToNullInt(position),
 		})
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	if d.HasChange("path") || d.HasChange("source_code_hash") || d.HasChange("filename") {
-		return session.BitsManager.UploadBuildpack(d.Id(), d.Get("path").(string))
+		err := session.BitsManager.UploadBuildpack(d.Id(), d.Get("path").(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
-	err = metadataUpdate(buildpackMetadata, d, meta)
+	err := metadataUpdate(buildpackMetadata, d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceBuildpackDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceBuildpackDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	_, err := session.ClientV2.DeleteBuildpack(d.Id())
-	return err
+	return diag.FromErr(err)
 }

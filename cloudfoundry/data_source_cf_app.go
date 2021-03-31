@@ -2,7 +2,8 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -13,7 +14,7 @@ func dataSourceApp() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceAppRead,
+		ReadContext: dataSourceAppRead,
 
 		Schema: map[string]*schema.Schema{
 
@@ -84,37 +85,37 @@ func dataSourceApp() *schema.Resource {
 	}
 }
 
-func dataSourceAppRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	var (
-		name_or_id string
-		space      string
-		app        ccv2.Application
-		err        error
+		nameOrId string
+		space    string
+		app      ccv2.Application
+		err      error
 	)
 
-	name_or_id = d.Get("name_or_id").(string)
+	nameOrId = d.Get("name_or_id").(string)
 	space = d.Get("space").(string)
 
-	isUUID := uuid.FromStringOrNil(name_or_id)
+	isUUID := uuid.FromStringOrNil(nameOrId)
 	if uuid.Equal(isUUID, uuid.Nil) {
-		apps, _, err := session.ClientV2.GetApplications(ccv2.FilterByName(name_or_id), ccv2.FilterBySpace(space))
+		apps, _, err := session.ClientV2.GetApplications(ccv2.FilterByName(nameOrId), ccv2.FilterBySpace(space))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		if len(apps) == 0 {
-			return NotFound
+			return diag.FromErr(NotFound)
 		}
 		app = apps[0]
 	} else {
-		app, _, err = session.ClientV2.GetApplication(name_or_id)
+		app, _, err = session.ClientV2.GetApplication(nameOrId)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
@@ -136,7 +137,7 @@ func dataSourceAppRead(d *schema.ResourceData, meta interface{}) error {
 
 	err = metadataRead(appMetadata, d, meta, true)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }

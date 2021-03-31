@@ -2,7 +2,9 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strings"
 
@@ -18,13 +20,13 @@ func resourceAsg() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceAsgCreate,
-		Read:   resourceAsgRead,
-		Update: resourceAsgUpdate,
-		Delete: resourceAsgDelete,
+		CreateContext: resourceAsgCreate,
+		ReadContext:   resourceAsgRead,
+		UpdateContext: resourceAsgUpdate,
+		DeleteContext: resourceAsgDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceAsgRead),
+			StateContext: ImportReadContext(resourceAsgRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -85,27 +87,27 @@ func validateAsgProtocol(v interface{}, k string) (ws []string, errs []error) {
 	return ws, errs
 }
 
-func resourceAsgCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceAsgCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	am := session.ClientV2
 	rules, err := readASGRulesFromConfig(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	asg, _, err := am.CreateSecurityGroup(ccv2.SecurityGroup{
 		Name:  d.Get("name").(string),
 		Rules: rules,
 	})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.SetId(asg.GUID)
 
 	return nil
 }
 
-func resourceAsgRead(d *schema.ResourceData, meta interface{}) error {
+func resourceAsgRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 
@@ -116,7 +118,7 @@ func resourceAsgRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("name", asg.Name)
@@ -147,26 +149,26 @@ func resourceAsgRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceAsgUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceAsgUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	am := session.ClientV2
 
 	rules, err := readASGRulesFromConfig(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	_, _, err = am.UpdateSecurityGroup(ccv2.SecurityGroup{
 		GUID:  d.Id(),
 		Name:  d.Get("name").(string),
 		Rules: rules,
 	})
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceAsgDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceAsgDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	_, err := session.ClientV2.DeleteSecurityGroup(d.Id())
-	return err
+	return diag.FromErr(err)
 }
 
 func readASGRulesFromConfig(d *schema.ResourceData) (rules []ccv2.SecurityGroupRule, err error) {

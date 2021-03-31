@@ -3,6 +3,8 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
@@ -11,7 +13,7 @@ func dataSourceServiceKey() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceServiceKeyRead,
+		ReadContext: dataSourceServiceKeyRead,
 
 		Schema: map[string]*schema.Schema{
 
@@ -31,7 +33,7 @@ func dataSourceServiceKey() *schema.Resource {
 	}
 }
 
-func dataSourceServiceKeyRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceServiceKeyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	serviceKeys, _, err := session.ClientV2.GetServiceKeys(
@@ -39,10 +41,10 @@ func dataSourceServiceKeyRead(d *schema.ResourceData, meta interface{}) error {
 		ccv2.FilterEqual(constant.ServiceInstanceGUIDFilter, d.Get("service_instance").(string)),
 	)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if len(serviceKeys) == 0 {
-		return NotFound
+		return diag.FromErr(NotFound)
 	}
 	serviceKey := serviceKeys[0]
 	d.SetId(serviceKey.GUID)
