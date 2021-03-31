@@ -32,8 +32,8 @@ func TestAccDataSourceOrgQuota_normal(t *testing.T) {
 	ref := "data.cloudfoundry_org_quota.qq"
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:  func() { testAccPreCheck(t) },
-			Providers: testAccProviders,
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: orgQuotaDataResource,

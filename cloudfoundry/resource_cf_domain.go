@@ -152,7 +152,7 @@ func resourceDomainRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("name", ccDomain.Name)
 	d.Set("sub_domain", subDomain)
 	d.Set("domain", domain)
-	d.Set("route_group", ccDomain.RouterGroupGUID)
+	d.Set("router_group", ccDomain.RouterGroupGUID)
 	d.Set("router_type", ccDomain.RouterGroupType)
 	d.Set("internal", ccDomain.Internal)
 	d.Set("org", ccDomain.OwningOrganizationGUID)

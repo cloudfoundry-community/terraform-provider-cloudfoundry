@@ -77,9 +77,9 @@ func TestAccResSegment_normal(t *testing.T) {
 	defaultLenIsolationSegments = len(segments)
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckSegmentDestroyed("segment-one-name"),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckSegmentDestroyed("segment-one-name"),
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: segmentResource,

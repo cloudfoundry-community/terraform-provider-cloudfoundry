@@ -11,9 +11,9 @@ func TestAccUserProvidedService_importBasic(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckUserProvidedServiceDestroyed("mq", "cloudfoundry_space.space1"),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckUserProvidedServiceDestroyed("mq", "cloudfoundry_space.space1"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

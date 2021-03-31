@@ -280,8 +280,8 @@ func resourceServiceInstanceImport(d *schema.ResourceData, meta interface{}) ([]
 	d.Set("space", serviceinstance.SpaceGUID)
 	d.Set("tags", serviceinstance.Tags)
 
-	// json_param can't be retrieved from CF, please inject manually if necessary
-	d.Set("json_param", "")
+	d.Set("replace_on_service_plan_change", false)
+	d.Set("replace_on_params_change", false)
 
 	return ImportRead(resourceServiceInstanceRead)(d, meta)
 }

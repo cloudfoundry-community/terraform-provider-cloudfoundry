@@ -127,6 +127,12 @@ func resourceConfig() *schema.Resource {
 							Optional:     true,
 							Computed:     true,
 						},
+						"resource_matching": &schema.Schema{
+							Type:         schema.TypeString,
+							ValidateFunc: validateFeatureFlagValue,
+							Optional:     true,
+							Computed:     true,
+						},
 					},
 				},
 			},

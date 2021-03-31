@@ -21,8 +21,8 @@ func TestAccServiceInstance_importBasic(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:  func() { testAccPreCheck(t) },
-			Providers: testAccProviders,
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
 			CheckDestroy: testAccCheckServiceInstanceDestroyedImportState(
 				[]string{"test-service"},
 				resourceName),
@@ -49,6 +49,10 @@ func TestAccServiceInstance_importBasic(t *testing.T) {
 							resourceName, "tags.1", "tag-2"),
 						resource.TestCheckResourceAttr(
 							resourceName, "json_params", ""),
+						resource.TestCheckResourceAttr(
+							resourceName, "replace_on_params_change", "false"),
+						resource.TestCheckResourceAttr(
+							resourceName, "replace_on_service_plan_change", "false"),
 					),
 				},
 			},

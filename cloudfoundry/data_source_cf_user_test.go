@@ -3,6 +3,7 @@ package cloudfoundry
 import (
 	"fmt"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -12,26 +13,26 @@ import (
 const userDataResource = `
 
 data "cloudfoundry_user" "admin-user" {
-    name = "admin"
+    name = "%s"
 }
 `
 
 func TestAccDataSourceUser_normal(t *testing.T) {
 
 	ref := "data.cloudfoundry_user.admin-user"
-
+	username := os.Getenv("CF_USER")
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:  func() { testAccPreCheck(t) },
-			Providers: testAccProviders,
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: userDataResource,
+					Config: fmt.Sprintf(userDataResource, username),
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceUserExists(ref),
 						resource.TestCheckResourceAttr(
-							ref, "name", "admin"),
+							ref, "name", username),
 					),
 				},
 			},
