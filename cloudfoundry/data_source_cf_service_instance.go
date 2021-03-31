@@ -3,6 +3,8 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/satori/go.uuid"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
@@ -12,7 +14,7 @@ func dataSourceServiceInstance() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceServiceInstanceRead,
+		ReadContext: dataSourceServiceInstanceRead,
 
 		Schema: map[string]*schema.Schema{
 
@@ -41,32 +43,32 @@ func dataSourceServiceInstance() *schema.Resource {
 	}
 }
 
-func dataSourceServiceInstanceRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	var (
-		name_or_id      string
+		nameOrId        string
 		space           string
 		serviceInstance ccv2.ServiceInstance
 	)
 
-	name_or_id = d.Get("name_or_id").(string)
+	nameOrId = d.Get("name_or_id").(string)
 	space = d.Get("space").(string)
-	isUUID := uuid.FromStringOrNil(name_or_id)
+	isUUID := uuid.FromStringOrNil(nameOrId)
 	if uuid.Equal(isUUID, uuid.Nil) {
-		serviceInstances, _, err := session.ClientV2.GetServiceInstances(ccv2.FilterByName(name_or_id), ccv2.FilterEqual(constant.SpaceGUIDFilter, space))
+		serviceInstances, _, err := session.ClientV2.GetServiceInstances(ccv2.FilterByName(nameOrId), ccv2.FilterEqual(constant.SpaceGUIDFilter, space))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		if len(serviceInstances) == 0 {
-			return NotFound
+			return diag.FromErr(NotFound)
 		}
 		serviceInstance = serviceInstances[0]
 	} else {
 		var err error
-		serviceInstance, _, err = session.ClientV2.GetServiceInstance(name_or_id)
+		serviceInstance, _, err = session.ClientV2.GetServiceInstance(nameOrId)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 

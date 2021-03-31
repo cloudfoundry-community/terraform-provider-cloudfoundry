@@ -2,7 +2,8 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -12,7 +13,7 @@ func dataSourceStack() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceStackRead,
+		ReadContext: dataSourceStackRead,
 
 		Schema: map[string]*schema.Schema{
 
@@ -30,11 +31,11 @@ func dataSourceStack() *schema.Resource {
 	}
 }
 
-func dataSourceStackRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceStackRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	sm := session.ClientV2
@@ -42,16 +43,16 @@ func dataSourceStackRead(d *schema.ResourceData, meta interface{}) error {
 
 	stacks, _, err := sm.GetStacks(ccv2.FilterByName(name))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if len(stacks) == 0 {
-		return NotFound
+		return diag.FromErr(NotFound)
 	}
 	d.SetId(stacks[0].GUID)
 	d.Set("description", stacks[0].Description)
 	err = metadataRead(stackMetadata, d, meta, true)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	return err
+	return diag.FromErr(err)
 }

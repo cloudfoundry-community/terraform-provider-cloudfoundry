@@ -1,6 +1,8 @@
 package cloudfoundry
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
@@ -20,13 +22,13 @@ func resourceOrgUsers() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceOrgUsersCreate,
-		Read:   resourceOrgUsersRead,
-		Update: resourceOrgUsersUpdate,
-		Delete: resourceOrgUsersDelete,
+		CreateContext: resourceOrgUsersCreate,
+		ReadContext:   resourceOrgUsersRead,
+		UpdateContext: resourceOrgUsersUpdate,
+		DeleteContext: resourceOrgUsersDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceOrgUsersRead),
+			StateContext: ImportReadContext(resourceOrgUsersRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -68,10 +70,10 @@ func resourceOrgUsers() *schema.Resource {
 	}
 }
 
-func resourceOrgUsersCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceOrgUsersCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	session := meta.(*managers.Session)
 	orgId := d.Get("org").(string)
@@ -80,21 +82,21 @@ func resourceOrgUsersCreate(d *schema.ResourceData, meta interface{}) error {
 		for _, r := range orgRoleMap {
 			users, _, err := session.ClientV2.GetOrganizationUsersByRole(r, orgId)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 			for _, u := range users {
 				_, err := session.ClientV2.DeleteOrganizationUserByRole(r, orgId, u.GUID)
 				if err != nil {
-					return err
+					return diag.FromErr(err)
 				}
 			}
 
 		}
 	}
-	return resourceOrgUsersUpdate(d, meta)
+	return resourceOrgUsersUpdate(ctx, d, meta)
 }
 
-func resourceOrgUsersRead(d *schema.ResourceData, meta interface{}) error {
+func resourceOrgUsersRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	if IsImportState(d) {
 		d.Set("org", d.Id())
 	}
@@ -102,7 +104,7 @@ func resourceOrgUsersRead(d *schema.ResourceData, meta interface{}) error {
 	for t, r := range orgRoleMap {
 		users, _, err := session.ClientV2.GetOrganizationUsersByRole(r, d.Get("org").(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		tfUsers := d.Get(t).(*schema.Set).List()
 		if d.Get("force").(bool) || IsImportState(d) {
@@ -128,7 +130,7 @@ func resourceOrgUsersRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceOrgUsersUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceOrgUsersUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	orgId := d.Get("org").(string)
 	for t, r := range orgRoleMap {
@@ -141,7 +143,7 @@ func resourceOrgUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 			err = deleteOrgUserByRole(session, r, orgId, uid, byUsername)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 		for _, uid := range add {
@@ -152,14 +154,14 @@ func resourceOrgUsersUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 			err = updateOrgUserByRole(session, r, orgId, uid, byUsername)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
 	return nil
 }
 
-func resourceOrgUsersDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceOrgUsersDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	orgId := d.Get("org").(string)
 	session := meta.(*managers.Session)
 	for t, r := range orgRoleMap {
@@ -167,7 +169,7 @@ func resourceOrgUsersDelete(d *schema.ResourceData, meta interface{}) error {
 		for _, uid := range tfUsers {
 			_, err := session.ClientV2.DeleteOrganizationUserByRole(r, orgId, uid.(string))
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}

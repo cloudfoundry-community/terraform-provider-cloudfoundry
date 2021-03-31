@@ -3,7 +3,8 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/uaa"
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
@@ -11,15 +12,14 @@ import (
 func resourceUser() *schema.Resource {
 	return &schema.Resource{
 
-		Create: resourceUserCreate,
-		Read:   resourceUserRead,
-		Update: resourceUserUpdate,
-		Delete: resourceUserDelete,
+		CreateContext: resourceUserCreate,
+		ReadContext:   resourceUserRead,
+		UpdateContext: resourceUserUpdate,
+		DeleteContext: resourceUserDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceUserRead),
+			StateContext: ImportReadContext(resourceUserRead),
 		},
-
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
 				Type:             schema.TypeString,
@@ -66,10 +66,10 @@ func resourceUser() *schema.Resource {
 	}
 }
 
-func resourceUserCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceUserCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	username := d.Get("name").(string)
@@ -103,16 +103,16 @@ func resourceUserCreate(d *schema.ResourceData, meta interface{}) error {
 
 	userUAA, err := createUaaUserIfNotExists(username, password, origin, &name, emails, uaam)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	userCF, err := createCFUserIfNotExists(userUAA.ID, um)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(userCF.GUID)
-	return resourceUserUpdate(d, meta)
+	return resourceUserUpdate(ctx, d, meta)
 }
 
 func createCFUserIfNotExists(ID string, um *ccv2.Client) (ccv2.User, error) {
@@ -172,7 +172,7 @@ func createUaaUserIfNotExists(
 	return createUser()
 }
 
-func resourceUserRead(d *schema.ResourceData, meta interface{}) error {
+func resourceUserRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 
@@ -184,7 +184,7 @@ func resourceUserRead(d *schema.ResourceData, meta interface{}) error {
 	usersCF, _, err := um.GetUsers()
 	if err != nil {
 		d.SetId("")
-		return err
+		return diag.FromErr(err)
 	}
 	found := false
 	for _, user := range usersCF {
@@ -205,7 +205,7 @@ func resourceUserRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("name", user.Username)
@@ -229,7 +229,7 @@ func resourceUserRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	id := d.Id()
@@ -279,7 +279,7 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
 				Origin:   d.Get("origin").(string),
 			})
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 
@@ -287,7 +287,7 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
 		if updatePassword {
 			err := umuaa.ChangeUserPassword(id, oldPassword, newPassword)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
@@ -298,22 +298,25 @@ func resourceUserUpdate(d *schema.ResourceData, meta interface{}) error {
 	for _, r := range rolesToDelete {
 		err := umuaa.DeleteMemberByName(id, r)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	for _, r := range rolesToAdd {
 		err := umuaa.AddMemberByName(id, d.Get("origin").(string), r)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	return nil
 }
 
-func resourceUserDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceUserDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	id := d.Id()
-	umuaa := session.ClientUAA
-	return umuaa.DeleteUser(id)
+	err := session.ClientUAA.DeleteUser(id)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
 }
