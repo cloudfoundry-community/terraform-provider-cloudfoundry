@@ -11,9 +11,9 @@ func TestAccOrg_importBasic(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckOrgDestroyed("organization-one-updated"),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckOrgDestroyed("organization-one-updated"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

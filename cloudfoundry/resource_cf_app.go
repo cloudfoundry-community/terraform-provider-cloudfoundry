@@ -451,7 +451,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		d.Partial(false)
 		AppDeployToResourceData(d, appResp)
-		return err
+		return nil
 	}
 
 	if d.HasChange("routes") {

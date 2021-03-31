@@ -23,9 +23,9 @@ func TestAccServicePlanAccess_importBasic(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServicePlanAccessDestroyed(servicePlanAccessGUID),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckServicePlanAccessDestroyed(servicePlanAccessGUID),
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: fmt.Sprintf(saResource,

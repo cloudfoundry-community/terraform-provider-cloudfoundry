@@ -18,9 +18,9 @@ func TestAccApp_importBasic(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"dummy-app"}),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckAppDestroyed([]string{"dummy-app"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

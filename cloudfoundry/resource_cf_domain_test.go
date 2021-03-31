@@ -35,7 +35,7 @@ resource "cloudfoundry_domain" "shared-tcp" {
 const domainResourcePrivate = `
 
 resource "cloudfoundry_domain" "private" {
-	name = "%s.%s"
+  name = "%s.%s"
   org = "%s"
 }
 `
@@ -47,9 +47,9 @@ func TestAccResSharedDomain_normal(t *testing.T) {
 
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckSharedDomainDestroy(domainname),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckSharedDomainDestroy(domainname),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -80,9 +80,9 @@ func TestAccResSharedTCPDomain_normal(t *testing.T) {
 
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckSharedDomainDestroy(domainname),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckSharedDomainDestroy(domainname),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -114,9 +114,9 @@ func TestAccResPrivateDomain_normal(t *testing.T) {
 
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckPrivateDomainDestroy(domain),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckPrivateDomainDestroy(domain),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

@@ -54,9 +54,9 @@ func TestAccResBuildpack_normal(t *testing.T) {
 
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckBuildpackDestroyed("tomee-buildpack-res"),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckBuildpackDestroyed("tomee-buildpack-res"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

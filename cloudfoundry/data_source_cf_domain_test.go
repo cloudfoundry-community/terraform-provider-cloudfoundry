@@ -9,8 +9,8 @@ import (
 )
 
 const domainDataResource = `
-data "cloudfoundry_domain" "tcp" {
-    sub_domain = "tcp"
+data "cloudfoundry_domain" "my-domain" {
+    name = "%s"
 }
 `
 
@@ -34,23 +34,21 @@ data "cloudfoundry_domain" "private" {
 func TestAccDataSourceDomain_normal(t *testing.T) {
 
 	domain := strings.Join(strings.Split(defaultAppDomain(), ".")[1:], ".")
-	ref := "data.cloudfoundry_domain.tcp"
+	ref := "data.cloudfoundry_domain.my-domain"
 
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:  func() { testAccPreCheck(t) },
-			Providers: testAccProviders,
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
-					Config: domainDataResource,
+					Config: fmt.Sprintf(domainDataResource, domain),
 					Check: resource.ComposeTestCheckFunc(
 						resource.TestCheckResourceAttr(
-							ref, "name", "tcp."+domain),
+							ref, "name", domain),
 						resource.TestCheckResourceAttr(
-							ref, "sub_domain", "tcp"),
-						resource.TestCheckResourceAttr(
-							ref, "domain", domain),
+							ref, "domain", strings.SplitN(domain, ".", 2)[1]),
 					),
 				},
 			},
@@ -61,8 +59,8 @@ func TestAccDataSourceDomain_private(t *testing.T) {
 	ref := "data.cloudfoundry_domain.private"
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:  func() { testAccPreCheck(t) },
-			Providers: testAccProviders,
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: fmt.Sprintf(privateDomainDataResource, defaultAppDomain()),
