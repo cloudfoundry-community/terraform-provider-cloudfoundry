@@ -53,9 +53,7 @@ func dataSourceServiceRead(d *schema.ResourceData, meta interface{}) error {
 	filters := []ccv2.Filter{
 		ccv2.FilterEqual(constant.LabelFilter, name),
 	}
-	if space != "" {
-		filters = append(filters, ccv2.FilterBySpace(space))
-	}
+
 	if serviceBrokerGUID != "" {
 		filters = append(filters, ccv2.FilterEqual(constant.ServiceBrokerGUIDFilter, serviceBrokerGUID))
 	}
@@ -66,7 +64,21 @@ func dataSourceServiceRead(d *schema.ResourceData, meta interface{}) error {
 	if len(services) == 0 {
 		return NotFound
 	}
+
 	service := services[0]
+	if space != "" {
+		for _, svc := range services {
+			brk, _, err := session.ClientV2.GetServiceBroker(svc.ServiceBrokerGUID)
+			if err != nil {
+				return err
+			}
+			if brk.SpaceGUID == space {
+				service = svc
+				break
+			}
+		}
+
+	}
 	d.SetId(service.GUID)
 	if serviceBrokerGUID == "" {
 		d.Set("service_broker_name", service.ServiceBrokerName)
