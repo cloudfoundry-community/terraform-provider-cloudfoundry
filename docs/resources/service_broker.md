@@ -10,7 +10,7 @@ description: |-
 
 Provides a Cloud Foundry resource for managing [service brokers](https://docs.cloudfoundry.org/services/) definitions.
 
-~> **NOTE:** To visibility of service plans provided by a registred service brijer, use the [cloudfoundry_service_plan_access](service_plan_access.html) resource.
+~> **NOTE:** To visibility of service plans provided by a registred service broker, use the [cloudfoundry_service_plan_access](service_plan_access.html) resource.
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted org manager permissions.
 ~> **NOTE:** If catalog is accessible to terraform broker will be automatically updated if catalog change from previous version in resource.
 
