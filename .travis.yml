@@ -1,14 +1,13 @@
 dist: bionic
 language: go
 go:
-  - '1.14'
+  - '1.16.x'
 stages:
   - testlint
   - testds
   - testimport
   - testres
   - testmigrate
-  - deploy
 go_import_path: github.com/terraform-providers/terraform-provider-cloudfoundry
 before_install:
   - mkdir -p .cf-cli
@@ -19,7 +18,7 @@ jobs:
   include:
     - stage: testlint
       install:
-        - GO111MODULE=on go install github.com/golangci/golangci-lint/cmd/golangci-lint
+        - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.40.1
       script: travis_wait 360 scripts/build.sh
     - stage: testds
       script: travis_wait 360 scripts/build.sh
@@ -33,22 +32,6 @@ jobs:
     - stage: testmigrate
       script: travis_wait 360 scripts/build.sh
       if: type = pull_request AND fork = false OR branch = dev OR branch = master
-    - stage: deploy
-      if: branch = master OR tag IS present
-      script:
-        - rm -Rf .cf-cli
-        - "echo -e $GPG_KEY > /tmp/key.pgp"
-        - "printf $PASSPHRASE > /tmp/pass.txt"
-        - "echo $PASSPHRASE | gpg2 --batch --yes --passphrase-fd 0 --import /tmp/key.pgp"
-        - "rm /tmp/key.pgp"
-        - "gpg2 --version"
-      deploy:
-        provider: script
-        skip_cleanup: true
-        script: "curl -sL https://git.io/goreleaser | bash"
-        on:
-          tags: true
-          condition: $TRAVIS_OS_NAME = linux
 env:
   global:
     - secure: H5qYyCdEXT35+axMqGEd82+/CC7nLunAt01sL4j2kiuBLPVsU+itJh1oSYlxlCPhiN5dGaBvRqXLntuMyd+/i1lGWsieVSrPebcufIGUXuyHV/5aLZbkXQfebW5APseYjD4FMhQvmT7VeemMHkt/dMkJp+WL0XsFJd0vObB5TBuAwbj+vqhU/cKgFF5c8JSyMf3rLc+taa8c+8Rh+ClaFFltYn9rWn5BV5HbtoIYUAYWKSQ5GhG4NIcGgpRjR7Bs5oIhpOY+OYkkRj7eK3A0NMUs4tT+vIaSkxzh2SzTFcGMAuylihz80Tml+DW4wMq9oKXl6qzqVtZ8gSbfZkiq5NyP+zViaTHqP4sCEI8mdwqTMiQz2A2/U3Y5BbNFm7o0Sp0/JKA8S/+F41VyS3qpXECp8JyYR+iD7yeM3cuGMVwfR9RBAxr64yeG8u3stYHlTEFJBYAKmZSA2VjsjGsxhfTUFoi0J25qt+UjfVyfHRYVxp8DS4B9rTNoXLjaurHDAJFZkljQR0pK3vSa8YtSZYJBtyR9AyTI8z79+2KSneSFoiM40dTrREsOOHiPdXCSlZhGNMJA//Vyx4+/USUBU6Apfpu+xtLViumZznDDXYgoQ/KWdMCVJ18pi6ZJgegs3q+/gTLwInbhoAOA+zDs0uRn3pI4+B5FbHccKPguBNU=
