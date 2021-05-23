@@ -551,7 +551,7 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 		appDeploy.App = app
 	}
 
-	if !appDeploy.IsDockerImage() && (IsAppRestageNeeded(d) || (deployer.IsCreateNewApp() && IsAppRestartNeeded(d))) {
+	if IsAppRestageNeeded(d) || (deployer.IsCreateNewApp() && IsAppRestartNeeded(d)) {
 		appResp, err := deployer.Restage(appDeploy)
 		if err != nil {
 			return diag.FromErr(err)
