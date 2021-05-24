@@ -1,18 +1,19 @@
 package cloudfoundry
 
 import (
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceInfo() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceInfoRead,
+		ReadContext: dataSourceInfoRead,
 
 		Schema: map[string]*schema.Schema{
 			"api_version": &schema.Schema{
@@ -44,17 +45,17 @@ func dataSourceInfo() *schema.Resource {
 	}
 }
 
-func dataSourceInfoRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceInfoRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	info := session.ClientV3.Info
 	infoV2, _, err := session.ClientV2.Info()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.Set("api_version", info.CloudControllerAPIVersion())
 	d.Set("auth_endpoint", infoV2.AuthorizationEndpoint)

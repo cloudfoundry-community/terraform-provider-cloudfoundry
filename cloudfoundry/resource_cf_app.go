@@ -1,8 +1,10 @@
 package cloudfoundry
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"reflect"
 	"strings"
@@ -10,9 +12,9 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/hashcode"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 )
@@ -29,13 +31,13 @@ const (
 func resourceApp() *schema.Resource {
 	return &schema.Resource{
 
-		Create: resourceAppCreate,
-		Read:   resourceAppRead,
-		Update: resourceAppUpdate,
-		Delete: resourceAppDelete,
+		CreateContext: resourceAppCreate,
+		ReadContext:   resourceAppRead,
+		UpdateContext: resourceAppUpdate,
+		DeleteContext: resourceAppDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceAppImport,
+			StateContext: resourceAppImport,
 		},
 		SchemaVersion: 4,
 		MigrateState:  resourceAppMigrateState,
@@ -171,7 +173,7 @@ func resourceApp() *schema.Resource {
 					))
 				},
 				Elem: &schema.Resource{
-					CustomizeDiff: func(diff *schema.ResourceDiff, i interface{}) error {
+					CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, i interface{}) error {
 
 						if diff.HasChange("port") {
 							return nil
@@ -227,7 +229,7 @@ func resourceApp() *schema.Resource {
 			annotationsKey: annotationsSchema(),
 		},
 
-		CustomizeDiff: func(diff *schema.ResourceDiff, meta interface{}) error {
+		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 			if diff.HasChange("docker_image") || diff.HasChange("path") {
 				oldImg, newImg := diff.GetChange("docker_image")
 				oldPath, newPath := diff.GetChange("path")
@@ -274,29 +276,29 @@ func validateStrategy(v interface{}, k string) (ws []string, errs []error) {
 	return ws, errs
 }
 
-func resourceAppCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceAppCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
 	log.Printf("[INFO] Use deploy strategy %s", deployer.Names()[0])
 
 	appDeploy, err := ResourceDataToAppDeploy(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	appResp, err := deployer.Deploy(appDeploy)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	AppDeployToResourceData(d, appResp)
 	err = metadataCreate(appMetadata, d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
+func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	app, _, err := session.ClientV2.GetApplication(d.Id())
@@ -305,18 +307,18 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 	if idBg, ok := d.GetOk("id_bg"); !ok || idBg == "" {
 		d.Set("id_bg", d.Id())
 	}
 	mappings, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.AppGUIDFilter, d.Id()))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	bindings, _, err := session.ClientV2.GetServiceBindings(ccv2.FilterEqual(constant.AppGUIDFilter, d.Id()))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	bindings = reorderBindings(bindings, d.Get("service_binding").([]interface{}))
 	AppDeployToResourceData(d, appdeployers.AppDeployResponse{
@@ -326,7 +328,7 @@ func resourceAppRead(d *schema.ResourceData, meta interface{}) error {
 	})
 	err = metadataRead(appMetadata, d, meta, false)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
@@ -360,9 +362,8 @@ func reorderBindings(bindings []ccv2.ServiceBinding, currentBindings []interface
 	return finalBindings
 }
 
-func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	d.Partial(true)
-	d.SetPartial("docker_credentials")
 	session := meta.(*managers.Session)
 	defer func() {
 		d.Set("id_bg", d.Id())
@@ -390,7 +391,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		for _, r := range remove {
 			mappings, _, err := session.ClientV2.GetRouteMappings(filterAppGuid(d.Id()), filterRouteGuid(r["route"].(string)))
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 			for _, mapping := range mappings {
 				// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
@@ -402,7 +403,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 				}
 				_, err := session.ClientV2.DeleteRouteMapping(mapping.GUID)
 				if err != nil && !IsErrNotFound(err) {
-					return err
+					return diag.FromErr(err)
 				}
 			}
 		}
@@ -425,12 +426,12 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 		for _, r := range remove {
 			bindings, _, err := session.ClientV2.GetServiceBindings(filterAppGuid(d.Id()), filterServiceInstanceGuid(r["service_instance"].(string)))
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 			for _, binding := range bindings {
 				_, _, err := session.ClientV2.DeleteServiceBinding(binding.GUID, true)
 				if err != nil && !IsErrNotFound(err) {
-					return err
+					return diag.FromErr(err)
 				}
 			}
 
@@ -439,7 +440,7 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	appDeploy, err := ResourceDataToAppDeploy(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	// we are on the case where app code change so we can run directly deploy
@@ -447,30 +448,28 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	if IsAppCodeChange(d) {
 		appResp, err := deployer.Deploy(appDeploy)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		d.Partial(false)
 		AppDeployToResourceData(d, appResp)
-		return err
+		return nil
 	}
 
 	if d.HasChange("routes") {
 		mappings, err := session.RunBinder.MapRoutes(appDeploy)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		appDeploy.Mappings = mappings
 	}
-	d.SetPartial("routes")
 
 	if d.HasChange("service_binding") {
 		bindings, err := session.RunBinder.BindServiceInstances(appDeploy)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		appDeploy.ServiceBindings = bindings
 	}
-	d.SetPartial("service_binding")
 
 	appUpdate := ccv2.Application{
 		GUID: appDeploy.App.GUID,
@@ -547,30 +546,15 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	if IsAppUpdateOnly(d) || (IsAppRestageNeeded(d) && !deployer.IsCreateNewApp()) || (IsAppRestartNeeded(d) && !deployer.IsCreateNewApp()) {
 		app, _, err := session.ClientV2.UpdateApplication(appUpdate)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
-		d.SetPartial("name")
-		d.SetPartial("ports")
-		d.SetPartial("instances")
-		d.SetPartial("memory")
-		d.SetPartial("disk_quota")
-		d.SetPartial("stack")
-		d.SetPartial("buildpack")
-		d.SetPartial("command")
-		d.SetPartial("enable_ssh")
-		d.SetPartial("stopped")
-		d.SetPartial("docker_image")
-		d.SetPartial("health_check_http_endpoint")
-		d.SetPartial("health_check_type")
-		d.SetPartial("health_check_timeout")
-		d.SetPartial("environment")
 		appDeploy.App = app
 	}
 
 	if IsAppRestageNeeded(d) || (deployer.IsCreateNewApp() && IsAppRestartNeeded(d)) {
 		appResp, err := deployer.Restage(appDeploy)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		d.Partial(false)
 		AppDeployToResourceData(d, appResp)
@@ -580,14 +564,14 @@ func resourceAppUpdate(d *schema.ResourceData, meta interface{}) error {
 	if IsAppRestartNeeded(d) {
 		err := session.RunBinder.Restart(appDeploy, DefaultStageTimeout)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		d.Partial(false)
 		return nil
 	}
 	err = metadataUpdate(appMetadata, d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.Partial(false)
 	return nil
@@ -647,8 +631,8 @@ func isDiffAppParamsBinding(oldBinding, currentBinding map[string]interface{}) (
 	return reflect.DeepEqual(oldParams, currentParams), nil
 }
 
-func resourceAppDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceAppDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	_, err := session.ClientV2.DeleteApplication(d.Id())
-	return err
+	return diag.FromErr(err)
 }

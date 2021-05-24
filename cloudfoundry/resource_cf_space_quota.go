@@ -3,22 +3,24 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceSpaceQuota() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceSpaceQuotaCreate,
-		Read:   resourceSpaceQuotaRead,
-		Update: resourceSpaceQuotaUpdate,
-		Delete: resourceSpaceQuotaDelete,
+		CreateContext: resourceSpaceQuotaCreate,
+		ReadContext:   resourceSpaceQuotaRead,
+		UpdateContext: resourceSpaceQuotaUpdate,
+		DeleteContext: resourceSpaceQuotaDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceSpaceQuotaRead),
+			StateContext: ImportReadContext(resourceSpaceQuotaRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -75,19 +77,19 @@ func resourceSpaceQuota() *schema.Resource {
 	}
 }
 
-func resourceSpaceQuotaCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceSpaceQuotaCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	qm := session.ClientV2
 
 	quota, _, err := qm.CreateQuota(constant.SpaceQuota, readSpaceQuotaResource(d))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.SetId(quota.GUID)
 	return nil
 }
 
-func resourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) error {
+func resourceSpaceQuotaRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	qm := session.ClientV2
 	quota, _, err := qm.GetQuota(constant.SpaceQuota, d.Id())
@@ -96,7 +98,7 @@ func resourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("name", quota.Name)
@@ -114,20 +116,20 @@ func resourceSpaceQuotaRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceSpaceQuotaUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceSpaceQuotaUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	qm := session.ClientV2
 	quota := readSpaceQuotaResource(d)
 	quota.GUID = d.Id()
 	_, _, err := qm.UpdateQuota(constant.SpaceQuota, quota)
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceSpaceQuotaDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceSpaceQuotaDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	qm := session.ClientV2
 	_, err := qm.DeleteQuota(constant.SpaceQuota, d.Id())
-	return err
+	return diag.FromErr(err)
 }
 
 func readSpaceQuotaResource(d *schema.ResourceData) ccv2.Quota {

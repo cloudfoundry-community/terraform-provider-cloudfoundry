@@ -1,12 +1,14 @@
 package cloudfoundry
 
 import (
+	"context"
 	"encoding/json"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/structure"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/structure"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
@@ -14,13 +16,13 @@ func resourceUserProvidedService() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceUserProvidedServiceCreate,
-		Read:   resourceUserProvidedServiceRead,
-		Update: resourceUserProvidedServiceUpdate,
-		Delete: resourceUserProvidedServiceDelete,
+		CreateContext: resourceUserProvidedServiceCreate,
+		ReadContext:   resourceUserProvidedServiceRead,
+		UpdateContext: resourceUserProvidedServiceUpdate,
+		DeleteContext: resourceUserProvidedServiceDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceUserProvidedServiceRead),
+			StateContext: ImportReadContext(resourceUserProvidedServiceRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -80,7 +82,7 @@ func resourceUserProvidedService() *schema.Resource {
 	}
 }
 
-func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceUserProvidedServiceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	name := d.Get("name").(string)
@@ -100,7 +102,7 @@ func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{})
 	if credsJSON, hasJSON := d.GetOk("credentials_json"); hasJSON {
 		err := json.Unmarshal([]byte(credsJSON.(string)), &credentials)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	} else {
 		for k, v := range d.Get("credentials").(map[string]interface{}) {
@@ -123,7 +125,7 @@ func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{})
 		Credentials:     credentials,
 	})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(usi.GUID)
@@ -131,7 +133,7 @@ func resourceUserProvidedServiceCreate(d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) error {
+func resourceUserProvidedServiceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	ups, _, err := session.ClientV2.GetUserProvidedServiceInstance(d.Id())
@@ -140,7 +142,7 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) e
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("name", ups.Name)
@@ -183,7 +185,7 @@ func resourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceUserProvidedServiceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	name := d.Get("name").(string)
@@ -202,7 +204,7 @@ func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{})
 	if credsJSON, hasJSON := d.GetOk("credentials_json"); hasJSON {
 		err := json.Unmarshal([]byte(credsJSON.(string)), &credentials)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	} else {
 		for k, v := range d.Get("credentials").(map[string]interface{}) {
@@ -223,11 +225,11 @@ func resourceUserProvidedServiceUpdate(d *schema.ResourceData, meta interface{})
 		SyslogDrainUrl:  syslogDrainURL,
 		Credentials:     credentials,
 	})
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceUserProvidedServiceDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceUserProvidedServiceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	_, err := session.ClientV2.DeleteUserProvidedServiceInstance(d.Id())
-	return err
+	return diag.FromErr(err)
 }

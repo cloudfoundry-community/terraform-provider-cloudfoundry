@@ -2,25 +2,26 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceDefaultAsg() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceDefaultAsgCreate,
-		Read:   resourceDefaultAsgRead,
-		Update: resourceDefaultAsgUpdate,
-		Delete: resourceDefaultAsgDelete,
+		CreateContext: resourceDefaultAsgCreate,
+		ReadContext:   resourceDefaultAsgRead,
+		UpdateContext: resourceDefaultAsgUpdate,
+		DeleteContext: resourceDefaultAsgDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: func(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+			StateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 				d.Set("name", d.Id())
-				return ImportRead(resourceDefaultAsgRead)(d, meta)
+				return ImportReadContext(resourceDefaultAsgRead)(ctx, d, meta)
 			},
 		},
 
@@ -42,7 +43,7 @@ func resourceDefaultAsg() *schema.Resource {
 	}
 }
 
-func resourceDefaultAsgCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceDefaultAsgCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	name := d.Get("name").(string)
@@ -54,25 +55,25 @@ func resourceDefaultAsgCreate(d *schema.ResourceData, meta interface{}) error {
 		for _, g := range asgs {
 			_, err := am.BindRunningSecurityGroup(g.(string))
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	case AppStatusStaging:
 		for _, g := range asgs {
 			_, err := am.BindStagingSecurityGroup(g.(string))
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	default:
-		return fmt.Errorf("default security group name must be one of 'running' or 'staging'")
+		return diag.Errorf("default security group name must be one of 'running' or 'staging'")
 	}
 	d.SetId(name)
 
 	return nil
 }
 
-func resourceDefaultAsgRead(d *schema.ResourceData, meta interface{}) error {
+func resourceDefaultAsgRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	var asgs []ccv2.SecurityGroup
@@ -83,12 +84,12 @@ func resourceDefaultAsgRead(d *schema.ResourceData, meta interface{}) error {
 	case AppStatusRunning:
 		asgs, _, err = am.GetRunningSecurityGroups()
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	case AppStatusStaging:
 		asgs, _, err = am.GetStagingSecurityGroups()
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
@@ -104,7 +105,7 @@ func resourceDefaultAsgRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceDefaultAsgUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceDefaultAsgUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 
@@ -115,33 +116,33 @@ func resourceDefaultAsgUpdate(d *schema.ResourceData, meta interface{}) error {
 		for _, secGroup := range secGroupToAdd {
 			_, err := am.BindRunningSecurityGroup(secGroup)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 		for _, secGroup := range secGroupToDelete {
 			_, err := am.UnbindRunningSecurityGroup(secGroup)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	case AppStatusStaging:
 		for _, secGroup := range secGroupToAdd {
 			_, err := am.BindStagingSecurityGroup(secGroup)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 		for _, secGroup := range secGroupToDelete {
 			_, err := am.UnbindStagingSecurityGroup(secGroup)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
 	return nil
 }
 
-func resourceDefaultAsgDelete(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceDefaultAsgDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	am := session.ClientV2
@@ -152,14 +153,14 @@ func resourceDefaultAsgDelete(d *schema.ResourceData, meta interface{}) (err err
 		for _, asg := range tfAsgs {
 			_, err := am.UnbindRunningSecurityGroup(asg.(string))
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	case AppStatusStaging:
 		for _, asg := range tfAsgs {
 			_, err := am.UnbindStagingSecurityGroup(asg.(string))
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}

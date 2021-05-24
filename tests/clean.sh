@@ -63,6 +63,7 @@ cf delete-service -f basic-auth &> /dev/null
 cf delete-service -f rabbitmq &> /dev/null
 cf delete-service -f db &> /dev/null
 cf delete-service -f fs1 &> /dev/null
+cf delete-service -f test-service-instance &> /dev/null
 cf purge-service-offering -f p-basic-auth &> /dev/null
 cf delete-service-broker -f basic-auth &> /dev/null
 cf delete-service-broker -f test &> /dev/null

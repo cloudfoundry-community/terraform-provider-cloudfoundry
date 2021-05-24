@@ -5,8 +5,8 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 const configResource = `
@@ -33,9 +33,9 @@ func TestAccResConfig_normal(t *testing.T) {
 
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckConfigDestroy,
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckConfigDestroy,
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -139,33 +139,32 @@ func testAccCheckConfig(resConfig string) resource.TestCheckFunc {
 		}
 		if err := assertListEquals(attributes, "feature_flags", 1,
 			func(values map[string]string, i int) (match bool) {
-
-				if len(values) == len(featureFlags) {
-
-					var (
-						ok bool
-					)
-
-					for k, v := range values {
-						for _, ff := range featureFlags {
-							if ff.Name == k {
-								if ff.Enabled {
-									ok = (v == "enabled")
-								} else {
-									ok = (v == "disabled")
-								}
-								break
-							}
-						}
-						if !ok {
-							return false
-						}
-					}
-					return true
+				// remove number inside % key
+				delete(values, "%")
+				if len(values) != len(featureFlags) {
+					return false
 				}
 
-				return false
+				var (
+					ok bool
+				)
 
+				for k, v := range values {
+					for _, ff := range featureFlags {
+						if ff.Name == k {
+							if ff.Enabled {
+								ok = (v == "enabled")
+							} else {
+								ok = (v == "disabled")
+							}
+							break
+						}
+					}
+					if !ok {
+						return false
+					}
+				}
+				return true
 			}); err != nil {
 			return err
 		}

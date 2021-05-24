@@ -1,20 +1,22 @@
 package cloudfoundry
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceRoute() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceRouteRead,
+		ReadContext: dataSourceRouteRead,
 
 		Schema: map[string]*schema.Schema{
 			"hostname": &schema.Schema{
@@ -44,11 +46,11 @@ func dataSourceRoute() *schema.Resource {
 	}
 }
 
-func dataSourceRouteRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceRouteRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	dm := session.ClientV2
@@ -68,10 +70,10 @@ func dataSourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	routes, _, err := dm.GetRoutes(filters...)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if len(routes) == 0 {
-		return NotFound
+		return diag.FromErr(NotFound)
 	}
 	route := routes[0]
 
@@ -81,5 +83,5 @@ func dataSourceRouteRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("port", route.Port.Value)
 	}
 	d.SetId(route.GUID)
-	return err
+	return diag.FromErr(err)
 }

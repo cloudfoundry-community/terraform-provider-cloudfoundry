@@ -2,8 +2,10 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"context"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
@@ -11,13 +13,13 @@ func resourceSpace() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceSpaceCreate,
-		Read:   resourceSpaceRead,
-		Update: resourceSpaceUpdate,
-		Delete: resourceSpaceDelete,
+		CreateContext: resourceSpaceCreate,
+		ReadContext:   resourceSpaceRead,
+		UpdateContext: resourceSpaceUpdate,
+		DeleteContext: resourceSpaceDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceSpaceRead),
+			StateContext: ImportReadContext(resourceSpaceRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -88,7 +90,7 @@ func resourceSpace() *schema.Resource {
 	}
 }
 
-func resourceSpaceCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceSpaceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	name := d.Get("name").(string)
@@ -109,21 +111,21 @@ func resourceSpaceCreate(d *schema.ResourceData, meta interface{}) error {
 		SpaceQuotaDefinitionGUID: quota,
 	})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.SetId(space.GUID)
-	err = resourceSpaceUpdate(d, meta)
-	if err != nil {
-		return err
+	dg := resourceSpaceUpdate(ctx, d, meta)
+	if dg.HasError() {
+		return dg
 	}
 	err = metadataCreate(spaceMetadata, d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
+func resourceSpaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	id := d.Id()
@@ -135,7 +137,7 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 	d.Set("name", space.Name)
 	d.Set("org", space.OrganizationGUID)
@@ -145,7 +147,7 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
 	for t, r := range typeToSpaceRoleMap {
 		users, _, err := sm.GetSpaceUsersByRole(r, id)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		tfUsers := d.Get(t).(*schema.Set).List()
 		if !IsImportState(d) {
@@ -198,18 +200,18 @@ func resourceSpaceRead(d *schema.ResourceData, meta interface{}) error {
 
 	segment, _, err := session.ClientV3.GetSpaceIsolationSegment(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.Set("isolation_segment", segment.GUID)
 
 	err = metadataRead(spaceMetadata, d, meta, false)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceSpaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	spaceID := d.Id()
@@ -222,27 +224,27 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			AllowSSH:         d.Get("allow_ssh").(bool),
 		})
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		if d.HasChange("quota") {
 			_, err := session.ClientV2.SetSpaceQuota(spaceID, d.Get("quota").(string))
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
-
+	var err error
 	removeAsgs, addAsgs := getListChanges(d.GetChange("asgs"))
 	for _, asgID := range removeAsgs {
 		_, err = session.ClientV2.DeleteSecurityGroupSpace(asgID, spaceID)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	for _, asgID := range addAsgs {
 		_, err = session.ClientV2.UpdateSecurityGroupSpace(asgID, spaceID)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
@@ -250,13 +252,13 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	for _, asgID := range removeStagingAsgs {
 		_, err = session.ClientV2.DeleteSecurityGroupStagingSpace(asgID, spaceID)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	for _, asgID := range addStagingAsgs {
 		_, err = session.ClientV2.UpdateSecurityGroupStagingSpace(asgID, spaceID)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
@@ -265,7 +267,7 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		for _, uid := range remove {
 			_, err = session.ClientV2.DeleteSpaceUserByRole(r, spaceID, uid)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 		for _, uidOrUsername := range add {
@@ -276,11 +278,11 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			}
 			err = addOrNothingUserInOrgBySpace(session, orgID, uidOrUsername, byUsername)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 			err = updateSpaceUserByRole(session, r, spaceID, uidOrUsername, byUsername)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
@@ -289,33 +291,33 @@ func resourceSpaceUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	if segID != "" && d.IsNewResource() {
 		_, _, err := session.ClientV3.UpdateSpaceIsolationSegmentRelationship(spaceID, segID)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	if !d.IsNewResource() && d.HasChange("isolation_segment") {
 		_, _, err := session.ClientV3.UpdateSpaceIsolationSegmentRelationship(spaceID, segID)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	err = metadataUpdate(spaceMetadata, d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceSpaceDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceSpaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	j, _, err := session.ClientV2.DeleteSpace(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	_, err = session.ClientV2.PollJob(j)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	return err
+	return diag.FromErr(err)
 }

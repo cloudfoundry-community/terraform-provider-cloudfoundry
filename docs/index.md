@@ -79,3 +79,6 @@ The following arguments are supported:
 
 * `store_tokens_path` - (Optional) Path to a file to store tokens used for login. (this is useful for sso, this avoid
   requiring each time sso passcode) . This can also be specified with the `CF_STORE_TOKENS_PATH` shell environment variable.
+  
+* `force_broker_not_fail_when_catalog_not_accessible` (Optional) Set to true to enforce `fail_when_catalog_not_accessible` to `true` to all broker for avoiding to be 
+  stuck if broker has been deleted for example. This can also be specified with the `CF_FORCE_BROKER_NOT_FAIL_CATALOG` shell environment variable.

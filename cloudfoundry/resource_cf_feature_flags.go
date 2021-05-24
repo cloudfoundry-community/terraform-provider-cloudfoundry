@@ -2,10 +2,12 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 // FlagStatusEnabled - Status returned by CF api for enabled flags
@@ -18,15 +20,15 @@ func resourceConfig() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceConfigCreate,
-		Read:   resourceConfigRead,
-		Update: resourceConfigUpdate,
-		Delete: resourceConfigDelete,
+		CreateContext: resourceConfigCreate,
+		ReadContext:   resourceConfigRead,
+		UpdateContext: resourceConfigUpdate,
+		DeleteContext: resourceConfigDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: func(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+			StateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 				d.SetId("config")
-				return ImportRead(resourceConfigRead)(d, meta)
+				return ImportReadContext(resourceConfigRead)(ctx, d, meta)
 			},
 		},
 
@@ -127,6 +129,12 @@ func resourceConfig() *schema.Resource {
 							Optional:     true,
 							Computed:     true,
 						},
+						"resource_matching": &schema.Schema{
+							Type:         schema.TypeString,
+							ValidateFunc: validateFeatureFlagValue,
+							Optional:     true,
+							Computed:     true,
+						},
 					},
 				},
 			},
@@ -142,11 +150,11 @@ func validateFeatureFlagValue(v interface{}, k string) (ws []string, errs []erro
 	return ws, errs
 }
 
-func resourceConfigCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceConfigCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	if v, ok := d.GetOk("feature_flags"); ok {
@@ -154,25 +162,25 @@ func resourceConfigCreate(d *schema.ResourceData, meta interface{}) error {
 		for _, ff := range ffs {
 			_, err := session.ClientV2.SetConfigFeatureFlags(ff)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 
 	}
 
 	d.SetId("config")
-	return resourceConfigRead(d, meta)
+	return resourceConfigRead(ctx, d, meta)
 }
 
-func resourceConfigRead(d *schema.ResourceData, meta interface{}) error {
+func resourceConfigRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 	featureFlags, _, err := session.ClientV2.GetConfigFeatureFlags()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	flags := make(map[string]interface{})
@@ -185,10 +193,10 @@ func resourceConfigRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("feature_flags", []interface{}{flags})
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceConfigUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceConfigUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	if d.HasChange("feature_flags") {
@@ -196,14 +204,14 @@ func resourceConfigUpdate(d *schema.ResourceData, meta interface{}) error {
 		for _, ff := range ffs {
 			_, err := session.ClientV2.SetConfigFeatureFlags(ff)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
 	return nil
 }
 
-func resourceConfigDelete(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceConfigDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 

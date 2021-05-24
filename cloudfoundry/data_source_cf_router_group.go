@@ -2,17 +2,18 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/router/routererror"
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceRouterGroup() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceRouterGroupRead,
+		ReadContext: dataSourceRouterGroupRead,
 
 		Schema: map[string]*schema.Schema{
 
@@ -28,10 +29,10 @@ func dataSourceRouterGroup() *schema.Resource {
 	}
 }
 
-func dataSourceRouterGroupRead(d *schema.ResourceData, meta interface{}) (err error) {
+func dataSourceRouterGroupRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	dm := session.RouterClient
@@ -40,9 +41,9 @@ func dataSourceRouterGroupRead(d *schema.ResourceData, meta interface{}) (err er
 	routerGroup, err := dm.GetRouterGroupByName(name)
 	if err != nil {
 		if err == (routererror.ResourceNotFoundError{}) {
-			return NotFound
+			return diag.FromErr(NotFound)
 		}
-		return err
+		return diag.FromErr(err)
 	}
 	d.SetId(routerGroup.GUID)
 	d.Set("type", routerGroup.Type)

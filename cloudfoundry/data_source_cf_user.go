@@ -2,18 +2,20 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
 
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceUser() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceUserRead,
+		ReadContext: dataSourceUserRead,
 
 		Schema: map[string]*schema.Schema{
 
@@ -30,7 +32,7 @@ func dataSourceUser() *schema.Resource {
 	}
 }
 
-func dataSourceUserRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	um := session.ClientV2
@@ -40,16 +42,16 @@ func dataSourceUserRead(d *schema.ResourceData, meta interface{}) error {
 	users, _, err := um.GetUsers()
 	isNotAuthorized := IsErrNotAuthorized(err)
 	if err != nil && !isNotAuthorized {
-		return err
+		return diag.FromErr(err)
 	}
 	if isNotAuthorized { // Fallback for OrgManagers
 		orgID := d.Get("org_id").(string)
 		if orgID == "" {
-			return err
+			return diag.FromErr(err)
 		}
 		users, _, err := um.GetOrganizationUsers(orgID)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		if isInSlice(users, func(object interface{}) bool {
 			if user, ok := object.(ccv2.User); ok && user.Username == name {
@@ -60,7 +62,7 @@ func dataSourceUserRead(d *schema.ResourceData, meta interface{}) error {
 		}) {
 			return nil
 		}
-		return NotFound
+		return diag.FromErr(NotFound)
 	}
 
 	for _, user := range users {
@@ -69,5 +71,5 @@ func dataSourceUserRead(d *schema.ResourceData, meta interface{}) error {
 			return nil
 		}
 	}
-	return NotFound
+	return diag.FromErr(NotFound)
 }

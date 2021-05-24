@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 const sbResource = `
@@ -74,9 +74,9 @@ func TestAccResServiceBroker_normal(t *testing.T) {
 	var catalogHash string
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceBrokerDestroyed("test"),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckServiceBrokerDestroyed("test"),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -133,9 +133,9 @@ func TestAccResServiceBroker_fail(t *testing.T) {
 	serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword, _ := getTestBrokerCredentials(t)
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceBrokerDestroyed("test"),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckServiceBrokerDestroyed("test"),
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: fmt.Sprintf(sbResourceUpdateCatalogFail,
@@ -151,9 +151,9 @@ func TestAccResServiceBroker_failShow(t *testing.T) {
 	serviceBrokerURL, serviceBrokerUser, serviceBrokerPassword, _ := getTestBrokerCredentials(t)
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckServiceBrokerDestroyed("test"),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckServiceBrokerDestroyed("test"),
 			Steps: []resource.TestStep{
 				resource.TestStep{
 					Config: fmt.Sprintf(sbResourceUpdateCatalogFailShow,

@@ -1,9 +1,11 @@
 package cloudfoundry
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,7 +13,7 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
@@ -23,13 +25,13 @@ func resourceServiceBroker() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceServiceBrokerCreate,
-		Read:   resourceServiceBrokerRead,
-		Update: resourceServiceBrokerUpdate,
-		Delete: resourceServiceBrokerDelete,
+		CreateContext: resourceServiceBrokerCreate,
+		ReadContext:   resourceServiceBrokerRead,
+		UpdateContext: resourceServiceBrokerUpdate,
+		DeleteContext: resourceServiceBrokerDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceServiceBrokerRead),
+			StateContext: ImportReadContext(resourceServiceBrokerRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -87,13 +89,13 @@ func resourceServiceBroker() *schema.Resource {
 	}
 }
 
-func resourceServiceBrokerCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServiceBrokerCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	// do as first to not try add broker if catalog not accessible
 	err := serviceBrokerUpdateCatalogSignature(d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	sb, _, err := session.ClientV2.CreateServiceBroker(
@@ -104,28 +106,28 @@ func resourceServiceBrokerCreate(d *schema.ResourceData, meta interface{}) error
 		d.Get("space").(string),
 	)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if err = readServiceDetail(sb.GUID, session, d); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.SetId(sb.GUID)
 
 	err = metadataCreate(serviceBrokerMetadata, d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServiceBrokerRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	// do as first to not try add broker if catalog not accessible
 	err := serviceBrokerUpdateCatalogSignature(d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	sb, _, err := session.ClientV2.GetServiceBroker(d.Id())
@@ -134,11 +136,11 @@ func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 	err = readServiceDetail(d.Id(), session, d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("name", sb.Name)
@@ -148,18 +150,18 @@ func resourceServiceBrokerRead(d *schema.ResourceData, meta interface{}) error {
 
 	err = metadataRead(serviceBrokerMetadata, d, meta, false)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceServiceBrokerUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	// do as first to not try add broker if catalog not accessible
 	err := serviceBrokerUpdateCatalogSignature(d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	_, _, err = session.ClientV2.UpdateServiceBroker(ccv2.ServiceBroker{
@@ -171,45 +173,45 @@ func resourceServiceBrokerUpdate(d *schema.ResourceData, meta interface{}) error
 		Name:         d.Get("name").(string),
 	})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err = readServiceDetail(d.Id(), session, d); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = metadataUpdate(serviceBrokerMetadata, d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceServiceBrokerDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServiceBrokerDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	if !session.PurgeWhenDelete {
 		_, err := session.ClientV2.DeleteServiceBroker(d.Id())
-		return err
+		return diag.FromErr(err)
 	}
 
 	svcs, _, err := session.ClientV2.GetServices(ccv2.FilterEqual(constant.ServiceBrokerGUIDFilter, d.Id()))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	for _, svc := range svcs {
 		sis, _, err := session.ClientV2.GetServiceInstances(ccv2.FilterEqual(constant.ServiceGUIDFilter, svc.GUID))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		for _, si := range sis {
 			_, _, err := session.ClientV2.DeleteServiceInstance(si.GUID, true, true)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
 	_, err = session.ClientV2.DeleteServiceBroker(d.Id())
-	return err
+	return diag.FromErr(err)
 }
 
 func readServiceDetail(id string, session *managers.Session, d *schema.ResourceData) error {
@@ -237,12 +239,19 @@ func readServiceDetail(id string, session *managers.Session, d *schema.ResourceD
 }
 
 func serviceBrokerUpdateCatalogSignature(d *schema.ResourceData, meta interface{}) error {
+	session := meta.(*managers.Session)
+
 	signature, err := serviceBrokerCatalogSignature(d, meta)
 	failNotAccessible := d.Get("fail_when_catalog_not_accessible").(bool)
 	if d.HasChange("fail_when_catalog_not_accessible") {
 		_, newFailNotAccessible := d.GetChange("fail_when_catalog_not_accessible")
 		failNotAccessible = newFailNotAccessible.(bool)
 	}
+
+	if session.Config.ForceNotFailBrokerCatalog {
+		failNotAccessible = false
+	}
+
 	if err != nil && failNotAccessible {
 		return fmt.Errorf("Error when getting catalog signature: %s", err.Error())
 	}

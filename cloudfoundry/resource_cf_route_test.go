@@ -7,8 +7,8 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 const routeResource = `
@@ -106,9 +106,9 @@ func TestAccResRoute_normal(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckRouteDestroyed([]string{"test-app-single", "test-app-multi"}, defaultAppDomain()),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckRouteDestroyed([]string{"test-app-single", "test-app-multi"}, defaultAppDomain()),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -118,7 +118,7 @@ func TestAccResRoute_normal(t *testing.T) {
 						appPath),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
-							if err = assertHTTPResponse("http://test-app-single."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://test-app-single."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -139,7 +139,7 @@ func TestAccResRoute_normal(t *testing.T) {
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
 							for i := 1; i <= 9; i++ {
-								if err = assertHTTPResponse("http://test-app-multi."+defaultAppDomain(), 200, nil); err != nil {
+								if err = assertHTTPResponse("https://test-app-multi."+defaultAppDomain(), 200, nil); err != nil {
 									return err
 								}
 							}

@@ -2,21 +2,23 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"context"
 	"fmt"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceSegment() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceSegmentCreate,
-		Read:   resourceSegmentRead,
-		Update: resourceSegmentUpdate,
-		Delete: resourceSegmentDelete,
+		CreateContext: resourceSegmentCreate,
+		ReadContext:   resourceSegmentRead,
+		UpdateContext: resourceSegmentUpdate,
+		DeleteContext: resourceSegmentDelete,
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceSegmentRead),
+			StateContext: ImportReadContext(resourceSegmentRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -33,10 +35,10 @@ func resourceSegment() *schema.Resource {
 
 func resourceSegmentEntitlement() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceSegmentEntitlementCreate,
-		Read:   resourceSegmentEntitlementRead,
-		Update: resourceSegmentEntitlementUpdate,
-		Delete: resourceSegmentEntitlementDelete,
+		CreateContext: resourceSegmentEntitlementCreate,
+		ReadContext:   resourceSegmentEntitlementRead,
+		UpdateContext: resourceSegmentEntitlementUpdate,
+		DeleteContext: resourceSegmentEntitlementDelete,
 		// Importer: &schema.ResourceImporter{
 		// 	State: ImportStatePassthrough,
 		// },
@@ -64,7 +66,7 @@ func resourceSegmentEntitlement() *schema.Resource {
 	}
 }
 
-func resourceSegmentCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceSegmentCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	name := d.Get("name").(string)
 
@@ -73,21 +75,21 @@ func resourceSegmentCreate(d *schema.ResourceData, meta interface{}) error {
 		Name: name,
 	})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.SetId(seg.GUID)
 	err = metadataCreate(segmentMetadata, d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceSegmentUpdate(d *schema.ResourceData, meta interface{}) error {
-	return metadataUpdate(segmentMetadata, d, meta)
+func resourceSegmentUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return diag.FromErr(metadataUpdate(segmentMetadata, d, meta))
 }
 
-func resourceSegmentRead(d *schema.ResourceData, meta interface{}) error {
+func resourceSegmentRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	sm := session.ClientV3
@@ -97,31 +99,31 @@ func resourceSegmentRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 	d.Set("name", seg.Name)
 
 	err = metadataRead(segmentMetadata, d, meta, false)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceSegmentDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceSegmentDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	sm := session.ClientV3
 	_, err := sm.DeleteIsolationSegment(d.Id())
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceSegmentEntitlementCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceSegmentEntitlementCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	segmentId := d.Get("segment").(string)
 	tfOrgs := d.Get("orgs").(*schema.Set).List()
 	id, err := uuid.GenerateUUID()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.SetId(id)
 
@@ -134,21 +136,21 @@ func resourceSegmentEntitlementCreate(d *schema.ResourceData, meta interface{}) 
 	_, _, err = sm.EntitleIsolationSegmentToOrganizations(segmentId, orgs)
 	if err != nil {
 		d.SetId("")
-		return err
+		return diag.FromErr(err)
 	}
 	if d.Get("default").(bool) {
 		for _, org := range orgs {
 			_, _, err := sm.UpdateOrganizationDefaultIsolationSegmentRelationship(org, segmentId)
 			if err != nil {
 				d.SetId("")
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
 	return nil
 }
 
-func resourceSegmentEntitlementUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceSegmentEntitlementUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	sm := session.ClientV3
 	if !d.HasChange("orgs") {
@@ -161,13 +163,13 @@ func resourceSegmentEntitlementUpdate(d *schema.ResourceData, meta interface{}) 
 	for _, orgId := range toDelete {
 		_, err := sm.DeleteIsolationSegmentOrganization(segmentId, orgId)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	if len(toAdd) > 0 {
 		_, _, err := sm.EntitleIsolationSegmentToOrganizations(segmentId, toAdd)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	if !d.HasChange("default") {
@@ -182,13 +184,13 @@ func resourceSegmentEntitlementUpdate(d *schema.ResourceData, meta interface{}) 
 		_, _, err := sm.UpdateOrganizationDefaultIsolationSegmentRelationship(tfOrg.(string), segmentId)
 		if err != nil {
 			d.SetId("")
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	return nil
 }
 
-func resourceSegmentEntitlementRead(d *schema.ResourceData, meta interface{}) error {
+func resourceSegmentEntitlementRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	sm := session.ClientV3
@@ -198,7 +200,7 @@ func resourceSegmentEntitlementRead(d *schema.ResourceData, meta interface{}) er
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	tfOrgs := d.Get("orgs").(*schema.Set).List()
@@ -219,7 +221,7 @@ func resourceSegmentEntitlementRead(d *schema.ResourceData, meta interface{}) er
 	return nil
 }
 
-func resourceSegmentEntitlementDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceSegmentEntitlementDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	sm := session.ClientV3
 	tfOrgs := d.Get("orgs").(*schema.Set).List()
@@ -227,12 +229,12 @@ func resourceSegmentEntitlementDelete(d *schema.ResourceData, meta interface{}) 
 		if d.Get("default").(bool) {
 			_, _, err := sm.UpdateOrganizationDefaultIsolationSegmentRelationship(org.(string), "")
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 		_, err := sm.DeleteIsolationSegmentOrganization(d.Get("segment").(string), fmt.Sprint(org))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 

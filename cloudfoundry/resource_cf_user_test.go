@@ -2,14 +2,13 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"strconv"
 	"testing"
 
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+
 	"code.cloudfoundry.org/cli/cf/errors"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 const ldapUserResource = `
@@ -35,7 +34,7 @@ const userResourceWithGroupsUpdate = `
 
 resource "cloudfoundry_user" "admin-service-user" {
     name = "cf-admin"
-	password = "asdfg"
+	password = "qwerty"
 	email = "cf-admin@acme.com"
     groups = [ "cloud_controller.admin", "clients.admin", "uaa.admin", "doppler.firehose" ]
 }
@@ -73,9 +72,9 @@ func TestAccResUser_LdapOrigin_normal(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckUserDestroy(username),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckUserDestroy(username),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -103,9 +102,9 @@ func TestAccResUser_WithGroups_normal(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckUserDestroy(username),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckUserDestroy(username),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -120,15 +119,9 @@ func TestAccResUser_WithGroups_normal(t *testing.T) {
 							ref, "email", username),
 						resource.TestCheckResourceAttr(
 							ref, "groups.#", "3"),
-						resource.TestCheckResourceAttr(
-							ref, "groups."+strconv.Itoa(hashcode.String("cloud_controller.admin")),
-							"cloud_controller.admin"),
-						resource.TestCheckResourceAttr(
-							ref, "groups."+strconv.Itoa(hashcode.String("scim.read")),
-							"scim.read"),
-						resource.TestCheckResourceAttr(
-							ref, "groups."+strconv.Itoa(hashcode.String("scim.write")),
-							"scim.write"),
+						resource.TestCheckResourceAttr(ref, "groups.0", "cloud_controller.admin"),
+						resource.TestCheckResourceAttr(ref, "groups.1", "scim.read"),
+						resource.TestCheckResourceAttr(ref, "groups.2", "scim.write"),
 					),
 				},
 
@@ -139,23 +132,15 @@ func TestAccResUser_WithGroups_normal(t *testing.T) {
 						resource.TestCheckResourceAttr(
 							ref, "name", "cf-admin"),
 						resource.TestCheckResourceAttr(
-							ref, "password", "asdfg"),
+							ref, "password", "qwerty"),
 						resource.TestCheckResourceAttr(
 							ref, "email", "cf-admin@acme.com"),
 						resource.TestCheckResourceAttr(
 							ref, "groups.#", "4"),
-						resource.TestCheckResourceAttr(
-							ref, "groups."+strconv.Itoa(hashcode.String("cloud_controller.admin")),
-							"cloud_controller.admin"),
-						resource.TestCheckResourceAttr(
-							ref, "groups."+strconv.Itoa(hashcode.String("clients.admin")),
-							"clients.admin"),
-						resource.TestCheckResourceAttr(
-							ref, "groups."+strconv.Itoa(hashcode.String("uaa.admin")),
-							"uaa.admin"),
-						resource.TestCheckResourceAttr(
-							ref, "groups."+strconv.Itoa(hashcode.String("doppler.firehose")),
-							"doppler.firehose"),
+						resource.TestCheckResourceAttr(ref, "groups.0", "clients.admin"),
+						resource.TestCheckResourceAttr(ref, "groups.1", "cloud_controller.admin"),
+						resource.TestCheckResourceAttr(ref, "groups.2", "doppler.firehose"),
+						resource.TestCheckResourceAttr(ref, "groups.3", "uaa.admin"),
 					),
 				},
 			},
@@ -169,9 +154,9 @@ func TestAccResUser_EmptyGroups_normal(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckUserDestroy(username),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckUserDestroy(username),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

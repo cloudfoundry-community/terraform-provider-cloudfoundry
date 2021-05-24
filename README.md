@@ -52,6 +52,32 @@ providers {
 
 That's override the path where to found provider binary to use your development version. 
 
+
+Debugging the Provider
+----------------------
+
+You can build a binary of the provider and then starting it with the `-debug` flag. Example
+
+```shell
+$ dlv exec --headless ./terraform-provider-cloudfoundry -- -debug
+```
+
+Connect your debugger (whether it's your IDE or the debugger client) to the debugger server. Have it continue execution (it pauses the process by default) and it will print output like the following to `stdout`:
+
+```text
+Provider started, to attach Terraform set the TF_REATTACH_PROVIDERS env var:
+
+        TF_REATTACH_PROVIDERS='{"registry.terraform.io/cloudfoundry-community/cloudfoundry":{"Protocol":"grpc","Pid":3382870,"Test":true,"Addr":{"Network":"unix","String":"/tmp/plugin713096927"}}}'
+```
+
+Running Terraform with the provider in Debug Mode
+-------------------------------------------------
+Copy the line starting with `TF_REATTACH_PROVIDERS` from your provider's output. Either export it, or prefix every Terraform command with it:
+
+```shell
+TF_REATTACH_PROVIDERS='{"registry.terraform.io/cloudfoundry-community/cloudfoundry":{"Protocol":"grpc","Pid":3382870,"Test":true,"Addr":{"Network":"unix","String":"/tmp/plugin713096927"}}}' terraform apply
+```
+
 Testing the Provider
 --------------------
 

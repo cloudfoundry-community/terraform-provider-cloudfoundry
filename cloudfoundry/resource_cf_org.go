@@ -2,22 +2,24 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"context"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceOrg() *schema.Resource {
 	return &schema.Resource{
 
-		Create: resourceOrgCreate,
-		Read:   resourceOrgRead,
-		Update: resourceOrgUpdate,
-		Delete: resourceOrgDelete,
+		CreateContext: resourceOrgCreate,
+		ReadContext:   resourceOrgRead,
+		UpdateContext: resourceOrgUpdate,
+		DeleteContext: resourceOrgDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceOrgRead),
+			StateContext: ImportReadContext(resourceOrgRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -64,7 +66,7 @@ func resourceOrg() *schema.Resource {
 	}
 }
 
-func resourceOrgCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceOrgCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	om := session.ClientV2
 
@@ -73,16 +75,16 @@ func resourceOrgCreate(d *schema.ResourceData, meta interface{}) error {
 
 	org, _, err := om.CreateOrganization(name, quota)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if quota == "" {
 		d.Set("quota", org.QuotaDefinitionGUID)
 	}
 	d.SetId(org.GUID)
-	return resourceOrgUpdate(d, meta)
+	return resourceOrgUpdate(ctx, d, meta)
 }
 
-func resourceOrgRead(d *schema.ResourceData, meta interface{}) error {
+func resourceOrgRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	om := session.ClientV2
 
@@ -94,7 +96,7 @@ func resourceOrgRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("name", org.Name)
@@ -103,7 +105,7 @@ func resourceOrgRead(d *schema.ResourceData, meta interface{}) error {
 	for t, r := range orgRoleMap {
 		users, _, err := om.GetOrganizationUsersByRole(r, id)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		tfUsers := d.Get(t).(*schema.Set).List()
 		if !IsImportState(d) {
@@ -120,12 +122,12 @@ func resourceOrgRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	err = metadataRead(orgMetadata, d, meta, false)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceOrgUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	id := d.Id()
@@ -134,7 +136,7 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 	if !d.IsNewResource() {
 		_, _, err := om.UpdateOrganization(id, d.Get("name").(string), d.Get("quota").(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
@@ -142,9 +144,9 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 		remove, add := getListChanges(d.GetChange(t))
 
 		for _, uid := range remove {
-			_, err = om.DeleteOrganizationUserByRole(r, id, uid)
+			_, err := om.DeleteOrganizationUserByRole(r, id, uid)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 		for _, uidOrUsername := range add {
@@ -155,18 +157,18 @@ func resourceOrgUpdate(d *schema.ResourceData, meta interface{}) (err error) {
 			}
 			err = updateOrgUserByRole(session, r, id, uidOrUsername, byUsername)
 			if err != nil {
-				return err
+				return diag.FromErr(err)
 			}
 		}
 	}
-	err = metadataUpdate(orgMetadata, d, meta)
+	err := metadataUpdate(orgMetadata, d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceOrgDelete(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceOrgDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	client := session.ClientV2
 
@@ -174,25 +176,25 @@ func resourceOrgDelete(d *schema.ResourceData, meta interface{}) (err error) {
 	spaces, _, err := client.GetSpaces(ccv2.FilterByOrg(id))
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	for _, s := range spaces {
 		j, _, err := client.DeleteSpace(s.GUID)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		_, err = client.PollJob(j)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	j, _, err := client.DeleteOrganization(id)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	_, err = client.PollJob(j)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }

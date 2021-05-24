@@ -1,10 +1,12 @@
 package cloudfoundry
 
 import (
+	"context"
 	"encoding/json"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
@@ -12,12 +14,12 @@ func resourceServiceKey() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceServiceKeyCreate,
-		Read:   resourceServiceKeyRead,
-		Delete: resourceServiceKeyDelete,
+		CreateContext: resourceServiceKeyCreate,
+		ReadContext:   resourceServiceKeyRead,
+		DeleteContext: resourceServiceKeyDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceServiceKeyRead),
+			StateContext: ImportReadContext(resourceServiceKeyRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -55,7 +57,7 @@ func resourceServiceKey() *schema.Resource {
 	}
 }
 
-func resourceServiceKeyCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServiceKeyCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	name := d.Get("name").(string)
@@ -65,13 +67,13 @@ func resourceServiceKeyCreate(d *schema.ResourceData, meta interface{}) error {
 	if len(params) == 0 && paramJson != "" {
 		err := json.Unmarshal([]byte(paramJson), &params)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	serviceKey, _, err := session.ClientV2.CreateServiceKey(serviceInstance, name, params)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("credentials", normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_"))
@@ -79,7 +81,7 @@ func resourceServiceKeyCreate(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServiceKeyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	serviceKey, _, err := session.ClientV2.GetServiceKey(d.Id())
@@ -88,7 +90,7 @@ func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 	d.Set("name", serviceKey.Name)
 	d.Set("service_instance", serviceKey.ServiceInstanceGUID)
@@ -96,9 +98,9 @@ func resourceServiceKeyRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceServiceKeyDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServiceKeyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	_, err := session.ClientV2.DeleteServiceKey(d.Id())
-	return err
+	return diag.FromErr(err)
 }

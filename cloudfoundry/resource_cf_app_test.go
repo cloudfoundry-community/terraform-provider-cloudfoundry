@@ -6,12 +6,12 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 const appResourceTemplate = `
@@ -324,9 +324,9 @@ func TestAccResAppVersions_app1(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"test-app"}),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckAppDestroyed([]string{"test-app"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -368,9 +368,9 @@ func TestAccResApp_app1(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"dummy-app"}),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckAppDestroyed([]string{"dummy-app"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -391,7 +391,7 @@ func TestAccResApp_app1(t *testing.T) {
 						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
+						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "1"),
 						resource.TestCheckResourceAttr(refApp, "memory", "64"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
@@ -423,7 +423,7 @@ func TestAccResApp_app1(t *testing.T) {
 						resource.TestCheckResourceAttr(refApp, "name", "dummy-app-updated"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
+						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "2"),
 						resource.TestCheckResourceAttr(refApp, "memory", "128"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "1024"),
@@ -450,9 +450,9 @@ func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"dummy-app"}),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckAppDestroyed([]string{"dummy-app"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -476,7 +476,7 @@ func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
+						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "1"),
 						resource.TestCheckResourceAttr(refApp, "memory", "64"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
@@ -520,7 +520,7 @@ func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
+						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "1"),
 						resource.TestCheckResourceAttr(refApp, "memory", "64"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
@@ -561,7 +561,7 @@ func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
+						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "1"),
 						resource.TestCheckResourceAttr(refApp, "memory", "64"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
@@ -613,7 +613,7 @@ func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.8080", "8080"),
+						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
 						resource.TestCheckResourceAttr(refApp, "instances", "1"),
 						resource.TestCheckResourceAttr(refApp, "memory", "64"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
@@ -638,9 +638,9 @@ func TestAccResApp_dockerApp(t *testing.T) {
 
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"test-docker-app"}),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckAppDestroyed([]string{"test-docker-app"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{
@@ -683,9 +683,9 @@ func TestAccResApp_app_bluegreen(t *testing.T) {
 	appDeploy := &appdeployers.AppDeploy{}
 	resource.Test(t,
 		resource.TestCase{
-			PreCheck:     func() { testAccPreCheck(t) },
-			Providers:    testAccProviders,
-			CheckDestroy: testAccCheckAppDestroyed([]string{"dummy-app"}),
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckAppDestroyed([]string{"dummy-app"}),
 			Steps: []resource.TestStep{
 
 				resource.TestStep{

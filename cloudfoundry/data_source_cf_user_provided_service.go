@@ -3,7 +3,9 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
@@ -11,7 +13,7 @@ func dataSourceUserProvidedService() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceUserProvidedServiceRead,
+		ReadContext: dataSourceUserProvidedServiceRead,
 
 		Schema: map[string]*schema.Schema{
 			"space": &schema.Schema{
@@ -43,7 +45,7 @@ func dataSourceUserProvidedService() *schema.Resource {
 	}
 }
 
-func dataSourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceUserProvidedServiceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	var (
@@ -56,10 +58,10 @@ func dataSourceUserProvidedServiceRead(d *schema.ResourceData, meta interface{})
 	space = d.Get("space").(string)
 	serviceInstances, _, err := session.ClientV2.GetUserProvServiceInstances(ccv2.FilterByName(name), ccv2.FilterEqual(constant.SpaceGUIDFilter, space))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if len(serviceInstances) == 0 {
-		return NotFound
+		return diag.FromErr(NotFound)
 	}
 	serviceInstance = serviceInstances[0]
 

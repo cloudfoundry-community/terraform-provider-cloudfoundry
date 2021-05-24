@@ -3,22 +3,24 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceOrgQuota() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceOrgQuotaCreate,
-		Read:   resourceOrgQuotaRead,
-		Update: resourceOrgQuotaUpdate,
-		Delete: resourceOrgQuotaDelete,
+		CreateContext: resourceOrgQuotaCreate,
+		ReadContext:   resourceOrgQuotaRead,
+		UpdateContext: resourceOrgQuotaUpdate,
+		DeleteContext: resourceOrgQuotaDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: ImportRead(resourceOrgQuotaRead),
+			StateContext: ImportReadContext(resourceOrgQuotaRead),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -76,19 +78,19 @@ func resourceOrgQuota() *schema.Resource {
 	}
 }
 
-func resourceOrgQuotaCreate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceOrgQuotaCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	qm := session.ClientV2
 
-	var quota ccv2.Quota
-	if quota, _, err = qm.CreateQuota(constant.OrgQuota, readOrgQuotaResource(d)); err != nil {
-		return err
+	quota, _, err := qm.CreateQuota(constant.OrgQuota, readOrgQuotaResource(d))
+	if err != nil {
+		return diag.FromErr(err)
 	}
 	d.SetId(quota.GUID)
 	return nil
 }
 
-func resourceOrgQuotaRead(d *schema.ResourceData, meta interface{}) error {
+func resourceOrgQuotaRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	qm := session.ClientV2
 
@@ -98,7 +100,7 @@ func resourceOrgQuotaRead(d *schema.ResourceData, meta interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("name", quota.Name)
@@ -115,17 +117,17 @@ func resourceOrgQuotaRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceOrgQuotaUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceOrgQuotaUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	qm := session.ClientV2
 
 	quota := readOrgQuotaResource(d)
 	quota.GUID = d.Id()
 	_, _, err := qm.UpdateQuota(constant.OrgQuota, quota)
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceOrgQuotaDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceOrgQuotaDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	qm := session.ClientV2
 	id := d.Id()
@@ -133,7 +135,7 @@ func resourceOrgQuotaDelete(d *schema.ResourceData, meta interface{}) error {
 	// For context: org quota can't be removed if there is still an org associated on it
 	orgs, _, err := qm.GetOrganizations()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	for _, org := range orgs {
 		if org.QuotaDefinitionGUID != id {
@@ -141,11 +143,11 @@ func resourceOrgQuotaDelete(d *schema.ResourceData, meta interface{}) error {
 		}
 		_, _, err := qm.UpdateOrganization(org.GUID, org.Name, session.DefaultQuotaGuid())
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	_, err = qm.DeleteQuota(constant.OrgQuota, id)
-	return err
+	return diag.FromErr(err)
 }
 
 func readOrgQuotaResource(d *schema.ResourceData) ccv2.Quota {

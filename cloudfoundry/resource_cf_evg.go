@@ -1,24 +1,26 @@
 package cloudfoundry
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceEvg() *schema.Resource {
 
 	return &schema.Resource{
 
-		Create: resourceEvgCreate,
-		Read:   resourceEvgRead,
-		Update: resourceEvgUpdate,
-		Delete: resourceEvgDelete,
+		CreateContext: resourceEvgCreate,
+		ReadContext:   resourceEvgRead,
+		UpdateContext: resourceEvgUpdate,
+		DeleteContext: resourceEvgDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: func(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+			StateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 				d.Set("name", d.Id())
-				return ImportRead(resourceEvgRead)(d, meta)
+				return ImportReadContext(resourceEvgRead)(ctx, d, meta)
 			},
 		},
 
@@ -36,16 +38,16 @@ func resourceEvg() *schema.Resource {
 	}
 }
 
-func resourceEvgCreate(d *schema.ResourceData, meta interface{}) (err error) {
+func resourceEvgCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
-	if err = resourceEvgUpdate(d, meta); err != nil {
+	if err := resourceEvgUpdate(ctx, d, meta); err != nil {
 		return err
 	}
 	d.SetId(d.Get("name").(string))
 	return nil
 }
 
-func resourceEvgRead(d *schema.ResourceData, meta interface{}) error {
+func resourceEvgRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	var variables map[string]string
@@ -57,7 +59,7 @@ func resourceEvgRead(d *schema.ResourceData, meta interface{}) error {
 		variables, _, err = session.ClientV2.GetEnvVarGroupStaging()
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	finalVariables := make(map[string]interface{})
 	tfVariables := d.Get("variables").(map[string]interface{})
@@ -76,7 +78,7 @@ func resourceEvgRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceEvgUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceEvgUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 
@@ -92,7 +94,7 @@ func resourceEvgUpdate(d *schema.ResourceData, meta interface{}) error {
 		variables, _, err = session.ClientV2.GetEnvVarGroupStaging()
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	old, new := d.GetChange("variables")
 	keyToDelete, keyToAdd := getMapChanges(old, new)
@@ -110,12 +112,12 @@ func resourceEvgUpdate(d *schema.ResourceData, meta interface{}) error {
 		_, err = session.ClientV2.SetEnvVarGroupStaging(variables)
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
 
-func resourceEvgDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceEvgDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	var variables map[string]string
 	var err error
@@ -126,7 +128,7 @@ func resourceEvgDelete(d *schema.ResourceData, meta interface{}) error {
 		variables, _, err = session.ClientV2.GetEnvVarGroupStaging()
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	for k := range d.Get("variables").(map[string]interface{}) {
 		delete(variables, k)
@@ -138,7 +140,7 @@ func resourceEvgDelete(d *schema.ResourceData, meta interface{}) error {
 		_, err = session.ClientV2.SetEnvVarGroupStaging(variables)
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }

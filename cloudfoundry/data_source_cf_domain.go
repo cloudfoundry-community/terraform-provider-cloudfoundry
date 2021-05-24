@@ -2,18 +2,19 @@ package cloudfoundry
 
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceDomain() *schema.Resource {
 
 	return &schema.Resource{
 
-		Read: dataSourceDomainRead,
+		ReadContext: dataSourceDomainRead,
 
 		Schema: map[string]*schema.Schema{
 
@@ -45,11 +46,11 @@ func dataSourceDomain() *schema.Resource {
 	}
 }
 
-func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceDomainRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	dm := session.ClientV2
@@ -60,11 +61,11 @@ func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) error {
 
 	sharedDomains, _, err := dm.GetSharedDomains()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	privateDomains, _, err := dm.GetPrivateDomains()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	domains := append(sharedDomains, privateDomains...)
 
@@ -76,7 +77,7 @@ func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) error {
 	} else if v, ok := d.GetOk("name"); ok {
 		name = v.(string)
 	} else {
-		return fmt.Errorf("neither a full name or sub-domain was provided to do an effective domain search")
+		return diag.Errorf("neither a full name or sub-domain was provided to do an effective domain search")
 	}
 
 	var domain *ccv2.Domain
@@ -88,7 +89,7 @@ func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) error {
 			}
 		}
 		if domain == nil {
-			return fmt.Errorf("no domain found with sub-domain '%s'", prefix)
+			return diag.Errorf("no domain found with sub-domain '%s'", prefix)
 		}
 	} else {
 		for _, d := range domains {
@@ -98,7 +99,7 @@ func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) error {
 			}
 		}
 		if domain == nil {
-			return fmt.Errorf("no domain found with name '%s'", name)
+			return diag.Errorf("no domain found with name '%s'", name)
 		}
 	}
 
@@ -110,5 +111,5 @@ func dataSourceDomainRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("org", domain.OwningOrganizationGUID)
 	d.Set("internal", domain.Internal)
 	d.SetId(domain.GUID)
-	return err
+	return diag.FromErr(err)
 }

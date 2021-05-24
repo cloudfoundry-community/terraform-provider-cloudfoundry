@@ -1,19 +1,20 @@
 package cloudfoundry
 
 import (
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceServicePlanAccess() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceServicePlanAccessCreate,
-		Read:   resourceServicePlanAccessRead,
-		Delete: resourceServicePlanAccessDelete,
+		CreateContext: resourceServicePlanAccessCreate,
+		ReadContext:   resourceServicePlanAccessRead,
+		DeleteContext: resourceServicePlanAccessDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceServicePlanAccessImport,
+			StateContext: resourceServicePlanAccessImport,
 		},
 		Schema: map[string]*schema.Schema{
 			"plan": &schema.Schema{
@@ -37,11 +38,11 @@ func resourceServicePlanAccess() *schema.Resource {
 	}
 }
 
-func resourceServicePlanAccessCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceServicePlanAccessCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
-		return fmt.Errorf("client is nil")
+		return diag.Errorf("client is nil")
 	}
 
 	plan := d.Get("plan").(string)
@@ -52,7 +53,7 @@ func resourceServicePlanAccessCreate(d *schema.ResourceData, meta interface{}) e
 	if hasOrg {
 		spV, _, err := session.ClientV2.CreateServicePlanVisibility(plan, org.(string))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		id = spV.GUID
 	} else {
@@ -62,7 +63,7 @@ func resourceServicePlanAccessCreate(d *schema.ResourceData, meta interface{}) e
 		}
 		_, err := session.ClientV2.UpdateServicePlan(plan, state)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		id = plan
 	}
@@ -71,7 +72,7 @@ func resourceServicePlanAccessCreate(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func resourceServicePlanAccessRead(d *schema.ResourceData, meta interface{}) error {
+func resourceServicePlanAccessRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	_, hasOrg := d.GetOk("org")
@@ -83,7 +84,7 @@ func resourceServicePlanAccessRead(d *schema.ResourceData, meta interface{}) err
 				d.SetId("")
 				return nil
 			}
-			return err
+			return diag.FromErr(err)
 		}
 		d.Set("plan", spV.ServicePlanGUID)
 		d.Set("org", spV.OrganizationGUID)
@@ -94,7 +95,7 @@ func resourceServicePlanAccessRead(d *schema.ResourceData, meta interface{}) err
 				d.SetId("")
 				return nil
 			}
-			return err
+			return diag.FromErr(err)
 		}
 		d.Set("plan", d.Id())
 		d.Set("public", plan.Public)
@@ -103,7 +104,7 @@ func resourceServicePlanAccessRead(d *schema.ResourceData, meta interface{}) err
 	return nil
 }
 
-func resourceServicePlanAccessDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceServicePlanAccessDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	_, hasOrg := d.GetOk("org")
@@ -111,5 +112,5 @@ func resourceServicePlanAccessDelete(d *schema.ResourceData, meta interface{}) e
 		return nil
 	}
 	_, err := session.ClientV2.DeleteServicePlanVisibility(d.Id())
-	return err
+	return diag.FromErr(err)
 }

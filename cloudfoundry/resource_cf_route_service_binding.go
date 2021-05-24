@@ -1,23 +1,24 @@
 package cloudfoundry
 
 import (
-	"fmt"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"encoding/json"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceRouteServiceBinding() *schema.Resource {
 
 	return &schema.Resource{
-		Create: resourceRouteServiceBindingCreate,
-		Read:   resourceRouteServiceBindingRead,
-		Delete: resourceRouteServiceBindingDelete,
+		CreateContext: resourceRouteServiceBindingCreate,
+		ReadContext:   resourceRouteServiceBindingRead,
+		DeleteContext: resourceRouteServiceBindingDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceRouteServiceBindingImport,
+			StateContext: resourceRouteServiceBindingImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -40,15 +41,15 @@ func resourceRouteServiceBinding() *schema.Resource {
 	}
 }
 
-func resourceRouteServiceBindingImport(d *schema.ResourceData, meta interface{}) (res []*schema.ResourceData, err error) {
+func resourceRouteServiceBindingImport(ctx context.Context, d *schema.ResourceData, meta interface{}) (res []*schema.ResourceData, err error) {
 	id := d.Id()
 	if _, _, err = parseID(id); err != nil {
 		return
 	}
-	return ImportRead(resourceRouteServiceBindingRead)(d, meta)
+	return ImportReadContext(resourceRouteServiceBindingRead)(ctx, d, meta)
 }
 
-func resourceRouteServiceBindingCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceRouteServiceBindingCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	var data map[string]interface{}
@@ -59,28 +60,28 @@ func resourceRouteServiceBindingCreate(d *schema.ResourceData, meta interface{})
 
 	if okParams {
 		if err := json.Unmarshal([]byte(params.(string)), &data); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	_, err := session.ClientV2.CreateServiceBindingRoute(serviceID, routeID, data)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(computeID(serviceID, routeID))
 	return nil
 }
 
-func resourceRouteServiceBindingRead(d *schema.ResourceData, meta interface{}) error {
+func resourceRouteServiceBindingRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	serviceID, routeID, err := parseID(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	routes, _, err := session.ClientV2.GetServiceBindingRoutes(serviceID)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	found := false
 	for _, route := range routes {
@@ -91,7 +92,7 @@ func resourceRouteServiceBindingRead(d *schema.ResourceData, meta interface{}) e
 	}
 	if !found {
 		d.SetId("")
-		return fmt.Errorf("Route '%s' not found in service instance '%s'", routeID, serviceID)
+		return diag.Errorf("Route '%s' not found in service instance '%s'", routeID, serviceID)
 	}
 
 	d.Set("service_instance", serviceID)
@@ -99,11 +100,11 @@ func resourceRouteServiceBindingRead(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func resourceRouteServiceBindingDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceRouteServiceBindingDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	serviceID := d.Get("service_instance").(string)
 	routeID := d.Get("route").(string)
 	_, err := session.ClientV2.DeleteServiceBindingRoute(serviceID, routeID)
-	return err
+	return diag.FromErr(err)
 }
