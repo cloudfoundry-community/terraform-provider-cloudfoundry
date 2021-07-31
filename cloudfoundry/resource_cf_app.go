@@ -553,6 +553,29 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 			}
 			appUpdate.EnvironmentVariables = envVars
 		}
+		// Remove stale / externally set variables
+		if currentEnv, _, err := session.ClientV3.GetApplicationEnvironment(appDeploy.App.GUID); err == nil {
+			var staleVars []string
+			var vv map[string]interface{}
+			if v, ok := d.GetOk("environment"); ok {
+				vv = v.(map[string]interface{})
+			}
+			for s, _ := range currentEnv.EnvironmentVariables {
+				found := false
+				for k, _ := range vv {
+					if k == s {
+						found = true
+						break
+					}
+				}
+				if !found {
+					staleVars = append(staleVars, s)
+				}
+			}
+			if len(staleVars) > 0 {
+				_ = session.BitsManager.RemoveAppEnvs(appDeploy.App.GUID, staleVars...)
+			}
+		}
 	}
 
 	if IsAppUpdateOnly(d) || (IsAppRestageNeeded(d) && !deployer.IsCreateNewApp()) || (IsAppRestartNeeded(d) && !deployer.IsCreateNewApp()) {
