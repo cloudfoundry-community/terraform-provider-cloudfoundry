@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
@@ -540,6 +541,29 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 				envVars[k] = fmt.Sprint(v)
 			}
 			appUpdate.EnvironmentVariables = envVars
+		}
+		// Remove stale / externally set variables
+		if currentEnv, _, err := session.ClientV3.GetApplicationEnvironment(appDeploy.App.GUID); err == nil {
+			var staleVars []string
+			var vv map[string]interface{}
+			if v, ok := d.GetOk("environment"); ok {
+				vv = v.(map[string]interface{})
+			}
+			for s, _ := range currentEnv.EnvironmentVariables {
+				found := false
+				for k, _ := range vv {
+					if k == s {
+						found = true
+						break
+					}
+				}
+				if !found {
+					staleVars = append(staleVars, s)
+				}
+			}
+			if len(staleVars) > 0 {
+				_ = session.BitsManager.RemoveAppEnvs(appDeploy.App.GUID, staleVars...)
+			}
 		}
 	}
 
