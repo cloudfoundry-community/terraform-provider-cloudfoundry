@@ -1,6 +1,11 @@
 package cloudfoundry
 
 import (
+	"fmt"
+	"io/ioutil"
+	"log"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/uaa"
 	"context"
@@ -314,7 +319,37 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, meta interf
 func resourceUserDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	id := d.Id()
-	err := session.ClientUAA.DeleteUser(id)
+
+	endpoint := fmt.Sprintf("/v2/users/%s", id)
+	req, err := session.RawClient.NewRequest("DELETE", endpoint, nil)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	resp, err := session.RawClient.Do(req)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Printf("[WARN] could not close stream from endpoint: %s", err)
+		}
+	}()
+
+	if resp.StatusCode != 204 {
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		err = ccerror.RawHTTPStatusError{
+			StatusCode:  resp.StatusCode,
+			RawResponse: b,
+		}
+		return diag.FromErr(err)
+	}
+
+	err = session.ClientUAA.DeleteUser(id)
 	if err != nil {
 		return diag.FromErr(err)
 	}
