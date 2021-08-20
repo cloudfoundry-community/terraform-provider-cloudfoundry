@@ -2,15 +2,18 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"strconv"
 	"testing"
+
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"code.cloudfoundry.org/cli/cf/errors"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
+
+var lastID string
 
 const ldapUserResource = `
 
@@ -82,6 +85,7 @@ func TestAccResUser_LdapOrigin_normal(t *testing.T) {
 					Config: ldapUserResource,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserExists(ref),
+						testAccStoreID(ref),
 						resource.TestCheckResourceAttr(
 							ref, "name", username),
 						resource.TestCheckResourceAttr(
@@ -112,6 +116,7 @@ func TestAccResUser_WithGroups_normal(t *testing.T) {
 					Config: userResourceWithGroups,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserExists(ref),
+						testAccStoreID(ref),
 						resource.TestCheckResourceAttr(
 							ref, "name", username),
 						resource.TestCheckResourceAttr(
@@ -136,6 +141,7 @@ func TestAccResUser_WithGroups_normal(t *testing.T) {
 					Config: userResourceWithGroupsUpdate,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserExists(ref),
+						testAccStoreID(ref),
 						resource.TestCheckResourceAttr(
 							ref, "name", "cf-admin"),
 						resource.TestCheckResourceAttr(
@@ -178,6 +184,7 @@ func TestAccResUser_EmptyGroups_normal(t *testing.T) {
 					Config: userResourceWithEmptyGroup,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserExists(ref),
+						testAccStoreID(ref),
 						resource.TestCheckResourceAttr(
 							ref, "name", username),
 						resource.TestCheckResourceAttr(
@@ -193,6 +200,7 @@ func TestAccResUser_EmptyGroups_normal(t *testing.T) {
 					Config: userResourceWithEmptyGroupUpdate,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserExists(ref),
+						testAccStoreID(ref),
 						resource.TestCheckResourceAttr(
 							ref, "name", username),
 						resource.TestCheckResourceAttr(
@@ -247,6 +255,18 @@ func testAccCheckUserExists(resource string) resource.TestCheckFunc {
 	}
 }
 
+func testAccStoreID(resource string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resource]
+		if !ok {
+			return fmt.Errorf("user '%s' not found in terraform state", resource)
+		}
+		id := rs.Primary.ID
+		lastID = id
+		return nil
+	}
+}
+
 func testAccCheckUserDestroy(username string) resource.TestCheckFunc {
 
 	return func(s *terraform.State) error {
@@ -262,8 +282,21 @@ func testAccCheckUserDestroy(username string) resource.TestCheckFunc {
 			}
 		}
 		if len(users) > 0 {
-			return fmt.Errorf("user with username '%s' still exists in cloud foundry", username)
+			return fmt.Errorf("user with username '%s' still exists in UAA", username)
 		}
+
+
+		umCF := session.ClientV2
+		usersCF, _, err := umCF.GetUsers()
+		if err != nil {
+			return err
+		}
+		for _, user := range usersCF {
+			if user.GUID == lastID {
+				return fmt.Errorf("user with username '%s' still exists in cloud foundry", username)
+			}
+		}
+
 		return nil
 	}
 }

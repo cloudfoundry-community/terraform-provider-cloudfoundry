@@ -1,9 +1,12 @@
 package cloudfoundry
 
 import (
+	"fmt"
+	"io/ioutil"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/uaa"
-	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
@@ -315,5 +318,33 @@ func resourceUserDelete(d *schema.ResourceData, meta interface{}) error {
 	session := meta.(*managers.Session)
 	id := d.Id()
 	umuaa := session.ClientUAA
+	client := meta.(*managers.Session).RawClient
+
+	endpoint := fmt.Sprintf("/v2/users/%s", id)
+	req, err := client.NewRequest("DELETE", endpoint, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	if resp.StatusCode != 204 {
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return ccerror.RawHTTPStatusError{
+			StatusCode:  resp.StatusCode,
+			RawResponse: b,
+		}
+	}
+
 	return umuaa.DeleteUser(id)
 }
