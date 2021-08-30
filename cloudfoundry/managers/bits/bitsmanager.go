@@ -133,8 +133,32 @@ func (m BitsManager) UploadBuildpack(buildpackGUID string, bpPath string) error 
 	return nil
 }
 
-// RemoveAppEnvs - Remove app environment variables
-func (m BitsManager) RemoveAppEnvs(appGUID string, keys ...string) error {
+// GetAppEnvironmentVariables - Get app environment variables
+func (m BitsManager) GetAppEnvironmentVariables(appGUID string) (map[string]string, error) {
+	apiURL := fmt.Sprintf("/v3/apps/%s/environment_variables", appGUID)
+
+	req, err := m.rawClient.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	var responseBody = struct {
+		Var map[string]string `json:"var"`
+	}{}
+	resp, err := m.rawClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(responseBody)
+	if err != nil {
+		return nil, err
+	}
+	return responseBody.Var, nil
+}
+
+// SetAppEnvironmentVariables - Remove app environment variables
+func (m BitsManager) SetAppEnvironmentVariables(appGUID string, env map[string]interface{}) error {
 	apiURL := fmt.Sprintf("/v3/apps/%s/environment_variables", appGUID)
 
 	req, err := m.rawClient.NewRequest("PATCH", apiURL, nil)
@@ -144,12 +168,12 @@ func (m BitsManager) RemoveAppEnvs(appGUID string, keys ...string) error {
 	var requestBody = struct {
 		Var map[string]interface{} `json:"var"`
 	}{}
-	requestBody.Var = make(map[string]interface{})
-	for _, k := range keys {
-		requestBody.Var[k] = nil
-	}
+	requestBody.Var = env
 	body := new(bytes.Buffer)
-	json.NewEncoder(body).Encode(requestBody)
+	err = json.NewEncoder(body).Encode(requestBody)
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Body = ioutil.NopCloser(body)
 
