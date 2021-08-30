@@ -562,7 +562,11 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 				}
 			}
 			if len(staleVars) > 0 {
-				_ = session.BitsManager.RemoveAppEnvs(appDeploy.App.GUID, staleVars...)
+				env := make(map[string]interface{})
+				for _, e := range staleVars {
+					env[e] = nil
+				}
+				_ = session.BitsManager.SetAppEnvironmentVariables(appDeploy.App.GUID, env)
 			}
 		}
 	}
