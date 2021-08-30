@@ -24,8 +24,8 @@ data "cloudfoundry_domain" "l" {
 
 The following arguments are supported and will be used to perform the lookup:
 
-* `name` - (Optional) This value will be computed based on the `sub-domain` or `domain` attributes. If provided then this argument will be used as the full domain name.
-* `sub-domain` - (Optional) The sub-domain of the full domain name
+* `name` - (Optional) This value will be computed based on the `sub_domain` or `domain` attributes. If provided then this argument will be used as the full domain name.
+* `sub_domain` - (Optional) The sub-domain of the full domain name
 * `domain` - (Optional) The domain name
 
 ## Attributes Reference

@@ -3,8 +3,9 @@ package cloudfoundry
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"net/http"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/cenkalti/backoff/v4"
 
@@ -40,6 +41,7 @@ func resourceRoute() *schema.Resource {
 			"space": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"hostname": &schema.Schema{
 				Type:     schema.TypeString,
