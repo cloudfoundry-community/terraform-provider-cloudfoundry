@@ -12,7 +12,7 @@ Gets information on a Cloud Foundry organization.
 
 ## Example Usage
 
-The following example looks up an organization named 'myorg'. 
+The following example looks up an organization named 'myorg'.
 
 ```hcl
 data "cloudfoundry_org" "o" {
@@ -28,10 +28,10 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-The following attributes are exported:
+The following attributes are exported
 
 * `id` - The GUID of the organization
-* `labels` - Map of labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
-Works only on cloud foundry with api >= v3.63.
-* `annotations` - Map of annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
-Works only on cloud foundry with api >= v3.63.
+* `labels` - Map of labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object).
+  Works only on cloud foundry with api >= v3.63.
+* `annotations` - Map of annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object).
+  Works only on cloud foundry with api >= v3.63.

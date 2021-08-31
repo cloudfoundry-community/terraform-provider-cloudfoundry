@@ -12,7 +12,7 @@ Gets information on a Cloud Foundry user.
 
 ## Example Usage
 
-The following example looks up an user named 'myuser'. 
+The following example looks up an user named 'myuser'.
 
 ```hcl
 data "cloudfoundry_user" "myuser" {

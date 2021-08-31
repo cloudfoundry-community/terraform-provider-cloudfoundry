@@ -14,7 +14,7 @@ Gets information on a particular Cloud Foundry router group. Router groups are u
 
 ## Example Usage
 
-The following example looks up a router group named 'my_custom_router_group'. 
+The following example looks up a router group named 'my_custom_router_group'.
 
 ```hcl
 data "cloudfoundry_router_group" "default-tcp" {
