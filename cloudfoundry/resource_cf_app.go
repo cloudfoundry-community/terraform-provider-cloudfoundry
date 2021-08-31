@@ -549,9 +549,9 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 			if v, ok := d.GetOk("environment"); ok {
 				vv = v.(map[string]interface{})
 			}
-			for s, _ := range currentEnv.EnvironmentVariables {
+			for s := range currentEnv.EnvironmentVariables {
 				found := false
-				for k, _ := range vv {
+				for k := range vv {
 					if k == s {
 						found = true
 						break

@@ -36,7 +36,7 @@ data "cloudfoundry_service" "s2" {
 resource "cloudfoundry_route" "dummy-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
-  hostname = "dummy-app"
+  hostname = "dummy-app-tf"
 }
 resource "cloudfoundry_service_instance" "db" {
   name = "db"
@@ -72,19 +72,21 @@ data "cloudfoundry_org" "org" {
 }
 data "cloudfoundry_space" "space" {
 	name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
+    org = "${data.cloudfoundry_org.org.id}"
 }
 data "cloudfoundry_service" "s1" {
 	name = "%s"
+    space = "${data.cloudfoundry_space.space.id}"
 }
 data "cloudfoundry_service" "s2" {
 	name = "%s"
+    space = "${data.cloudfoundry_space.space.id}"
 }
 
 resource "cloudfoundry_route" "dummy-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
-  hostname = "dummy-app"
+  hostname = "dummy-app-tf"
 }
 resource "cloudfoundry_service_instance" "db" {
   name = "db"
@@ -133,7 +135,7 @@ data "cloudfoundry_domain" "local" {
 resource "cloudfoundry_route" "dummy-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "%s"
-  hostname = "dummy-app"
+  hostname = "dummy-app-tf"
 }
 
 resource "cloudfoundry_app" "dummy-app" {
@@ -163,19 +165,21 @@ data "cloudfoundry_org" "org" {
 }
 data "cloudfoundry_space" "space" {
 	name = "%s"
-  org = "${data.cloudfoundry_org.org.id}"
+    org = "${data.cloudfoundry_org.org.id}"
 }
 data "cloudfoundry_service" "s1" {
 	name = "%s"
+    space = "${data.cloudfoundry_space.space.id}"
 }
 data "cloudfoundry_service" "s2" {
 	name = "%s"
+    space = "${data.cloudfoundry_space.space.id}"
 }
 
 resource "cloudfoundry_route" "dummy-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
-  hostname = "dummy-app"
+  hostname = "dummy-app-tf"
 }
 resource "cloudfoundry_service_instance" "db" {
   name = "db"
@@ -219,7 +223,6 @@ resource "cloudfoundry_app" "dummy-app" {
 
   environment = {
     TEST_VAR_1 = "testval1"
-    TEST_VAR_2 = "testval2"
   }
 }
 `
@@ -268,7 +271,7 @@ data "cloudfoundry_space" "space" {
 resource "cloudfoundry_route" "test-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
-  hostname = "test-app"
+  hostname = "test-app-tf"
   target {
     app = "${cloudfoundry_app.test-app.id}"
   }
@@ -298,7 +301,7 @@ data "cloudfoundry_space" "space" {
 resource "cloudfoundry_route" "test-app" {
   domain = "${data.cloudfoundry_domain.local.id}"
   space = "${data.cloudfoundry_space.space.id}"
-  hostname = "test-app"
+  hostname = "test-app-tf"
   target {
     app = "${cloudfoundry_app.test-app.id}"
   }
@@ -334,7 +337,7 @@ func TestAccResAppVersions_app1(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
-							if err = assertHTTPResponse("https://test-app."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://test-app-tf."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -347,7 +350,7 @@ func TestAccResAppVersions_app1(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckRouteExists(refRoute, func() (err error) {
 
-							if err = assertHTTPResponse("https://test-app."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://test-app-tf."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -383,7 +386,7 @@ func TestAccResApp_app1(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -406,6 +409,21 @@ func TestAccResApp_app1(t *testing.T) {
 				},
 
 				resource.TestStep{
+					Config: fmt.Sprintf(appResource,
+						defaultAppDomain(),
+						orgName, spaceName,
+						serviceName1, serviceName2, servicePlan, servicePlan,
+						appPath,
+					),
+					Check: resource.ComposeTestCheckFunc(
+						setEnvironmentVariables(refApp, map[string]interface{}{
+							"TEST_VAR_3": "testval3",
+						}),
+					),
+					ExpectNonEmptyPlan: true,
+				},
+
+				resource.TestStep{
 					Config: fmt.Sprintf(appResourceUpdate,
 						defaultAppDomain(),
 						orgName, spaceName,
@@ -415,11 +433,14 @@ func TestAccResApp_app1(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
 						}),
+						testAccCheckEnvironmentVariableSet(refApp, "TEST_VAR_1"),
+						testAccCheckEnvironmentVariableNotSet(refApp, "TEST_VAR_2"),
+						testAccCheckEnvironmentVariableNotSet(refApp, "TEST_VAR_3"),
 						resource.TestCheckResourceAttr(refApp, "name", "dummy-app-updated"),
 						resource.TestCheckResourceAttr(refApp, "space", spaceID),
 						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
@@ -428,9 +449,8 @@ func TestAccResApp_app1(t *testing.T) {
 						resource.TestCheckResourceAttr(refApp, "memory", "128"),
 						resource.TestCheckResourceAttr(refApp, "disk_quota", "1024"),
 						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "2"),
+						resource.TestCheckResourceAttr(refApp, "environment.%", "1"),
 						resource.TestCheckResourceAttr(refApp, "environment.TEST_VAR_1", "testval1"),
-						resource.TestCheckResourceAttr(refApp, "environment.TEST_VAR_2", "testval2"),
 						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
 						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
 						resource.TestCheckResourceAttr(refApp, "service_binding.#", "3"),
@@ -438,6 +458,66 @@ func TestAccResApp_app1(t *testing.T) {
 				},
 			},
 		})
+}
+
+func testAccCheckEnvironmentVariableSet(resApp string, envVar string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+
+		session := testAccProvider.Meta().(*managers.Session)
+		rs, ok := s.RootModule().Resources[resApp]
+		if !ok {
+			return fmt.Errorf("app '%s' not found in terraform state", resApp)
+		}
+		id := rs.Primary.ID
+
+		vars, err := session.BitsManager.GetAppEnvironmentVariables(id)
+		if err != nil {
+			return err
+		}
+		for v := range vars {
+			if v == envVar {
+				return nil
+			}
+		}
+		return fmt.Errorf("environment variable '%s' not set", envVar)
+	}
+}
+
+func testAccCheckEnvironmentVariableNotSet(resApp string, envVar string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+
+		session := testAccProvider.Meta().(*managers.Session)
+		rs, ok := s.RootModule().Resources[resApp]
+		if !ok {
+			return fmt.Errorf("app '%s' not found in terraform state", resApp)
+		}
+		id := rs.Primary.ID
+
+		vars, err := session.BitsManager.GetAppEnvironmentVariables(id)
+		if err != nil {
+			return err
+		}
+		for v := range vars {
+			if v == envVar {
+				return fmt.Errorf("environemnt variable '%s' is set", envVar)
+			}
+		}
+		return nil
+	}
+}
+
+func setEnvironmentVariables(resApp string, m map[string]interface{}) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		session := testAccProvider.Meta().(*managers.Session)
+
+		rs, ok := s.RootModule().Resources[resApp]
+		if !ok {
+			return fmt.Errorf("app '%s' not found in terraform state", resApp)
+		}
+		id := rs.Primary.ID
+
+		return session.BitsManager.SetAppEnvironmentVariables(id, m)
+	}
 }
 
 func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
@@ -468,7 +548,7 @@ func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -509,7 +589,7 @@ func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 200, nil); err != nil {
@@ -550,7 +630,7 @@ func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 404, nil); err != nil {
@@ -599,7 +679,7 @@ func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExists(refApp, func() (err error) {
 
-							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 404, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 404, nil); err != nil {
 								return err
 							}
 							if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 200, nil); err != nil {
@@ -698,7 +778,7 @@ func TestAccResApp_app_bluegreen(t *testing.T) {
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckAppExistsInject(refApp, appDeploy, func() (err error) {
 
-							if err = assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil); err != nil {
+							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
 								return err
 							}
 							return
@@ -715,7 +795,7 @@ func TestAccResApp_app_bluegreen(t *testing.T) {
 					),
 					Check: resource.ComposeTestCheckFunc(
 						func(s *terraform.State) error {
-							err := assertHTTPResponse("https://dummy-app."+defaultAppDomain(), 200, nil)
+							err := assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil)
 							if err != nil {
 								return err
 							}
