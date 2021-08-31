@@ -15,7 +15,6 @@ stage and run applications.
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
 ~> **NOTE:** Resource will not override all security group set but rather only manage ASGs defined in the resource.
 
-
 ## Example Usage
 
 Basic usage
@@ -65,6 +64,6 @@ The following attributes are exported:
 The current Asg can be imported using the `asg` guid, e.g.
 
 ```bash
-$ terraform import cloudfoundry_asg.messaging a-guid
+terraform import cloudfoundry_asg.messaging a-guid
 ```
 

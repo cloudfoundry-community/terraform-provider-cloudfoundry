@@ -61,5 +61,5 @@ The following arguments are supported:
 An existing Users list can be imported using its space guid, e.g.
 
 ```bash
-$ terraform import cloudfoundry_space_users.su1 space-guid
+terraform import cloudfoundry_space_users.su1 space-guid
 ```

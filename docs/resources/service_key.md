@@ -52,5 +52,5 @@ The following attributes are exported:
 An existing Service Key can be imported using its guid , e.g.
 
 ```bash
-$ terraform import cloudfoundry_service_key.redis1-key1 a-guid
+terraform import cloudfoundry_service_key.redis1-key1 a-guid
 ```

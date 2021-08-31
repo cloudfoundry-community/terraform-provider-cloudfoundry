@@ -36,7 +36,6 @@ resource "cloudfoundry_org" "o1" {
 }
 ```
 
-
 ## Argument Reference
 
 The following arguments are supported:
@@ -62,5 +61,5 @@ The following attributes are exported:
 A Quota can be imported using its guid, e.g.
 
 ```bash
-$ terraform import cloudfoundry_org_quota.10g a-guid
+terraform import cloudfoundry_org_quota.10g a-guid
 ```

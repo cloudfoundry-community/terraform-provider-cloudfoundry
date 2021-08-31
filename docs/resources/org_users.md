@@ -50,5 +50,5 @@ The following arguments are supported:
 An existing Users list can be imported using its organization guid, e.g.
 
 ```bash
-$ terraform import cloudfoundry_org_users.ou1 org-guid
+terraform import cloudfoundry_org_users.ou1 org-guid
 ```

@@ -11,7 +11,6 @@ description: |-
 Provides a Cloud Foundry resource for managing Cloud Foundry network policies to manage
 access between applications via [container-to-container networking](https://docs.cloudfoundry.org/devguide/deploy-apps/cf-networking.html).
 
-
 ## Example Usage
 
 The following creates container to container access policy between the given applications.
@@ -38,12 +37,11 @@ resource "cf_network_policy" "my-policy" {
 
 The following arguments are supported:
 
-- `policy` - (Required, List) List of policies that allow direct network traffic from one app to another.
-  
-  - `source_app` - (Required, String) The ID of the [application](/docs/providers/cf/r/app.html) to connect from.
-  - `destination_app` - (Required, String) The ID of the [application](/docs/providers/cf/r/app.html) to connect to.
-  - `port` - (Required, String) Port (8080) or range of ports (8080-8085) for connection to destination app
-  - `protocol` - (Optional, String) One of 'udp' or 'tcp' identifying the allowed protocol for the access. Default is 'tcp'.
+* `policy` - (Required, List) List of policies that allow direct network traffic from one app to another.
+  * `source_app` - (Required, String) The ID of the [application](/docs/providers/cf/r/app.html) to connect from.
+  * `destination_app` - (Required, String) The ID of the [application](/docs/providers/cf/r/app.html) to connect to.
+  * `port` - (Required, String) Port (8080) or range of ports (8080-8085) for connection to destination app
+  * `protocol` - (Optional, String) One of 'udp' or 'tcp' identifying the allowed protocol for the access. Default is 'tcp'.
 
 ## Attributes Reference
 
@@ -56,5 +54,5 @@ The following attributes are exported along with any defaults for the inputs att
 The current Network policy can be imported using the `network_policy`, e.g.
 
 ```bash
-$ terraform import cf_network_policy.my-policy a-guid
+terraform import cf_network_policy.my-policy a-guid
 ```

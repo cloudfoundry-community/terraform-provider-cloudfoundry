@@ -49,7 +49,7 @@ The following attributes are exported:
 An existing Service Instance can be imported using its guid, e.g.
 
 ```bash
-$ terraform import cloudfoundry_service.redis a-guid
+terraform import cloudfoundry_service.redis a-guid
 ```
 
 ### Timeouts
@@ -57,6 +57,6 @@ $ terraform import cloudfoundry_service.redis a-guid
 `cloudfoundry_service_instance` provides the following
 [Timeouts](https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts) configuration options:
 
-- `create` - (Default `15 minutes`) Used for Creating Instance.
-- `update` - (Default `15 minutes`) Used for Updating Instance.
-- `delete` - (Default `15 minutes`) Used for Destroying Instance.
+* `create` - (Default `15 minutes`) Used for Creating Instance.
+* `update` - (Default `15 minutes`) Used for Updating Instance.
+* `delete` - (Default `15 minutes`) Used for Destroying Instance.

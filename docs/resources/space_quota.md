@@ -12,7 +12,6 @@ Provides a Cloud Foundry resource to manage space [quotas](https://docs.cloudfou
 
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
 
-
 ## Example Usage
 
 The following example creates a space quota that can be then applied to one or more space.
@@ -55,5 +54,5 @@ The following attributes are exported:
 An existing space Quota can be imported using its guid, e.g.
 
 ```bash
-$ terraform import cloudfoundry_space_quota.10g a-guid
+terraform import cloudfoundry_space_quota.10g a-guid
 ```

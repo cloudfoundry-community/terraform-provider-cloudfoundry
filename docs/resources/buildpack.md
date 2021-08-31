@@ -33,21 +33,21 @@ The following arguments are supported:
 * `position` - (Optional, Number) Specifies where to place the buildpack in the detection priority list. For more information, see the [Buildpack Detection](https://docs.cloudfoundry.org/buildpacks/detection.html) topic. When not provided, cloudfoundry assigns a default buildpack position.
 * `enabled` - (Optional, Boolean) Specifies whether to allow apps to be pushed with the buildpack, and defaults to true.
 * `locked` - (Optional, Boolean) Specifies whether buildpack is locked to prevent further updates, and defaults to false.
-* `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
-Works only on cloud foundry with api >= v3.63.
-* `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
-Works only on cloud foundry with api >= v3.63.
+* `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object).
+  Works only on cloud foundry with api >= v3.63.
+* `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object).
+  Works only on cloud foundry with api >= v3.63.
 
 ### Buildpack location
 
 * `path` - (Required) An uri or path to target a zip file. this can be in the form of unix path (`/my/path.zip`) or url path (`http://zip.com/my.zip`)
-* `source_code_hash` - (Optional) Used to trigger updates. Must be set to a base64-encoded SHA256 hash of the path specified. The usual way to set this is `base64sha256(file("file.zip"))`, 
+* `source_code_hash` - (Optional) Used to trigger updates. Must be set to a base64-encoded SHA256 hash of the path specified. The usual way to set this is `base64sha256(file("file.zip"))`,
 where "file.zip" is the local filename of the lambda function source archive.
 
-~> **NOTE:** [terraform-provider-zipper](https://github.com/ArthurHlt/terraform-provider-zipper) 
+~> **NOTE:** [terraform-provider-zipper](https://github.com/ArthurHlt/terraform-provider-zipper)
 can create zip file from `tar.gz`, `tar.bz2`, `folder location`, `git repo` locally or remotely and provide `source_code_hash`.
 
-Example Usage with zipper: 
+Example Usage with zipper:
 
 ```hcl
 provider "zipper" {
@@ -79,5 +79,5 @@ The following attributes are exported:
 The current buildpack can be imported using the `buildpack` guid, e.g.
 
 ```bash
-$ terraform import cloudfoundry_buildpack.tomee a-guid
+terraform import cloudfoundry_buildpack.tomee a-guid
 ```

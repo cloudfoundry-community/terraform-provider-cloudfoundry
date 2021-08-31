@@ -6,15 +6,13 @@ description: |-
   Provides a Cloud Foundry Service Access resource.
 ---
 
-# cloudfoundry\_service\_access
+# cloudfoundry_service_access
 
 Provides a Cloud Foundry resource for managing [access](https://docs.cloudfoundry.org/services/access-control.html)
 to service plans published by Cloud Foundry [service brokers](https://docs.cloudfoundry.org/services/).
 
 ~> **NOTE:** Multiple instances of this resource can be used to share a given service plan with multiple orgs.
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
-
-
 
 ## Example Usage
 
@@ -58,5 +56,5 @@ Otherwise, the import would fail.
 E.g.
 
 ```bash
-$ terraform import cloudfoundry_service_plan_access.org1-mysql-512mb a-guid
+terraform import cloudfoundry_service_plan_access.org1-mysql-512mb a-guid
 ```

@@ -19,11 +19,11 @@ Provides a Cloud Foundry resource for managing [service brokers](https://docs.cl
 The following example registers a service broker.
 
 ```hcl
-resource "cloudfoundry_service_broker" "mysql" {
-	name = "test-mysql"
-	url = "http://mysql-broker.local.pcfdev.io"
-	username = "admin"
-	password = "admin"
+resource "cloudfoundry_service_broker" "mysql" { 
+  name = "test-mysql"
+  url = "http://mysql-broker.local.pcfdev.io"
+  username = "admin"
+  password = "admin"
 }
 ```
 
@@ -38,9 +38,9 @@ The following arguments are supported:
 * `space` - (Optional) The ID of the space to scope this broker to (registering the broker as [space-scoped](http://docs.cloudfoundry.org/services/managing-service-brokers.html#register-broker)). By default, registers [standard](http://docs.cloudfoundry.org/services/managing-service-brokers.html#register-broker) brokers
 * `fail_when_catalog_not_accessible` - (Optional) Set to true if you want to see errors when getting service broker catalog (default behaviour is silently failed).
 * `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object).
-Works only on cloud foundry with api >= v3.71.
+  Works only on cloud foundry with api >= v3.71.
 * `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object).
-Works only on cloud foundry with api >= v3.71.
+  Works only on cloud foundry with api >= v3.71.
 
 ## Attributes Reference
 
@@ -48,12 +48,12 @@ The following attributes are exported:
 
 * `id` - The GUID of the service broker
 * `service_plans` - Map of service plan GUIDs keyed by service "&lt;service name&gt;/&lt;plan name&gt;"
-* `services` - Map of service service GUIDs keyed by service name
+* `services` - Map of service GUIDs keyed by service name
 
 ## Import
 
 An existing Service Broker can be imported using its guid, e.g.
 
 ```bash
-$ terraform import cloudfoundry_service_broker.mysql a-guid
+terraform import cloudfoundry_service_broker.mysql a-guid
 ```

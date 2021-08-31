@@ -10,7 +10,7 @@ description: |-
 
 Provides a resource for modifying the running or staging [environment variable groups](https://docs.cloudfoundry.org/devguide/deploy-apps/environment-variable.html#evgroups) in Cloud Foundry.
 
-~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions. 
+~> **NOTE:** This resource requires the provider to be authenticated with an account granted admin permissions.
 ~> **NOTE:** Resource will only modify env var group managed by itself (will not destroy or affect previous env vars set outside of terraform).
 
 ## Example Usage
@@ -18,16 +18,15 @@ Provides a resource for modifying the running or staging [environment variable g
 The example below shows how to add environment variables to the running environment variable group.
 
 ```hcl
-resource "cloudfoundry_evg" "running" {
+resource "cloudfoundry_evg" "running" { 
+  name = "running"
 
-	name = "running"
-
-    variables = {
-        name1 = "value1"
-        name2 = "value2"
-        name3 = "value3"
-        name4 = "value4"
-    }
+  variables = {
+    name1 = "value1"
+    name2 = "value2"
+    name3 = "value3"
+    name4 = "value4"
+  }
 }
 ```
 
@@ -43,5 +42,5 @@ The following arguments are supported:
 The current Evg can be imported using the `evg` name (either `running` or `staging` constant) e.g.
 
 ```bash
-$ terraform import cloudfoundry_evg.private <running/staging>
+terraform import cloudfoundry_evg.private <running/staging>
 ```
