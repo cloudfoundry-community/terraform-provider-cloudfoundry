@@ -150,7 +150,7 @@ func (m BitsManager) GetAppEnvironmentVariables(appGUID string) (map[string]stri
 		return nil, err
 	}
 	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(responseBody)
+	err = json.NewDecoder(resp.Body).Decode(&responseBody)
 	if err != nil {
 		return nil, err
 	}
