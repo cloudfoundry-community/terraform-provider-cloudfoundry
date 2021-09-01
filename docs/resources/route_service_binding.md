@@ -40,5 +40,5 @@ terraform files after import will lead to the recreation of the resource.
 E.g.
 
 ```bash
-$ terraform import cloudfoundry_route_service_binding.mybind <service-guid>/<route-guid>
+terraform import cloudfoundry_route_service_binding.mybind <service-guid>/<route-guid>
 ```

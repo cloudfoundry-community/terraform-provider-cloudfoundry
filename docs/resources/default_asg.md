@@ -34,8 +34,8 @@ The following arguments are supported:
 
 ## Import
 
-The current Default Asg can be imported using the `name` (either `running` or `staging` constant) e.g. 
+The current Default Asg can be imported using the `name` (either `running` or `staging` constant) e.g.
 
 ```bash
-$ terraform import cloudfoundry_default_asg.running <running/staging>
+terraform import cloudfoundry_default_asg.running <running/staging>
 ```

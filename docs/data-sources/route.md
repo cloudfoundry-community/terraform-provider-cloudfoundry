@@ -29,7 +29,6 @@ The following arguments are supported and will be used to perform the lookup:
 * `path` - (Optional) The path associated to the route to lookup.
 * `port` - (Optional) The port associated to the route to lookup.
 
-
 ## Attributes Reference
 
 The following attributes are exported:

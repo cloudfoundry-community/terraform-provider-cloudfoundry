@@ -6,7 +6,7 @@ description: |-
   Provides a Cloud Foundry User Provided Service.
 ---
 
-# cloudfoundry\_user_provided_service
+# cloudfoundry_user_provided_service
 
 Provides a Cloud Foundry resource for managing Cloud Foundry [User Provided Services](https://docs.cloudfoundry.org/devguide/services/user-provided.html) within spaces.
 
@@ -67,5 +67,5 @@ The following attributes are exported:
 An existing User Provided Service can be imported using its guid, e.g.
 
 ```bash
-$ terraform import cloudfoundry_user_provided_service.mq-server a-guid
+terraform import cloudfoundry_user_provided_service.mq-server a-guid
 ```

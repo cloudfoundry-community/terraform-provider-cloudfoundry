@@ -12,7 +12,7 @@ Gets information on a Cloud Foundry service definition.
 
 ## Example Usage
 
-The following example looks up a service definition named 'p-redis', globally. 
+The following example looks up a service definition named 'p-redis', globally.
 
 ```hcl
 data "cloudfoundry_service" "redis" {

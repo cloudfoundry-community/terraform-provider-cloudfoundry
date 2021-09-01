@@ -38,10 +38,10 @@ The following arguments are supported:
 * `isolation_segment` - (`Experimental`,Optional) The ID of the isolation segment to assign to the space. The segment must be entitled to the space's parent organization. If the isolation segment id is unspecified, then Cloud Foundry assigns the space to the org’s default isolation segment if any. Note that existing apps in the space will not run in a newly assigned isolation segment until they are restarted.
 * `asgs` - (Optional) List of running [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications running within this space. Defaults to empty list.
 * `staging_asgs` - (Optional) List of staging [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications being staged for this space. Defaults to empty list.
-* `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
-Works only on cloud foundry with api >= v3.63.
-* `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). 
-Works only on cloud foundry with api >= v3.63.
+* `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object).
+  Works only on cloud foundry with api >= v3.63.
+* `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object).
+  Works only on cloud foundry with api >= v3.63.
 
 ## Attributes Reference
 
@@ -54,5 +54,5 @@ The following attributes are exported:
 An existing Space can be imported using its guid, e.g.
 
 ```bash
-$ terraform import cloudfoundry_space.s1 a-guid
+terraform import cloudfoundry_space.s1 a-guid
 ```

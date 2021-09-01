@@ -14,7 +14,6 @@ Provides a resource for sharing access to [private domains](https://docs.cloudfo
 
 ~> **NOTE:** This resource requires the provider to be authenticated with an account granted org manager permissions.
 
-
 ## Example Usage
 
 The following is an example of giving an organization access to a private [domain]. The
@@ -33,12 +32,12 @@ resource "cloudfoundry_private_domain_access" "shared-to-my-org" {
 The following arguments are supported:
 
 * `domain` - (Required, String) The GUID of private domain.
-* `org`    - (Required, String) The GUID of the organization.
+* `org` - (Required, String) The GUID of the organization.
 
 ## Import
 
 An existing CF private domain access can be imported using the combined `<org-guid>/<domain-guid>' identifier, e.g.
 
 ```bash
-$ terraform import cloudfoundry_private_domain_access.my-access 84f5ba83-1728-481f-9a62-72d109e4be74/c8eba5e6-5a21-45ee-ae0a-59b1f650888a
+terraform import cloudfoundry_private_domain_access.my-access 84f5ba83-1728-481f-9a62-72d109e4be74/c8eba5e6-5a21-45ee-ae0a-59b1f650888a
 ```
