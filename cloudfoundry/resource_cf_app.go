@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
@@ -310,7 +311,7 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface
 		return diag.FromErr(err)
 	}
 	if idBg, ok := d.GetOk("id_bg"); !ok || idBg == "" {
-		d.Set("id_bg", d.Id())
+		_ = d.Set("id_bg", d.Id())
 	}
 	mappings, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.AppGUIDFilter, d.Id()))
 	if err != nil {
@@ -326,6 +327,17 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface
 		RouteMapping:    mappings,
 		ServiceBindings: bindings,
 	})
+	// droplet sync through V3 API
+	droplet, _, err := session.ClientV3.GetApplicationDropletCurrent(d.Id())
+	if err != nil {
+		if IsErrNotFound(err) {
+			d.SetId("")
+			return nil
+		}
+		return diag.FromErr(err)
+	}
+	DropletToResourceData(d, droplet)
+
 	err = metadataRead(appMetadata, d, meta, false)
 	if err != nil {
 		return diag.FromErr(err)

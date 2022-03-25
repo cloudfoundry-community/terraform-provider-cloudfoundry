@@ -7,6 +7,7 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 )
@@ -99,6 +100,10 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 		BindTimeout:     DefaultBindTimeout,
 		StageTimeout:    DefaultStageTimeout,
 	}, nil
+}
+
+func DropletToResourceData(d *schema.ResourceData, droplet ccv3.Droplet) {
+	_ = d.Set("docker_image", droplet.Image)
 }
 
 func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppDeployResponse) {
