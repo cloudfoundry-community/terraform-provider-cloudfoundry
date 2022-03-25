@@ -2,11 +2,8 @@ package bits
 
 import (
 	"bytes"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"encoding/json"
 	"fmt"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -16,6 +13,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
 )
 
 // Manage upload bits like app and buildpack in full stream
@@ -132,7 +133,59 @@ func (m BitsManager) UploadBuildpack(buildpackGUID string, bpPath string) error 
 	return nil
 }
 
-// UploadApp - Upload an zip file containing app code to cloud foundry in full stream
+// GetAppEnvironmentVariables - Get app environment variables
+func (m BitsManager) GetAppEnvironmentVariables(appGUID string) (map[string]string, error) {
+	apiURL := fmt.Sprintf("/v3/apps/%s/environment_variables", appGUID)
+
+	req, err := m.rawClient.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	var responseBody = struct {
+		Var map[string]string `json:"var"`
+	}{}
+	resp, err := m.rawClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&responseBody)
+	if err != nil {
+		return nil, err
+	}
+	return responseBody.Var, nil
+}
+
+// SetAppEnvironmentVariables - Remove app environment variables
+func (m BitsManager) SetAppEnvironmentVariables(appGUID string, env map[string]interface{}) error {
+	apiURL := fmt.Sprintf("/v3/apps/%s/environment_variables", appGUID)
+
+	req, err := m.rawClient.NewRequest("PATCH", apiURL, nil)
+	if err != nil {
+		return err
+	}
+	var requestBody = struct {
+		Var map[string]interface{} `json:"var"`
+	}{}
+	requestBody.Var = env
+	body := new(bytes.Buffer)
+	err = json.NewEncoder(body).Encode(requestBody)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Body = ioutil.NopCloser(body)
+
+	resp, err := m.rawClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
+// UploadApp - Upload a zip file containing app code to cloud foundry in full stream
 func (m BitsManager) UploadApp(appGUID string, path string) error {
 	zipFile, err := m.RetrieveZip(path)
 	if err != nil {
