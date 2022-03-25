@@ -26,8 +26,9 @@ func dataSourceServiceKey() *schema.Resource {
 				Required: true,
 			},
 			"credentials": &schema.Schema{
-				Type:     schema.TypeMap,
-				Computed: true,
+				Type:      schema.TypeMap,
+				Computed:  true,
+				Sensitive: true,
 			},
 		},
 	}
