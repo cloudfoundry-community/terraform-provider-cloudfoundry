@@ -8,20 +8,19 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
 )
 
 func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, error) {
-	enableSSH := d.Get("enable_ssh").(bool)
-	if d.IsNewResource() {
-		// if user does not explicitly set allow_ssh
-		// it set allow ssh to true only during creation
-		if _, ok := d.GetOk("enable_ssh"); !ok {
-			enableSSH = true
-		}
+	enableSSH := types.NullBool{
+		IsSet: false,
 	}
-
+	if schemaEnableSSH, ok := d.GetOk("enable_ssh"); ok {
+		enableSSH.Value = schemaEnableSSH.(bool)
+		enableSSH.IsSet = true
+	}
 	app := ccv2.Application{
 		GUID:                    d.Id(),
 		Name:                    d.Get("name").(string),
@@ -31,7 +30,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 		StackGUID:               d.Get("stack").(string),
 		Buildpack:               StringToFilteredString(d.Get("buildpack").(string)),
 		Command:                 StringToFilteredString(d.Get("command").(string)),
-		EnableSSH:               BoolToNullBool(enableSSH),
+		EnableSSH:               enableSSH,
 		State:                   constant.ApplicationStarted,
 		DockerImage:             d.Get("docker_image").(string),
 		HealthCheckHTTPEndpoint: d.Get("health_check_http_endpoint").(string),
@@ -108,25 +107,25 @@ func DropletToResourceData(d *schema.ResourceData, droplet ccv3.Droplet) {
 
 func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppDeployResponse) {
 	d.SetId(appDeploy.App.GUID)
-	d.Set("name", appDeploy.App.Name)
-	d.Set("space", appDeploy.App.SpaceGUID)
-	d.Set("ports", appDeploy.App.Ports)
-	d.Set("instances", appDeploy.App.Instances.Value)
-	d.Set("memory", appDeploy.App.Memory.Value)
-	d.Set("disk_quota", appDeploy.App.DiskQuota.Value)
-	d.Set("stack", appDeploy.App.StackGUID)
-	d.Set("buildpack", appDeploy.App.Buildpack.Value)
-	d.Set("command", appDeploy.App.Command.Value)
-	d.Set("enable_ssh", appDeploy.App.EnableSSH.Value)
-	d.Set("stopped", appDeploy.App.State == constant.ApplicationStopped)
-	d.Set("docker_image", appDeploy.App.DockerImage)
-	d.Set("health_check_http_endpoint", appDeploy.App.HealthCheckHTTPEndpoint)
-	d.Set("health_check_type", string(appDeploy.App.HealthCheckType))
-	d.Set("health_check_timeout", int(appDeploy.App.HealthCheckTimeout))
-	d.Set("environment", appDeploy.App.EnvironmentVariables)
+	_ = d.Set("name", appDeploy.App.Name)
+	_ = d.Set("space", appDeploy.App.SpaceGUID)
+	_ = d.Set("ports", appDeploy.App.Ports)
+	_ = d.Set("instances", appDeploy.App.Instances.Value)
+	_ = d.Set("memory", appDeploy.App.Memory.Value)
+	_ = d.Set("disk_quota", appDeploy.App.DiskQuota.Value)
+	_ = d.Set("stack", appDeploy.App.StackGUID)
+	_ = d.Set("buildpack", appDeploy.App.Buildpack.Value)
+	_ = d.Set("command", appDeploy.App.Command.Value)
+	_ = d.Set("enable_ssh", appDeploy.App.EnableSSH.Value)
+	_ = d.Set("stopped", appDeploy.App.State == constant.ApplicationStopped)
+	_ = d.Set("docker_image", appDeploy.App.DockerImage)
+	_ = d.Set("health_check_http_endpoint", appDeploy.App.HealthCheckHTTPEndpoint)
+	_ = d.Set("health_check_type", string(appDeploy.App.HealthCheckType))
+	_ = d.Set("health_check_timeout", int(appDeploy.App.HealthCheckTimeout))
+	_ = d.Set("environment", appDeploy.App.EnvironmentVariables)
 	// Ensure id_bg is set
 	if idBg, ok := d.GetOk("id_bg"); !ok || idBg == "" {
-		d.Set("id_bg", d.Id())
+		_ = d.Set("id_bg", d.Id())
 	}
 
 	bindingsTf := getListOfStructs(d.Get("service_binding"))
@@ -161,7 +160,7 @@ func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppD
 			finalBindings = append(finalBindings, curBinding)
 		}
 	}
-	d.Set("service_binding", finalBindings)
+	_ = d.Set("service_binding", finalBindings)
 
 	mappingsTf := getListOfStructs(d.Get("routes"))
 	finalMappings := make([]map[string]interface{}, 0)
@@ -195,7 +194,7 @@ func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppD
 		}
 
 	}
-	d.Set("routes", finalMappings)
+	_ = d.Set("routes", finalMappings)
 
 }
 
