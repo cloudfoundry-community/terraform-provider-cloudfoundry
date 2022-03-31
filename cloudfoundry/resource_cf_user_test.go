@@ -79,7 +79,7 @@ func TestAccResUser_LdapOrigin_normal(t *testing.T) {
 			CheckDestroy:      testAccCheckUserDestroy(username),
 			Steps: []resource.TestStep{
 
-				resource.TestStep{
+				{
 					Config: ldapUserResource,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserExists(ref),
@@ -110,7 +110,7 @@ func TestAccResUser_WithGroups_normal(t *testing.T) {
 			CheckDestroy:      testAccCheckUserDestroy(username),
 			Steps: []resource.TestStep{
 
-				resource.TestStep{
+				{
 					Config: userResourceWithGroups,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserExists(ref),
@@ -129,7 +129,7 @@ func TestAccResUser_WithGroups_normal(t *testing.T) {
 					),
 				},
 
-				resource.TestStep{
+				{
 					Config: userResourceWithGroupsUpdate,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserExists(ref),
@@ -164,7 +164,7 @@ func TestAccResUser_EmptyGroups_normal(t *testing.T) {
 			CheckDestroy:      testAccCheckUserDestroy(username),
 			Steps: []resource.TestStep{
 
-				resource.TestStep{
+				{
 					Config: userResourceWithEmptyGroup,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserExists(ref),
@@ -180,7 +180,7 @@ func TestAccResUser_EmptyGroups_normal(t *testing.T) {
 					),
 				},
 
-				resource.TestStep{
+				{
 					Config: userResourceWithEmptyGroupUpdate,
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckUserExists(ref),
@@ -268,7 +268,6 @@ func testAccCheckUserDestroy(username string) resource.TestCheckFunc {
 		if len(users) > 0 {
 			return fmt.Errorf("user with username '%s' still exists in UAA", username)
 		}
-
 
 		umCF := session.ClientV2
 		usersCF, _, err := umCF.GetUsers()

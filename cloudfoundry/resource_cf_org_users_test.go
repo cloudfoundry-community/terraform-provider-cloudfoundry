@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 const orgUsersResource = `
@@ -91,7 +91,9 @@ func TestAccResOrgUsers_normal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	defer sessions.ClientUAA.DeleteUser(user.ID)
+	defer func() {
+		_ = sessions.ClientUAA.DeleteUser(user.ID)
+	}()
 	err = addOrNothingUserInOrgBySpace(sessions, orgId, user.ID, false)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -102,7 +104,7 @@ func TestAccResOrgUsers_normal(t *testing.T) {
 			PreCheck:          func() { testAccPreCheck(t) },
 			ProviderFactories: testAccProvidersFactories,
 			Steps: []resource.TestStep{
-				resource.TestStep{
+				{
 					Config: fmt.Sprintf(orgUsersResource, orgId),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckOrgUsersExists(ref, &usersMap),
@@ -115,7 +117,7 @@ func TestAccResOrgUsers_normal(t *testing.T) {
 					),
 				},
 
-				resource.TestStep{
+				{
 					Config: fmt.Sprintf(orgUsersResourceUpdate, orgId),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckOrgUsersExists(ref, &usersMap),
@@ -142,7 +144,9 @@ func TestAccResOrgUsers_force(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	defer sessions.ClientUAA.DeleteUser(user.ID)
+	defer func() {
+		_ = sessions.ClientUAA.DeleteUser(user.ID)
+	}()
 
 	_, err = sessions.ClientV2.UpdateOrganizationManager(orgId, user.ID)
 	if err != nil {
@@ -154,7 +158,7 @@ func TestAccResOrgUsers_force(t *testing.T) {
 			PreCheck:          func() { testAccPreCheck(t) },
 			ProviderFactories: testAccProvidersFactories,
 			Steps: []resource.TestStep{
-				resource.TestStep{
+				{
 					Config: fmt.Sprintf(orgUsersResourceForce, orgId),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckOrgUsersExists(ref, &usersMap),

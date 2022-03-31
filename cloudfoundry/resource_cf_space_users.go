@@ -2,8 +2,9 @@ package cloudfoundry
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
@@ -32,17 +33,17 @@ func resourceSpaceUsers() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"space": &schema.Schema{
+			"space": {
 				Type:     schema.TypeString,
 				ForceNew: true,
 				Required: true,
 			},
-			"force": &schema.Schema{
+			"force": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
 			},
-			"managers": &schema.Schema{
+			"managers": {
 				Type:       schema.TypeSet,
 				ConfigMode: schema.SchemaConfigModeAttr,
 				Computed:   true,
@@ -50,7 +51,7 @@ func resourceSpaceUsers() *schema.Resource {
 				Elem:       &schema.Schema{Type: schema.TypeString},
 				Set:        resourceStringHash,
 			},
-			"developers": &schema.Schema{
+			"developers": {
 				Type:       schema.TypeSet,
 				ConfigMode: schema.SchemaConfigModeAttr,
 				Computed:   true,
@@ -58,7 +59,7 @@ func resourceSpaceUsers() *schema.Resource {
 				Elem:       &schema.Schema{Type: schema.TypeString},
 				Set:        resourceStringHash,
 			},
-			"auditors": &schema.Schema{
+			"auditors": {
 				Type:       schema.TypeSet,
 				ConfigMode: schema.SchemaConfigModeAttr,
 				Computed:   true,
@@ -96,10 +97,10 @@ func resourceSpaceUsersCreate(ctx context.Context, d *schema.ResourceData, meta 
 	return resourceSpaceUsersUpdate(ctx, d, meta)
 }
 
-func resourceSpaceUsersRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceSpaceUsersRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	if IsImportState(d) {
-		d.Set("space", d.Id())
-		d.Set("force", false)
+		_ = d.Set("space", d.Id())
+		_ = d.Set("force", false)
 	}
 	session := meta.(*managers.Session)
 	for t, r := range typeToSpaceRoleMap {
@@ -112,13 +113,13 @@ func resourceSpaceUsersRead(ctx context.Context, d *schema.ResourceData, meta in
 			finalUsers := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
 				return source.(string) == item.(ccv2.User).GUID || strings.EqualFold(source.(string), item.(ccv2.User).Username)
 			})
-			d.Set(t, schema.NewSet(resourceStringHash, finalUsers))
+			_ = d.Set(t, schema.NewSet(resourceStringHash, finalUsers))
 		} else {
 			usersByUsername := intersectSlices(tfUsers, users, func(source, item interface{}) bool {
 				return strings.EqualFold(source.(string), item.(ccv2.User).Username)
 			})
 
-			d.Set(t, schema.NewSet(resourceStringHash, objectsToIds(users, func(object interface{}) string {
+			_ = d.Set(t, schema.NewSet(resourceStringHash, objectsToIds(users, func(object interface{}) string {
 				if isInSlice(usersByUsername, func(userByUsername interface{}) bool {
 					return strings.EqualFold(object.(ccv2.User).Username, userByUsername.(string))
 				}) {
@@ -131,7 +132,7 @@ func resourceSpaceUsersRead(ctx context.Context, d *schema.ResourceData, meta in
 	return nil
 }
 
-func resourceSpaceUsersUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceSpaceUsersUpdate(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	spaceId := d.Get("space").(string)
 	space, _, err := session.ClientV2.GetSpace(spaceId)
@@ -242,7 +243,7 @@ func addOrNothingUserInOrgBySpace(session *managers.Session, orgId, uaaidOrUsern
 	return updateOrgUserByRole(session, constant.OrgUser, orgId, uaaidOrUsername, byUsername)
 }
 
-func resourceSpaceUsersDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceSpaceUsersDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	spaceId := d.Get("space").(string)
 	session := meta.(*managers.Session)
 	for t, r := range typeToSpaceRoleMap {
