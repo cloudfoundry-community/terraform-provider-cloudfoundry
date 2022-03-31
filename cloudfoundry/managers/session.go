@@ -390,7 +390,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 func (s *Session) loadDeployer() {
 	s.RunBinder = appdeployers.NewRunBinder(s.ClientV2, s.NOAAClient)
 	stdStrategy := appdeployers.NewStandard(s.BitsManager, s.ClientV2, s.RunBinder)
-	bgStrategy := appdeployers.NewBlueGreenV2(s.BitsManager, s.ClientV2, s.RunBinder, stdStrategy)
+	bgStrategy := appdeployers.NewBlueGreenV2(s.BitsManager, s.ClientV2, s.RawClient, s.RunBinder, stdStrategy)
 	s.Deployer = appdeployers.NewDeployer(stdStrategy, bgStrategy)
 }
 
