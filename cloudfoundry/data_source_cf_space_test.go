@@ -1,10 +1,11 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"fmt"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -44,11 +45,11 @@ func TestAccDataSourceSpace_normal(t *testing.T) {
 
 	resource.ParallelTest(t,
 		resource.TestCase{
-			PreCheck:  func() { testAccPreCheck(t) },
+			PreCheck:          func() { testAccPreCheck(t) },
 			ProviderFactories: testAccProvidersFactories,
 			Steps: []resource.TestStep{
 
-				resource.TestStep{
+				{
 					Config: spaceDataResource1,
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceSpaceExists(ref1),
@@ -61,7 +62,7 @@ func TestAccDataSourceSpace_normal(t *testing.T) {
 					),
 				},
 
-				resource.TestStep{
+				{
 					Config: fmt.Sprintf(spaceDataResource2, spaceName, orgName),
 					Check: resource.ComposeTestCheckFunc(
 						checkDataSourceSpaceExists(ref2),
