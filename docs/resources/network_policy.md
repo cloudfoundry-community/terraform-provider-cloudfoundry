@@ -1,12 +1,12 @@
 ---
 layout: "cf"
-page_title: "Cloud Foundry: cf_network_policy"
+page_title: "Cloud Foundry: cloudfoundry_network_policy"
 sidebar_current: "docs-cf-resource-network-policy"
 description: |-
   Provides a Cloud Foundry Network Policy resource.
 ---
 
-# cf\_network\_policy
+# cloudfoundry\_network\_policy
 
 Provides a Cloud Foundry resource for managing Cloud Foundry network policies to manage
 access between applications via [container-to-container networking](https://docs.cloudfoundry.org/devguide/deploy-apps/cf-networking.html).
@@ -16,17 +16,17 @@ access between applications via [container-to-container networking](https://docs
 The following creates container to container access policy between the given applications.
 
 ```hcl
-resource "cf_network_policy" "my-policy" {
+resource "cloudfoundry_network_policy" "my-policy" {
 
     policy {
-        source_app = cf_app.app1.id
-        destination_app = cf_app.app2.id
+        source_app = cloudfoundry_app.app1.id
+        destination_app = cloudfoundry_app.app2.id
         port = "8080-8090"
     }
 
     policy {
-        source_app = cf_app.app1.id
-        destination_app = cf_app.app3.id
+        source_app = cloudfoundry_app.app1.id
+        destination_app = cloudfoundry_app.app3.id
         port = "9999"
         protocol = "udp"
     }
@@ -54,5 +54,5 @@ The following attributes are exported along with any defaults for the inputs att
 The current Network policy can be imported using the `network_policy`, e.g.
 
 ```bash
-terraform import cf_network_policy.my-policy a-guid
+terraform import cloudfoundry_network_policy.my-policy a-guid
 ```
