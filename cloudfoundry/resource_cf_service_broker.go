@@ -5,11 +5,12 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
@@ -36,33 +37,33 @@ func resourceServiceBroker() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 
-			"name": &schema.Schema{
+			"name": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"url": &schema.Schema{
+			"url": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"username": &schema.Schema{
+			"username": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"password": &schema.Schema{
+			"password": {
 				Type:      schema.TypeString,
 				Required:  true,
 				Sensitive: true,
 			},
-			"space": &schema.Schema{
+			"space": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
-			"service_plans": &schema.Schema{
+			"service_plans": {
 				Type:     schema.TypeMap,
 				Computed: true,
 			},
-			"services": &schema.Schema{
+			"services": {
 				Type:     schema.TypeMap,
 				Computed: true,
 			},
@@ -89,7 +90,7 @@ func resourceServiceBroker() *schema.Resource {
 	}
 }
 
-func resourceServiceBrokerCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceServiceBrokerCreate(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	// do as first to not try add broker if catalog not accessible
@@ -121,7 +122,7 @@ func resourceServiceBrokerCreate(ctx context.Context, d *schema.ResourceData, me
 	return nil
 }
 
-func resourceServiceBrokerRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceServiceBrokerRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	// do as first to not try add broker if catalog not accessible
@@ -143,10 +144,10 @@ func resourceServiceBrokerRead(ctx context.Context, d *schema.ResourceData, meta
 		return diag.FromErr(err)
 	}
 
-	d.Set("name", sb.Name)
-	d.Set("url", sb.BrokerURL)
-	d.Set("username", sb.AuthUsername)
-	d.Set("space", sb.SpaceGUID)
+	_ = d.Set("name", sb.Name)
+	_ = d.Set("url", sb.BrokerURL)
+	_ = d.Set("username", sb.AuthUsername)
+	_ = d.Set("space", sb.SpaceGUID)
 
 	err = metadataRead(serviceBrokerMetadata, d, meta, false)
 	if err != nil {
@@ -155,7 +156,7 @@ func resourceServiceBrokerRead(ctx context.Context, d *schema.ResourceData, meta
 	return nil
 }
 
-func resourceServiceBrokerUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceServiceBrokerUpdate(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
 	// do as first to not try add broker if catalog not accessible
@@ -187,7 +188,7 @@ func resourceServiceBrokerUpdate(ctx context.Context, d *schema.ResourceData, me
 	return nil
 }
 
-func resourceServiceBrokerDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceServiceBrokerDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	if !session.PurgeWhenDelete {
 		_, err := session.ClientV2.DeleteServiceBroker(d.Id())
@@ -232,8 +233,8 @@ func readServiceDetail(id string, session *managers.Session, d *schema.ResourceD
 			servicePlansTf[s.Label+"/"+sp.Name] = sp.GUID
 		}
 	}
-	d.Set("service_plans", servicePlansTf)
-	d.Set("services", servicesTf)
+	_ = d.Set("service_plans", servicePlansTf)
+	_ = d.Set("services", servicesTf)
 
 	return err
 }
@@ -263,20 +264,18 @@ func serviceBrokerUpdateCatalogSignature(d *schema.ResourceData, meta interface{
 		return nil
 	}
 	previousSignature := d.Get("catalog_hash")
-	d.Set("catalog_hash", signature)
+	_ = d.Set("catalog_hash", signature)
 	if d.IsNewResource() {
 		return nil
 	}
-	d.Set("catalog_change", previousSignature != signature)
+	_ = d.Set("catalog_change", previousSignature != signature)
 	return nil
 }
 
 func serviceBrokerCatalogSignature(d *schema.ResourceData, meta interface{}) (string, error) {
 	client := meta.(*managers.Session).HttpClient
 	catalogUrl := d.Get("url").(string)
-	if strings.HasSuffix(catalogUrl, "/") {
-		catalogUrl = strings.TrimSuffix(catalogUrl, "/")
-	}
+	catalogUrl = strings.TrimSuffix(catalogUrl, "/")
 	catalogUrl += catalogEndpoint
 	req, err := http.NewRequest("GET", catalogUrl, nil)
 	if err != nil {
@@ -288,7 +287,9 @@ func serviceBrokerCatalogSignature(d *schema.ResourceData, meta interface{}) (st
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

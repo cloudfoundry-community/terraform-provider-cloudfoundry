@@ -31,8 +31,8 @@ func RedactHeaders(header http.Header) http.Header {
 const tokenEndpoint = "token_endpoint"
 
 var keysToSanitize = regexp.MustCompile("(?i)token|password")
-var sanitizeURIParams = regexp.MustCompile(`([&?]password)=[A-Za-z0-9\-._~!$'()*+,;=:@/?]*`)
-var sanitizeURLPassword = regexp.MustCompile(`([\d\w]+):\/\/([^:]+):(?:[^@]+)@`)
+var sanitizeURIParams = regexp.MustCompile(`([&?]password)=[A-Za-z\d\-._~!$'()*+,;=:@/?]*`)
+var sanitizeURLPassword = regexp.MustCompile(`([\d\w]+)://([^:]+):[^@]+@`)
 
 func SanitizeJSON(raw []byte) ([]byte, error) {
 	var result interface{}
@@ -98,23 +98,23 @@ func NewRequestLogger() *RequestLogger {
 }
 
 func (display *RequestLogger) DisplayBody([]byte) error {
-	log.Print(fmt.Sprintf("%s\n", RedactedValue))
+	log.Printf("%s\n", RedactedValue)
 	return nil
 }
 
 func (display *RequestLogger) DisplayDump(dump string) error {
 	sanitized := display.dumpSanitizer.ReplaceAllString(dump, RedactedValue)
-	log.Print(fmt.Sprintf("%s\n", sanitized))
+	log.Printf("%s\n", sanitized)
 	return nil
 }
 
 func (display *RequestLogger) DisplayHeader(name string, value string) error {
-	log.Print(fmt.Sprintf("%s: %s\n", name, value))
+	log.Printf("%s: %s\n", name, value)
 	return nil
 }
 
 func (display *RequestLogger) DisplayHost(name string) error {
-	log.Print(fmt.Sprintf("host: %s\n", name))
+	log.Printf("host: %s\n", name)
 	return nil
 }
 
@@ -125,27 +125,27 @@ func (display *RequestLogger) DisplayJSONBody(body []byte) error {
 
 	sanitized, err := SanitizeJSON(body)
 	if err != nil {
-		log.Print(fmt.Sprintf("%s\n", string(body)))
+		log.Printf("%s\n", string(body))
 		return nil
 	}
 
-	log.Print(fmt.Sprintf("%s\n", string(sanitized)))
+	log.Printf("%s\n", string(sanitized))
 
 	return nil
 }
 
 func (display *RequestLogger) DisplayMessage(msg string) error {
-	log.Print(fmt.Sprintf("%s\n", msg))
+	log.Printf("%s\n", msg)
 	return nil
 }
 
 func (display *RequestLogger) DisplayRequestHeader(method string, uri string, httpProtocol string) error {
-	log.Print(fmt.Sprintf("%s %s %s\n", method, uri, httpProtocol))
+	log.Printf("%s %s %s\n", method, uri, httpProtocol)
 	return nil
 }
 
 func (display *RequestLogger) DisplayResponseHeader(httpProtocol string, status string) error {
-	log.Print(fmt.Sprintf("%s %s\n", httpProtocol, status))
+	log.Printf("%s %s\n", httpProtocol, status)
 	return nil
 }
 
