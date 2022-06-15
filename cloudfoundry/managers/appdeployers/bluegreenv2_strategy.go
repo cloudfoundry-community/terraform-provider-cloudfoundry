@@ -112,15 +112,12 @@ func (s BlueGreenV2) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 			Forward: func(ctx Context) (Context, error) {
 				// Ask CF to stop application (desired state)
 				_, _, err := s.clientV3.UpdateApplicationStop(appDeploy.App.GUID)
-				log.Print("Asked application to stop")
-				// time.Sleep(45 * time.Second)
 				return ctx, err
 			},
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
 				// Ensure application is stopped before continuing (timeout 10 sec)
-				log.Print("Ensuring application is stopped before continuing...")
 				channelIsStopped := make(chan bool, 1)
 				channelError := make(chan error, 1)
 				var err error
@@ -137,7 +134,6 @@ func (s BlueGreenV2) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 
 				select {
 				case <-channelIsStopped:
-					log.Print("Application and attached processes successfully stopped")
 				case <-time.After(stopAppTimeout * time.Second):
 					log.Print("Timeout of 10 seconds reach to stop application. Cloud Foundry sent SIGKILL to ensure application is down")
 				case <-channelError:
