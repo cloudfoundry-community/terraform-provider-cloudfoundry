@@ -38,7 +38,7 @@ type metadata struct {
 
 const (
 	appMetadata          metadataType  = "apps"
-	stopAppTimeout       time.Duration = 10
+	stopAppTimeout       time.Duration = 15
 	delayBetweenRequests time.Duration = 1
 )
 
@@ -117,7 +117,7 @@ func (s BlueGreenV2) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				// Ensure application is stopped before continuing (timeout 10 sec)
+				// Ensure application is stopped before continuing
 				channelIsStopped := make(chan bool, 1)
 				channelError := make(chan error, 1)
 				var err error
@@ -135,10 +135,10 @@ func (s BlueGreenV2) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				select {
 				case <-channelIsStopped:
 				case <-time.After(stopAppTimeout * time.Second):
-					log.Print("Timeout of 10 seconds reach to stop application. Cloud Foundry sent SIGKILL to ensure application is down")
+					// App is not in expected state (stopped) after waiting for the timeout
+					log.Print("Timeout reached while waiting for application to stop. Cloud Foundry sent SIGKILL to ensure application is down")
 				case <-channelError:
-					log.Printf("An error occured when asking for application state. Waiting %d seconds to ensure Cloud Foundry sends a SIGKILL to shutdown the application", int64(stopAppTimeout))
-					time.Sleep(stopAppTimeout * time.Second)
+					return ctx, err
 				}
 
 				return ctx, err
@@ -363,9 +363,9 @@ func pathMetadata(t metadataType, appGuid string) string {
 }
 
 // Check the app subprocesses state to ensure it is really down.
-// Note: when you ask CF to stop an app, it tries to stop it gracefully, but after a timeout of 10 sec, it sends a SIGKILL
+// Note: when you ask CF to stop an app, it tries to stop it gracefully, but after a timeout, it sends a SIGKILL
 func isAppStopped(clientV3 *ccv3.Client, appGUID string) (bool, error) {
-	isStopped := true
+	isStopped := false
 	processes, _, err := clientV3.GetApplicationProcesses(appGUID)
 
 	if err == nil {
@@ -373,8 +373,11 @@ func isAppStopped(clientV3 *ccv3.Client, appGUID string) (bool, error) {
 			processInstances, _, err := clientV3.GetProcessInstances(process.GUID)
 			if err == nil {
 				for _, processInstance := range processInstances {
-					if processInstance.State != constantV3.ProcessInstanceDown {
-						isStopped = false
+					if processInstance.State == constantV3.ProcessInstanceDown {
+						isStopped = true
+					} else if processInstance.State == constantV3.ProcessInstanceCrashed {
+						isStopped = true
+						log.Print("Process with GUID" + process.GUID + " has crashed. Considered stopped and proceeding with BlueGreen...")
 					}
 				}
 			} else {
