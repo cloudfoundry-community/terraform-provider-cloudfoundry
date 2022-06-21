@@ -38,7 +38,7 @@ type metadata struct {
 
 const (
 	appMetadata          metadataType  = "apps"
-	stopAppTimeout       time.Duration = 15
+	stopAppTimeout       time.Duration = 15 // CF SHOULD send a SIGKILL if an app is not stopped after 10 seconds
 	delayBetweenRequests time.Duration = 1
 )
 
@@ -136,7 +136,7 @@ func (s BlueGreenV2) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				case <-channelIsStopped:
 				case <-time.After(stopAppTimeout * time.Second):
 					// App is not in expected state (stopped) after waiting for the timeout
-					log.Print("Timeout reached while waiting for application to stop. Cloud Foundry sent SIGKILL to ensure application is down")
+					log.Print("Timeout of reached while waiting for application to stop.")
 				case <-channelError:
 					return ctx, err
 				}
