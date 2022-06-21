@@ -136,7 +136,7 @@ func (s BlueGreenV2) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				case <-channelIsStopped:
 				case <-time.After(stopAppTimeout * time.Second):
 					// App is not in expected state (stopped) after waiting for the timeout
-					log.Print("Timeout of reached while waiting for application to stop.")
+					log.Print("Timeout reached while waiting for application to stop.")
 				case <-channelError:
 					return ctx, err
 				}
