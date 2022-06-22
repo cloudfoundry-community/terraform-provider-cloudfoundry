@@ -4,10 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	constantV3 "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/bits"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
 )
@@ -15,6 +19,7 @@ import (
 type BlueGreenV2 struct {
 	bitsManager *bits.BitsManager
 	client      *ccv2.Client
+	clientV3    *ccv3.Client
 	rawClient   *raw.RawClient
 	runBinder   *RunBinder
 	standard    *Standard
@@ -32,13 +37,16 @@ type metadata struct {
 }
 
 const (
-	appMetadata metadataType = "apps"
+	appMetadata          metadataType  = "apps"
+	stopAppTimeout       time.Duration = 15 // CF SHOULD send a SIGKILL if an app is not stopped after 10 seconds
+	delayBetweenRequests time.Duration = 1
 )
 
-func NewBlueGreenV2(bitsManager *bits.BitsManager, client *ccv2.Client, rawClient *raw.RawClient, runBinder *RunBinder, standard *Standard) *BlueGreenV2 {
+func NewBlueGreenV2(bitsManager *bits.BitsManager, client *ccv2.Client, clientV3 *ccv3.Client, rawClient *raw.RawClient, runBinder *RunBinder, standard *Standard) *BlueGreenV2 {
 	return &BlueGreenV2{
 		bitsManager: bitsManager,
 		client:      client,
+		clientV3:    clientV3,
 		rawClient:   rawClient,
 		runBinder:   runBinder,
 		standard:    standard,
@@ -98,6 +106,42 @@ func (s BlueGreenV2) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					_ = metadataUpdate(appResp.App.GUID, appMetadata, s.rawClient, metadata)
 				}
 				return ctx, nil
+			},
+		},
+		{
+			Forward: func(ctx Context) (Context, error) {
+				// Ask CF to stop application (desired state)
+				_, _, err := s.clientV3.UpdateApplicationStop(appDeploy.App.GUID)
+				return ctx, err
+			},
+		},
+		{
+			Forward: func(ctx Context) (Context, error) {
+				// Ensure application is stopped before continuing
+				channelIsStopped := make(chan bool, 1)
+				channelError := make(chan error, 1)
+				var err error
+
+				go func() {
+					isStopped := false
+					for !isStopped {
+						isStopped, err = isAppStopped(s.clientV3, appDeploy.App.GUID)
+						time.Sleep(delayBetweenRequests * time.Second)
+					}
+					channelIsStopped <- isStopped
+					channelError <- err
+				}()
+
+				select {
+				case <-channelIsStopped:
+				case <-time.After(stopAppTimeout * time.Second):
+					// App is not in expected state (stopped) after waiting for the timeout
+					log.Print("Timeout reached while waiting for application to stop.")
+				case <-channelError:
+					return ctx, err
+				}
+
+				return ctx, err
 			},
 		},
 		{
@@ -316,4 +360,31 @@ func metadataRetrieve(appGuid string, t metadataType, client *raw.RawClient) (me
 
 func pathMetadata(t metadataType, appGuid string) string {
 	return fmt.Sprintf("/v3/%s/%s", t, appGuid)
+}
+
+// Check the app subprocesses state to ensure it is really down.
+// Note: when you ask CF to stop an app, it tries to stop it gracefully, but after a timeout, it sends a SIGKILL
+func isAppStopped(clientV3 *ccv3.Client, appGUID string) (bool, error) {
+	isStopped := false
+	processes, _, err := clientV3.GetApplicationProcesses(appGUID)
+
+	if err == nil {
+		for _, process := range processes {
+			processInstances, _, err := clientV3.GetProcessInstances(process.GUID)
+			if err == nil {
+				for _, processInstance := range processInstances {
+					if processInstance.State == constantV3.ProcessInstanceDown {
+						isStopped = true
+					} else if processInstance.State == constantV3.ProcessInstanceCrashed {
+						isStopped = true
+						log.Print("Process with GUID" + process.GUID + " has crashed. Considered stopped and proceeding with BlueGreen...")
+					}
+				}
+			} else {
+				break
+			}
+		}
+	}
+
+	return isStopped, err
 }
