@@ -3,15 +3,16 @@ package cloudfoundry
 import (
 	"context"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	uuid "github.com/satori/go.uuid"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
+	resources "code.cloudfoundry.org/cli/resources"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	uuid "github.com/satori/go.uuid"
 )
 
-func dataSourceApp() *schema.Resource {
+func dataSourceAppV3() *schema.Resource {
 
 	return &schema.Resource{
 
@@ -86,7 +87,7 @@ func dataSourceApp() *schema.Resource {
 	}
 }
 
-func dataSourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceAppV3Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
@@ -94,18 +95,28 @@ func dataSourceAppRead(ctx context.Context, d *schema.ResourceData, meta interfa
 	}
 
 	var (
-		nameOrId string
+		nameOrID string
 		space    string
-		app      ccv2.Application
+		app      resources.Application
 		err      error
 	)
 
-	nameOrId = d.Get("name_or_id").(string)
+	nameOrID = d.Get("name_or_id").(string)
 	space = d.Get("space").(string)
 
-	isUUID := uuid.FromStringOrNil(nameOrId)
+	nameQuery := ccv3.Query{
+		Key:    ccv3.NameFilter,
+		Values: []string{nameOrID},
+	}
+	spaceQuery := ccv3.Query{
+		Key:    ccv3.SpaceGUIDFilter,
+		Values: []string{space},
+	}
+
+	isUUID := uuid.FromStringOrNil(nameOrID)
 	if uuid.Equal(isUUID, uuid.Nil) {
-		apps, _, err := session.ClientV2.GetApplications(ccv2.FilterByName(nameOrId), ccv2.FilterBySpace(space))
+
+		apps, _, err := session.ClientV3.GetApplications(nameQuery, spaceQuery)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -114,27 +125,49 @@ func dataSourceAppRead(ctx context.Context, d *schema.ResourceData, meta interfa
 		}
 		app = apps[0]
 	} else {
-		app, _, err = session.ClientV2.GetApplication(nameOrId)
+		apps, _, err := session.ClientV3.GetApplications(nameQuery, spaceQuery)
 		if err != nil {
 			return diag.FromErr(err)
 		}
+		app = apps[0]
 	}
+
+	guid := app.GUID
 
 	d.SetId(app.GUID)
 	d.Set("name", app.Name)
 	d.Set("space", app.SpaceGUID)
-	d.Set("instances", app.Instances.Value)
-	d.Set("memory", app.Memory.Value)
-	d.Set("disk_quota", app.DiskQuota.Value)
-	d.Set("stack", app.StackGUID)
-	d.Set("buildpack", app.Buildpack.Value)
-	d.Set("command", app.Command.Value)
-	d.Set("enable_ssh", app.EnableSSH.Value)
-	d.Set("environment", app.EnvironmentVariables)
+	d.Set("buildpack", app.LifecycleBuildpacks[0])
+	// In v3 the following information are kept in separate endpoints.
+	// Process
+	appProcesses, _, err := session.ClientV3.GetApplicationProcesses(guid)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	appProcess := appProcesses[0]
+	d.Set("instances", appProcess.Instances.Value)
+	d.Set("memory", appProcess.MemoryInMB.Value)
+	d.Set("disk_quota", appProcess.DiskInMB.Value)
+	d.Set("stack", app.StackName)
+	d.Set("command", appProcess.Command.Value)
+
+	// Check for sshEnabled feature
+	sshEnabled, _, err := session.ClientV3.GetAppFeature(guid, "ssh")
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.Set("enable_ssh", sshEnabled.Enabled)
+
+	// Environment
+	appEnvironment, _, err := session.ClientV3.GetApplicationEnvironment(guid)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.Set("environment", appEnvironment.EnvironmentVariables)
 	d.Set("state", app.State)
-	d.Set("health_check_http_endpoint", app.HealthCheckHTTPEndpoint)
-	d.Set("health_check_type", app.HealthCheckType)
-	d.Set("health_check_timeout", app.HealthCheckTimeout)
+	d.Set("health_check_http_endpoint", appProcess.HealthCheckEndpoint)
+	d.Set("health_check_type", appProcess.HealthCheckType)
+	d.Set("health_check_timeout", appProcess.HealthCheckTimeout)
 
 	err = metadataRead(appMetadata, d, meta, true)
 	if err != nil {
