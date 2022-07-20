@@ -185,7 +185,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 		return translatableerror.AuthorizationEndpointNotFoundError{}
 	}
 
-	_, err = ccClientV3.TargetCF(ccv3.TargetSettings{
+	_, _, err = ccClientV3.TargetCF(ccv3.TargetSettings{
 		URL:               config.Target(),
 		SkipSSLValidation: config.SkipSSLValidation(),
 		DialTimeout:       config.DialTimeout(),
