@@ -1,5 +1,10 @@
 # Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry)
 
+# Specific to v3 migration
+Alias to fetch cli from github.wdf.sap.corp and build 
+```shell
+make local-install
+```
 
 Overview
 --------
