@@ -5,6 +5,11 @@ PKG_NAME=cloudfoundry
 
 default: build
 
+get:
+	export GOPRIVATE=github.wdf.sap.corp
+	go get
+	go mod tidy
+
 release:
 	rm -fr bin
 	mkdir -p bin
