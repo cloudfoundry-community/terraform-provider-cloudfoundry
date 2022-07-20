@@ -43,7 +43,7 @@ test-compile:
 	fi
 	go test -c $(TEST) $(TESTARGS)
 
-local-install:
+local-install: get
 	go build
 	cp terraform-provider-cloudfoundry ~/.terraform.d/plugins/linux_amd64/terraform-provider-cloudfoundry
 
