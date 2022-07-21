@@ -38,3 +38,6 @@ website/vendor
 # Test exclusions
 !command/test-fixtures/**/*.tfstate
 !command/test-fixtures/**/.terraform/
+
+# cf access token
+**/tokens.txt
