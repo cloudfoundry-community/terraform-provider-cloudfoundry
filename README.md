@@ -15,7 +15,7 @@ provider "cloudfoundry" {
 }
 ```
 
-*! It's important that you run `make clean` after your tests to remove the configs in ~/.terraformrc *
+**! It's important that you run `make clean` after your tests to remove the configs in ~/.terraformrc **
 
 ## No overriding ~/.terraformrc
 If you have some configs in ~/.terraformrc that you don't want to lose, you can run `make local-build-only` and manually configure ~/.terraformrc by adding this dev_override
@@ -29,6 +29,7 @@ provider_installation {
   direct {}
 }
 ```
+After you can run tf scripts as mentioned above.
 
 Overview
 --------
