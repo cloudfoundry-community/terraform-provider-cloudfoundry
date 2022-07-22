@@ -1,6 +1,8 @@
 # Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry)
 
 # Specific to v3 migration
+You don't need to do any setup except for installing the latest version of go.
+
 ## Override with ~/.terraformrc
 If you don't have anything in ~/.terraformrc you can simply run `make local-install` to build, install and configure dev_override for the provider
 ```shell
