@@ -5,8 +5,8 @@ You don't need to do any setup except for installing the latest version of go. I
 
 ## API docs
 It is very important to read both v3 and v2 api docs to see the differences between the two.
-v3 api docs: http://v3-apidocs.cloudfoundry.org/version/3.122.0/
-v2 api docs: https://apidocs.cloudfoundry.org/16.22.0/
+- v3 api docs: http://v3-apidocs.cloudfoundry.org/version/3.122.0/
+- v2 api docs: https://apidocs.cloudfoundry.org/16.22.0/
 
 ## Override with ~/.terraformrc
 If you don't have anything in ~/.terraformrc you can simply run `make local-install` to build, install and configure dev_override for the provider
