@@ -48,6 +48,12 @@ local-install: get
 	cp terraform-provider-cloudfoundry ~/.terraform.d/plugins/linux_amd64/terraform-provider-cloudfoundry
 	./scripts/create_dev_override.sh
 
+build-only: get
+	go build
+
+windows-install: build-only
+	powershell -File scripts\create_dev_override.ps1
+
 local-build-only: get
 	go build
 	cp terraform-provider-cloudfoundry ~/.terraform.d/plugins/linux_amd64/terraform-provider-cloudfoundry
