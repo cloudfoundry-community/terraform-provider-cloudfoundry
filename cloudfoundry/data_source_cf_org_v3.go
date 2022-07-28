@@ -14,7 +14,7 @@ func dataSourceOrgV3() *schema.Resource {
 
 	return &schema.Resource{
 
-		ReadContext: dataSourceOrgReadV3,
+		ReadContext: dataSourceOrgV3Read,
 
 		Schema: map[string]*schema.Schema{
 
@@ -28,7 +28,7 @@ func dataSourceOrgV3() *schema.Resource {
 	}
 }
 
-func dataSourceOrgReadV3(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceOrgV3Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
@@ -41,6 +41,7 @@ func dataSourceOrgReadV3(ctx context.Context, d *schema.ResourceData, meta inter
 		Key:    "names",
 		Values: []string{name},
 	})
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -48,6 +49,10 @@ func dataSourceOrgReadV3(ctx context.Context, d *schema.ResourceData, meta inter
 	if len(orgs) == 0 {
 		return diag.FromErr(NotFound)
 	}
+	if len(orgs) != 1 {
+		return diag.Errorf("Found more than one org")
+	}
+
 	d.SetId(orgs[0].GUID)
 
 	err = metadataRead(orgMetadata, d, meta, true)
