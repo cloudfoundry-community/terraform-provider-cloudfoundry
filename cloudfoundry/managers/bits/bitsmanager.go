@@ -321,11 +321,32 @@ func (m BitsManager) RetrieveZip(path string) (ZipFile, error) {
 				baseName = params["filename"]
 			}
 		}
-		return ZipFile{
-			r:        resp.Body,
-			baseName: baseName,
-			filesize: fileSize,
-		}, nil
+		if fileSize > 0 {
+			return ZipFile{
+				r:        resp.Body,
+				baseName: baseName,
+				filesize: fileSize,
+			}, nil
+		} else {
+			tempFile, err := ioutil.TempFile("", "")
+			if err != nil {
+				return ZipFile{}, err
+			}
+			defer os.Remove(tempFile.Name())
+			fileSize, err := io.Copy(tempFile, resp.Body)
+			if err != nil {
+				return ZipFile{}, err
+			}
+			_, err = tempFile.Seek(0, 0)
+			if err != nil {
+				return ZipFile{}, err
+			}
+			return ZipFile{
+				r:        tempFile,
+				baseName: baseName,
+				filesize: fileSize,
+			}, nil
+		}
 	}
 	f, err := os.Open(path)
 	if err != nil {
