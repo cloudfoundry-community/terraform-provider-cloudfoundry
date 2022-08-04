@@ -98,7 +98,7 @@ func Provider() *schema.Provider {
 			"cloudfoundry_router_group":          dataSourceRouterGroup(),
 			"cloudfoundry_user":                  dataSourceUser(),
 			"cloudfoundry_domain":                dataSourceDomain(),
-			"cloudfoundry_domain_v3": 						dataSourceDomainV3(),
+			"cloudfoundry_domain_v3": 	      dataSourceDomainV3(),
 			"cloudfoundry_route":                 dataSourceRoute(),
 			"cloudfoundry_asg":                   dataSourceAsg(),
 			"cloudfoundry_org":                   dataSourceOrg(),
