@@ -95,6 +95,7 @@ func Provider() *schema.Provider {
 		DataSourcesMap: map[string]*schema.Resource{
 			"cloudfoundry_info":                  dataSourceInfo(),
 			"cloudfoundry_stack":                 dataSourceStack(),
+			"cloudfoundry_stack_v3":              dataSourceStackV3(),
 			"cloudfoundry_router_group":          dataSourceRouterGroup(),
 			"cloudfoundry_user":                  dataSourceUser(),
 			"cloudfoundry_domain":                dataSourceDomain(),
