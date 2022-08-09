@@ -110,6 +110,7 @@ func Provider() *schema.Provider {
 			"cloudfoundry_user_provided_service": dataSourceUserProvidedService(),
 			"cloudfoundry_service_key":           dataSourceServiceKey(),
 			"cloudfoundry_service":               dataSourceService(),
+			"cloudfoundry_service_offering_v3":   dataSourceServiceOfferingV3(),
 			"cloudfoundry_app":                   dataSourceApp(),
 			"cloudfoundry_app_v3":                dataSourceAppV3(),
 		},
