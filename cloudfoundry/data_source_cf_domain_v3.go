@@ -15,7 +15,7 @@ func dataSourceDomainV3() *schema.Resource {
 
 	return &schema.Resource{
 
-		ReadContext: dataSourceDomainRead,
+		ReadContext: dataSourceDomainV3Read,
 
 		Schema: map[string]*schema.Schema{
 
