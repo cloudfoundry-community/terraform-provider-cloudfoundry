@@ -452,8 +452,8 @@ github.com/zclconf/go-cty v1.8.0/go.mod h1:vVKLxnk3puL4qRAv72AO+W99LUD4da90g3uUA
 github.com/zclconf/go-cty v1.10.0 h1:mp9ZXQeIcN8kAwuqorjH+Q+njbJKjLrvB2yIh4q7U+0=
 github.com/zclconf/go-cty v1.10.0/go.mod h1:vVKLxnk3puL4qRAv72AO+W99LUD4da90g3uUAzyuvAk=
 github.com/zclconf/go-cty-debug v0.0.0-20191215020915-b22d67c1ba0b/go.mod h1:ZRKQfBXbGkpdV6QMzT3rU1kSTAnfu1dO8dPKjYprgj8=
-github.wdf.sap.corp/I564552/cloudfoundry-cli v1.18.0-only-api h1:nApujisXoSOkAi1Of61jfyGGZpUWXQV+LKZFyYod2tI=
-github.wdf.sap.corp/I564552/cloudfoundry-cli v1.18.0-only-api/go.mod h1:pjxp3NDmCy28xoBDtvrtoP8V1ReER3X0K1SSfnj5Dgw=
+github.wdf.sap.corp/intelligent-rpa/cloudfoundry-cli v1.18.0-only-api h1:b+AaDXpKp1HbEfnMhRVR5DT1eN504b0Wom3Na90Lpkg=
+github.wdf.sap.corp/intelligent-rpa/cloudfoundry-cli v1.18.0-only-api/go.mod h1:pjxp3NDmCy28xoBDtvrtoP8V1ReER3X0K1SSfnj5Dgw=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=
 go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqeYNgFYFoEGnI=

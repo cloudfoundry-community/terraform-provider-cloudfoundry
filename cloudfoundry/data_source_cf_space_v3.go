@@ -97,7 +97,7 @@ func dataSourceSpaceV3Read(ctx context.Context, d *schema.ResourceData, meta int
 	d.SetId(space.GUID)
 	d.Set("org_name", orgName)
 	d.Set("org", orgId)
-	d.Set("quota", space.Relationships["quota"])
+	d.Set("quota", space.Relationships["quota"].GUID)
 
 	err = metadataRead(spaceMetadata, d, meta, true)
 	if err != nil {

@@ -37,6 +37,6 @@ output "space_test_output" {
   value = data.cloudfoundry_space.s
 }
 
-output "space_test_output" {
+output "space_test_v3_output" {
   value = data.cloudfoundry_space_v3.space_test
 }
