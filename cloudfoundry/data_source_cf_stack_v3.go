@@ -10,11 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func dataSourceOrgV3() *schema.Resource {
+func dataSourceStackV3() *schema.Resource {
 
 	return &schema.Resource{
 
-		ReadContext: dataSourceOrgV3Read,
+		ReadContext: dataSourceStackV3Read,
 
 		Schema: map[string]*schema.Schema{
 
@@ -22,40 +22,40 @@ func dataSourceOrgV3() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"description": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			labelsKey:      labelsSchema(),
 			annotationsKey: annotationsSchema(),
 		},
 	}
 }
 
-func dataSourceOrgV3Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceStackV3Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	session := meta.(*managers.Session)
 	if session == nil {
 		return diag.Errorf("client is nil")
 	}
 
-	name := d.Get("name").(string)
+	sm := session.ClientV3
 
-	orgs, _, err := session.ClientV3.GetOrganizations(ccv3.Query{
-		Key:    "names",
-		Values: []string{name},
-	})
+	query := ccv3.Query{
+		Key:    ccv3.NameFilter,
+		Values: []string{d.Get("name").(string)},
+	}
 
+	stacks, _, err := sm.GetStacks(query)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	if len(orgs) == 0 {
+	if len(stacks) == 0 {
 		return diag.FromErr(NotFound)
 	}
-	if len(orgs) != 1 {
-		return diag.Errorf("Found more than one org")
-	}
-
-	d.SetId(orgs[0].GUID)
-
-	err = metadataRead(orgMetadata, d, meta, true)
+	d.SetId(stacks[0].GUID)
+	d.Set("description", stacks[0].Description)
+	err = metadataRead(stackMetadata, d, meta, true)
 	if err != nil {
 		return diag.FromErr(err)
 	}
