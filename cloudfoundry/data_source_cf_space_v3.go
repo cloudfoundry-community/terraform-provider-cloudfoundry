@@ -14,7 +14,7 @@ func dataSourceSpaceV3() *schema.Resource {
 
 	return &schema.Resource{
 
-		ReadContext: dataSourceSpaceRead,
+		ReadContext: dataSourceSpaceV3Read,
 
 		Schema: map[string]*schema.Schema{
 
