@@ -79,28 +79,28 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 			},
 			ReversePrevious: defaultReverse,
 		},
-		// {
-		// 	Forward: func(ctx Context) (Context, error) {
-		// 		appResp := ctx["app_response"].(AppDeployResponse)
-		// 		bindings, err := s.runBinder.BindServiceInstances(AppDeploy{
-		// 			App:             appResp.App,
-		// 			ServiceBindings: appDeploy.ServiceBindings,
-		// 			StageTimeout:    appDeploy.StageTimeout,
-		// 			BindTimeout:     appDeploy.BindTimeout,
-		// 			StartTimeout:    appDeploy.StartTimeout,
-		// 		})
-		// 		if err != nil {
-		// 			return ctx, err
-		// 		}
-		// 		ctx["app_response"] = AppDeployResponse{
-		// 			App:             appResp.App,
-		// 			Mappings:        appResp.Mappings,
-		// 			ServiceBindings: bindings,
-		// 		}
-		// 		return ctx, nil
-		// 	},
-		// 	ReversePrevious: defaultReverse,
-		// },
+		{
+			Forward: func(ctx Context) (Context, error) {
+				appResp := ctx["app_response"].(AppDeployResponse)
+				bindings, err := s.runBinder.BindServiceInstances(AppDeploy{
+					App:             appResp.App,
+					ServiceBindings: appDeploy.ServiceBindings,
+					StageTimeout:    appDeploy.StageTimeout,
+					BindTimeout:     appDeploy.BindTimeout,
+					StartTimeout:    appDeploy.StartTimeout,
+				})
+				if err != nil {
+					return ctx, err
+				}
+				ctx["app_response"] = AppDeployResponse{
+					App:             appResp.App,
+					Mappings:        appResp.Mappings,
+					ServiceBindings: bindings,
+				}
+				return ctx, nil
+			},
+			ReversePrevious: defaultReverse,
+		},
 		{
 			Forward: func(ctx Context) (Context, error) {
 				if appDeploy.Path == "" {

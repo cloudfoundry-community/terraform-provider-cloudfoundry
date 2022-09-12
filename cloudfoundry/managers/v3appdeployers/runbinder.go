@@ -99,50 +99,67 @@ func (r RunBinder) bindingExists(appGUID string, binding resources.ServiceCreden
 	return len(bindings) > 0, nil
 }
 
-// func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]ccv2.ServiceBinding, error) {
-// 	bindings := make([]ccv2.ServiceBinding, 0)
-// 	appGuid := appDeploy.App.GUID
-// 	for _, binding := range appDeploy.ServiceBindings {
-// 		exists, err := r.bindingExists(appGuid, binding)
-// 		if err != nil {
-// 			return bindings, err
-// 		}
-// 		if exists {
-// 			bindings = append(bindings, binding)
-// 			continue
-// 		}
-// 		binding, _, err := r.client.CreateServiceBinding(appGuid, binding.ServiceInstanceGUID, binding.Name, true, binding.Parameters)
-// 		if err != nil {
-// 			return bindings, err
-// 		}
-// 		bindings = append(bindings, binding)
-// 		if binding.LastOperation.State == constant.LastOperationSucceeded {
-// 			continue
-// 		}
-// 		err = common.PollingWithTimeout(func() (bool, error) {
-// 			binding, _, err := r.client.GetServiceBinding(binding.GUID)
-// 			if err != nil {
-// 				return true, err
-// 			}
-// 			if binding.LastOperation.State == constant.LastOperationSucceeded {
-// 				return true, nil
-// 			}
-// 			if binding.LastOperation.State == constant.LastOperationFailed {
-// 				return true, fmt.Errorf(
-// 					"Binding %s failed for app %s, reason: %s",
-// 					binding.Name,
-// 					appDeploy.App.Name,
-// 					binding.LastOperation.Description,
-// 				)
-// 			}
-// 			return false, nil
-// 		}, 5*time.Second, appDeploy.BindTimeout)
-// 		if err != nil {
-// 			return bindings, err
-// 		}
-// 	}
-// 	return bindings, nil
-// }
+// BindServiceInstances creates service credential bindings resources for each definied service bindings in terrafrom
+func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.ServiceCredentialBinding, error) {
+	bindings := make([]resources.ServiceCredentialBinding, 0)
+	appGUID := appDeploy.App.GUID
+	for _, binding := range appDeploy.ServiceBindings {
+		exists, err := r.bindingExists(appGUID, binding)
+		if err != nil {
+			return bindings, err
+		}
+		if exists {
+			bindings = append(bindings, binding)
+			continue
+		}
+		jobURL, _, err := r.client.CreateServiceCredentialBinding(binding)
+		if err != nil {
+			return bindings, err
+		}
+
+		err = common.PollingWithTimeout(func() (bool, error) {
+			job, _, err := r.client.GetJob(jobURL)
+			if err != nil {
+				return true, err
+			}
+			if job.State == constant.JobComplete {
+				bindings, _, err := r.client.GetServiceCredentialBindings(
+					ccv3.Query{
+						Key:    ccv3.QueryKey("service_instance_guids"),
+						Values: []string{binding.ServiceInstanceGUID},
+					}, ccv3.Query{
+						Key:    ccv3.AppGUIDFilter,
+						Values: []string{appGUID},
+					},
+				)
+				if err != nil {
+					return true, err
+				}
+				bindings = append(bindings, binding)
+
+				if binding.LastOperation.State == resources.OperationSucceeded {
+					return true, nil
+				}
+
+				if binding.LastOperation.State == resources.OperationFailed {
+					return true, fmt.Errorf(
+						"Binding %s failed for app %s, reason: %s",
+						binding.Name,
+						appDeploy.App.Name,
+						binding.LastOperation.Description,
+					)
+				}
+				return false, nil
+			}
+			return false, nil
+		}, 5*time.Second, appDeploy.BindTimeout)
+
+		if err != nil {
+			return bindings, err
+		}
+	}
+	return bindings, nil
+}
 
 // WaitStart checks the state of each process instance
 func (r RunBinder) WaitStart(appDeploy AppDeploy) error {
