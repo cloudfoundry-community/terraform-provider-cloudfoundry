@@ -83,16 +83,21 @@ func (r RunBinder) mappingExists(appGUID string, curMapping resources.Route) (bo
 	return false, nil
 }
 
-// func (r RunBinder) bindingExists(appGuid string, binding ccv2.ServiceBinding) (bool, error) {
-// 	bindings, _, err := r.client.GetServiceBindings(
-// 		ccv2.FilterEqual(constant.ServiceInstanceGUIDFilter, binding.ServiceInstanceGUID),
-// 		ccv2.FilterEqual(constant.AppGUIDFilter, appGuid),
-// 	)
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	return len(bindings) > 0, nil
-// }
+func (r RunBinder) bindingExists(appGUID string, binding resources.ServiceCredentialBinding) (bool, error) {
+	bindings, _, err := r.client.GetServiceCredentialBindings(
+		ccv3.Query{
+			Key:    ccv3.QueryKey("service_instance_guids"),
+			Values: []string{binding.ServiceInstanceGUID},
+		}, ccv3.Query{
+			Key:    ccv3.AppGUIDFilter,
+			Values: []string{appGUID},
+		},
+	)
+	if err != nil {
+		return false, err
+	}
+	return len(bindings) > 0, nil
+}
 
 // func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]ccv2.ServiceBinding, error) {
 // 	bindings := make([]ccv2.ServiceBinding, 0)
