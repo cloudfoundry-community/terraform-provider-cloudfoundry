@@ -38,6 +38,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 		HealthCheckTimeout:      uint64(d.Get("health_check_timeout").(int)),
 		SpaceGUID:               d.Get("space").(string),
 	}
+
 	if d.Get("stopped").(bool) {
 		app.State = constant.ApplicationStopped
 	}
