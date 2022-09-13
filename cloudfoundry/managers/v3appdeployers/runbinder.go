@@ -138,7 +138,7 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.Servic
 				bindings = append(bindings, binding)
 
 				if binding.LastOperation.State == resources.OperationSucceeded {
-					return true, nil
+					return false, nil
 				}
 
 				if binding.LastOperation.State == resources.OperationFailed {
@@ -223,18 +223,84 @@ func (r RunBinder) WaitStaging(appDeploy AppDeploy) error {
 	return nil
 }
 
+// Start performs staging of the most recent ready package, update the app's current droplet and start the application
+// http://v3-apidocs.cloudfoundry.org/version/3.124.0/#starting-apps
 func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
-	_, _, err := r.client.UpdateApplication(resources.Application{
+
+	// Get newest READY package for an app
+	packages, _, err := r.client.GetPackages(ccv3.Query{
+		Key:    ccv3.AppGUIDFilter,
+		Values: []string{appDeploy.App.GUID},
+	}, ccv3.Query{
+		Key:    ccv3.StatesFilter,
+		Values: []string{"READY"},
+	}, ccv3.Query{
+		Key:    ccv3.OrderBy,
+		Values: []string{"-created_at"},
+	})
+	if err != nil {
+		return resources.Application{}, err
+	}
+	if len(packages) < 1 {
+		return resources.Application{}, fmt.Errorf("No READY package found")
+	}
+	packageGUID := packages[0].GUID
+
+	// Check for package droplets
+	var dropletGUID string
+	droplets, _, err := r.client.GetPackageDroplets(packageGUID, ccv3.Query{
+		Key:    ccv3.StatesFilter,
+		Values: []string{"STAGED"},
+	})
+	if err != nil {
+		return resources.Application{}, err
+	}
+
+	if len(droplets) > 0 {
+		dropletGUID = droplets[0].GUID
+	} else {
+		// Stage the package
+		build, _, err := r.client.CreateBuild(resources.Build{
+			PackageGUID: packageGUID,
+		})
+		if err != nil {
+			return resources.Application{}, err
+		}
+
+		// Poll once every 5 sec, timeout ${stageTimeout} fixed by appDeploy
+		err = common.PollingWithTimeout(func() (bool, error) {
+
+			ccBuild, _, err := r.client.GetBuild(build.GUID)
+			if err != nil {
+				return true, err
+			}
+
+			if ccBuild.State == constant.BuildStaged {
+				return true, nil
+			}
+
+			if ccBuild.State == constant.BuildFailed {
+				return true, fmt.Errorf("Package staging failed")
+			}
+
+			return false, nil
+		}, 5*time.Second, appDeploy.StageTimeout)
+
+		dropletGUID = build.DropletGUID
+	}
+
+	// Set current droplet
+	_, _, err = r.client.SetApplicationDroplet(appDeploy.App.GUID, dropletGUID)
+
+	// Start application
+	_, _, err = r.client.UpdateApplication(resources.Application{
 		GUID:  appDeploy.App.GUID,
 		State: constant.ApplicationStarted,
 	})
 	if err != nil {
 		return resources.Application{}, err
 	}
-	err = r.WaitStaging(appDeploy)
-	if err != nil {
-		return resources.Application{}, err
-	}
+
 	err = r.WaitStart(appDeploy)
 	if err != nil {
 		return resources.Application{}, r.processDeployErr(err, appDeploy)

@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/bits"
 )
 
@@ -107,7 +108,7 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					return ctx, nil
 				}
 				appResp := ctx["app_response"].(AppDeployResponse)
-				err := s.bitsManager.UploadApp(appResp.App.GUID, appDeploy.Path)
+				_, _, err := s.bitsManager.CreateAndUploadBitsPackage(appResp.App.GUID, appDeploy.Path, appDeploy.StageTimeout)
 				if err != nil {
 					return ctx, err
 				}
@@ -177,12 +178,23 @@ func (s Standard) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 		return AppDeployResponse{}, err
 	}
 
-	// Poll build until the state is STAGED:
-	time.Sleep(1 * time.Second)
-	buildDetails, _, err := s.client.GetBuild(build.GUID)
-	if buildDetails.State != constant.BuildStaged {
-		return AppDeployResponse{}, fmt.Errorf("Build not staged")
-	}
+	err = common.PollingWithTimeout(func() (bool, error) {
+
+		ccBuild, _, err := s.client.GetBuild(build.GUID)
+		if err != nil {
+			return true, err
+		}
+
+		if ccBuild.State == constant.BuildStaged {
+			return true, nil
+		}
+
+		if ccBuild.State == constant.BuildFailed {
+			return true, fmt.Errorf("Package staging failed")
+		}
+
+		return false, nil
+	}, 5*time.Second, appDeploy.StageTimeout)
 
 	// Stop the app
 	app, _, err := s.client.UpdateApplicationStop(appDeploy.App.GUID)
@@ -191,7 +203,7 @@ func (s Standard) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 	}
 
 	// Set droplet
-	_, _, err = s.client.SetApplicationDroplet(appDeploy.App.GUID, buildDetails.DropletGUID)
+	_, _, err = s.client.SetApplicationDroplet(appDeploy.App.GUID, build.DropletGUID)
 	if err != nil {
 		return AppDeployResponse{}, err
 	}
@@ -209,10 +221,6 @@ func (s Standard) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 		ServiceBindings: appDeploy.ServiceBindings,
 	}
 
-	err = s.runBinder.WaitStaging(appDeploy)
-	if err != nil {
-		return appResp, err
-	}
 	err = s.runBinder.WaitStart(appDeploy)
 	if err != nil {
 		return appResp, err
