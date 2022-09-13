@@ -132,8 +132,8 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					return ctx, err
 				}
 				ctx["app_response"] = AppDeployResponse{
-					App: app,
-					// Mappings:        rejoinMappingPort(app.Ports[0], appResp.RouteMapping),
+					App:             app,
+					Mappings:        appResp.Mappings,
 					ServiceBindings: appResp.ServiceBindings,
 				}
 				return ctx, err
