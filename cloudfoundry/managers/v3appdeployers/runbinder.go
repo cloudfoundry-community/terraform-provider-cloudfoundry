@@ -117,13 +117,25 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.Servic
 			return bindings, err
 		}
 
+		// Poll the state of the async job
 		err = common.PollingWithTimeout(func() (bool, error) {
 			job, _, err := r.client.GetJob(jobURL)
 			if err != nil {
 				return true, err
 			}
+
+			// Stop polling and return error if job failed
+			if job.State == constant.JobFailed {
+				return true, fmt.Errorf(
+					"Binding %s failed for app %s, reason: async job failed",
+					binding.Name,
+					appDeploy.App.Name,
+				)
+			}
+
+			// Check binding state if job completed
 			if job.State == constant.JobComplete {
-				bindings, _, err := r.client.GetServiceCredentialBindings(
+				createdBindings, _, err := r.client.GetServiceCredentialBindings(
 					ccv3.Query{
 						Key:    ccv3.QueryKey("service_instance_guids"),
 						Values: []string{binding.ServiceInstanceGUID},
@@ -135,7 +147,7 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.Servic
 				if err != nil {
 					return true, err
 				}
-				bindings = append(bindings, binding)
+				bindings = append(bindings, createdBindings[0])
 
 				if binding.LastOperation.State == resources.OperationSucceeded {
 					return false, nil
@@ -149,8 +161,9 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.Servic
 						binding.LastOperation.Description,
 					)
 				}
-				return false, nil
 			}
+
+			// Last operation initial or inprogress or job not completed, continue polling
 			return false, nil
 		}, 5*time.Second, appDeploy.BindTimeout)
 
