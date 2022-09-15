@@ -13,9 +13,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
 )
 
@@ -340,4 +344,64 @@ func (m BitsManager) RetrieveZip(path string) (ZipFile, error) {
 		baseName: baseName,
 		filesize: stat.Size(),
 	}, nil
+}
+
+// v3
+
+// CreateAndUploadBitsPackage creates a new package and upload bits to the application
+func (m BitsManager) CreateAndUploadBitsPackage(appGUID string, path string, stageTimeout time.Duration) (resources.Package, ccv3.Warnings, error) {
+	pkg, warnings, err := m.CreateBitsPackageByApplication(appGUID)
+
+	if err != nil {
+		return resources.Package{}, warnings, err
+	}
+
+	_, warnings, err = m.clientV3.UploadPackage(pkg, path)
+	if err != nil {
+		return resources.Package{}, warnings, err
+	}
+
+	// Poll once every 5 sec, timeout ${stageTimeout} fixed by appDeploy
+	err = common.PollingWithTimeout(func() (bool, error) {
+
+		ccPkg, _, err := m.clientV3.GetPackage(pkg.GUID)
+		if err != nil {
+			return true, err
+		}
+
+		if ccPkg.State == constant.PackageReady {
+			return true, nil
+		}
+
+		if ccPkg.State == constant.PackageFailed {
+			return true, fmt.Errorf("Package processing failed")
+		} else if ccPkg.State == constant.PackageExpired {
+			return true, fmt.Errorf("Package expired")
+		}
+
+		return false, nil
+	}, 5*time.Second, stageTimeout)
+
+	if err != nil {
+		return resources.Package{}, warnings, err
+	}
+
+	return pkg, warnings, nil
+}
+
+// CreateBitsPackageByApplication creates a new package for an app to upload bits
+func (m BitsManager) CreateBitsPackageByApplication(appGUID string) (resources.Package, ccv3.Warnings, error) {
+	inputPackage := resources.Package{
+		Type: constant.PackageTypeBits,
+		Relationships: resources.Relationships{
+			constant.RelationshipTypeApplication: resources.Relationship{GUID: appGUID},
+		},
+	}
+
+	pkg, warnings, err := m.clientV3.CreatePackage(inputPackage)
+	if err != nil {
+		return resources.Package{}, warnings, err
+	}
+
+	return pkg, warnings, err
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/bits"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/v3appdeployers"
 )
 
 // Session - wraps the available clients from CF cli
@@ -56,6 +57,9 @@ type Session struct {
 
 	// Deployer is used to deploy an frim different strategy
 	Deployer *appdeployers.Deployer
+
+	// Deployer is used to deploy an frim different strategy
+	V3Deployer *v3appdeployers.Deployer
 
 	// RunBinder is used to to manage start stop of an app
 	RunBinder *appdeployers.RunBinder
