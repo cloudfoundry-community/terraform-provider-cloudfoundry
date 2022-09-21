@@ -220,4 +220,5 @@ func ProcessToResourceData(d *schema.ResourceData, proc resources.Process) {
 	_ = d.Set("health_check_type", proc.HealthCheckType)
 	_ = d.Set("health_check_http_endpoint", proc.HealthCheckEndpoint)
 	_ = d.Set("health_check_timeout", proc.HealthCheckTimeout)
+	_ = d.Set("command", proc.Command.Value)
 }

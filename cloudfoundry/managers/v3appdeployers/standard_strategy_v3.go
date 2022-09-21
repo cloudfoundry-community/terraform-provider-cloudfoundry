@@ -127,9 +127,15 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					return ctx, nil
 				}
 				appResp := ctx["app_response"].(AppDeployResponse)
-				_, _, err := s.bitsManager.CreateAndUploadBitsPackage(appResp.App.GUID, appDeploy.Path, appDeploy.StageTimeout)
+				pkg, _, err := s.bitsManager.CreateAndUploadBitsPackage(appResp.App.GUID, appDeploy.Path, appDeploy.StageTimeout)
 				if err != nil {
 					return ctx, err
+				}
+				ctx["app_response"] = AppDeployResponse{
+					App:             appResp.App,
+					Mappings:        appResp.Mappings,
+					ServiceBindings: appResp.ServiceBindings,
+					AppPackage:      pkg,
 				}
 				return ctx, nil
 			},
@@ -141,10 +147,6 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				if stateAsk == constant.ApplicationStopped {
 					return ctx, nil
 				}
-
-				// Check for processes to see if we can scale to correct memory and nb instances
-				appProcesses, _, err := s.client.GetApplicationProcesses(appDeploy.App.GUID)
-				logDebug(fmt.Sprintf("app processes : %+v", appProcesses))
 
 				appResp := ctx["app_response"].(AppDeployResponse)
 				app, err := s.runBinder.Start(AppDeploy{
@@ -160,13 +162,18 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				if err != nil {
 					return ctx, err
 				}
+
+				// Get process information
+				appProcess, _, err := s.client.GetApplicationProcessByType(app.GUID, constant.ProcessTypeWeb)
+				logDebug(fmt.Sprintf("app and app web process : %+v, %+v", app, appProcess))
+
 				ctx["app_response"] = AppDeployResponse{
 					App:             app,
 					Mappings:        appResp.Mappings,
 					ServiceBindings: appResp.ServiceBindings,
-					Process:         appDeploy.Process,
+					Process:         appProcess,
 					EnableSSH:       appDeploy.EnableSSH,
-					AppPackage:      appDeploy.AppPackage,
+					AppPackage:      appResp.AppPackage,
 					EnvVars:         appDeploy.EnvVars,
 				}
 				return ctx, err

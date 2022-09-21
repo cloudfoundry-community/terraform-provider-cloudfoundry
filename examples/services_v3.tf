@@ -1,5 +1,5 @@
 data "cloudfoundry_service_instance" "xsuaa" {
-  name_or_id = "1396747a-627d-4a3c-971a-cd4fa24705b5"
+  name_or_id = "e9532a3d-f7b8-44dd-a9d5-9a14ce3ca596"
   space      = data.cloudfoundry_space_v3.space_v3.id
 }
 
