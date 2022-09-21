@@ -47,6 +47,8 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 	actions := Actions{
 		{
 			Forward: func(ctx Context) (Context, error) {
+				logDebug(fmt.Sprintf("Create/Update app: %+v", appDeploy.App))
+
 				app := appDeploy.App
 				app.State = constant.ApplicationStopped
 				app, _, err := deployFunc(app)
@@ -54,13 +56,23 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					return ctx, err
 				}
 				ctx["app_response"] = AppDeployResponse{
-					App: app,
+					App:        app,
+					Process:    appDeploy.Process,
+					EnableSSH:  appDeploy.EnableSSH,
+					AppPackage: appDeploy.AppPackage,
+					EnvVars:    appDeploy.EnvVars,
 				}
 				return ctx, nil
 			},
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
+				logDebug(fmt.Sprintf("Map routes: %+v", appDeploy.Mappings))
+
+				// Check for processes to see if we can scale to correct memory and nb instances
+				appProcesses, _, err := s.client.GetApplicationProcesses(appDeploy.App.GUID)
+				logDebug(fmt.Sprintf("app processes : %+v", appProcesses))
+
 				appResp := ctx["app_response"].(AppDeployResponse)
 				mappings, err := s.runBinder.MapRoutes(AppDeploy{
 					App:          appResp.App,
@@ -68,6 +80,10 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					StageTimeout: appDeploy.StageTimeout,
 					BindTimeout:  appDeploy.BindTimeout,
 					StartTimeout: appDeploy.StartTimeout,
+					Process:      appDeploy.Process,
+					EnableSSH:    appDeploy.EnableSSH,
+					AppPackage:   appDeploy.AppPackage,
+					EnvVars:      appDeploy.EnvVars,
 				})
 				if err != nil {
 					return ctx, err
@@ -82,6 +98,8 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
+				logDebug(fmt.Sprintf("Bind service instance %+v", appDeploy.ServiceBindings))
+
 				appResp := ctx["app_response"].(AppDeployResponse)
 				bindings, err := s.runBinder.BindServiceInstances(AppDeploy{
 					App:             appResp.App,
@@ -104,6 +122,7 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
+				logDebug("Uploading package")
 				if appDeploy.Path == "" {
 					return ctx, nil
 				}
@@ -118,12 +137,22 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
+				logDebug(fmt.Sprintf("Start application %+v", appDeploy))
 				if stateAsk == constant.ApplicationStopped {
 					return ctx, nil
 				}
+
+				// Check for processes to see if we can scale to correct memory and nb instances
+				appProcesses, _, err := s.client.GetApplicationProcesses(appDeploy.App.GUID)
+				logDebug(fmt.Sprintf("app processes : %+v", appProcesses))
+
 				appResp := ctx["app_response"].(AppDeployResponse)
 				app, err := s.runBinder.Start(AppDeploy{
 					App:          appResp.App,
+					Process:      appDeploy.Process,
+					EnableSSH:    appDeploy.EnableSSH,
+					AppPackage:   appDeploy.AppPackage,
+					EnvVars:      appDeploy.EnvVars,
 					StageTimeout: appDeploy.StageTimeout,
 					BindTimeout:  appDeploy.BindTimeout,
 					StartTimeout: appDeploy.StartTimeout,
@@ -135,6 +164,10 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					App:             app,
 					Mappings:        appResp.Mappings,
 					ServiceBindings: appResp.ServiceBindings,
+					Process:         appDeploy.Process,
+					EnableSSH:       appDeploy.EnableSSH,
+					AppPackage:      appDeploy.AppPackage,
+					EnvVars:         appDeploy.EnvVars,
 				}
 				return ctx, err
 			},

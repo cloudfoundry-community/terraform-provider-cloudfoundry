@@ -8,11 +8,12 @@ import (
 
 type AppDeploy struct {
 	App             resources.Application
-	feature         resources.ApplicationFeature
-	appPackage      resources.Package
-	process         resources.Process
+	EnableSSH       resources.ApplicationFeature
+	AppPackage      resources.Package
+	Process         resources.Process
 	Mappings        []resources.Route
 	ServiceBindings []resources.ServiceCredentialBinding
+	EnvVars         resources.EnvironmentVariables
 	Path            string
 	BindTimeout     time.Duration
 	StageTimeout    time.Duration
@@ -20,14 +21,15 @@ type AppDeploy struct {
 }
 
 func (a AppDeploy) IsDockerImage() bool {
-	return a.appPackage.DockerImage != ""
+	return a.AppPackage.DockerImage != ""
 }
 
 type AppDeployResponse struct {
 	App             resources.Application
-	feature         resources.ApplicationFeature
-	appPackage      resources.Package
-	process         resources.Process
+	EnableSSH       resources.ApplicationFeature
+	AppPackage      resources.Package
+	Process         resources.Process
+	EnvVars         resources.EnvironmentVariables
 	Mappings        []resources.Route
 	ServiceBindings []resources.ServiceCredentialBinding
 }
