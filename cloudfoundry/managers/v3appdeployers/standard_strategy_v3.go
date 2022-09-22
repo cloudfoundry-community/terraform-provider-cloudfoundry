@@ -273,10 +273,12 @@ func (s Standard) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 	return appResp, nil
 }
 
+// IsCreateNewApp returns false since we are not creating a new app during rolling deployment
 func (s Standard) IsCreateNewApp() bool {
 	return false
 }
 
+// Names defines acceptable names that can be passed to terraform
 func (s Standard) Names() []string {
 	return []string{"standard", "v2", DefaultStrategy}
 }
