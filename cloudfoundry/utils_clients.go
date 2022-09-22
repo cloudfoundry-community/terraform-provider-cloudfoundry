@@ -15,6 +15,19 @@ func IntToNullInt(v int) types.NullInt {
 	}
 }
 
+func IntToNullUint64Zero(v int) types.NullUint64 {
+	if v < 0 {
+		return types.NullUint64{
+			IsSet: false,
+		}
+	}
+
+	return types.NullUint64{
+		IsSet: true,
+		Value: uint64(v),
+	}
+}
+
 func BoolToNullBool(b bool) types.NullBool {
 	return types.NullBool{
 		IsSet: true,
