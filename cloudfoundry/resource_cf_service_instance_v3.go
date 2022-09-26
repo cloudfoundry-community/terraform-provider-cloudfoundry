@@ -8,19 +8,16 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
-	//"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
-
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
+const ManagedServiceInstance = "managed"
 
 func resourceServiceInstanceV3() *schema.Resource {
 
@@ -86,8 +83,8 @@ func resourceServiceInstanceV3() *schema.Resource {
 				Default:  false,
 			},
 			// Some instances takes more time for creation
-			// This a custom timeout flag to give service more time for creeation
-			"timeout": &schema.Schema{
+			// This a custom timeout flag to give service more time for creation in minutes
+			"timeout_in_minutes": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  1,
@@ -123,8 +120,8 @@ func resourceServiceInstanceV3Create(ctx context.Context, d *schema.ResourceData
 	tags := make([]string, 0)
 
 	// Some instances takes more time for creation
-	// This a custom timeout flag to give service more time for creeation
-	poll_timeout:=d.Get("timeout").(int)
+	// This a custom timeout_in_minutes flag to give service more time for creation in minutes
+	poll_timeout_in_minutes:=d.Get("timeout_in_minutes").(int)
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
 	}
@@ -146,7 +143,7 @@ func resourceServiceInstanceV3Create(ctx context.Context, d *schema.ResourceData
 	}
 	log.Printf("params_format : %+v", params_format)
 	serviceInstance := resources.ServiceInstance{}
-	serviceInstance.Type = "managed"
+	serviceInstance.Type = ManagedServiceInstance
 	serviceInstance.Name = name
 	serviceInstance.SpaceGUID = space
 	serviceInstance.ServicePlanGUID = servicePlan
@@ -192,7 +189,7 @@ func resourceServiceInstanceV3Create(ctx context.Context, d *schema.ResourceData
 		}
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, time.Duration(poll_timeout) * time.Minute)
+	}, 5*time.Second, time.Duration(poll_timeout_in_minutes) * time.Minute)
 	
 	if err != nil {
 		return diag.FromErr(err)
@@ -270,8 +267,8 @@ func resourceServiceInstanceV3Update(ctx context.Context, d *schema.ResourceData
 	space:= d.Get("space").(string)
 	
 	// Some instances takes more time for creation
-	// This a custom timeout flag to give service more time for creeation  
-	poll_timeout:=d.Get("timeout").(int)
+	// This a custom timeout_in_minutes flag to give service more time for creation in minutes  
+	poll_timeout_in_minutes:=d.Get("timeout_in_minutes").(int)
 	if len(jsonParameters) > 0 {
 		err := json.Unmarshal([]byte(jsonParameters), &params)
 		if err != nil {
@@ -346,7 +343,7 @@ func resourceServiceInstanceV3Update(ctx context.Context, d *schema.ResourceData
 
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, time.Duration(poll_timeout)  * time.Minute)
+	}, 5*time.Second, time.Duration(poll_timeout_in_minutes)  * time.Minute)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -366,7 +363,7 @@ func resourceServiceInstanceV3Delete(ctx context.Context, d *schema.ResourceData
 	}
 	name := d.Get("name").(string)
 	space := d.Get("space").(string)
-	poll_timeout:=d.Get("timeout").(int)
+	poll_timeout_in_minutes:=d.Get("timeout_in_minutes").(int)
 
 	// Poll the state of the async job
 	err = common.PollingWithTimeout(func() (bool, error) {
@@ -398,7 +395,7 @@ func resourceServiceInstanceV3Delete(ctx context.Context, d *schema.ResourceData
 
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, time.Duration(poll_timeout) * time.Minute)
+	}, 5*time.Second, time.Duration(poll_timeout_in_minutes) * time.Minute)
 
 	return nil
 }
