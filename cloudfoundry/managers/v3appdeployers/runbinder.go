@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
 )
@@ -119,6 +120,13 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.Servic
 		// Define type = app for backing service bindings
 		binding.Type = resources.AppBinding
 		binding.AppGUID = appGUID
+
+		// force parameters to disappear to fix issues with v3 user-provided services
+		if len(binding.Parameters.Value) == 0 {
+			binding.Parameters = types.OptionalObject{
+				IsSet: false,
+			}
+		}
 
 		jobURL, _, err := r.client.CreateServiceCredentialBinding(binding)
 		if err != nil {
