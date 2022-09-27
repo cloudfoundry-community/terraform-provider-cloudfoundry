@@ -51,6 +51,12 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 
 				app := appDeploy.App
 				app.State = constant.ApplicationStopped
+				// If update app, remove spaceGUID request body
+				// if space changes, force new ( delete + recreate )
+				if app.GUID != "" {
+					app.SpaceGUID = ""
+				}
+
 				app, _, err := deployFunc(app)
 				if err != nil {
 					return ctx, err
