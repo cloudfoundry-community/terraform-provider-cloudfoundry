@@ -88,6 +88,13 @@ func resourceUserProvidedServiceV3() *schema.Resource {
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      schema.HashString,
 			},
+			// Some instances takes more time for creation
+			// This a custom timeout flag to give service more time for creation in minutes
+			"timeout_in_minutes": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  1,
+			},
 		},
 	}
 }
@@ -97,7 +104,6 @@ func resourceUserProvidedServiceV3Create(ctx context.Context, d *schema.Resource
 
 	name := d.Get("name").(string)
 	space := d.Get("space").(string)
-	jsonParameters := d.Get("json_params").(string)
 	syslogDrainURL := d.Get("syslog_drain_url").(string)
 	routeServiceURL := d.Get("route_service_url").(string)
 	// Some instances takes more time for creation
@@ -111,6 +117,7 @@ func resourceUserProvidedServiceV3Create(ctx context.Context, d *schema.Resource
 	if routeServiceURL == "" {
 		routeServiceURL = d.Get("routeServiceURL").(string)
 	}
+	// credentials := types.OptionalObject{}
 
 	credentials := make(map[string]interface{})
 	if credsJSON, hasJSON := d.GetOk("credentials_json"); hasJSON {
@@ -124,18 +131,6 @@ func resourceUserProvidedServiceV3Create(ctx context.Context, d *schema.Resource
 		}
 	}
 
-	params := make(map[string]interface{})
-	if len(jsonParameters) > 0 {
-		err := json.Unmarshal([]byte(jsonParameters), &params)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	params_format := types.OptionalObject{
-		IsSet: true,
-		Value: params,
-	}
-
 	tagsSchema := d.Get("tags").(*schema.Set)
 	tags := make([]string, 0)
 	for _, tag := range tagsSchema.List() {
@@ -146,15 +141,33 @@ func resourceUserProvidedServiceV3Create(ctx context.Context, d *schema.Resource
 		Value: tags,
 	}
 
+	SyslogDrainURL_format := types.OptionalString{
+		IsSet: true,
+		Value: syslogDrainURL,
+	}
+
+	routeServiceURL_format := types.OptionalString{
+		IsSet: true,
+		Value: routeServiceURL,
+	}
+
+	if routeServiceURL_format.Value == "" {
+		routeServiceURL_format.IsSet = false
+	}
+	if SyslogDrainURL_format.Value == "" {
+		SyslogDrainURL_format.IsSet = false
+	}
+	if tags_format.Value == nil {
+		tags_format.IsSet = false
+	}
 	userProvidedServiceInstance := resources.ServiceInstance{}
 	userProvidedServiceInstance.Type = UserProvidedServiceInstance
 	userProvidedServiceInstance.Name = name
 	userProvidedServiceInstance.SpaceGUID = space
 	userProvidedServiceInstance.Credentials = types.NewOptionalObject(credentials)
 	userProvidedServiceInstance.Tags = tags_format
-	userProvidedServiceInstance.Parameters = params_format
-	userProvidedServiceInstance.SyslogDrainURL = types.NewOptionalString(syslogDrainURL)
-	userProvidedServiceInstance.RouteServiceURL = types.NewOptionalString(routeServiceURL)
+	userProvidedServiceInstance.SyslogDrainURL = SyslogDrainURL_format
+	userProvidedServiceInstance.RouteServiceURL = routeServiceURL_format
 
 	log.Printf("SI : %+v", userProvidedServiceInstance)
 	jobURL, _, err := session.ClientV3.CreateServiceInstance(userProvidedServiceInstance)
