@@ -20,8 +20,6 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
-const UserProvidedServiceInstance = "user-provided"
-
 func resourceUserProvidedServiceV3() *schema.Resource {
 
 	return &schema.Resource{
@@ -88,13 +86,6 @@ func resourceUserProvidedServiceV3() *schema.Resource {
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Set:      schema.HashString,
 			},
-			// Some instances takes more time for creation
-			// This a custom timeout flag to give service more time for creation in minutes
-			"timeout_in_minutes": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  1,
-			},
 		},
 	}
 }
@@ -106,9 +97,6 @@ func resourceUserProvidedServiceV3Create(ctx context.Context, d *schema.Resource
 	space := d.Get("space").(string)
 	syslogDrainURL := d.Get("syslog_drain_url").(string)
 	routeServiceURL := d.Get("route_service_url").(string)
-	// Some instances takes more time for creation
-	// This a custom timeout_in_minutes flag to give service more time for creation in minutes
-	poll_timeout_in_minutes := d.Get("timeout_in_minutes").(int)
 
 	// should be removed when syslogDrainURL and routeServiceURL will be removed
 	if syslogDrainURL == "" {
@@ -130,89 +118,54 @@ func resourceUserProvidedServiceV3Create(ctx context.Context, d *schema.Resource
 			credentials[k] = v.(string)
 		}
 	}
+	credentialsFormat := types.OptionalObject{
+		IsSet: len(credentials) != 0,
+		Value: credentials,
+	}
 
 	tagsSchema := d.Get("tags").(*schema.Set)
 	tags := make([]string, 0)
 	for _, tag := range tagsSchema.List() {
 		tags = append(tags, tag.(string))
 	}
-	tags_format := types.OptionalStringSlice{
-		IsSet: true,
+
+	tagsFormat := types.OptionalStringSlice{
+		IsSet: tags != nil,
 		Value: tags,
 	}
 
-	SyslogDrainURL_format := types.OptionalString{
-		IsSet: true,
+	syslogDrainURLFormat := types.OptionalString{
+		IsSet: syslogDrainURL != "",
 		Value: syslogDrainURL,
 	}
 
-	routeServiceURL_format := types.OptionalString{
-		IsSet: true,
+	routeServiceURLFormat := types.OptionalString{
+		IsSet: routeServiceURL != "",
 		Value: routeServiceURL,
 	}
 
-	if routeServiceURL_format.Value == "" {
-		routeServiceURL_format.IsSet = false
+	userProvidedServiceInstance := resources.ServiceInstance{
+		Type:            resources.UserProvidedServiceInstance,
+		Name:            name,
+		SpaceGUID:       space,
+		Credentials:     credentialsFormat,
+		Tags:            tagsFormat,
+		SyslogDrainURL:  syslogDrainURLFormat,
+		RouteServiceURL: routeServiceURLFormat,
 	}
-	if SyslogDrainURL_format.Value == "" {
-		SyslogDrainURL_format.IsSet = false
-	}
-	if tags_format.Value == nil {
-		tags_format.IsSet = false
-	}
-	userProvidedServiceInstance := resources.ServiceInstance{}
-	userProvidedServiceInstance.Type = UserProvidedServiceInstance
-	userProvidedServiceInstance.Name = name
-	userProvidedServiceInstance.SpaceGUID = space
-	userProvidedServiceInstance.Credentials = types.NewOptionalObject(credentials)
-	userProvidedServiceInstance.Tags = tags_format
-	userProvidedServiceInstance.SyslogDrainURL = SyslogDrainURL_format
-	userProvidedServiceInstance.RouteServiceURL = routeServiceURL_format
 
 	log.Printf("SI : %+v", userProvidedServiceInstance)
-	jobURL, _, err := session.ClientV3.CreateServiceInstance(userProvidedServiceInstance)
-	log.Printf("Job URL : %+v", jobURL)
+	userProvidedSI, _, err := session.ClientV3.CreateUserProvidedServiceInstance(userProvidedServiceInstance)
+	log.Printf("Created SI : %+v", userProvidedSI)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	// Poll the state of the async job
-	err = common.PollingWithTimeout(func() (bool, error) {
-		job, _, err := session.ClientV3.GetJob(jobURL)
-		log.Printf("Job URL Status output: %+v", job)
-		if err != nil {
-			return true, err
-		}
-
-		// Stop polling and return error if job failed
-		if job.State == constant.JobFailed {
-			log.Printf("Failed")
-			return true, fmt.Errorf(
-				"Service Instance %s failed %s, reason: async job failed",
-				name,
-				space,
-			)
-		}
-		if job.State == constant.JobComplete {
-			si, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
-			log.Printf("Job completed for Service Instance Creation")
-			log.Printf("Service Instance Object : %+v", si)
-			if err != nil {
-				return true, err
-			}
-
-			log.Printf("Service Instance GUID : %+v", si.GUID)
-			d.SetId(si.GUID)
-			return true, err
-		}
-		// Last operation initial or inprogress or job not completed, continue polling
-		return false, nil
-	}, 5*time.Second, time.Duration(poll_timeout_in_minutes)*time.Minute)
 
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
+	d.SetId(userProvidedSI.GUID)
 	return nil
 }
 
