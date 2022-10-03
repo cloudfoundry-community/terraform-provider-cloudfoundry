@@ -7,7 +7,6 @@ import (
 	"log"
 	"time"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
@@ -187,39 +186,42 @@ func resourceUserProvidedServiceV3Read(ctx context.Context, d *schema.ResourceDa
 	d.Set("space", userProvidedServiceInstance.SpaceGUID)
 
 	syslogSet := false
+	syslogDrainURL := userProvidedServiceInstance.SyslogDrainURL.String()
 	if _, ok := d.GetOk("syslogDrainURL"); ok {
-		d.Set("syslogDrainURL", userProvidedServiceInstance.SyslogDrainURL)
+		d.Set("syslogDrainURL", syslogDrainURL)
 		syslogSet = true
 	}
 	if _, ok := d.GetOk("syslog_drain_url"); ok {
-		d.Set("syslog_drain_url", userProvidedServiceInstance.SyslogDrainURL)
+		d.Set("syslog_drain_url", syslogDrainURL)
 		syslogSet = true
 	}
 
-	if !syslogSet && userProvidedServiceInstance.SyslogDrainURL.String() != "" {
-		d.Set("syslog_drain_url", userProvidedServiceInstance.SyslogDrainURL)
+	if !syslogSet && syslogDrainURL != "" {
+		d.Set("syslog_drain_url", syslogDrainURL)
 	}
 
 	routeServiceSet := false
+	routeServiceURL := userProvidedServiceInstance.RouteServiceURL.String()
 	if _, ok := d.GetOk("routeServiceURL"); ok {
-		d.Set("routeServiceURL", userProvidedServiceInstance.RouteServiceURL)
+		d.Set("routeServiceURL", routeServiceURL)
 		routeServiceSet = true
 	}
 	if _, ok := d.GetOk("route_service_url"); ok {
-		d.Set("route_service_url", userProvidedServiceInstance.RouteServiceURL)
+		d.Set("route_service_url", routeServiceURL)
 		routeServiceSet = true
 	}
-	if !routeServiceSet && userProvidedServiceInstance.RouteServiceURL.String() != "" {
-		d.Set("route_service_url", userProvidedServiceInstance.RouteServiceURL)
+	if !routeServiceSet && routeServiceURL != "" {
+		d.Set("route_service_url", routeServiceURL)
 	}
 
+	credentials := userProvidedServiceInstance.Credentials.Value
 	if _, hasJSON := d.GetOk("credentials_json"); hasJSON {
-		bytes, _ := json.Marshal(userProvidedServiceInstance.Credentials)
+		bytes, _ := json.Marshal(credentials)
 		d.Set("credentials_json", string(bytes))
 	} else {
-		d.Set("credentials", userProvidedServiceInstance.Credentials)
+		d.Set("credentials", credentials)
 	}
-	d.Set("tags", userProvidedServiceInstance.Tags)
+	d.Set("tags", userProvidedServiceInstance.Tags.Value)
 	return nil
 }
 
@@ -254,30 +256,42 @@ func resourceUserProvidedServiceV3Update(ctx context.Context, d *schema.Resource
 	for _, tag := range tagsSchema.List() {
 		tags = append(tags, tag.(string))
 	}
-	_, _, err := session.ClientV2.UpdateUserProvidedServiceInstance(ccv2.UserProvidedServiceInstance{
-		GUID:            d.Id(),
-		Name:            name,
-		SpaceGuid:       space,
-		Tags:            tags,
-		RouteServiceUrl: routeServiceURL,
-		SyslogDrainUrl:  syslogDrainURL,
-		Credentials:     credentials,
+
+	updated, _, err := session.ClientV3.UpdateUserProvidedServiceInstance(d.Id(), resources.ServiceInstance{
+		Name:      name,
+		SpaceGUID: space,
+		Tags: types.OptionalStringSlice{
+			IsSet: tags != nil,
+			Value: tags,
+		},
+		RouteServiceURL: types.OptionalString{
+			IsSet: routeServiceURL != "",
+			Value: routeServiceURL,
+		},
+		SyslogDrainURL: types.OptionalString{
+			IsSet: syslogDrainURL != "",
+			Value: syslogDrainURL,
+		},
+		Credentials: types.OptionalObject{
+			IsSet: len(credentials) > 0,
+			Value: credentials,
+		},
 	})
+
+	log.Printf("updated service instance: %+v", updated)
 	return diag.FromErr(err)
 }
 
 func resourceUserProvidedServiceV3Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-	id := d.Id()
 
-	jobURL, _, err := session.ClientV3.DeleteServiceInstance(id)
+	jobURL, _, err := session.ClientV3.DeleteServiceInstance(d.Id())
 
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	name := d.Get("name").(string)
 	space := d.Get("space").(string)
-	poll_timeout_in_minutes := d.Get("timeout_in_minutes").(int)
 
 	// Poll the state of the async job
 	err = common.PollingWithTimeout(func() (bool, error) {
@@ -289,27 +303,20 @@ func resourceUserProvidedServiceV3Delete(ctx context.Context, d *schema.Resource
 		// Stop polling and return error if job failed
 		if job.State == constant.JobFailed {
 			return true, fmt.Errorf(
-				"Instance %s failed %s, reason: async job failed",
+				"Delete user-provided service instance %s in space %s failed, reason: async job failed",
 				name,
 				space,
 			)
 		}
-		/*
-			query := ccv3.Query{
-				Key:    ccv3.GUIDFilter,
-				Values: []string{d.Id()},
-			}*/
+
 		// Check the state if job completed
 		if job.State == constant.JobComplete {
-			_, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
-			if err != nil {
-				return true, err
-			}
+			return true, nil
 		}
 
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, time.Duration(poll_timeout_in_minutes)*time.Minute)
+	}, 1*time.Second, 60*time.Second)
 
 	return nil
 }
