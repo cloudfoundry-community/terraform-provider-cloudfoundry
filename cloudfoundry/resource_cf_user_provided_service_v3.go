@@ -231,7 +231,6 @@ func resourceUserProvidedServiceV3Update(ctx context.Context, d *schema.Resource
 	name := d.Get("name").(string)
 	syslogDrainURL := d.Get("syslog_drain_url").(string)
 	routeServiceURL := d.Get("route_service_url").(string)
-	space := d.Get("space").(string)
 	// should be removed when syslogDrainURL and routeServiceURL will be removed
 	if syslogDrainURL == "" {
 		syslogDrainURL = d.Get("syslogDrainURL").(string)
@@ -258,8 +257,7 @@ func resourceUserProvidedServiceV3Update(ctx context.Context, d *schema.Resource
 	}
 
 	updated, _, err := session.ClientV3.UpdateUserProvidedServiceInstance(d.Id(), resources.ServiceInstance{
-		Name:      name,
-		SpaceGUID: space,
+		Name: name,
 		Tags: types.OptionalStringSlice{
 			IsSet: tags != nil,
 			Value: tags,
