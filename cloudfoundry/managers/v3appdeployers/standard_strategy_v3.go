@@ -61,6 +61,14 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				if err != nil {
 					return ctx, err
 				}
+
+				// Set envars
+				createdEnv, _, err := s.client.UpdateApplicationEnvironmentVariables(app.GUID, appDeploy.EnvVars)
+				if err != nil {
+					return ctx, err
+				}
+				logDebug(fmt.Sprintf("environment variables: %+v", createdEnv))
+
 				ctx["app_response"] = AppDeployResponse{
 					App:        app,
 					Process:    appDeploy.Process,

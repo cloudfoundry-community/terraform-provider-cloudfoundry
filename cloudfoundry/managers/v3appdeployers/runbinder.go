@@ -198,7 +198,7 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.Servic
 // WaitStart checks the state of each process instance
 func (r RunBinder) WaitStart(appDeploy AppDeploy) error {
 	return common.PollingWithTimeout(func() (bool, error) {
-		processes, _, err := r.client.GetApplicationProcesses(appDeploy.App.GUID)
+		process, _, err := r.client.GetApplicationProcessByType(appDeploy.App.GUID, constant.ProcessTypeWeb)
 		if err != nil {
 			return true, err
 		}
@@ -206,23 +206,21 @@ func (r RunBinder) WaitStart(appDeploy AppDeploy) error {
 			return true, nil
 		}
 
-		for _, process := range processes {
-			instances, _, err := r.client.GetProcessInstances(process.GUID)
-			if err != nil {
-				return false, err
+		instances, _, err := r.client.GetProcessInstances(process.GUID)
+		if err != nil {
+			return false, err
+		}
+		for i, instance := range instances {
+			if instance.State == constant.ProcessInstanceStarting {
+				continue
 			}
-			for i, instance := range instances {
-				if instance.State == constant.ProcessInstanceStarting {
-					continue
-				}
-				if instance.State == constant.ProcessInstanceRunning {
-					return true, nil
-				}
-				if instance.State == constant.ProcessInstanceDown {
-					return false, fmt.Errorf("Instance %d failed with state %s for app %s", i, instance.State, appDeploy.App.Name)
-				}
-				return true, fmt.Errorf("Instance %d failed with state %s for app %s", i, instance.State, appDeploy.App.Name)
+			if instance.State == constant.ProcessInstanceRunning {
+				return true, nil
 			}
+			if instance.State == constant.ProcessInstanceDown {
+				return false, fmt.Errorf("Instance %d failed with state %s for app %s", i, instance.State, appDeploy.App.Name)
+			}
+			return true, fmt.Errorf("Instance %d failed with state %s for app %s", i, instance.State, appDeploy.App.Name)
 		}
 
 		return false, nil
@@ -341,13 +339,43 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 	if err != nil {
 		return resources.Application{}, err
 	}
-	logDebug(fmt.Sprintf("droplets to set: %+v / %+v", stgPkg, dropletGUID))
+	logDebug(fmt.Sprintf("droplets to set: %+v / %+v", stgPkg, stgPkg[0].GUID))
 
 	// Set current droplet
 	_, _, err = r.client.SetApplicationDroplet(appDeploy.App.GUID, stgPkg[0].GUID)
 	if err != nil {
 		return resources.Application{}, err
 	}
+
+	// Grabbing the process information
+	appProcess, _, err := r.client.GetApplicationProcessByType(appDeploy.App.GUID, constant.ProcessTypeWeb)
+	logDebug(fmt.Sprintf("[after start] app web process : %+v", appProcess))
+
+	appDeploy.Process = appProcess
+
+	// Define process information and add to payload if set in terraform
+	processScaleInfo := resources.Process{
+		Type:       constant.ProcessTypeWeb,
+		Instances:  appDeploy.Process.Instances,
+		MemoryInMB: appDeploy.Process.MemoryInMB,
+		DiskInMB:   appDeploy.Process.DiskInMB,
+	}
+	logDebug(fmt.Sprintf("[before scale] process scale info : %+v", processScaleInfo))
+
+	scaledProcess, _, err := r.client.CreateApplicationProcessScale(appDeploy.App.GUID, processScaleInfo)
+	if err != nil {
+		return resources.Application{}, err
+	}
+
+	updatedProcess, _, err := r.client.UpdateProcess(resources.Process{
+		GUID:                scaledProcess.GUID,
+		HealthCheckType:     appDeploy.Process.HealthCheckType,
+		HealthCheckEndpoint: appDeploy.Process.HealthCheckEndpoint,
+	})
+	if err != nil {
+		return resources.Application{}, err
+	}
+	logDebug(fmt.Sprintf("[after scale] app process : %+v", updatedProcess))
 
 	// Check application state
 	appState, _, err := r.client.GetApplications(ccv3.Query{
@@ -359,50 +387,17 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 	}
 	logDebug(fmt.Sprintf("App status %+v", appState))
 
-	// Again grabbing the process information
-	appProcesses, _, err := r.client.GetApplicationProcesses(appDeploy.App.GUID)
-	logDebug(fmt.Sprintf("[before start] app processes : %+v", appProcesses))
-
-	// Define process information and add to payload if set in terraform
-	processScaleInfo := resources.Process{
-		Type: constant.ProcessTypeWeb,
-	}
-
-	if appDeploy.Process.Instances.IsSet {
-		processScaleInfo.Instances = appDeploy.Process.Instances
-	}
-
-	if appDeploy.Process.MemoryInMB.IsSet && appDeploy.Process.MemoryInMB.Value > 0 {
-		processScaleInfo.MemoryInMB = appDeploy.Process.MemoryInMB
-	}
-
-	if appDeploy.Process.DiskInMB.IsSet && appDeploy.Process.DiskInMB.Value > 0 {
-		processScaleInfo.DiskInMB = appDeploy.Process.DiskInMB
-	}
-	logDebug(fmt.Sprintf("[before scale] process scale info : %+v", processScaleInfo))
-
-	scaledProcess, _, err := r.client.CreateApplicationProcessScale(appDeploy.App.GUID, processScaleInfo)
-	if err != nil {
-		return resources.Application{}, err
-	}
-	logDebug(fmt.Sprintf("[after scale] app process : %+v", scaledProcess))
-
 	// Start application
 	_, _, err = r.client.UpdateApplicationStart(appDeploy.App.GUID)
 	if err != nil {
 		return resources.Application{}, err
 	}
 
-	// Again grabbing the process information
-	appProcess, _, err := r.client.GetApplicationProcessByType(appDeploy.App.GUID, constant.ProcessTypeWeb)
-	logDebug(fmt.Sprintf("[after start] app web process : %+v", appProcesses))
-
-	appDeploy.Process = appProcess
-
 	err = r.WaitStart(appDeploy)
 	if err != nil {
 		return resources.Application{}, r.processDeployErr(err, appDeploy)
 	}
+
 	app, _, err := r.client.GetApplications(ccv3.Query{
 		Key:    ccv3.GUIDFilter,
 		Values: []string{appDeploy.App.GUID},

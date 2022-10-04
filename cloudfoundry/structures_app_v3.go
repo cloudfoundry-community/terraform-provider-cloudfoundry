@@ -109,7 +109,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		EnvVars:         envVars,
 	}
 
-	log.Printf(" ***** \n --------- \n ***** [INFO] Parsed app deploy %+v", appDeploy)
+	log.Printf(" ***** \n --------- \n ***** [INFO] Parser : parsed app deploy %+v \n\n", appDeploy)
 
 	return appDeploy, nil
 }
