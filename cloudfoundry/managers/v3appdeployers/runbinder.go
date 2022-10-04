@@ -121,11 +121,36 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.Servic
 		binding.Type = resources.AppBinding
 		binding.AppGUID = appGUID
 
-		// force parameters to disappear to fix issues with v3 user-provided services
-		if len(binding.Parameters.Value) == 0 {
-			binding.Parameters = types.OptionalObject{
-				IsSet: false,
+		si, _, _, err := r.client.GetServiceInstances(ccv3.Query{
+			Key:    ccv3.GUIDFilter,
+			Values: []string{binding.ServiceInstanceGUID},
+		})
+		if err != nil {
+			return bindings, err
+		}
+		if len(si) != 1 {
+			return bindings, fmt.Errorf("Error querying for the type of the service instance")
+		}
+
+		siType := si[0].Type
+
+		// Specific binding action for user-provided service instance
+		if siType == resources.UserProvidedServiceInstance {
+			// Force parameters to disappear to fix issues with v3 user-provided services
+			if len(binding.Parameters.Value) == 0 {
+				binding.Parameters = types.OptionalObject{
+					IsSet: false,
+				}
 			}
+
+			// Create binding using specific endpoint
+			createdBinding, _, err := r.client.CreateUserProvidedServiceCredentialBinding(binding)
+			if err != nil {
+				return bindings, err
+			}
+
+			bindings = append(bindings, createdBinding)
+			continue
 		}
 
 		jobURL, _, err := r.client.CreateServiceCredentialBinding(binding)
