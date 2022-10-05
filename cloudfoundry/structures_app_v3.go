@@ -106,9 +106,10 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		StartTimeout:    time.Duration(d.Get("timeout").(int)) * time.Second,
 		BindTimeout:     DefaultBindTimeout,
 		StageTimeout:    DefaultStageTimeout,
+		EnvVars:         envVars,
 	}
 
-	log.Printf("--------- [INFO] Parsed app deploy %+v", appDeploy)
+	log.Printf(" ***** \n --------- \n ***** [INFO] Parsed app deploy %+v", appDeploy)
 
 	return appDeploy, nil
 }
