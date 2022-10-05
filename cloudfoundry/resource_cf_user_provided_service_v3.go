@@ -3,11 +3,8 @@ package cloudfoundry
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
-	"time"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -15,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/structure"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
@@ -214,9 +210,11 @@ func resourceUserProvidedServiceV3Read(ctx context.Context, d *schema.ResourceDa
 		d.Set("route_service_url", routeServiceURL)
 	}
 
-	credentials := userProvidedServiceInstance.Credentials.Value
+	credentials, _, err := session.ClientV3.GetUserProvidedServiceInstanceCredentails(d.Id())
+
 	if _, hasJSON := d.GetOk("credentials_json"); hasJSON {
 		bytes, _ := json.Marshal(credentials)
+		log.Printf("Creds : %s //// state: %s", string(bytes), d.Get("credentials_json"))
 		d.Set("credentials_json", string(bytes))
 	} else {
 		d.Set("credentials", credentials)
@@ -256,7 +254,7 @@ func resourceUserProvidedServiceV3Update(ctx context.Context, d *schema.Resource
 		tags = append(tags, tag.(string))
 	}
 
-	updated, _, err := session.ClientV3.UpdateUserProvidedServiceInstance(d.Id(), resources.ServiceInstance{
+	_, _, err := session.ClientV3.UpdateUserProvidedServiceInstance(d.Id(), resources.ServiceInstance{
 		Name: name,
 		Tags: types.OptionalStringSlice{
 			IsSet: tags != nil,
@@ -276,45 +274,19 @@ func resourceUserProvidedServiceV3Update(ctx context.Context, d *schema.Resource
 		},
 	})
 
-	log.Printf("updated service instance: %+v", updated)
+	// log.Printf("updated service instance: %+v", updated)
 	return diag.FromErr(err)
 }
 
 func resourceUserProvidedServiceV3Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
-	jobURL, _, err := session.ClientV3.DeleteServiceInstance(d.Id())
+	// No polling needed since no discussion with service broker
+	_, _, err := session.ClientV3.DeleteServiceInstance(d.Id())
 
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	name := d.Get("name").(string)
-	space := d.Get("space").(string)
-
-	// Poll the state of the async job
-	err = common.PollingWithTimeout(func() (bool, error) {
-		job, _, err := session.ClientV3.GetJob(jobURL)
-		if err != nil {
-			return true, err
-		}
-
-		// Stop polling and return error if job failed
-		if job.State == constant.JobFailed {
-			return true, fmt.Errorf(
-				"Delete user-provided service instance %s in space %s failed, reason: async job failed",
-				name,
-				space,
-			)
-		}
-
-		// Check the state if job completed
-		if job.State == constant.JobComplete {
-			return true, nil
-		}
-
-		// Last operation initial or inprogress or job not completed, continue polling
-		return false, nil
-	}, 1*time.Second, 60*time.Second)
 
 	return nil
 }
