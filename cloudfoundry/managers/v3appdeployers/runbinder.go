@@ -2,6 +2,7 @@ package v3appdeployers
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
@@ -102,6 +103,8 @@ func (r RunBinder) bindingExists(appGUID string, binding resources.ServiceCreden
 // BindServiceInstances creates service credential bindings resources for each definied service bindings in terrafrom
 func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.ServiceCredentialBinding, error) {
 	bindings := make([]resources.ServiceCredentialBinding, 0)
+
+	log.Printf("Bind service instances : %+v", appDeploy.ServiceBindings)
 	appGUID := appDeploy.App.GUID
 	for _, binding := range appDeploy.ServiceBindings {
 		exists, err := r.bindingExists(appGUID, binding)
@@ -112,18 +115,35 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.Servic
 			bindings = append(bindings, binding)
 			continue
 		}
+
+		// Define type = app for backing service bindings
+		binding.Type = resources.AppBinding
+		binding.AppGUID = appGUID
+
 		jobURL, _, err := r.client.CreateServiceCredentialBinding(binding)
 		if err != nil {
 			return bindings, err
 		}
 
+		// Poll the state of the async job
 		err = common.PollingWithTimeout(func() (bool, error) {
 			job, _, err := r.client.GetJob(jobURL)
 			if err != nil {
 				return true, err
 			}
+
+			// Stop polling and return error if job failed
+			if job.State == constant.JobFailed {
+				return true, fmt.Errorf(
+					"Binding %s failed for app %s, reason: async job failed",
+					binding.Name,
+					appDeploy.App.Name,
+				)
+			}
+
+			// Check binding state if job completed
 			if job.State == constant.JobComplete {
-				bindings, _, err := r.client.GetServiceCredentialBindings(
+				createdBindings, _, err := r.client.GetServiceCredentialBindings(
 					ccv3.Query{
 						Key:    ccv3.QueryKey("service_instance_guids"),
 						Values: []string{binding.ServiceInstanceGUID},
@@ -135,13 +155,16 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.Servic
 				if err != nil {
 					return true, err
 				}
-				bindings = append(bindings, binding)
 
-				if binding.LastOperation.State == resources.OperationSucceeded {
+				if len(createdBindings) == 0 {
 					return false, nil
 				}
 
-				if binding.LastOperation.State == resources.OperationFailed {
+				if createdBindings[0].LastOperation.State == resources.OperationSucceeded {
+					return true, nil
+				}
+
+				if createdBindings[0].LastOperation.State == resources.OperationFailed {
 					return true, fmt.Errorf(
 						"Binding %s failed for app %s, reason: %s",
 						binding.Name,
@@ -149,14 +172,17 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.Servic
 						binding.LastOperation.Description,
 					)
 				}
-				return false, nil
 			}
+
+			// Last operation initial or inprogress or job not completed, continue polling
 			return false, nil
 		}, 5*time.Second, appDeploy.BindTimeout)
 
 		if err != nil {
 			return bindings, err
 		}
+
+		bindings = append(bindings, binding)
 	}
 	return bindings, nil
 }
@@ -168,7 +194,7 @@ func (r RunBinder) WaitStart(appDeploy AppDeploy) error {
 		if err != nil {
 			return true, err
 		}
-		if appDeploy.process.Instances.Value == 0 {
+		if appDeploy.Process.Instances.Value == 0 {
 			return true, nil
 		}
 
@@ -227,6 +253,8 @@ func (r RunBinder) WaitStaging(appDeploy AppDeploy) error {
 // http://v3-apidocs.cloudfoundry.org/version/3.124.0/#starting-apps
 func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 
+	logDebug(fmt.Sprintf("Starting app %+v", appDeploy))
+
 	// Get newest READY package for an app
 	packages, _, err := r.client.GetPackages(ccv3.Query{
 		Key:    ccv3.AppGUIDFilter,
@@ -244,7 +272,12 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 	if len(packages) < 1 {
 		return resources.Application{}, fmt.Errorf("No READY package found")
 	}
-	packageGUID := packages[0].GUID
+
+	// Get first package in the list
+	pkg := packages[0]
+	packageGUID := pkg.GUID
+
+	logDebug(fmt.Sprintf("\npackage to stage: %+v", pkg))
 
 	// Check for package droplets
 	var dropletGUID string
@@ -255,6 +288,8 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 	if err != nil {
 		return resources.Application{}, err
 	}
+
+	logDebug(fmt.Sprintf("\npackage droplets: %+v", droplets))
 
 	if len(droplets) > 0 {
 		dropletGUID = droplets[0].GUID
@@ -286,20 +321,75 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 			return false, nil
 		}, 5*time.Second, appDeploy.StageTimeout)
 
+		if err != nil {
+			return resources.Application{}, err
+		}
 		dropletGUID = build.DropletGUID
+		logDebug(fmt.Sprintf("build + droplet to set: %+v / %+v", build, dropletGUID))
 	}
 
-	// Set current droplet
-	_, _, err = r.client.SetApplicationDroplet(appDeploy.App.GUID, dropletGUID)
+	// Poll staged package
+	stgPkg, _, err := r.client.GetPackageDroplets(packageGUID)
+	if err != nil {
+		return resources.Application{}, err
+	}
+	logDebug(fmt.Sprintf("droplets to set: %+v / %+v", stgPkg, dropletGUID))
 
-	// Start application
-	_, _, err = r.client.UpdateApplication(resources.Application{
-		GUID:  appDeploy.App.GUID,
-		State: constant.ApplicationStarted,
+	// Set current droplet
+	_, _, err = r.client.SetApplicationDroplet(appDeploy.App.GUID, stgPkg[0].GUID)
+	if err != nil {
+		return resources.Application{}, err
+	}
+
+	// Check application state
+	appState, _, err := r.client.GetApplications(ccv3.Query{
+		Key:    ccv3.GUIDFilter,
+		Values: []string{appDeploy.App.GUID},
 	})
 	if err != nil {
 		return resources.Application{}, err
 	}
+	logDebug(fmt.Sprintf("App status %+v", appState))
+
+	// Again grabbing the process information
+	appProcesses, _, err := r.client.GetApplicationProcesses(appDeploy.App.GUID)
+	logDebug(fmt.Sprintf("[before start] app processes : %+v", appProcesses))
+
+	// Define process information and add to payload if set in terraform
+	processScaleInfo := resources.Process{
+		Type: constant.ProcessTypeWeb,
+	}
+
+	if appDeploy.Process.Instances.IsSet {
+		processScaleInfo.Instances = appDeploy.Process.Instances
+	}
+
+	if appDeploy.Process.MemoryInMB.IsSet && appDeploy.Process.MemoryInMB.Value > 0 {
+		processScaleInfo.MemoryInMB = appDeploy.Process.MemoryInMB
+	}
+
+	if appDeploy.Process.DiskInMB.IsSet && appDeploy.Process.DiskInMB.Value > 0 {
+		processScaleInfo.DiskInMB = appDeploy.Process.DiskInMB
+	}
+	logDebug(fmt.Sprintf("[before scale] process scale info : %+v", processScaleInfo))
+
+	scaledProcess, _, err := r.client.CreateApplicationProcessScale(appDeploy.App.GUID, processScaleInfo)
+	if err != nil {
+		return resources.Application{}, err
+	}
+	logDebug(fmt.Sprintf("[after scale] app process : %+v", scaledProcess))
+
+	// Start application
+	_, _, err = r.client.UpdateApplicationStart(appDeploy.App.GUID)
+	if err != nil {
+		return resources.Application{}, err
+	}
+
+	// Again grabbing the process information
+	appProcess, _, err := r.client.GetApplicationProcessByType(appDeploy.App.GUID, constant.ProcessTypeWeb)
+	logDebug(fmt.Sprintf("[after start] app web process : %+v", appProcesses))
+
+	appDeploy.Process = appProcess
 
 	err = r.WaitStart(appDeploy)
 	if err != nil {
@@ -316,13 +406,12 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 }
 
 func (r RunBinder) Stop(appDeploy AppDeploy) error {
-	_, _, err := r.client.UpdateApplication(resources.Application{
-		GUID:  appDeploy.App.GUID,
-		State: constant.ApplicationStopped,
-	})
+	app, _, err := r.client.UpdateApplicationStop(appDeploy.App.GUID)
 	if err != nil {
 		return err
 	}
+
+	logDebug(fmt.Sprintf("app state : %+v", app))
 	return nil
 }
 
