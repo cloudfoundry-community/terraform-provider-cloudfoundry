@@ -1,7 +1,7 @@
 # Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry)
 
 # Using the internal release
-Please refer to the [How to use section](../../wiki/How-to-use-the-provider) of the Wiki for a detailed guide
+Please refer to the [How to use section](../../wiki/How-to-use-the-provider) of the Wiki for a detailed guide on provider installation and setup.
 
 # Specific to v3 migration
 You don't need to do any setup except for installing the latest version of go. I'm using vscode with go extension installed.
