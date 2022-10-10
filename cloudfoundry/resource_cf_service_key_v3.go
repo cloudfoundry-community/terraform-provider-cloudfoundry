@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
@@ -185,8 +186,22 @@ func resourceServiceKeyV3Read(ctx context.Context, d *schema.ResourceData, meta 
 }
 
 func resourceServiceKeyV3Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	// Note : When deleting credential bindings originated from user provided service instances,
+	// the delete operation does not require interactions with service brokers,
+	// therefore the API will respond synchronously to the delete request.
 	session := meta.(*managers.Session)
 	jobURL, _, err := session.ClientV3.DeleteServiceCredentialBinding(d.Id())
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if jobURL == "" {
+		log.Printf("[INFO] Deleted service credential binding %s for User-Provided service instance, finishing without polling", d.Id())
+		return diag.FromErr(err)
+	}
+
+	// Polling when deleting service credential binding for a managed service instance
 	err = common.PollingWithTimeout(func() (bool, error) {
 		job, _, err := session.ClientV3.GetJob(jobURL)
 		if err != nil {

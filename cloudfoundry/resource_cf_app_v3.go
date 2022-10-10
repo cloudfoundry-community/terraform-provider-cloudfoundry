@@ -279,10 +279,9 @@ func validateV3Strategy(v interface{}, k string) (ws []string, errs []error) {
 
 func resourceAppV3Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-	log.Printf("[INFO] v3 deployer %+v", session.V3Deployer)
 
 	deployer := session.V3Deployer.Strategy(d.Get("strategy").(string))
-	log.Printf("[INFO] Use deploy strategy %s", deployer.Names()[0])
+	// log.Printf("[INFO] Use deploy strategy %s", deployer.Names()[0])
 
 	appDeploy, err := ResourceDataToAppDeployV3(d)
 	if err != nil {
@@ -512,7 +511,7 @@ func resourceAppV3Update(ctx context.Context, d *schema.ResourceData, meta inter
 		for _, vv := range d.Get("ports").(*schema.Set).List() {
 			ports = append(ports, vv.(int))
 		}
-		log.Printf("Ports have changed but not yet supported in v3 provider")
+		log.Printf("[WARN] Ports have changed but not yet supported in v3 provider")
 	}
 	if d.HasChange("instances") {
 		processUpdate.Instances = IntToNullInt(d.Get("instances").(int))
@@ -609,9 +608,13 @@ func resourceAppV3Update(ctx context.Context, d *schema.ResourceData, meta inter
 		}
 
 		if d.HasChange("instances") {
-			session.ClientV3.CreateApplicationProcessScale(d.Id(), resources.Process{
+			// Scale only web process type
+			procScale := resources.Process{
+				Type:      constant.ProcessTypeWeb,
 				Instances: IntToNullInt(d.Get("instances").(int)),
-			})
+			}
+			// log.Printf("scale proc : %+v", procScale)
+			session.ClientV3.CreateApplicationProcessScale(d.Id(), procScale)
 		}
 
 		if d.HasChange("stopped") {
@@ -659,11 +662,10 @@ func resourceAppV3Update(ctx context.Context, d *schema.ResourceData, meta inter
 func resourceAppV3Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 	appGUID := d.Id()
-	app, _, err := session.ClientV3.UpdateApplicationStop(appGUID)
+	_, _, err := session.ClientV3.UpdateApplicationStop(appGUID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	log.Printf("App status : %+v", app)
 
 	_, _, err = session.ClientV3.DeleteApplication(appGUID)
 	return diag.FromErr(err)

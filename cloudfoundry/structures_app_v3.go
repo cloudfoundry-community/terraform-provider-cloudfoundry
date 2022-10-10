@@ -3,7 +3,6 @@ package cloudfoundry
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
@@ -109,7 +108,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		EnvVars:         envVars,
 	}
 
-	log.Printf(" ***** \n --------- \n ***** [INFO] Parser : parsed app deploy %+v \n\n", appDeploy)
+	// log.Printf(" ***** \n --------- \n ***** [INFO] Parser : parsed app deploy %+v \n\n", appDeploy)
 
 	return appDeploy, nil
 }
@@ -117,7 +116,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 // AppDeployV3ToResourceData convert AppDeploy structure to tfstate
 func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.AppDeployResponse) {
 	d.SetId(appDeploy.App.GUID)
-	log.Printf("--------- [INFO] Appdeploy resp to parse %+v", appDeploy)
+	// log.Printf("--------- [INFO] Appdeploy resp to parse %+v", appDeploy)
 
 	_ = d.Set("name", appDeploy.App.Name)
 	_ = d.Set("space", appDeploy.App.SpaceGUID)
@@ -214,7 +213,7 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 
 // ProcessToResourceData convert an app's process information to terraform state
 func ProcessToResourceData(d *schema.ResourceData, proc resources.Process) {
-	log.Printf("---------- [READ] proc info : %+v", proc)
+	// log.Printf("---------- [READ] proc info : %+v", proc)
 	_ = d.Set("instances", proc.Instances.Value)
 	_ = d.Set("memory", proc.MemoryInMB.Value)
 	_ = d.Set("disk_quota", proc.DiskInMB.Value)

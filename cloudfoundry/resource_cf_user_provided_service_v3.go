@@ -3,7 +3,6 @@ package cloudfoundry
 import (
 	"context"
 	"encoding/json"
-	"log"
 
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
@@ -149,9 +148,9 @@ func resourceUserProvidedServiceV3Create(ctx context.Context, d *schema.Resource
 		RouteServiceURL: routeServiceURLFormat,
 	}
 
-	log.Printf("SI : %+v", userProvidedServiceInstance)
+	// log.Printf("SI : %+v", userProvidedServiceInstance)
 	userProvidedSI, _, err := session.ClientV3.CreateUserProvidedServiceInstance(userProvidedServiceInstance)
-	log.Printf("Created SI : %+v", userProvidedSI)
+	// log.Printf("Created SI : %+v", userProvidedSI)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -214,7 +213,6 @@ func resourceUserProvidedServiceV3Read(ctx context.Context, d *schema.ResourceDa
 
 	if _, hasJSON := d.GetOk("credentials_json"); hasJSON {
 		bytes, _ := json.Marshal(credentials)
-		log.Printf("Creds : %s //// state: %s", string(bytes), d.Get("credentials_json"))
 		d.Set("credentials_json", string(bytes))
 	} else {
 		d.Set("credentials", credentials)

@@ -2,7 +2,6 @@ package v3appdeployers
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
@@ -105,7 +104,7 @@ func (r RunBinder) bindingExists(appGUID string, binding resources.ServiceCreden
 func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.ServiceCredentialBinding, error) {
 	bindings := make([]resources.ServiceCredentialBinding, 0)
 
-	log.Printf("Bind service instances : %+v", appDeploy.ServiceBindings)
+	// log.Printf("Bind service instances : %+v", appDeploy.ServiceBindings)
 	appGUID := appDeploy.App.GUID
 	for _, binding := range appDeploy.ServiceBindings {
 		exists, err := r.bindingExists(appGUID, binding)
@@ -136,7 +135,7 @@ func (r RunBinder) BindServiceInstances(appDeploy AppDeploy) ([]resources.Servic
 
 		// Specific binding action for user-provided service instance
 		if siType == resources.UserProvidedServiceInstance {
-			// Force parameters to disappear to fix issues with v3 user-provided services
+			// Force parameters to disappear for user-provided services as this is not allowed and don't have any effect
 			if len(binding.Parameters.Value) == 0 {
 				binding.Parameters = types.OptionalObject{
 					IsSet: false,
@@ -282,9 +281,9 @@ func (r RunBinder) WaitStaging(appDeploy AppDeploy) error {
 
 // Start performs staging of the most recent ready package, update the app's current droplet and start the application
 // http://v3-apidocs.cloudfoundry.org/version/3.124.0/#starting-apps
-func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
+func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, resources.Process, error) {
 
-	logDebug(fmt.Sprintf("Starting app %+v", appDeploy))
+	// logDebug(fmt.Sprintf("Starting app %+v", appDeploy))
 
 	// Get newest READY package for an app
 	packages, _, err := r.client.GetPackages(ccv3.Query{
@@ -298,17 +297,17 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 		Values: []string{"-created_at"},
 	})
 	if err != nil {
-		return resources.Application{}, err
+		return resources.Application{}, resources.Process{}, err
 	}
 	if len(packages) < 1 {
-		return resources.Application{}, fmt.Errorf("No READY package found")
+		return resources.Application{}, resources.Process{}, fmt.Errorf("No READY package found")
 	}
 
 	// Get first package in the list
 	pkg := packages[0]
 	packageGUID := pkg.GUID
 
-	logDebug(fmt.Sprintf("\npackage to stage: %+v", pkg))
+	// logDebug(fmt.Sprintf("\npackage to stage: %+v", pkg))
 
 	// Check for package droplets
 	var dropletGUID string
@@ -317,10 +316,8 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 		Values: []string{"STAGED"},
 	})
 	if err != nil {
-		return resources.Application{}, err
+		return resources.Application{}, resources.Process{}, err
 	}
-
-	logDebug(fmt.Sprintf("\npackage droplets: %+v", droplets))
 
 	if len(droplets) > 0 {
 		dropletGUID = droplets[0].GUID
@@ -330,7 +327,7 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 			PackageGUID: packageGUID,
 		})
 		if err != nil {
-			return resources.Application{}, err
+			return resources.Application{}, resources.Process{}, err
 		}
 
 		// Poll once every 5 sec, timeout ${stageTimeout} fixed by appDeploy
@@ -353,74 +350,76 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 		}, 5*time.Second, appDeploy.StageTimeout)
 
 		if err != nil {
-			return resources.Application{}, err
+			return resources.Application{}, resources.Process{}, err
 		}
-		dropletGUID = build.DropletGUID
-		logDebug(fmt.Sprintf("build + droplet to set: %+v / %+v", build, dropletGUID))
-	}
 
-	// Poll staged package
-	stgPkg, _, err := r.client.GetPackageDroplets(packageGUID)
-	if err != nil {
-		return resources.Application{}, err
+		// Poll staged package
+		stgPkg, _, err := r.client.GetPackageDroplets(packageGUID)
+		if err != nil {
+			return resources.Application{}, resources.Process{}, err
+		}
+
+		// logDebug(fmt.Sprintf("droplets to set: %+v / %+v", stgPkg, stgPkg[0].GUID))
+		dropletGUID = stgPkg[0].GUID
 	}
-	logDebug(fmt.Sprintf("droplets to set: %+v / %+v", stgPkg, stgPkg[0].GUID))
 
 	// Set current droplet
-	_, _, err = r.client.SetApplicationDroplet(appDeploy.App.GUID, stgPkg[0].GUID)
+	_, _, err = r.client.SetApplicationDroplet(appDeploy.App.GUID, dropletGUID)
 	if err != nil {
-		return resources.Application{}, err
+		return resources.Application{}, resources.Process{}, err
 	}
 
 	// Grabbing the process information
 	appProcess, _, err := r.client.GetApplicationProcessByType(appDeploy.App.GUID, constant.ProcessTypeWeb)
-	logDebug(fmt.Sprintf("[after start] app web process : %+v", appProcess))
-
-	appDeploy.Process = appProcess
+	// logDebug(fmt.Sprintf("[after start] app web process : %+v", appProcess))
 
 	// Define process information and add to payload if set in terraform
 	processScaleInfo := resources.Process{
-		Type:       constant.ProcessTypeWeb,
-		Instances:  appDeploy.Process.Instances,
-		MemoryInMB: appDeploy.Process.MemoryInMB,
-		DiskInMB:   appDeploy.Process.DiskInMB,
+		Type: constant.ProcessTypeWeb,
 	}
-	logDebug(fmt.Sprintf("[before scale] process scale info : %+v", processScaleInfo))
+
+	if appDeploy.Process.Instances.IsSet {
+		processScaleInfo.Instances = appDeploy.Process.Instances
+	}
+
+	if appDeploy.Process.MemoryInMB.IsSet && appDeploy.Process.MemoryInMB.Value > 0 {
+		processScaleInfo.MemoryInMB = appDeploy.Process.MemoryInMB
+	}
+
+	if appDeploy.Process.DiskInMB.IsSet && appDeploy.Process.DiskInMB.Value > 0 {
+		processScaleInfo.DiskInMB = appDeploy.Process.DiskInMB
+	}
+
+	// logDebug(fmt.Sprintf("[before scale] process scale info : %+v", processScaleInfo))
 
 	scaledProcess, _, err := r.client.CreateApplicationProcessScale(appDeploy.App.GUID, processScaleInfo)
 	if err != nil {
-		return resources.Application{}, err
+		return resources.Application{}, resources.Process{}, err
 	}
+
+	// logDebug(fmt.Sprintf("[scaled process] app process : %+v", scaledProcess))
 
 	updatedProcess, _, err := r.client.UpdateProcess(resources.Process{
 		GUID:                scaledProcess.GUID,
 		HealthCheckType:     appDeploy.Process.HealthCheckType,
 		HealthCheckEndpoint: appDeploy.Process.HealthCheckEndpoint,
+		HealthCheckTimeout:  appProcess.HealthCheckTimeout,
 	})
 	if err != nil {
-		return resources.Application{}, err
+		return resources.Application{}, resources.Process{}, err
 	}
-	logDebug(fmt.Sprintf("[after scale] app process : %+v", updatedProcess))
 
-	// Check application state
-	appState, _, err := r.client.GetApplications(ccv3.Query{
-		Key:    ccv3.GUIDFilter,
-		Values: []string{appDeploy.App.GUID},
-	})
-	if err != nil {
-		return resources.Application{}, err
-	}
-	logDebug(fmt.Sprintf("App status %+v", appState))
+	// logDebug(fmt.Sprintf("[after scale] app process : %+v", updatedProcess))
 
 	// Start application
 	_, _, err = r.client.UpdateApplicationStart(appDeploy.App.GUID)
 	if err != nil {
-		return resources.Application{}, err
+		return resources.Application{}, resources.Process{}, err
 	}
 
 	err = r.WaitStart(appDeploy)
 	if err != nil {
-		return resources.Application{}, r.processDeployErr(err, appDeploy)
+		return resources.Application{}, resources.Process{}, r.processDeployErr(err, appDeploy)
 	}
 
 	app, _, err := r.client.GetApplications(ccv3.Query{
@@ -428,27 +427,29 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, error) {
 		Values: []string{appDeploy.App.GUID},
 	})
 	if err != nil {
-		return app[0], err
+		return resources.Application{}, resources.Process{}, err
 	}
-	return app[0], nil
+	return app[0], updatedProcess, nil
 }
 
+// Stop simply stops the application
 func (r RunBinder) Stop(appDeploy AppDeploy) error {
-	app, _, err := r.client.UpdateApplicationStop(appDeploy.App.GUID)
+	_, _, err := r.client.UpdateApplicationStop(appDeploy.App.GUID)
 	if err != nil {
 		return err
 	}
 
-	logDebug(fmt.Sprintf("app state : %+v", app))
+	// logDebug(fmt.Sprintf("app state : %+v", app))
 	return nil
 }
 
+// Restart simply runs Stop and Start.
 func (r RunBinder) Restart(appDeploy AppDeploy, stageTimeout time.Duration) error {
 	err := r.Stop(appDeploy)
 	if err != nil {
 		return err
 	}
-	_, err = r.Start(appDeploy)
+	_, _, err = r.Start(appDeploy)
 	if err != nil {
 		return err
 	}
