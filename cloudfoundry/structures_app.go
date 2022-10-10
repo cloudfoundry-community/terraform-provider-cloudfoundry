@@ -219,7 +219,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		Metadata:            &metadata,
 		Name:                d.Get("name").(string),
 		SpaceGUID:           d.Get("space").(string),
-		State:               v3Constants.ApplicationStarted,
+		State:               v3Constants.ApplicationState(d.Get("state").(string)),
 	}
 
 	if d.Get("stopped").(bool) {
@@ -261,7 +261,6 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		Instances:                    IntToNullInt(d.Get("instances").(int)),
 		MemoryInMB:                   IntToNullUint64Zero(d.Get("memory").(int)),
 		DiskInMB:                     IntToNullUint64Zero(d.Get("disk_quota").(int)),
-		AppGUID:                      app.GUID,
 	}
 
 	var DockerUsername string
