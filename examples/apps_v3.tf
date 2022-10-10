@@ -5,10 +5,21 @@ resource "cloudfoundry_route" "routes" {  # memo: End result URL is: <hostname>.
   space    = data.cloudfoundry_space_v3.space_v3.id
 }
 
+resource "cloudfoundry_user_provided_service_v3" "mq" {
+  name = "mq_server_v3"
+  space = data.cloudfoundry_space_v3.space_v3.id
+  credentials = {
+    "url" = "mq:#localhost:9000"
+    "username" = "tphan"
+    "password" = "tphan"
+  }
+}
+
 resource "cloudfoundry_app_v3" "test_app_thanh" {
     name                    = "ipa-store-test"
     space                   = data.cloudfoundry_space_v3.space_v3.id
-    memory                  = 128
+    memory                  = 64
+    disk_quota              = 2048
     timeout                 = 120
     path                    = "/home/tphan/SAPDevelop/v3_migration/frontend/target/com.sap.ipa.store/dist.zip"
     strategy                = "standard"
@@ -23,7 +34,7 @@ resource "cloudfoundry_app_v3" "test_app_thanh" {
     }
 
     service_binding {
-        service_instance =  data.cloudfoundry_service_instance.xsuaa.id 
+        service_instance =  resource.cloudfoundry_user_provided_service_v3.mq.id 
     }
 }
 
