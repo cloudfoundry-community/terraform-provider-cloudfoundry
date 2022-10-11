@@ -18,6 +18,7 @@ type AppDeploy struct {
 	BindTimeout     time.Duration
 	StageTimeout    time.Duration
 	StartTimeout    time.Duration
+	Ports           []int
 }
 
 func (a AppDeploy) IsDockerImage() bool {
@@ -32,4 +33,5 @@ type AppDeployResponse struct {
 	EnvVars         resources.EnvironmentVariables
 	Mappings        []resources.Route
 	ServiceBindings []resources.ServiceCredentialBinding
+	Ports           []int
 }

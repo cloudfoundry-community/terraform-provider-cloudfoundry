@@ -14,7 +14,7 @@ import (
 )
 
 // ResourceDataToAppDeployV3 convert tfstate to AppDeploy structure
-func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy, error) {
+func ResourceDataToAppDeployV3Deprecated(d *schema.ResourceData) (v3appdeployers.AppDeploy, error) {
 	app := resources.Application{
 		GUID:                d.Id(),
 		Name:                d.Get("name").(string),
@@ -115,7 +115,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 }
 
 // AppDeployV3ToResourceData convert AppDeploy structure to tfstate
-func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.AppDeployResponse) {
+func AppDeployV3ToResourceDataDeprecated(d *schema.ResourceData, appDeploy v3appdeployers.AppDeployResponse) {
 	d.SetId(appDeploy.App.GUID)
 	log.Printf("--------- [INFO] Appdeploy resp to parse %+v", appDeploy)
 
