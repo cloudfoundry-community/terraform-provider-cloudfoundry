@@ -149,9 +149,9 @@ func resourceUserProvidedServiceV3Create(ctx context.Context, d *schema.Resource
 		RouteServiceURL: routeServiceURLFormat,
 	}
 
-	log.Printf("SI : %+v", userProvidedServiceInstance)
+	// log.Printf("SI : %+v", userProvidedServiceInstance)
 	userProvidedSI, _, err := session.ClientV3.CreateUserProvidedServiceInstance(userProvidedServiceInstance)
-	log.Printf("Created SI : %+v", userProvidedSI)
+	// log.Printf("Created SI : %+v", userProvidedSI)
 	if err != nil {
 		return diag.FromErr(err)
 	}

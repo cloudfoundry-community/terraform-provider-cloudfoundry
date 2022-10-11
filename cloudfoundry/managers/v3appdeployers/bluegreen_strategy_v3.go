@@ -219,7 +219,7 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 		{
 			Forward: func(ctx Context) (Context, error) {
 				appResp := ctx["app_response"].(AppDeployResponse)
-				app, err := s.runBinder.Start(AppDeploy{
+				app, _, err := s.runBinder.Start(AppDeploy{
 					App:          appResp.App,
 					StageTimeout: appDeploy.StageTimeout,
 					BindTimeout:  appDeploy.BindTimeout,

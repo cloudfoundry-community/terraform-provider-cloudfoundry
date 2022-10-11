@@ -1,7 +1,7 @@
-data "cloudfoundry_service_instance" "xsuaa" {
-  name_or_id = "e9532a3d-f7b8-44dd-a9d5-9a14ce3ca596"
-  space      = data.cloudfoundry_space_v3.space_v3.id
-}
+# data "cloudfoundry_service_instance" "xsuaa" {
+#   name_or_id = "e9532a3d-f7b8-44dd-a9d5-9a14ce3ca596"
+#   space      = data.cloudfoundry_space_v3.space_v3.id
+# }
 
 # resource "cloudfoundry_service_instance" "service_instance" {
 #   name         = var.service_instance_name

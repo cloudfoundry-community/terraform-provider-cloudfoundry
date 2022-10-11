@@ -47,31 +47,41 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 	actions := Actions{
 		{
 			Forward: func(ctx Context) (Context, error) {
-				logDebug(fmt.Sprintf("Create/Update app: %+v", appDeploy.App))
+				// logDebug(fmt.Sprintf("Create/Update app: %+v", appDeploy.App))
 
 				app := appDeploy.App
 				app.State = constant.ApplicationStopped
+				// If update app, remove spaceGUID request body
+				// if space changes, force new ( delete + recreate )
+				if app.GUID != "" {
+					app.SpaceGUID = ""
+				}
+
 				app, _, err := deployFunc(app)
 				if err != nil {
 					return ctx, err
 				}
+
+				// Set envars
+				createdEnv, _, err := s.client.UpdateApplicationEnvironmentVariables(app.GUID, appDeploy.EnvVars)
+				if err != nil {
+					return ctx, err
+				}
+				// logDebug(fmt.Sprintf("environment variables: %+v", createdEnv))
+
 				ctx["app_response"] = AppDeployResponse{
 					App:        app,
 					Process:    appDeploy.Process,
 					EnableSSH:  appDeploy.EnableSSH,
 					AppPackage: appDeploy.AppPackage,
-					EnvVars:    appDeploy.EnvVars,
+					EnvVars:    createdEnv,
 				}
 				return ctx, nil
 			},
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				logDebug(fmt.Sprintf("Map routes: %+v", appDeploy.Mappings))
-
-				// Check for processes to see if we can scale to correct memory and nb instances
-				appProcesses, _, err := s.client.GetApplicationProcesses(appDeploy.App.GUID)
-				logDebug(fmt.Sprintf("app processes : %+v", appProcesses))
+				// logDebug(fmt.Sprintf("Map routes: %+v", appDeploy.Mappings))
 
 				appResp := ctx["app_response"].(AppDeployResponse)
 				mappings, err := s.runBinder.MapRoutes(AppDeploy{
@@ -98,7 +108,7 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				logDebug(fmt.Sprintf("Bind service instance %+v", appDeploy.ServiceBindings))
+				// logDebug(fmt.Sprintf("Bind service instance %+v", appDeploy.ServiceBindings))
 
 				appResp := ctx["app_response"].(AppDeployResponse)
 				bindings, err := s.runBinder.BindServiceInstances(AppDeploy{
@@ -111,6 +121,9 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				if err != nil {
 					return ctx, err
 				}
+
+				// logDebug(fmt.Sprintf("created service bindings : %+v", bindings))
+
 				ctx["app_response"] = AppDeployResponse{
 					App:             appResp.App,
 					Mappings:        appResp.Mappings,
@@ -122,7 +135,7 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				logDebug("Uploading package")
+				// Bits will be loaded entirely into memory for each app
 				if appDeploy.Path == "" {
 					return ctx, nil
 				}
@@ -143,13 +156,14 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				logDebug(fmt.Sprintf("Start application %+v", appDeploy))
+				// logDebug(fmt.Sprintf("Start application %+v", appDeploy))
+
 				if stateAsk == constant.ApplicationStopped {
 					return ctx, nil
 				}
 
 				appResp := ctx["app_response"].(AppDeployResponse)
-				app, err := s.runBinder.Start(AppDeploy{
+				app, proc, err := s.runBinder.Start(AppDeploy{
 					App:          appResp.App,
 					Process:      appDeploy.Process,
 					EnableSSH:    appDeploy.EnableSSH,
@@ -164,14 +178,14 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				}
 
 				// Get process information
-				appProcess, _, err := s.client.GetApplicationProcessByType(app.GUID, constant.ProcessTypeWeb)
-				logDebug(fmt.Sprintf("app and app web process : %+v, %+v", app, appProcess))
+				// appProcess, _, err := s.client.GetApplicationProcessByType(app.GUID, constant.ProcessTypeWeb)
+				// logDebug(fmt.Sprintf("app and app web process : %+v, %+v", app, appProcess))
 
 				ctx["app_response"] = AppDeployResponse{
 					App:             app,
 					Mappings:        appResp.Mappings,
 					ServiceBindings: appResp.ServiceBindings,
-					Process:         appProcess,
+					Process:         proc,
 					EnableSSH:       appDeploy.EnableSSH,
 					AppPackage:      appResp.AppPackage,
 					EnvVars:         appDeploy.EnvVars,

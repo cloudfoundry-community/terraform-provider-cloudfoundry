@@ -7,16 +7,17 @@ import (
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
+
 const ManagedServiceInstance = "managed"
 
 func resourceServiceInstanceV3() *schema.Resource {
@@ -121,15 +122,15 @@ func resourceServiceInstanceV3Create(ctx context.Context, d *schema.ResourceData
 
 	// Some instances takes more time for creation
 	// This a custom timeout_in_minutes flag to give service more time for creation in minutes
-	poll_timeout_in_minutes:=d.Get("timeout_in_minutes").(int)
+	poll_timeout_in_minutes := d.Get("timeout_in_minutes").(int)
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
 	}
-	tags_format := types.OptionalStringSlice {
+	tags_format := types.OptionalStringSlice{
 		IsSet: true,
 		Value: tags,
 	}
-	
+
 	params := make(map[string]interface{})
 	if len(jsonParameters) > 0 {
 		err := json.Unmarshal([]byte(jsonParameters), &params)
@@ -137,7 +138,7 @@ func resourceServiceInstanceV3Create(ctx context.Context, d *schema.ResourceData
 			return diag.FromErr(err)
 		}
 	}
-	params_format:= types.OptionalObject {
+	params_format := types.OptionalObject{
 		IsSet: true,
 		Value: params,
 	}
@@ -147,16 +148,15 @@ func resourceServiceInstanceV3Create(ctx context.Context, d *schema.ResourceData
 	serviceInstance.Name = name
 	serviceInstance.SpaceGUID = space
 	serviceInstance.ServicePlanGUID = servicePlan
-	serviceInstance.Tags= tags_format
-	serviceInstance.Parameters=params_format
-	
-	log.Printf("SI : %+v",serviceInstance)
+	serviceInstance.Tags = tags_format
+	serviceInstance.Parameters = params_format
+
+	log.Printf("SI : %+v", serviceInstance)
 	jobURL, _, err := session.ClientV3.CreateServiceInstance(serviceInstance)
 	log.Printf("Job URL : %+v", jobURL)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	
 
 	// Poll the state of the async job
 	err = common.PollingWithTimeout(func() (bool, error) {
@@ -183,18 +183,17 @@ func resourceServiceInstanceV3Create(ctx context.Context, d *schema.ResourceData
 				return true, err
 			}
 
-			log.Printf("Service Instance GUID : %+v",si.GUID)
+			log.Printf("Service Instance GUID : %+v", si.GUID)
 			d.SetId(si.GUID)
 			return true, err
 		}
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, time.Duration(poll_timeout_in_minutes) * time.Minute)
-	
+	}, 5*time.Second, time.Duration(poll_timeout_in_minutes)*time.Minute)
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
 
 	return nil
 }
@@ -217,7 +216,7 @@ func resourceServiceInstanceV3Read(ctx context.Context, d *schema.ResourceData, 
 	d.Set("service_plan", serviceInstance.ServicePlanGUID)
 	d.Set("space", serviceInstance.SpaceGUID)
 
-	if (serviceInstance.Tags.IsSet)  {
+	if serviceInstance.Tags.IsSet {
 		tags := make([]interface{}, len(serviceInstance.Tags.Value))
 		for i, v := range serviceInstance.Tags.Value {
 			tags[i] = v
@@ -226,18 +225,18 @@ func resourceServiceInstanceV3Read(ctx context.Context, d *schema.ResourceData, 
 	} else {
 		d.Set("tags", nil)
 	}
-	if ( serviceInstance.Parameters.IsSet)  {
+	if serviceInstance.Parameters.IsSet {
 		//params := make(map[string]interface{})
 		params, err := json.Marshal(serviceInstance.Parameters.Value)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-	
-	d.Set("jsonParameters", params)
+
+		d.Set("jsonParameters", params)
 	} else {
 		d.Set("jsonParameters", nil)
 	}
-	
+
 	return nil
 }
 
@@ -264,11 +263,11 @@ func resourceServiceInstanceV3Update(ctx context.Context, d *schema.ResourceData
 	name = d.Get("name").(string)
 	servicePlan := d.Get("service_plan").(string)
 	jsonParameters := d.Get("json_params").(string)
-	space:= d.Get("space").(string)
-	
+	space := d.Get("space").(string)
+
 	// Some instances takes more time for creation
-	// This a custom timeout_in_minutes flag to give service more time for creation in minutes  
-	poll_timeout_in_minutes:=d.Get("timeout_in_minutes").(int)
+	// This a custom timeout_in_minutes flag to give service more time for creation in minutes
+	poll_timeout_in_minutes := d.Get("timeout_in_minutes").(int)
 	if len(jsonParameters) > 0 {
 		err := json.Unmarshal([]byte(jsonParameters), &params)
 		if err != nil {
@@ -282,7 +281,7 @@ func resourceServiceInstanceV3Update(ctx context.Context, d *schema.ResourceData
 		tags = append(tags, v.(string))
 	}
 
-	tags_format := types.OptionalStringSlice {
+	tags_format := types.OptionalStringSlice{
 		IsSet: true,
 		Value: tags,
 	}
@@ -293,7 +292,7 @@ func resourceServiceInstanceV3Update(ctx context.Context, d *schema.ResourceData
 			return diag.FromErr(err)
 		}
 	}
-	params_format:= types.OptionalObject {
+	params_format := types.OptionalObject{
 		IsSet: true,
 		Value: params,
 	}
@@ -326,10 +325,10 @@ func resourceServiceInstanceV3Update(ctx context.Context, d *schema.ResourceData
 			)
 		}
 		/*
-		query := ccv3.Query{
-			Key:    ccv3.GUIDFilter,
-			Values: []string{d.Id()},
-		}*/
+			query := ccv3.Query{
+				Key:    ccv3.GUIDFilter,
+				Values: []string{d.Id()},
+			}*/
 		// Check the state if job completed
 		if job.State == constant.JobComplete {
 			si, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
@@ -338,12 +337,12 @@ func resourceServiceInstanceV3Update(ctx context.Context, d *schema.ResourceData
 			}
 			d.SetId(si.GUID)
 			return true, nil
-			
+
 		}
 
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, time.Duration(poll_timeout_in_minutes)  * time.Minute)
+	}, 5*time.Second, time.Duration(poll_timeout_in_minutes)*time.Minute)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -363,7 +362,7 @@ func resourceServiceInstanceV3Delete(ctx context.Context, d *schema.ResourceData
 	}
 	name := d.Get("name").(string)
 	space := d.Get("space").(string)
-	poll_timeout_in_minutes:=d.Get("timeout_in_minutes").(int)
+	poll_timeout_in_minutes := d.Get("timeout_in_minutes").(int)
 
 	// Poll the state of the async job
 	err = common.PollingWithTimeout(func() (bool, error) {
@@ -381,10 +380,10 @@ func resourceServiceInstanceV3Delete(ctx context.Context, d *schema.ResourceData
 			)
 		}
 		/*
-		query := ccv3.Query{
-			Key:    ccv3.GUIDFilter,
-			Values: []string{d.Id()},
-		}*/
+			query := ccv3.Query{
+				Key:    ccv3.GUIDFilter,
+				Values: []string{d.Id()},
+			}*/
 		// Check the state if job completed
 		if job.State == constant.JobComplete {
 			_, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
@@ -395,7 +394,7 @@ func resourceServiceInstanceV3Delete(ctx context.Context, d *schema.ResourceData
 
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, time.Duration(poll_timeout_in_minutes) * time.Minute)
+	}, 5*time.Second, time.Duration(poll_timeout_in_minutes)*time.Minute)
 
 	return nil
 }
@@ -414,7 +413,7 @@ func resourceServiceInstanceImportV3(ctx context.Context, d *schema.ResourceData
 	d.Set("name", serviceInstance.Name)
 	d.Set("service_plan", serviceInstance.ServicePlanGUID)
 	d.Set("space", serviceInstance.SpaceGUID)
-	if (serviceInstance.Tags.IsSet)  {
+	if serviceInstance.Tags.IsSet {
 		tags := make([]interface{}, len(serviceInstance.Tags.Value))
 		for i, v := range serviceInstance.Tags.Value {
 			tags[i] = v

@@ -22,10 +22,10 @@ func resourceRouteV3() *schema.Resource {
 
 	return &schema.Resource{
 
-		CreateContext: resourceRouteCreate,
-		ReadContext:   resourceRouteRead,
-		UpdateContext: resourceRouteUpdate,
-		DeleteContext: resourceRouteDelete,
+		CreateContext: resourceRouteV3Create,
+		ReadContext:   resourceRouteV3Read,
+		UpdateContext: resourceRouteV3Update,
+		DeleteContext: resourceRouteV3Delete,
 
 		Importer: &schema.ResourceImporter{
 			StateContext: ImportReadContext(resourceRouteRead),
