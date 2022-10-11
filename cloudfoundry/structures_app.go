@@ -212,6 +212,13 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		Labels: map[string]types.NullString{},
 	}
 
+	stateAsk := v3Constants.ApplicationStarted
+	if stopped, ok := d.GetOk("stopped"); ok {
+		if stopped.(bool) {
+			stateAsk = v3Constants.ApplicationStopped
+		}
+	}
+
 	app := resources.Application{
 		GUID:                d.Id(),
 		StackName:           d.Get("stack").(string),
@@ -219,7 +226,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		Metadata:            &metadata,
 		Name:                d.Get("name").(string),
 		SpaceGUID:           d.Get("space").(string),
-		State:               v3Constants.ApplicationState(d.Get("state").(string)),
+		State:               stateAsk,
 	}
 
 	if d.Get("stopped").(bool) {
@@ -253,14 +260,13 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 	}
 
 	process := resources.Process{
-		Command:                      StringToFilteredString((d.Get("command").(string))),
-		HealthCheckType:              v3Constants.HealthCheckType(d.Get("health_check_type").(string)),
-		HealthCheckEndpoint:          d.Get("health_check_http_endpoint").(string),
-		HealthCheckInvocationTimeout: int64(d.Get("health_check_timeout").(int)),
-		HealthCheckTimeout:           d.Get("health_check_timeout").(int64),
-		Instances:                    IntToNullInt(d.Get("instances").(int)),
-		MemoryInMB:                   IntToNullUint64Zero(d.Get("memory").(int)),
-		DiskInMB:                     IntToNullUint64Zero(d.Get("disk_quota").(int)),
+		Command:             StringToFilteredString((d.Get("command").(string))),
+		HealthCheckType:     v3Constants.HealthCheckType(d.Get("health_check_type").(string)),
+		HealthCheckEndpoint: d.Get("health_check_http_endpoint").(string),
+		HealthCheckTimeout:  int64(d.Get("health_check_timeout").(int)),
+		Instances:           IntToNullInt(d.Get("instances").(int)),
+		MemoryInMB:          IntToNullUint64Zero(d.Get("memory").(int)),
+		DiskInMB:            IntToNullUint64Zero(d.Get("disk_quota").(int)),
 	}
 
 	var DockerUsername string
@@ -378,7 +384,7 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 	finalMappings := make([]map[string]interface{}, 0)
 	for _, mapping := range appDeploy.Mappings {
 		// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
-		if mapping.Port <= 0 {
+		if mapping.Port <= 0 && len(appDeploy.Ports) > 0 {
 			mapping.Port = appDeploy.Ports[0]
 		}
 		if IsImportState(d) {
