@@ -368,6 +368,11 @@ func resourceRouteV3Delete(ctx context.Context, d *schema.ResourceData, meta int
 			return diag.FromErr(err)
 		}
 	}
-	_, _, err := session.ClientV3.DeleteRoute(d.Id())
+
+	jobURL, _, err := session.ClientV3.DeleteRoute(d.Id())
+	err = PollAsyncJob(PollingConfig{
+		session: session,
+		jobURL:  jobURL,
+	})
 	return diag.FromErr(err)
 }

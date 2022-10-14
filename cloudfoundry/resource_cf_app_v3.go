@@ -667,6 +667,11 @@ func resourceAppV3Delete(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
-	_, _, err = session.ClientV3.DeleteApplication(appGUID)
+	jobURL, _, err := session.ClientV3.DeleteApplication(appGUID)
+
+	err = PollAsyncJob(PollingConfig{
+		session: session,
+		jobURL:  jobURL,
+	})
 	return diag.FromErr(err)
 }

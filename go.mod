@@ -2,7 +2,7 @@ module github.com/terraform-providers/terraform-provider-cloudfoundry
 
 go 1.17
 
-replace code.cloudfoundry.org/cli => github.wdf.sap.corp/intelligent-rpa/cloudfoundry-cli v1.18.8
+replace code.cloudfoundry.org/cli => github.wdf.sap.corp/intelligent-rpa/cloudfoundry-cli v1.18.10
 
 require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20180906201452-2aa6f33b730c // indirect
