@@ -142,7 +142,6 @@ func Provider() *schema.Provider {
 			"cloudfoundry_user_provided_service_v3":      resourceUserProvidedServiceV3(),
 			"cloudfoundry_buildpack":                     resourceBuildpack(),
 			"cloudfoundry_route":                         resourceRoute(),
-			"cloudfoundry_route_v3":                      resourceRouteV3(),
 			"cloudfoundry_route_service_binding":         resourceRouteServiceBinding(),
 			"cloudfoundry_app":                           resourceApp(),
 			"cloudfoundry_isolation_segment":             resourceSegment(),
