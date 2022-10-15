@@ -101,7 +101,6 @@ func Provider() *schema.Provider {
 			"cloudfoundry_route":                 dataSourceRoute(),
 			"cloudfoundry_asg":                   dataSourceAsg(),
 			"cloudfoundry_org":                   dataSourceOrg(),
-			"cloudfoundry_org_v3":                dataSourceOrgV3(),
 			"cloudfoundry_org_quota":             dataSourceOrgQuota(),
 			"cloudfoundry_space_quota":           dataSourceSpaceQuota(),
 			"cloudfoundry_isolation_segment":     dataSourceIsolationSegment(),

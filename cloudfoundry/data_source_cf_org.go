@@ -1,8 +1,9 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"context"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
@@ -36,7 +37,11 @@ func dataSourceOrgRead(ctx context.Context, d *schema.ResourceData, meta interfa
 
 	name := d.Get("name").(string)
 
-	orgs, _, err := session.ClientV2.GetOrganizations(ccv2.FilterByName(name))
+	orgs, _, err := session.ClientV3.GetOrganizations(ccv3.Query{
+		Key:    "names",
+		Values: []string{name},
+	})
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -44,6 +49,10 @@ func dataSourceOrgRead(ctx context.Context, d *schema.ResourceData, meta interfa
 	if len(orgs) == 0 {
 		return diag.FromErr(NotFound)
 	}
+	if len(orgs) != 1 {
+		return diag.Errorf("Found more than one org")
+	}
+
 	d.SetId(orgs[0].GUID)
 
 	err = metadataRead(orgMetadata, d, meta, true)
