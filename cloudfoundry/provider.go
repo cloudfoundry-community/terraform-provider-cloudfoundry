@@ -105,7 +105,6 @@ func Provider() *schema.Provider {
 			"cloudfoundry_space_quota":           dataSourceSpaceQuota(),
 			"cloudfoundry_isolation_segment":     dataSourceIsolationSegment(),
 			"cloudfoundry_space":                 dataSourceSpace(),
-			"cloudfoundry_space_v3":              dataSourceSpaceV3(),
 			"cloudfoundry_service_instance":      dataSourceServiceInstance(),
 			"cloudfoundry_user_provided_service": dataSourceUserProvidedService(),
 			"cloudfoundry_service_key":           dataSourceServiceKey(),
