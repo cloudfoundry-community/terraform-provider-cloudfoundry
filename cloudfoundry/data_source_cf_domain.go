@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
+	"code.cloudfoundry.org/cli/resources"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -54,21 +54,26 @@ func dataSourceDomainRead(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.Errorf("client is nil")
 	}
 
-	dm := session.ClientV2
+	dm := session.ClientV3
 
 	var (
 		name, prefix string
 	)
 
-	sharedDomains, _, err := dm.GetSharedDomains()
+	/* 	sharedDomains, _, err := dm.GetSharedDomains()
+	   	if err != nil {
+	   		return diag.FromErr(err)
+	   	}
+	   	privateDomains, _, err := dm.GetPrivateDomains()
+	   	if err != nil {
+	   		return diag.FromErr(err)
+	   	} */
+
+	domains, _, err := dm.GetDomains()
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	privateDomains, _, err := dm.GetPrivateDomains()
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	domains := append(sharedDomains, privateDomains...)
 
 	if v, ok := d.GetOk("sub_domain"); ok {
 		prefix = v.(string) + "."
@@ -81,7 +86,7 @@ func dataSourceDomainRead(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.Errorf("neither a full name or sub-domain was provided to do an effective domain search")
 	}
 
-	var domain *ccv2.Domain
+	var domain *resources.Domain
 	if len(name) == 0 {
 		for _, d := range domains {
 			if strings.HasPrefix(d.Name, prefix) {
@@ -109,7 +114,7 @@ func dataSourceDomainRead(ctx context.Context, d *schema.ResourceData, meta inte
 	d.Set("name", domain.Name)
 	d.Set("sub_domain", domainParts[0])
 	d.Set("domain", strings.Join(domainParts[1:], "."))
-	d.Set("org", domain.OwningOrganizationGUID)
+	d.Set("org", domain.OrganizationGUID)
 	d.Set("internal", domain.Internal)
 	d.SetId(domain.GUID)
 	return diag.FromErr(err)
