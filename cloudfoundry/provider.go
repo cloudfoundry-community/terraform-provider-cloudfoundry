@@ -110,7 +110,6 @@ func Provider() *schema.Provider {
 			"cloudfoundry_service_key":           dataSourceServiceKey(),
 			"cloudfoundry_service":               dataSourceService(),
 			"cloudfoundry_app":                   dataSourceApp(),
-			"cloudfoundry_app_v3":                dataSourceAppV3(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
