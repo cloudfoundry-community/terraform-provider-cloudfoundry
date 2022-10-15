@@ -396,7 +396,7 @@ func resourceServiceInstanceV3Delete(ctx context.Context, d *schema.ResourceData
 		return false, nil
 	}, 5*time.Second, time.Duration(poll_timeout_in_minutes)*time.Minute)
 
-	return nil
+	return diag.FromErr(err)
 }
 
 func resourceServiceInstanceImportV3(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
