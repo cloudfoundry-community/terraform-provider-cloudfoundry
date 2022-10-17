@@ -289,7 +289,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		ports = append(ports, vv.(int))
 	}
 	if len(ports) == 0 && appPackage.DockerImage == "" {
-		ports = []int{8080}
+		ports = []int{DefaultAppPort}
 	}
 
 	enableSSH := resources.ApplicationFeature{
@@ -382,7 +382,9 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 
 	mappingsTf := getListOfStructs(d.Get("routes"))
 	finalMappings := make([]map[string]interface{}, 0)
+
 	for _, mapping := range appDeploy.Mappings {
+
 		// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
 		if mapping.Port <= 0 && len(appDeploy.Ports) > 0 {
 			mapping.Port = appDeploy.Ports[0]
@@ -398,6 +400,10 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 			objMap := object.(map[string]interface{})
 			if objMap["port"].(int) <= 0 {
 				return objMap["route"] == mapping.GUID
+			}
+			// If mapping returned from API is 0, match if the port in tf state is 8080
+			if mapping.Port <= 0 {
+				return objMap["route"] == mapping.GUID && objMap["port"] == DefaultAppPort
 			}
 			return objMap["route"] == mapping.GUID && objMap["port"] == mapping.Port
 		})
