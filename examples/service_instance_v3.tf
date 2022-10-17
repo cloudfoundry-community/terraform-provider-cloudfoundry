@@ -1,5 +1,5 @@
 ## Grab a Cloud Foundry application-logs details
-data "cloudfoundry_service_offering_v3" "application-logs" {
+data "cloudfoundry_service" "application-logs" {
   name = "application-logs"
 }
 

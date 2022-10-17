@@ -12,7 +12,6 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/resources"
-	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/hashcode"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
@@ -95,7 +94,11 @@ func setRouteStateV3(session *managers.Session, route resources.Route, d *schema
 	d.Set("domain", route.DomainGUID)
 	d.Set("space", route.SpaceGUID)
 	d.Set("hostname", route.Host)
-	d.Set("port", route.Port)
+
+	if route.Port != 0 {
+		d.Set("port", route.Port)
+	}
+
 	d.Set("path", route.Path)
 
 	// In v3 shared domains and private domains are managed by the same endpoint, differenciating on whether
@@ -158,11 +161,7 @@ func resourceRouteCreate(ctx context.Context, d *schema.ResourceData, meta inter
 	if session == nil {
 		return diag.Errorf("client is nil")
 	}
-	port := types.NullInt{}
-	if v, ok := d.GetOk("port"); ok {
-		port.Value = v.(int)
-		port.IsSet = true
-	}
+
 	var route = resources.Route{}
 
 	// Call create route API
@@ -175,6 +174,10 @@ func resourceRouteCreate(ctx context.Context, d *schema.ResourceData, meta inter
 			Path:       d.Get("path").(string),
 			Port:       d.Get("port").(int),
 		})
+
+		if v, ok := d.GetOk("port"); ok {
+			route.Port = v.(int)
+		}
 		if err != nil {
 			if unexpected, ok := err.(ccerror.V3UnexpectedResponseError); ok && unexpected.ResponseCode == http.StatusInternalServerError {
 				return err

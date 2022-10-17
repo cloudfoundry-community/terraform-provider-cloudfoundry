@@ -42,3 +42,4 @@ website/vendor
 
 # cf access token
 **/tokens.txt
+examples/.terraform*
