@@ -107,7 +107,6 @@ func resourceApp() *schema.Resource {
 			"stopped": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
-				Computed: true,
 				Default:  false,
 			},
 			"strategy": &schema.Schema{
@@ -130,7 +129,6 @@ func resourceApp() *schema.Resource {
 			"docker_image": &schema.Schema{
 				Type:          schema.TypeString,
 				Optional:      true,
-				Computed:      true,
 				ConflictsWith: []string{"path"},
 			},
 			"docker_credentials": &schema.Schema{
@@ -218,7 +216,6 @@ func resourceApp() *schema.Resource {
 			"health_check_type": &schema.Schema{
 				Type:         schema.TypeString,
 				Optional:     true,
-				Computed:     true,
 				Default:      "port",
 				ValidateFunc: validateAppV3HealthCheckType,
 			},

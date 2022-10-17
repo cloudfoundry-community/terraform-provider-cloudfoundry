@@ -246,6 +246,11 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 		return diag.Errorf("client is nil")
 	}
 
+	// Nothing to be done
+	if !isServiceInstanceUpdateRequired(d) {
+		return nil
+	}
+
 	// Enable partial state mode
 	// We need to explicitly set state updates ourselves or
 	// tell terraform when a state change is applied and thus okay to persist
@@ -259,9 +264,8 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 		params   map[string]interface{}
 	)
 
-	id = d.Id()
 	name = d.Get("name").(string)
-	servicePlan := d.Get("service_plan").(string)
+	id = d.Id()
 	jsonParameters := d.Get("json_params").(string)
 	space := d.Get("space").(string)
 
@@ -298,12 +302,18 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 	}
 	log.Printf("Tags Format : %+v", tags_format)
 	log.Printf("Executing Update Instance")
-	jobURL, _, err := session.ClientV3.UpdateServiceInstance(id, resources.ServiceInstance{
-		Name:            name,
-		ServicePlanGUID: servicePlan,
-		Parameters:      params_format,
-		Tags:            tags_format,
-	})
+
+	serviceInstanceUpdate := resources.ServiceInstance{
+		Name:       name,
+		Parameters: params_format,
+		Tags:       tags_format,
+	}
+	// Some services don't support changing service plan, so we only add it to request body only if changed by user
+	if d.HasChange("service_plan") {
+		serviceInstanceUpdate.ServicePlanGUID = d.Get("service_plan").(string)
+	}
+
+	jobURL, _, err := session.ClientV3.UpdateServiceInstance(id, serviceInstanceUpdate)
 	log.Printf("Service Instance Object Job URL : %+v", jobURL)
 	if err != nil {
 		return diag.FromErr(err)
@@ -428,4 +438,8 @@ func resourceServiceInstanceImport(ctx context.Context, d *schema.ResourceData, 
 	d.Set("replace_on_params_change", false)
 
 	return ImportReadContext(resourceServiceInstanceRead)(ctx, d, meta)
+}
+
+func isServiceInstanceUpdateRequired(d ResourceChanger) bool {
+	return d.HasChange("name") || d.HasChange("service_plan") || d.HasChange("json_params") || d.HasChange("tags")
 }
