@@ -107,6 +107,7 @@ func resourceApp() *schema.Resource {
 			"stopped": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
+				Computed: true,
 				Default:  false,
 			},
 			"strategy": &schema.Schema{
@@ -129,6 +130,7 @@ func resourceApp() *schema.Resource {
 			"docker_image": &schema.Schema{
 				Type:          schema.TypeString,
 				Optional:      true,
+				Computed:      true,
 				ConflictsWith: []string{"path"},
 			},
 			"docker_credentials": &schema.Schema{
@@ -216,6 +218,7 @@ func resourceApp() *schema.Resource {
 			"health_check_type": &schema.Schema{
 				Type:         schema.TypeString,
 				Optional:     true,
+				Computed:     true,
 				Default:      "port",
 				ValidateFunc: validateAppV3HealthCheckType,
 			},
@@ -317,6 +320,9 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface
 		}
 		return diag.FromErr(err)
 	}
+
+	app := apps[0]
+
 	if idBg, ok := d.GetOk("id_bg"); !ok || idBg == "" {
 		_ = d.Set("id_bg", d.Id())
 	}
@@ -334,9 +340,12 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface
 
 	bindings = ReorderBindings(bindings, d.Get("service_binding").([]interface{}))
 	AppDeployV3ToResourceData(d, v3appdeployers.AppDeployResponse{
-		App:             apps[0],
+		App:             app,
 		Mappings:        mappings,
 		ServiceBindings: bindings,
+		// Buildpacks apps have a default port set to 8080. Custom port for app process and route is not yet supported
+		// Default port for docker apps is 9000, this case is not handled
+		Ports: []int{DefaultAppPort},
 	})
 
 	// droplet sync through V3 API
