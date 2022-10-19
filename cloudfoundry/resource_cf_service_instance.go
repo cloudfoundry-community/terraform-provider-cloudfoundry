@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
@@ -120,13 +121,10 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 	jsonParameters := d.Get("json_params").(string)
 	tags := make([]string, 0)
 
-	// Some instances takes more time for creation
-	// This a custom timeout_in_minutes flag to give service more time for creation in minutes
-	poll_timeout_in_minutes := d.Get("timeout_in_minutes").(int)
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
 	}
-	tags_format := types.OptionalStringSlice{
+	tagsFormatted := types.OptionalStringSlice{
 		IsSet: true,
 		Value: tags,
 	}
@@ -138,22 +136,20 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 	}
-	params_format := types.OptionalObject{
+	paramsFormatted := types.OptionalObject{
 		IsSet: true,
 		Value: params,
 	}
-	log.Printf("params_format : %+v", params_format)
+
 	serviceInstance := resources.ServiceInstance{}
 	serviceInstance.Type = ManagedServiceInstance
 	serviceInstance.Name = name
 	serviceInstance.SpaceGUID = space
 	serviceInstance.ServicePlanGUID = servicePlan
-	serviceInstance.Tags = tags_format
-	serviceInstance.Parameters = params_format
+	serviceInstance.Tags = tagsFormatted
+	serviceInstance.Parameters = paramsFormatted
 
-	log.Printf("SI : %+v", serviceInstance)
 	jobURL, _, err := session.ClientV3.CreateServiceInstance(serviceInstance)
-	log.Printf("Job URL : %+v", jobURL)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -161,35 +157,30 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 	// Poll the state of the async job
 	err = common.PollingWithTimeout(func() (bool, error) {
 		job, _, err := session.ClientV3.GetJob(jobURL)
-		log.Printf("Job URL Status output: %+v", job)
 		if err != nil {
 			return true, err
 		}
 
 		// Stop polling and return error if job failed
 		if job.State == constant.JobFailed {
-			log.Printf("Failed")
 			return true, fmt.Errorf(
 				"Service Instance %s failed %s, reason: async job failed",
 				name,
 				space,
 			)
 		}
+		// If job completed, check if the service instance is created
 		if job.State == constant.JobComplete {
 			si, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
-			log.Printf("Job completed for Service Instance Creation")
-			log.Printf("Service Instance Object : %+v", si)
 			if err != nil {
 				return true, err
 			}
-
-			log.Printf("Service Instance GUID : %+v", si.GUID)
 			d.SetId(si.GUID)
-			return true, err
+			return true, nil
 		}
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, time.Duration(poll_timeout_in_minutes)*time.Minute)
+	}, 5*time.Second, d.Timeout(schema.TimeoutCreate))
 
 	if err != nil {
 		return diag.FromErr(err)
@@ -269,9 +260,6 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 	jsonParameters := d.Get("json_params").(string)
 	space := d.Get("space").(string)
 
-	// Some instances takes more time for creation
-	// This a custom timeout_in_minutes flag to give service more time for creation in minutes
-	poll_timeout_in_minutes := d.Get("timeout_in_minutes").(int)
 	if len(jsonParameters) > 0 {
 		err := json.Unmarshal([]byte(jsonParameters), &params)
 		if err != nil {
@@ -285,7 +273,7 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 		tags = append(tags, v.(string))
 	}
 
-	tags_format := types.OptionalStringSlice{
+	tagsFormatted := types.OptionalStringSlice{
 		IsSet: true,
 		Value: tags,
 	}
@@ -296,17 +284,15 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 	}
-	params_format := types.OptionalObject{
+	paramsFormatted := types.OptionalObject{
 		IsSet: true,
 		Value: params,
 	}
-	log.Printf("Tags Format : %+v", tags_format)
-	log.Printf("Executing Update Instance")
 
 	serviceInstanceUpdate := resources.ServiceInstance{
 		Name:       name,
-		Parameters: params_format,
-		Tags:       tags_format,
+		Parameters: paramsFormatted,
+		Tags:       tagsFormatted,
 	}
 	// Some services don't support changing service plan, so we only add it to request body only if changed by user
 	if d.HasChange("service_plan") {
@@ -334,12 +320,7 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 				space,
 			)
 		}
-		/*
-			query := ccv3.Query{
-				Key:    ccv3.GUIDFilter,
-				Values: []string{d.Id()},
-			}*/
-		// Check the state if job completed
+		// If job completed, check if the service instance exists
 		if job.State == constant.JobComplete {
 			si, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
 			if err != nil {
@@ -347,12 +328,11 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 			}
 			d.SetId(si.GUID)
 			return true, nil
-
 		}
 
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, time.Duration(poll_timeout_in_minutes)*time.Minute)
+	}, 5*time.Second, d.Timeout(schema.TimeoutUpdate))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -372,7 +352,6 @@ func resourceServiceInstanceDelete(ctx context.Context, d *schema.ResourceData, 
 	}
 	name := d.Get("name").(string)
 	space := d.Get("space").(string)
-	serviceInstanceDeleteTimeout := d.Get("timeout_in_minutes").(int)
 
 	// Poll the state of the async job
 	err = common.PollingWithTimeout(func() (bool, error) {
@@ -389,23 +368,20 @@ func resourceServiceInstanceDelete(ctx context.Context, d *schema.ResourceData, 
 				space,
 			)
 		}
-		/*
-			query := ccv3.Query{
-				Key:    ccv3.GUIDFilter,
-				Values: []string{d.Id()},
-			}*/
-		// Check the state if job completed
+
 		if job.State == constant.JobComplete {
-			_, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
+			_, _, _, err := session.ClientV3.GetServiceInstances(ccv3.Query{
+				Key:    ccv3.GUIDFilter,
+				Values: []string{id},
+			})
 			if err != nil && !IsErrNotFound(err) {
 				return true, err
 			}
 			return true, nil
 		}
-
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, time.Duration(serviceInstanceDeleteTimeout)*time.Minute)
+	}, 5*time.Second, d.Timeout(schema.TimeoutDelete))
 
 	return diag.FromErr(err)
 }
