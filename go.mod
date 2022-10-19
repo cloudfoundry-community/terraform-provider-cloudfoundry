@@ -2,7 +2,7 @@ module github.com/terraform-providers/terraform-provider-cloudfoundry
 
 go 1.17
 
-replace code.cloudfoundry.org/cli => github.wdf.sap.corp/intelligent-rpa/cloudfoundry-cli v1.18.10
+replace code.cloudfoundry.org/cli => github.com/cloudfoundry-community/cloudfoundry-cli v6.44.1-0.20221018123456-a0d1e27e1749+incompatible
 
 require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20180906201452-2aa6f33b730c // indirect
@@ -43,9 +43,10 @@ require github.com/hashicorp/terraform-plugin-log v0.4.1
 require (
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	code.cloudfoundry.org/jsonry v1.1.3 // indirect
-	code.cloudfoundry.org/tlsconfig v0.0.0-20210615191307-5d92ef3894a7 // indirect
+	code.cloudfoundry.org/ykk v0.0.0-20170424192843-e4df4ce2fd4d // indirect
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
+	github.com/apoydence/eachers v0.0.0-20181020210610-23942921fe77 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/elazarl/goproxy v0.0.0-20220529153421-8ea89ba92021 // indirect
@@ -71,7 +72,6 @@ require (
 	github.com/hashicorp/terraform-svchost v0.0.0-20200729002733-f050f53b9734 // indirect
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
-	github.com/jessevdk/go-flags v1.5.0 // indirect
 	github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
