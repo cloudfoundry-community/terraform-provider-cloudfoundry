@@ -405,3 +405,29 @@ func (m BitsManager) CreateBitsPackageByApplication(appGUID string) (resources.P
 
 	return pkg, warnings, err
 }
+
+// CopyAppV3 - Copy one app to another by using only api
+func (m BitsManager) CopyAppV3(origAppGUID string, newAppGUID string) error {
+	srcPkgs, _, err := m.clientV3.GetPackages(
+		ccv3.Query{Key: ccv3.AppGUIDFilter, Values: []string{origAppGUID}},
+		ccv3.Query{Key: ccv3.StatesFilter, Values: []string{"READY"}},
+		ccv3.Query{Key: ccv3.OrderBy, Values: []string{"-created_at"}},
+	)
+
+	if err != nil {
+		return err
+	}
+
+	if len(srcPkgs) == 0 {
+		return fmt.Errorf("No package found for app %s", origAppGUID)
+	}
+
+	latestPkg := srcPkgs[0]
+
+	_, _, err = m.clientV3.CopyPackage(latestPkg.GUID, newAppGUID)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}

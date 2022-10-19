@@ -136,6 +136,7 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		{
 			Forward: func(ctx Context) (Context, error) {
 				// Bits will be loaded entirely into memory for each app
+				// If Path = "", bits will be copied (blue-green)
 				if appDeploy.Path == "" {
 					return ctx, nil
 				}

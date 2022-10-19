@@ -73,6 +73,10 @@ func (s BlueGreen) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				app.GUID = ""
 				appResp, err := s.standard.Deploy(AppDeploy{
 					App:             app,
+					Process:         appDeploy.Process,
+					EnableSSH:       appDeploy.EnableSSH,
+					AppPackage:      appDeploy.AppPackage,
+					EnvVars:         appDeploy.EnvVars,
 					ServiceBindings: appDeploy.ServiceBindings,
 					Mappings:        appDeploy.Mappings,
 					Path:            appDeploy.Path,
@@ -193,6 +197,10 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 				app.State = constant.ApplicationStopped
 				appResp, err := s.standard.Deploy(AppDeploy{
 					App:             app,
+					Process:         appDeploy.Process,
+					EnableSSH:       appDeploy.EnableSSH,
+					AppPackage:      appDeploy.AppPackage,
+					EnvVars:         appDeploy.EnvVars,
 					ServiceBindings: appDeploy.ServiceBindings,
 					Mappings:        appDeploy.Mappings,
 					Path:            "",
@@ -211,7 +219,7 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 					return ctx, nil
 				}
 				appResp := ctx["app_response"].(AppDeployResponse)
-				err := s.bitsManager.CopyApp(appDeploy.App.GUID, appResp.App.GUID)
+				err := s.bitsManager.CopyAppV3(appDeploy.App.GUID, appResp.App.GUID)
 				return ctx, err
 			},
 			ReversePrevious: defaultReverse,
@@ -221,6 +229,10 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 				appResp := ctx["app_response"].(AppDeployResponse)
 				app, _, err := s.runBinder.Start(AppDeploy{
 					App:          appResp.App,
+					Process:      appResp.Process,
+					EnableSSH:    appResp.EnableSSH,
+					AppPackage:   appResp.AppPackage,
+					EnvVars:      appResp.EnvVars,
 					StageTimeout: appDeploy.StageTimeout,
 					BindTimeout:  appDeploy.BindTimeout,
 					StartTimeout: appDeploy.StartTimeout,
@@ -268,7 +280,7 @@ func (BlueGreen) IsCreateNewApp() bool {
 }
 
 func (BlueGreen) Names() []string {
-	return []string{"blue-green", "blue-green-v2"}
+	return []string{"blue-green", "blue-green-v3"}
 }
 
 // These methods should be integrated in the CCV clients at some point

@@ -34,7 +34,8 @@ func (d Deployer) Strategy(strategyName string) Strategy {
 
 func ValidStrategy(strategyName string) ([]string, bool) {
 	strategyName = strings.ToLower(strategyName)
-	names := Standard{}.Names()
+	// names := Standard{}.Names()
+	names := append(Standard{}.Names(), BlueGreen{}.Names()...)
 	for _, name := range names {
 		if name == strategyName {
 			return names, true
