@@ -2,7 +2,7 @@ module github.com/terraform-providers/terraform-provider-cloudfoundry
 
 go 1.17
 
-replace code.cloudfoundry.org/cli => github.com/cloudfoundry-community/cloudfoundry-cli v6.44.1-0.20221018123456-a0d1e27e1749+incompatible
+replace code.cloudfoundry.org/cli => github.wdf.sap.corp/intelligent-rpa/cloudfoundry-cli v0.2.11-s3-min
 
 require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20180906201452-2aa6f33b730c // indirect

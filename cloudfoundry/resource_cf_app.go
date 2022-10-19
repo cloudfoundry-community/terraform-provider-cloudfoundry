@@ -311,11 +311,12 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface
 	}
 	apps, _, err := session.ClientV3.GetApplications(query)
 	if err != nil {
-		if IsErrNotFound(err) {
-			d.SetId("")
-			return nil
-		}
 		return diag.FromErr(err)
+	}
+
+	if len(apps) == 0 {
+		d.SetId("")
+		return nil
 	}
 
 	app := apps[0]

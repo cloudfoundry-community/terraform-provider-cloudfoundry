@@ -84,13 +84,6 @@ func resourceServiceInstance() *schema.Resource {
 				Optional: true,
 				Default:  false,
 			},
-			// Some instances takes more time for creation
-			// This a custom timeout flag to give service more time for creation in minutes
-			"timeout_in_minutes": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  5,
-			},
 		},
 		CustomizeDiff: customdiff.All(
 			customdiff.ForceNewIf(
