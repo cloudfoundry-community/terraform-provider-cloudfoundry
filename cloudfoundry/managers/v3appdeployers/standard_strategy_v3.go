@@ -57,6 +57,10 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					app.SpaceGUID = ""
 				}
 
+				if appDeploy.IsDockerImage() {
+					app.LifecycleType = constant.AppLifecycleTypeDocker
+				}
+
 				app, _, err := deployFunc(app)
 				if err != nil {
 					return ctx, err
@@ -135,13 +139,20 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				// Bits will be loaded entirely into memory for each app
-				// If Path = "", bits will be copied (blue-green)
-				if appDeploy.Path == "" {
-					return ctx, nil
-				}
 				appResp := ctx["app_response"].(AppDeployResponse)
-				pkg, _, err := s.bitsManager.CreateAndUploadBitsPackage(appResp.App.GUID, appDeploy.Path, appDeploy.StageTimeout)
+
+				var pkg resources.Package
+				var err error
+				if appDeploy.AppPackage.DockerImage != "" {
+					pkg, _, err = s.bitsManager.CreateDockerPackage(appResp.App.GUID, appDeploy.AppPackage.DockerImage, appDeploy.AppPackage.DockerUsername, appDeploy.AppPackage.DockerPassword)
+				} else {
+					// Bits will be loaded entirely into memory for each app
+					// If Path = "", bits will be copied
+					if appDeploy.Path == "" {
+						return ctx, nil
+					}
+					pkg, _, err = s.bitsManager.CreateAndUploadBitsPackage(appResp.App.GUID, appDeploy.Path, appDeploy.StageTimeout)
+				}
 				if err != nil {
 					return ctx, err
 				}
@@ -157,8 +168,6 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				// logDebug(fmt.Sprintf("Start application %+v", appDeploy))
-
 				if stateAsk == constant.ApplicationStopped {
 					return ctx, nil
 				}

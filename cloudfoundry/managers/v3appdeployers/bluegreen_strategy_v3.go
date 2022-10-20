@@ -195,6 +195,10 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 				app := appDeploy.App
 				app.GUID = ""
 				app.State = constant.ApplicationStopped
+
+				if appDeploy.IsDockerImage() {
+					app.LifecycleType = constant.AppLifecycleTypeDocker
+				}
 				appResp, err := s.standard.Deploy(AppDeploy{
 					App:             app,
 					Process:         appDeploy.Process,

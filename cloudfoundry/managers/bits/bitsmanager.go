@@ -369,6 +369,25 @@ func (m BitsManager) RetrieveZip(path string) (ZipFile, error) {
 
 // v3
 
+// CreateDockerPackage creates a package from a docker image
+func (m BitsManager) CreateDockerPackage(appGUID string, dockerImage string, dockerUsername string, dockerPassword string) (resources.Package, ccv3.Warnings, error) {
+	pkg, warnings, err := m.clientV3.CreatePackage(resources.Package{
+		Type: constant.PackageTypeDocker,
+		Relationships: resources.Relationships{
+			constant.RelationshipTypeApplication: resources.Relationship{GUID: appGUID},
+		},
+		DockerImage:    dockerImage,
+		DockerUsername: dockerUsername,
+		DockerPassword: dockerPassword,
+	})
+
+	if err != nil {
+		return resources.Package{}, warnings, err
+	}
+
+	return pkg, warnings, nil
+}
+
 // CreateAndUploadBitsPackage creates a new package and upload bits to the application
 func (m BitsManager) CreateAndUploadBitsPackage(appGUID string, path string, stageTimeout time.Duration) (resources.Package, ccv3.Warnings, error) {
 	pkg, warnings, err := m.CreateBitsPackageByApplication(appGUID)
