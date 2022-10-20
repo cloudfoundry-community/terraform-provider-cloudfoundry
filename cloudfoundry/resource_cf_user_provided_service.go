@@ -3,9 +3,12 @@ package cloudfoundry
 import (
 	"context"
 	"encoding/json"
+	"log"
+
+	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/structure"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -97,6 +100,7 @@ func resourceUserProvidedServiceCreate(ctx context.Context, d *schema.ResourceDa
 	if routeServiceURL == "" {
 		routeServiceURL = d.Get("routeServiceURL").(string)
 	}
+	// credentials := types.OptionalObject{}
 
 	credentials := make(map[string]interface{})
 	if credsJSON, hasJSON := d.GetOk("credentials_json"); hasJSON {
@@ -109,6 +113,10 @@ func resourceUserProvidedServiceCreate(ctx context.Context, d *schema.ResourceDa
 			credentials[k] = v.(string)
 		}
 	}
+	credentialsFormat := types.OptionalObject{
+		IsSet: len(credentials) != 0,
+		Value: credentials,
+	}
 
 	tagsSchema := d.Get("tags").(*schema.Set)
 	tags := make([]string, 0)
@@ -116,27 +124,52 @@ func resourceUserProvidedServiceCreate(ctx context.Context, d *schema.ResourceDa
 		tags = append(tags, tag.(string))
 	}
 
-	usi, _, err := session.ClientV2.CreateUserProvidedServiceInstance(ccv2.UserProvidedServiceInstance{
+	tagsFormat := types.OptionalStringSlice{
+		IsSet: tags != nil,
+		Value: tags,
+	}
+
+	syslogDrainURLFormat := types.OptionalString{
+		IsSet: syslogDrainURL != "",
+		Value: syslogDrainURL,
+	}
+
+	routeServiceURLFormat := types.OptionalString{
+		IsSet: routeServiceURL != "",
+		Value: routeServiceURL,
+	}
+
+	userProvidedServiceInstance := resources.ServiceInstance{
+		Type:            resources.UserProvidedServiceInstance,
 		Name:            name,
-		SpaceGuid:       space,
-		Tags:            tags,
-		RouteServiceUrl: routeServiceURL,
-		SyslogDrainUrl:  syslogDrainURL,
-		Credentials:     credentials,
-	})
+		SpaceGUID:       space,
+		Credentials:     credentialsFormat,
+		Tags:            tagsFormat,
+		SyslogDrainURL:  syslogDrainURLFormat,
+		RouteServiceURL: routeServiceURLFormat,
+	}
+
+	// log.Printf("SI : %+v", userProvidedServiceInstance)
+	userProvidedSI, _, err := session.ClientV3.CreateUserProvidedServiceInstance(userProvidedServiceInstance)
+	// log.Printf("Created SI : %+v", userProvidedSI)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.SetId(usi.GUID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
+	d.SetId(userProvidedSI.GUID)
 	return nil
 }
 
 func resourceUserProvidedServiceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
+	name := d.Get("name").(string)
+	space := d.Get("space").(string)
 
-	ups, _, err := session.ClientV2.GetUserProvidedServiceInstance(d.Id())
+	userProvidedServiceInstance, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
 	if err != nil {
 		if IsErrNotFound(err) {
 			d.SetId("")
@@ -145,43 +178,48 @@ func resourceUserProvidedServiceRead(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	d.Set("name", ups.Name)
-	d.Set("space", ups.SpaceGuid)
+	d.Set("name", userProvidedServiceInstance.Name)
+	d.Set("space", userProvidedServiceInstance.SpaceGUID)
 
 	syslogSet := false
+	syslogDrainURL := userProvidedServiceInstance.SyslogDrainURL.String()
 	if _, ok := d.GetOk("syslogDrainURL"); ok {
-		d.Set("syslogDrainURL", ups.SyslogDrainUrl)
+		d.Set("syslogDrainURL", syslogDrainURL)
 		syslogSet = true
 	}
 	if _, ok := d.GetOk("syslog_drain_url"); ok {
-		d.Set("syslog_drain_url", ups.SyslogDrainUrl)
+		d.Set("syslog_drain_url", syslogDrainURL)
 		syslogSet = true
 	}
 
-	if !syslogSet && ups.SyslogDrainUrl != "" {
-		d.Set("syslog_drain_url", ups.SyslogDrainUrl)
+	if !syslogSet && syslogDrainURL != "" {
+		d.Set("syslog_drain_url", syslogDrainURL)
 	}
 
 	routeServiceSet := false
+	routeServiceURL := userProvidedServiceInstance.RouteServiceURL.String()
 	if _, ok := d.GetOk("routeServiceURL"); ok {
-		d.Set("routeServiceURL", ups.RouteServiceUrl)
+		d.Set("routeServiceURL", routeServiceURL)
 		routeServiceSet = true
 	}
 	if _, ok := d.GetOk("route_service_url"); ok {
-		d.Set("route_service_url", ups.RouteServiceUrl)
+		d.Set("route_service_url", routeServiceURL)
 		routeServiceSet = true
 	}
-	if !routeServiceSet && ups.RouteServiceUrl != "" {
-		d.Set("route_service_url", ups.RouteServiceUrl)
+	if !routeServiceSet && routeServiceURL != "" {
+		d.Set("route_service_url", routeServiceURL)
 	}
 
+	credentials, _, err := session.ClientV3.GetUserProvidedServiceInstanceCredentails(d.Id())
+
 	if _, hasJSON := d.GetOk("credentials_json"); hasJSON {
-		bytes, _ := json.Marshal(ups.Credentials)
+		bytes, _ := json.Marshal(credentials)
+		log.Printf("Creds : %s //// state: %s", string(bytes), d.Get("credentials_json"))
 		d.Set("credentials_json", string(bytes))
 	} else {
-		d.Set("credentials", ups.Credentials)
+		d.Set("credentials", credentials)
 	}
-	d.Set("tags", ups.Tags)
+	d.Set("tags", userProvidedServiceInstance.Tags.Value)
 	return nil
 }
 
@@ -191,7 +229,6 @@ func resourceUserProvidedServiceUpdate(ctx context.Context, d *schema.ResourceDa
 	name := d.Get("name").(string)
 	syslogDrainURL := d.Get("syslog_drain_url").(string)
 	routeServiceURL := d.Get("route_service_url").(string)
-	space := d.Get("space").(string)
 	// should be removed when syslogDrainURL and routeServiceURL will be removed
 	if syslogDrainURL == "" {
 		syslogDrainURL = d.Get("syslogDrainURL").(string)
@@ -216,20 +253,40 @@ func resourceUserProvidedServiceUpdate(ctx context.Context, d *schema.ResourceDa
 	for _, tag := range tagsSchema.List() {
 		tags = append(tags, tag.(string))
 	}
-	_, _, err := session.ClientV2.UpdateUserProvidedServiceInstance(ccv2.UserProvidedServiceInstance{
-		GUID:            d.Id(),
-		Name:            name,
-		SpaceGuid:       space,
-		Tags:            tags,
-		RouteServiceUrl: routeServiceURL,
-		SyslogDrainUrl:  syslogDrainURL,
-		Credentials:     credentials,
+
+	_, _, err := session.ClientV3.UpdateUserProvidedServiceInstance(d.Id(), resources.ServiceInstance{
+		Name: name,
+		Tags: types.OptionalStringSlice{
+			IsSet: tags != nil,
+			Value: tags,
+		},
+		RouteServiceURL: types.OptionalString{
+			IsSet: routeServiceURL != "",
+			Value: routeServiceURL,
+		},
+		SyslogDrainURL: types.OptionalString{
+			IsSet: syslogDrainURL != "",
+			Value: syslogDrainURL,
+		},
+		Credentials: types.OptionalObject{
+			IsSet: len(credentials) > 0,
+			Value: credentials,
+		},
 	})
+
+	// log.Printf("updated service instance: %+v", updated)
 	return diag.FromErr(err)
 }
 
 func resourceUserProvidedServiceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-	_, err := session.ClientV2.DeleteUserProvidedServiceInstance(d.Id())
-	return diag.FromErr(err)
+
+	// No polling needed since no discussion with service broker
+	_, _, err := session.ClientV3.DeleteServiceInstance(d.Id())
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }

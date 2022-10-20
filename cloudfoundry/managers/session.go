@@ -28,6 +28,7 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/bits"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/v3appdeployers"
 )
 
 // Session - wraps the available clients from CF cli
@@ -57,8 +58,14 @@ type Session struct {
 	// Deployer is used to deploy an frim different strategy
 	Deployer *appdeployers.Deployer
 
+	// Deployer is used to deploy an frim different strategy
+	V3Deployer *v3appdeployers.Deployer
+
 	// RunBinder is used to to manage start stop of an app
 	RunBinder *appdeployers.RunBinder
+
+	// V3RunBinder is used to to manage start stop of an app in v3
+	V3RunBinder *v3appdeployers.RunBinder
 
 	defaultQuotaGuid string
 
@@ -185,7 +192,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 		return translatableerror.AuthorizationEndpointNotFoundError{}
 	}
 
-	_, err = ccClientV3.TargetCF(ccv3.TargetSettings{
+	_, _, err = ccClientV3.TargetCF(ccv3.TargetSettings{
 		URL:               config.Target(),
 		SkipSSLValidation: config.SkipSSLValidation(),
 		DialTimeout:       config.DialTimeout(),
@@ -392,6 +399,12 @@ func (s *Session) loadDeployer() {
 	stdStrategy := appdeployers.NewStandard(s.BitsManager, s.ClientV2, s.RunBinder)
 	bgStrategy := appdeployers.NewBlueGreenV2(s.BitsManager, s.ClientV2, s.ClientV3, s.RawClient, s.RunBinder, stdStrategy)
 	s.Deployer = appdeployers.NewDeployer(stdStrategy, bgStrategy)
+
+	// Initialize deployment strategies in v3
+	s.V3RunBinder = v3appdeployers.NewRunBinder(s.ClientV3, s.NOAAClient)
+	v3std := v3appdeployers.NewStandard(s.BitsManager, s.ClientV3, s.V3RunBinder)
+	v3bg := v3appdeployers.NewBlueGreen(s.BitsManager, s.ClientV3, s.RawClient, s.V3RunBinder, v3std)
+	s.V3Deployer = v3appdeployers.NewDeployer(v3std, v3bg)
 }
 
 func (s *Session) loadDefaultQuotaGuid(quotaName string) error {

@@ -1,12 +1,14 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"context"
+	"fmt"
+	"strings"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -52,41 +54,50 @@ func dataSourceServiceRead(ctx context.Context, d *schema.ResourceData, meta int
 	space := d.Get("space").(string)
 	serviceBrokerGUID := d.Get("service_broker_guid").(string)
 
-	filters := []ccv2.Filter{
-		ccv2.FilterEqual(constant.LabelFilter, name),
-	}
+	filters := []ccv3.Query{}
+
+	// Add required filter
+	filters = append(filters, ccv3.Query{
+		Key:    ccv3.NameFilter,
+		Values: []string{name},
+	})
 
 	if serviceBrokerGUID != "" {
-		filters = append(filters, ccv2.FilterEqual(constant.ServiceBrokerGUIDFilter, serviceBrokerGUID))
+		filters = append(filters, ccv3.Query{
+			Key:    ccv3.ServiceBrokerGUIDsFilter,
+			Values: []string{serviceBrokerGUID},
+		})
 	}
-	services, _, err := session.ClientV2.GetServices(filters...)
+
+	if space != "" {
+		filters = append(filters, ccv3.Query{
+			Key:    ccv3.SpaceGUIDFilter,
+			Values: []string{space},
+		})
+	}
+
+	tflog.Debug(ctx, fmt.Sprintf("%+v", filters))
+
+	services, _, err := session.ClientV3.GetServiceOfferings(filters...)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	if len(services) == 0 {
 		return diag.FromErr(NotFound)
 	}
-
 	service := services[0]
-	if space != "" {
-		for _, svc := range services {
-			brk, _, err := session.ClientV2.GetServiceBroker(svc.ServiceBrokerGUID)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-			if brk.SpaceGUID == space {
-				service = svc
-				break
-			}
-		}
 
-	}
 	d.SetId(service.GUID)
 	if serviceBrokerGUID == "" {
 		d.Set("service_broker_name", service.ServiceBrokerName)
 	}
 
-	servicePlans, _, err := session.ClientV2.GetServicePlans(ccv2.FilterEqual(constant.ServiceGUIDFilter, service.GUID))
+	// Get service plans
+	servicePlans, _, err := session.ClientV3.GetServicePlans(ccv3.Query{
+		// Constant not defined by cli ccv3
+		Key:    "service_offering_guids",
+		Values: []string{service.GUID},
+	})
 	if err != nil {
 		return diag.FromErr(err)
 	}

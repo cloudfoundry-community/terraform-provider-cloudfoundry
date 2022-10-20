@@ -1,17 +1,37 @@
 package cloudfoundry
 
 import (
+	"fmt"
+	"time"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	constantV3 "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/api/uaa"
 	"code.cloudfoundry.org/cli/types"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 func IntToNullInt(v int) types.NullInt {
 	return types.NullInt{
 		IsSet: true,
 		Value: v,
+	}
+}
+
+func IntToNullUint64Zero(v int) types.NullUint64 {
+	if v < 0 {
+		return types.NullUint64{
+			IsSet: false,
+		}
+	}
+
+	return types.NullUint64{
+		IsSet: true,
+		Value: uint64(v),
 	}
 }
 
@@ -109,4 +129,43 @@ func filterRouteGuid(guid string) ccv2.Filter {
 
 func filterServiceInstanceGuid(guid string) ccv2.Filter {
 	return ccv2.FilterEqual(constant.ServiceInstanceGUIDFilter, guid)
+}
+
+type PollingConfig struct {
+	session  *managers.Session
+	jobURL   ccv3.JobURL
+	interval time.Duration
+	timeout  time.Duration
+}
+
+// PollAsyncJob periodically check the state of the async job, return when the job failed / completed or timeout is reached
+func PollAsyncJob(config PollingConfig) error {
+	s := config.session
+
+	if config.interval == 0 {
+		config.interval = 5 * time.Second
+	}
+	if config.timeout == 0 {
+		config.timeout = 60 * time.Second
+	}
+	return common.PollingWithTimeout(func() (bool, error) {
+		job, _, err := s.ClientV3.GetJob(config.jobURL)
+		if err != nil {
+			return true, err
+		}
+
+		// Stop polling and return error if job failed
+		if job.State == constantV3.JobFailed {
+			return true, fmt.Errorf(
+				"Operation failed",
+			)
+		}
+
+		// Check binding state if job completed
+		if job.State == constantV3.JobComplete {
+			return true, nil
+		}
+		// Last operation initial or inprogress or job not completed, continue polling
+		return false, nil
+	}, config.interval, config.timeout)
 }

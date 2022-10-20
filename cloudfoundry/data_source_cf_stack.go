@@ -1,8 +1,9 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"context"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
@@ -38,10 +39,14 @@ func dataSourceStackRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.Errorf("client is nil")
 	}
 
-	sm := session.ClientV2
-	name := d.Get("name").(string)
+	sm := session.ClientV3
 
-	stacks, _, err := sm.GetStacks(ccv2.FilterByName(name))
+	query := ccv3.Query{
+		Key:    ccv3.NameFilter,
+		Values: []string{d.Get("name").(string)},
+	}
+
+	stacks, _, err := sm.GetStacks(query)
 	if err != nil {
 		return diag.FromErr(err)
 	}

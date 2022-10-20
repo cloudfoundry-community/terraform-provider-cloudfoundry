@@ -3,10 +3,19 @@ package cloudfoundry
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log"
+	"time"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
@@ -71,20 +80,91 @@ func resourceServiceKeyCreate(ctx context.Context, d *schema.ResourceData, meta 
 		}
 	}
 
-	serviceKey, _, err := session.ClientV2.CreateServiceKey(serviceInstance, name, params)
+	binding := resources.ServiceCredentialBinding{
+		ServiceInstanceGUID: serviceInstance,
+		Name:                name,
+		Parameters:          types.NewOptionalObject(params),
+		Type:                resources.ServiceCredentialBindingType("key"),
+	}
+
+	jobURL, _, err := session.ClientV3.CreateServiceCredentialBinding(binding)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.Set("credentials", normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_"))
+	var serviceKey resources.ServiceCredentialBinding
+
+	// Poll the state of the async job
+	err = common.PollingWithTimeout(func() (bool, error) {
+		job, _, err := session.ClientV3.GetJob(jobURL)
+		if err != nil {
+			return true, err
+		}
+
+		// Stop polling and return error if job failed
+		if job.State == constant.JobFailed {
+			return true, fmt.Errorf(
+				"ServiceKey creation failed for key %s, reason: async job failed",
+				serviceInstance,
+			)
+		}
+
+		// Check binding state if job completed
+		if job.State == constant.JobComplete {
+			createdKeys, _, err := session.ClientV3.GetServiceCredentialBindings(
+				ccv3.Query{
+					Key:    ccv3.QueryKey("service_instance_guids"),
+					Values: []string{binding.ServiceInstanceGUID},
+				}, ccv3.Query{
+					Key:    ccv3.NameFilter,
+					Values: []string{name},
+				},
+			)
+			if err != nil {
+				return true, err
+			}
+
+			if len(createdKeys) == 0 {
+				return false, nil
+			}
+
+			if createdKeys[0].LastOperation.State == resources.OperationSucceeded {
+				serviceKey = createdKeys[0]
+				return true, nil
+			}
+
+			if createdKeys[0].LastOperation.State == resources.OperationFailed {
+				return true, fmt.Errorf(
+					"ServiceKey creation failed for key %s, reason: async job failed",
+					serviceInstance,
+				)
+			}
+		}
+
+		// Last operation initial or inprogress or job not completed, continue polling
+		return false, nil
+	}, 5*time.Second, 60*time.Second)
+
+	credentials, _, err := session.ClientV3.GetServiceCredentialBindingDetails(serviceKey.GUID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.Set("credentials", normalizeMap(credentials.Credentials, make(map[string]interface{}), "", "_"))
 	d.SetId(serviceKey.GUID)
 	return nil
 }
 
 func resourceServiceKeyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-
-	serviceKey, _, err := session.ClientV2.GetServiceKey(d.Id())
+	serviceKeys, _, err := session.ClientV3.GetServiceCredentialBindings(
+		ccv3.Query{
+			Key:    ccv3.QueryKey("service_instance_guids"),
+			Values: []string{d.Get("service_instance").(string)},
+		}, ccv3.Query{
+			Key:    ccv3.NameFilter,
+			Values: []string{d.Get("name").(string)},
+		},
+	)
 	if err != nil {
 		if IsErrNotFound(err) {
 			d.SetId("")
@@ -92,15 +172,55 @@ func resourceServiceKeyRead(ctx context.Context, d *schema.ResourceData, meta in
 		}
 		return diag.FromErr(err)
 	}
-	d.Set("name", serviceKey.Name)
-	d.Set("service_instance", serviceKey.ServiceInstanceGUID)
-	d.Set("credentials", normalizeMap(serviceKey.Credentials, make(map[string]interface{}), "", "_"))
+	if len(serviceKeys) != 1 {
+		return diag.FromErr(fmt.Errorf("Some thing went wrong"))
+	}
+	d.Set("name", serviceKeys[0].Name)
+	d.Set("service_instance", serviceKeys[0].ServiceInstanceGUID)
+	serviceKeyDetails, _, err := session.ClientV3.GetServiceCredentialBindingDetails(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.Set("credentials", normalizeMap(serviceKeyDetails.Credentials, make(map[string]interface{}), "", "_"))
 	return nil
 }
 
 func resourceServiceKeyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	// Note : When deleting credential bindings originated from user provided service instances,
+	// the delete operation does not require interactions with service brokers,
+	// therefore the API will respond synchronously to the delete request.
 	session := meta.(*managers.Session)
+	jobURL, _, err := session.ClientV3.DeleteServiceCredentialBinding(d.Id())
 
-	_, err := session.ClientV2.DeleteServiceKey(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if jobURL == "" {
+		log.Printf("[INFO] Deleted service credential binding %s for User-Provided service instance, finishing without polling", d.Id())
+		return diag.FromErr(err)
+	}
+
+	// Polling when deleting service credential binding for a managed service instance
+	err = common.PollingWithTimeout(func() (bool, error) {
+		job, _, err := session.ClientV3.GetJob(jobURL)
+		if err != nil {
+			return true, err
+		}
+
+		// Stop polling and return error if job failed
+		if job.State == constant.JobFailed {
+			return true, fmt.Errorf(
+				"Service key deletion failed",
+			)
+		}
+
+		// Check binding state if job completed
+		if job.State == constant.JobComplete {
+			return true, nil
+		}
+		// Last operation initial or inprogress or job not completed, continue polling
+		return false, nil
+	}, 5*time.Second, 60*time.Second)
 	return diag.FromErr(err)
 }
