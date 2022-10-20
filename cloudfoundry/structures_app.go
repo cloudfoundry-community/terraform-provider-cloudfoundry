@@ -421,3 +421,15 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 	_ = d.Set("routes", finalMappings)
 
 }
+
+// ProcessToResourceData convert an app's process information to terraform state
+func ProcessToResourceData(d *schema.ResourceData, proc resources.Process) {
+	// log.Printf("---------- [READ] proc info : %+v", proc)
+	_ = d.Set("instances", proc.Instances.Value)
+	_ = d.Set("memory", proc.MemoryInMB.Value)
+	_ = d.Set("disk_quota", proc.DiskInMB.Value)
+	_ = d.Set("health_check_type", proc.HealthCheckType)
+	_ = d.Set("health_check_http_endpoint", proc.HealthCheckEndpoint)
+	_ = d.Set("health_check_timeout", proc.HealthCheckTimeout)
+	_ = d.Set("command", proc.Command.Value)
+}
