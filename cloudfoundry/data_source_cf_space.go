@@ -1,8 +1,9 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"context"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
@@ -59,7 +60,10 @@ func dataSourceSpaceRead(ctx context.Context, d *schema.ResourceData, meta inter
 	orgId := d.Get("org").(string)
 	orgName := d.Get("org_name").(string)
 	if d.Get("org_name").(string) != "" {
-		orgs, _, err := session.ClientV2.GetOrganizations(ccv2.FilterByName(orgName))
+		orgs, _, err := session.ClientV3.GetOrganizations(ccv3.Query{
+			Key:    "names",
+			Values: []string{orgName},
+		})
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -68,13 +72,21 @@ func dataSourceSpaceRead(ctx context.Context, d *schema.ResourceData, meta inter
 		}
 		orgId = orgs[0].GUID
 	} else {
-		org, _, err := session.ClientV2.GetOrganization(orgId)
+		org, _, err := session.ClientV3.GetOrganization(orgId)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 		orgName = org.Name
 	}
-	spaces, _, err := session.ClientV2.GetSpaces(ccv2.FilterByName(name), ccv2.FilterByOrg(orgId))
+	nameQuery := ccv3.Query{
+		Key:    ccv3.NameFilter,
+		Values: []string{name},
+	}
+	orgQuery := ccv3.Query{
+		Key:    ccv3.OrganizationGUIDFilter,
+		Values: []string{orgId},
+	}
+	spaces, _, _, err := session.ClientV3.GetSpaces(nameQuery, orgQuery)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -85,7 +97,7 @@ func dataSourceSpaceRead(ctx context.Context, d *schema.ResourceData, meta inter
 	d.SetId(space.GUID)
 	d.Set("org_name", orgName)
 	d.Set("org", orgId)
-	d.Set("quota", space.SpaceQuotaDefinitionGUID)
+	d.Set("quota", space.Relationships["quota"].GUID)
 
 	err = metadataRead(spaceMetadata, d, meta, true)
 	if err != nil {
