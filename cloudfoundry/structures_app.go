@@ -3,6 +3,7 @@ package cloudfoundry
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
@@ -333,7 +334,9 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 	if bpkg := appDeploy.App.LifecycleBuildpacks; len(bpkg) > 0 {
 		_ = d.Set("buildpack", bpkg[0])
 	}
-	_ = d.Set("command", appDeploy.Process.Command.Value)
+
+	commandTrimmed := strings.TrimSpace(appDeploy.Process.Command.Value)
+	_ = d.Set("command", commandTrimmed)
 	_ = d.Set("enable_ssh", appDeploy.EnableSSH.Enabled)
 	_ = d.Set("stopped", appDeploy.App.State == v3Constants.ApplicationStopped)
 	_ = d.Set("docker_image", appDeploy.AppPackage.DockerImage)
@@ -431,5 +434,8 @@ func ProcessToResourceData(d *schema.ResourceData, proc resources.Process) {
 	_ = d.Set("health_check_type", proc.HealthCheckType)
 	_ = d.Set("health_check_http_endpoint", proc.HealthCheckEndpoint)
 	_ = d.Set("health_check_timeout", proc.HealthCheckTimeout)
-	_ = d.Set("command", proc.Command.Value)
+
+	// cloudcontroller sometimes returns command field with a trailling whitespace
+	commandTrimmed := strings.TrimSpace(proc.Command.Value)
+	_ = d.Set("command", commandTrimmed)
 }

@@ -196,9 +196,6 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 				app.GUID = ""
 				app.State = constant.ApplicationStopped
 
-				if appDeploy.IsDockerImage() {
-					app.LifecycleType = constant.AppLifecycleTypeDocker
-				}
 				appResp, err := s.standard.Deploy(AppDeploy{
 					App:             app,
 					Process:         appDeploy.Process,
@@ -231,12 +228,12 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 		{
 			Forward: func(ctx Context) (Context, error) {
 				appResp := ctx["app_response"].(AppDeployResponse)
-				app, _, err := s.runBinder.Start(AppDeploy{
+				app, proc, err := s.runBinder.Start(AppDeploy{
 					App:          appResp.App,
-					Process:      appResp.Process,
-					EnableSSH:    appResp.EnableSSH,
-					AppPackage:   appResp.AppPackage,
-					EnvVars:      appResp.EnvVars,
+					Process:      appDeploy.Process,
+					EnableSSH:    appDeploy.EnableSSH,
+					AppPackage:   appDeploy.AppPackage,
+					EnvVars:      appDeploy.EnvVars,
 					StageTimeout: appDeploy.StageTimeout,
 					BindTimeout:  appDeploy.BindTimeout,
 					StartTimeout: appDeploy.StartTimeout,
@@ -246,6 +243,10 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 				}
 				ctx["app_response"] = AppDeployResponse{
 					App:             app,
+					Process:         proc,
+					EnableSSH:       appDeploy.EnableSSH,
+					AppPackage:      appDeploy.AppPackage,
+					EnvVars:         appDeploy.EnvVars,
 					Mappings:        appResp.Mappings,
 					ServiceBindings: appResp.ServiceBindings,
 				}

@@ -47,8 +47,6 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 	actions := Actions{
 		{
 			Forward: func(ctx Context) (Context, error) {
-				// logDebug(fmt.Sprintf("Create/Update app: %+v", appDeploy.App))
-
 				app := appDeploy.App
 				app.State = constant.ApplicationStopped
 				// If update app, remove spaceGUID request body
@@ -71,8 +69,6 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				if err != nil {
 					return ctx, err
 				}
-				// logDebug(fmt.Sprintf("environment variables: %+v", createdEnv))
-
 				ctx["app_response"] = AppDeployResponse{
 					App:        app,
 					Process:    appDeploy.Process,
@@ -85,8 +81,6 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				// logDebug(fmt.Sprintf("Map routes: %+v", appDeploy.Mappings))
-
 				appResp := ctx["app_response"].(AppDeployResponse)
 				mappings, err := s.runBinder.MapRoutes(AppDeploy{
 					App:          appResp.App,
@@ -112,8 +106,6 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				// logDebug(fmt.Sprintf("Bind service instance %+v", appDeploy.ServiceBindings))
-
 				appResp := ctx["app_response"].(AppDeployResponse)
 				bindings, err := s.runBinder.BindServiceInstances(AppDeploy{
 					App:             appResp.App,
@@ -125,8 +117,6 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				if err != nil {
 					return ctx, err
 				}
-
-				// logDebug(fmt.Sprintf("created service bindings : %+v", bindings))
 
 				ctx["app_response"] = AppDeployResponse{
 					App:             appResp.App,
@@ -143,7 +133,7 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 
 				var pkg resources.Package
 				var err error
-				if appDeploy.AppPackage.DockerImage != "" {
+				if appResp.App.LifecycleType == constant.AppLifecycleTypeDocker {
 					pkg, _, err = s.bitsManager.CreateDockerPackage(appResp.App.GUID, appDeploy.AppPackage.DockerImage, appDeploy.AppPackage.DockerUsername, appDeploy.AppPackage.DockerPassword)
 				} else {
 					// Bits will be loaded entirely into memory for each app
@@ -189,7 +179,6 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 
 				// Get process information
 				// appProcess, _, err := s.client.GetApplicationProcessByType(app.GUID, constant.ProcessTypeWeb)
-				// logDebug(fmt.Sprintf("app and app web process : %+v, %+v", app, appProcess))
 
 				ctx["app_response"] = AppDeployResponse{
 					App:             app,
@@ -233,6 +222,9 @@ func (s Standard) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 		Key:    ccv3.OrderBy,
 		Values: []string{"-created_at"},
 	})
+	if err != nil {
+		return AppDeployResponse{}, err
+	}
 
 	// Stage the package
 	build, _, err := s.client.CreateBuild(resources.Build{
@@ -243,7 +235,6 @@ func (s Standard) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 	}
 
 	err = common.PollingWithTimeout(func() (bool, error) {
-
 		ccBuild, _, err := s.client.GetBuild(build.GUID)
 		if err != nil {
 			return true, err
@@ -259,6 +250,10 @@ func (s Standard) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 
 		return false, nil
 	}, 5*time.Second, appDeploy.StageTimeout)
+
+	if err != nil {
+		return AppDeployResponse{}, err
+	}
 
 	// Stop the app
 	app, _, err := s.client.UpdateApplicationStop(appDeploy.App.GUID)

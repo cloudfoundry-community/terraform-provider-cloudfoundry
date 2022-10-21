@@ -283,8 +283,6 @@ func (r RunBinder) WaitStaging(appDeploy AppDeploy) error {
 // http://v3-apidocs.cloudfoundry.org/version/3.124.0/#starting-apps
 func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, resources.Process, error) {
 
-	// logDebug(fmt.Sprintf("Starting app %+v", appDeploy))
-
 	// Get newest READY package for an app
 	packages, _, err := r.client.GetPackages(ccv3.Query{
 		Key:    ccv3.AppGUIDFilter,
@@ -306,8 +304,6 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, resources.
 	// Get first package in the list
 	pkg := packages[0]
 	packageGUID := pkg.GUID
-
-	// logDebug(fmt.Sprintf("\npackage to stage: %+v", pkg))
 
 	// Check for package droplets
 	var dropletGUID string
@@ -358,8 +354,6 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, resources.
 		if err != nil {
 			return resources.Application{}, resources.Process{}, err
 		}
-
-		// logDebug(fmt.Sprintf("droplets to set: %+v / %+v", stgPkg, stgPkg[0].GUID))
 		dropletGUID = stgPkg[0].GUID
 	}
 
@@ -371,8 +365,9 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, resources.
 
 	// Grabbing the process information
 	appProcess, _, err := r.client.GetApplicationProcessByType(appDeploy.App.GUID, constant.ProcessTypeWeb)
-	// logDebug(fmt.Sprintf("[after start] app web process : %+v", appProcess))
-
+	if err != nil {
+		return resources.Application{}, resources.Process{}, err
+	}
 	// Define process information and add to payload if set in terraform
 	processScaleInfo := resources.Process{
 		Type: constant.ProcessTypeWeb,
@@ -390,14 +385,10 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, resources.
 		processScaleInfo.DiskInMB = appDeploy.Process.DiskInMB
 	}
 
-	// logDebug(fmt.Sprintf("[before scale] process scale info : %+v", processScaleInfo))
-
 	scaledProcess, _, err := r.client.CreateApplicationProcessScale(appDeploy.App.GUID, processScaleInfo)
 	if err != nil {
 		return resources.Application{}, resources.Process{}, err
 	}
-
-	// logDebug(fmt.Sprintf("[scaled process] app process : %+v", scaledProcess))
 
 	updatedProcess, _, err := r.client.UpdateProcess(resources.Process{
 		GUID:                scaledProcess.GUID,
@@ -408,8 +399,6 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, resources.
 	if err != nil {
 		return resources.Application{}, resources.Process{}, err
 	}
-
-	// logDebug(fmt.Sprintf("[after scale] app process : %+v", updatedProcess))
 
 	// Start application
 	_, _, err = r.client.UpdateApplicationStart(appDeploy.App.GUID)
@@ -439,7 +428,6 @@ func (r RunBinder) Stop(appDeploy AppDeploy) error {
 		return err
 	}
 
-	// logDebug(fmt.Sprintf("app state : %+v", app))
 	return nil
 }
 

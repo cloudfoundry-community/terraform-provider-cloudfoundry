@@ -503,75 +503,76 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 		appDeploy.ServiceBindings = bindings
 	}
 
-	appUpdate := resources.Application{
-		GUID: appDeploy.App.GUID,
-	}
+	// appUpdate := resources.Application{
+	// 	GUID: appDeploy.App.GUID,
+	// }
 
-	packageUpdate := resources.Package{}
-	processUpdate := resources.Process{}
-	sshUpdate := resources.ApplicationFeature{}
-	envVarUpdate := make(resources.EnvironmentVariables)
+	// packageUpdate := resources.Package{}
+	// processUpdate := resources.Process{}
+	// sshUpdate := resources.ApplicationFeature{}
+	// envVarUpdate := make(resources.EnvironmentVariables)
 
 	if d.HasChange("name") {
-		appUpdate.Name = d.Get("name").(string)
+		appDeploy.App.Name = d.Get("name").(string)
 	}
 	if d.HasChange("ports") {
 		ports := make([]int, 0)
 		for _, vv := range d.Get("ports").(*schema.Set).List() {
 			ports = append(ports, vv.(int))
 		}
+		appDeploy.Ports = ports
 		log.Printf("[WARN] Ports have changed but not yet supported in v3 provider")
 	}
 	if d.HasChange("instances") {
-		processUpdate.Instances = IntToNullInt(d.Get("instances").(int))
+		appDeploy.Process.Instances = IntToNullInt(d.Get("instances").(int))
 	}
 	if d.HasChange("memory") {
-		processUpdate.MemoryInMB = IntToNullUint64Zero(d.Get("memory").(int))
+		appDeploy.Process.MemoryInMB = IntToNullUint64Zero(d.Get("memory").(int))
 	}
 	if d.HasChange("disk_quota") {
-		processUpdate.DiskInMB = IntToNullUint64Zero(d.Get("disk_quota").(int))
+		appDeploy.Process.DiskInMB = IntToNullUint64Zero(d.Get("disk_quota").(int))
 	}
 	if d.HasChange("stack") {
-		appUpdate.StackName = d.Get("stack").(string)
+		appDeploy.App.StackName = d.Get("stack").(string)
 	}
 	if d.HasChange("buildpack") {
-		appUpdate.LifecycleBuildpacks = []string{d.Get("buildpack").(string)}
+		appDeploy.App.LifecycleBuildpacks = []string{d.Get("buildpack").(string)}
 	}
 	if d.HasChange("command") {
-		processUpdate.Command = StringToFilteredString(d.Get("command").(string))
+		appDeploy.Process.Command = StringToFilteredString(d.Get("command").(string))
 	}
 	if d.HasChange("enable_ssh") {
-		sshUpdate.Enabled = d.Get("enable_ssh").(bool)
+		appDeploy.EnableSSH.Enabled = d.Get("enable_ssh").(bool)
 	}
 	if d.HasChange("stopped") {
 		state := constant.ApplicationStarted
 		if d.Get("stopped").(bool) {
 			state = constant.ApplicationStopped
 		}
-		appUpdate.State = state
+		appDeploy.App.State = state
 	}
 	if d.HasChange("docker_image") {
-		packageUpdate.DockerImage = d.Get("docker_image").(string)
+		appDeploy.AppPackage.DockerImage = d.Get("docker_image").(string)
 		if v, ok := d.GetOk("docker_credentials"); ok {
 			vv := v.(map[string]interface{})
-			packageUpdate.DockerUsername = vv["username"].(string)
-			packageUpdate.DockerPassword = vv["password"].(string)
+			appDeploy.AppPackage.DockerUsername = vv["username"].(string)
+			appDeploy.AppPackage.DockerPassword = vv["password"].(string)
 		}
 	}
 	if d.HasChange("health_check_http_endpoint") {
-		processUpdate.HealthCheckEndpoint = d.Get("health_check_http_endpoint").(string)
+		appDeploy.Process.HealthCheckEndpoint = d.Get("health_check_http_endpoint").(string)
 	}
 	if d.HasChange("health_check_type") {
-		processUpdate.HealthCheckType = constant.HealthCheckType(d.Get("health_check_type").(string))
+		appDeploy.Process.HealthCheckType = constant.HealthCheckType(d.Get("health_check_type").(string))
 	}
 	if d.HasChange("health_check_timeout") {
-		processUpdate.HealthCheckTimeout = int64(d.Get("health_check_timeout").(int))
+		appDeploy.Process.HealthCheckTimeout = int64(d.Get("health_check_timeout").(int))
 	}
 	if d.HasChange("environment") {
 		if v, ok := d.GetOk("environment"); ok {
 			vv := v.(map[string]interface{})
 			for k, v := range vv {
-				envVarUpdate[k] = *types.NewFilteredString(fmt.Sprint(v))
+				appDeploy.EnvVars[k] = *types.NewFilteredString(fmt.Sprint(v))
 			}
 		}
 
@@ -605,13 +606,13 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 		}
 	}
 
-	appDeploy.AppPackage = packageUpdate
-	appDeploy.Process = processUpdate
-	appDeploy.EnableSSH = sshUpdate
-	appDeploy.EnvVars = envVarUpdate
+	// appDeploy.AppPackage = packageUpdate
+	// appDeploy.Process = processUpdate
+	// appDeploy.EnableSSH = sshUpdate
+	// appDeploy.EnvVars = envVarUpdate
 
 	if IsAppUpdateOnly(d) || (IsAppRestageNeeded(d) && !deployer.IsCreateNewApp()) || (IsAppRestartNeeded(d) && !deployer.IsCreateNewApp()) {
-		app, _, err := session.ClientV3.UpdateApplication(appUpdate)
+		app, _, err := session.ClientV3.UpdateApplication(appDeploy.App)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -623,7 +624,10 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 				Instances: IntToNullInt(d.Get("instances").(int)),
 			}
 			// log.Printf("scale proc : %+v", procScale)
-			session.ClientV3.CreateApplicationProcessScale(d.Id(), procScale)
+			_, _, err := session.ClientV3.CreateApplicationProcessScale(d.Id(), procScale)
+			if err != nil {
+				return diag.FromErr(err)
+			}
 		}
 
 		if d.HasChange("stopped") {

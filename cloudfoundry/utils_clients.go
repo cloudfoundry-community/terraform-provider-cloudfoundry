@@ -6,7 +6,6 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	constantV3 "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/api/uaa"
@@ -117,18 +116,6 @@ func IsErrNotFound(err error) bool {
 		return true
 	}
 	return false
-}
-
-func filterAppGuid(guid string) ccv2.Filter {
-	return ccv2.FilterEqual(constant.AppGUIDFilter, guid)
-}
-
-func filterRouteGuid(guid string) ccv2.Filter {
-	return ccv2.FilterEqual(constant.RouteGUIDFilter, guid)
-}
-
-func filterServiceInstanceGuid(guid string) ccv2.Filter {
-	return ccv2.FilterEqual(constant.ServiceInstanceGUIDFilter, guid)
 }
 
 type PollingConfig struct {
