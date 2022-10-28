@@ -4,19 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"log"
 	"time"
 
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
+
+const ManagedServiceInstance = "managed"
 
 func resourceServiceInstance() *schema.Resource {
 
@@ -110,8 +113,13 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 	space := d.Get("space").(string)
 	jsonParameters := d.Get("json_params").(string)
 	tags := make([]string, 0)
+
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
+	}
+	tagsFormatted := types.OptionalStringSlice{
+		IsSet: true,
+		Value: tags,
 	}
 
 	params := make(map[string]interface{})
@@ -121,34 +129,65 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 	}
-	si, _, err := session.ClientV2.CreateServiceInstance(space, servicePlan, name, params, tags)
+	paramsFormatted := types.OptionalObject{
+		IsSet: true,
+		Value: params,
+	}
+
+	serviceInstance := resources.ServiceInstance{}
+	serviceInstance.Type = ManagedServiceInstance
+	serviceInstance.Name = name
+	serviceInstance.SpaceGUID = space
+	serviceInstance.ServicePlanGUID = servicePlan
+	serviceInstance.Tags = tagsFormatted
+	serviceInstance.Parameters = paramsFormatted
+
+	jobURL, _, err := session.ClientV3.CreateServiceInstance(serviceInstance)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	stateConf := &resource.StateChangeConf{
-		Pending:        resourceServiceInstancePendingStates,
-		Target:         resourceServiceInstanceSuccessStates,
-		Refresh:        resourceServiceInstanceStateFunc(si.GUID, "create", meta),
-		Timeout:        d.Timeout(schema.TimeoutCreate),
-		PollInterval:   30 * time.Second,
-		Delay:          5 * time.Second,
-		NotFoundChecks: 6, // if the CF object for the instance isn't at least present after 3 minutes, it's probably not coming
-	}
 
-	// Wait, catching any errors
-	if _, err = stateConf.WaitForStateContext(ctx); err != nil {
+	// Poll the state of the async job
+	err = common.PollingWithTimeout(func() (bool, error) {
+		job, _, err := session.ClientV3.GetJob(jobURL)
+		if err != nil {
+			return true, err
+		}
+
+		// Stop polling and return error if job failed
+		if job.State == constant.JobFailed {
+			return true, fmt.Errorf(
+				"Service Instance %s failed %s, reason: async job failed",
+				name,
+				space,
+			)
+		}
+		// If job completed, check if the service instance is created
+		if job.State == constant.JobComplete {
+			si, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
+			if err != nil {
+				return true, err
+			}
+			d.SetId(si.GUID)
+			return true, nil
+		}
+		// Last operation initial or inprogress or job not completed, continue polling
+		return false, nil
+	}, 5*time.Second, d.Timeout(schema.TimeoutCreate))
+
+	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	d.SetId(si.GUID)
 
 	return nil
 }
 
 func resourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
+	name := d.Get("name").(string)
+	space := d.Get("space").(string)
 
-	serviceInstance, _, err := session.ClientV2.GetServiceInstance(d.Id())
+	serviceInstance, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
 	if err != nil {
 		if IsErrNotFound(err) {
 			d.SetId("")
@@ -161,14 +200,25 @@ func resourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, me
 	d.Set("service_plan", serviceInstance.ServicePlanGUID)
 	d.Set("space", serviceInstance.SpaceGUID)
 
-	if serviceInstance.Tags != nil {
-		tags := make([]interface{}, len(serviceInstance.Tags))
-		for i, v := range serviceInstance.Tags {
+	if serviceInstance.Tags.IsSet {
+		tags := make([]interface{}, len(serviceInstance.Tags.Value))
+		for i, v := range serviceInstance.Tags.Value {
 			tags[i] = v
 		}
 		d.Set("tags", tags)
 	} else {
 		d.Set("tags", nil)
+	}
+	if serviceInstance.Parameters.IsSet {
+		//params := make(map[string]interface{})
+		params, err := json.Marshal(serviceInstance.Parameters.Value)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		d.Set("jsonParameters", params)
+	} else {
+		d.Set("jsonParameters", nil)
 	}
 
 	return nil
@@ -178,6 +228,11 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 	session := meta.(*managers.Session)
 	if session == nil {
 		return diag.Errorf("client is nil")
+	}
+
+	// Nothing to be done
+	if !isServiceInstanceUpdateRequired(d) {
+		return nil
 	}
 
 	// Enable partial state mode
@@ -193,10 +248,10 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 		params   map[string]interface{}
 	)
 
-	id = d.Id()
 	name = d.Get("name").(string)
-	servicePlan := d.Get("service_plan").(string)
+	id = d.Id()
 	jsonParameters := d.Get("json_params").(string)
+	space := d.Get("space").(string)
 
 	if len(jsonParameters) > 0 {
 		err := json.Unmarshal([]byte(jsonParameters), &params)
@@ -204,36 +259,76 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 	}
+	tags = make([]string, 0)
+	log.Printf("Tags : %+v", tags)
 
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
 	}
 
-	_, _, err := session.ClientV2.UpdateServiceInstance(ccv2.ServiceInstance{
-		GUID:            id,
-		Name:            name,
-		ServicePlanGUID: servicePlan,
-		Parameters:      params,
-		Tags:            tags,
-	})
+	tagsFormatted := types.OptionalStringSlice{
+		IsSet: true,
+		Value: tags,
+	}
+	params = make(map[string]interface{})
+	if len(jsonParameters) > 0 {
+		err := json.Unmarshal([]byte(jsonParameters), &params)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	paramsFormatted := types.OptionalObject{
+		IsSet: true,
+		Value: params,
+	}
+
+	serviceInstanceUpdate := resources.ServiceInstance{
+		Name:       name,
+		Parameters: paramsFormatted,
+		Tags:       tagsFormatted,
+	}
+	// Some services don't support changing service plan, so we only add it to request body only if changed by user
+	if d.HasChange("service_plan") {
+		serviceInstanceUpdate.ServicePlanGUID = d.Get("service_plan").(string)
+	}
+
+	jobURL, _, err := session.ClientV3.UpdateServiceInstance(id, serviceInstanceUpdate)
+	log.Printf("Service Instance Object Job URL : %+v", jobURL)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	stateConf := &resource.StateChangeConf{
-		Pending:        resourceServiceInstancePendingStates,
-		Target:         resourceServiceInstanceSuccessStates,
-		Refresh:        resourceServiceInstanceStateFunc(id, "update", meta),
-		Timeout:        d.Timeout(schema.TimeoutUpdate),
-		PollInterval:   30 * time.Second,
-		Delay:          5 * time.Second,
-		NotFoundChecks: 3, // if we don't find the service instance in CF during an update, something is definitely wrong
-	}
-	// Wait, catching any errors
-	if _, err = stateConf.WaitForStateContext(ctx); err != nil {
+	// Poll the state of the async job
+	err = common.PollingWithTimeout(func() (bool, error) {
+		job, _, err := session.ClientV3.GetJob(jobURL)
+		if err != nil {
+			return true, err
+		}
+
+		// Stop polling and return error if job failed
+		if job.State == constant.JobFailed {
+			return true, fmt.Errorf(
+				"Instance %s failed %s, reason: async job failed",
+				name,
+				space,
+			)
+		}
+		// If job completed, check if the service instance exists
+		if job.State == constant.JobComplete {
+			si, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
+			if err != nil {
+				return true, err
+			}
+			d.SetId(si.GUID)
+			return true, nil
+		}
+
+		// Last operation initial or inprogress or job not completed, continue polling
+		return false, nil
+	}, 5*time.Second, d.Timeout(schema.TimeoutUpdate))
+	if err != nil {
 		return diag.FromErr(err)
 	}
-
 	// We succeeded, disable partial mode
 	d.Partial(false)
 	return nil
@@ -243,43 +338,70 @@ func resourceServiceInstanceDelete(ctx context.Context, d *schema.ResourceData, 
 	session := meta.(*managers.Session)
 	id := d.Id()
 
-	recursiveDelete := d.Get("recursive_delete").(bool)
-	async, _, err := session.ClientV2.DeleteServiceInstance(id, recursiveDelete, session.PurgeWhenDelete)
+	jobURL, _, err := session.ClientV3.DeleteServiceInstance(id)
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if !async {
-		return nil
-	}
-	stateConf := &resource.StateChangeConf{
-		Pending:      resourceServiceInstancePendingStates,
-		Target:       []string{},
-		Refresh:      resourceServiceInstanceStateFunc(id, "delete", meta),
-		Timeout:      d.Timeout(schema.TimeoutDelete),
-		PollInterval: 30 * time.Second,
-		Delay:        5 * time.Second,
-	}
-	// Wait, catching any errors
-	if _, err = stateConf.WaitForStateContext(ctx); err != nil {
-		return diag.FromErr(err)
-	}
+	name := d.Get("name").(string)
+	space := d.Get("space").(string)
 
-	return nil
+	// Poll the state of the async job
+	err = common.PollingWithTimeout(func() (bool, error) {
+		job, _, err := session.ClientV3.GetJob(jobURL)
+		if err != nil {
+			return true, err
+		}
+
+		// Stop polling and return error if job failed
+		if job.State == constant.JobFailed {
+			return true, fmt.Errorf(
+				"Instance %s failed %s, reason: async job failed",
+				name,
+				space,
+			)
+		}
+
+		if job.State == constant.JobComplete {
+			_, _, _, err := session.ClientV3.GetServiceInstances(ccv3.Query{
+				Key:    ccv3.GUIDFilter,
+				Values: []string{id},
+			})
+			if err != nil && !IsErrNotFound(err) {
+				return true, err
+			}
+			return true, nil
+		}
+		// Last operation initial or inprogress or job not completed, continue polling
+		return false, nil
+	}, 5*time.Second, d.Timeout(schema.TimeoutDelete))
+
+	return diag.FromErr(err)
 }
 
 func resourceServiceInstanceImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	session := meta.(*managers.Session)
 
-	serviceinstance, _, err := session.ClientV2.GetServiceInstance(d.Id())
+	name := d.Get("name").(string)
+	space := d.Get("space").(string)
+	serviceInstance, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
 
 	if err != nil {
 		return nil, err
 	}
 
-	d.Set("name", serviceinstance.Name)
-	d.Set("service_plan", serviceinstance.ServicePlanGUID)
-	d.Set("space", serviceinstance.SpaceGUID)
-	d.Set("tags", serviceinstance.Tags)
+	d.Set("name", serviceInstance.Name)
+	d.Set("service_plan", serviceInstance.ServicePlanGUID)
+	d.Set("space", serviceInstance.SpaceGUID)
+	if serviceInstance.Tags.IsSet {
+		tags := make([]interface{}, len(serviceInstance.Tags.Value))
+		for i, v := range serviceInstance.Tags.Value {
+			tags[i] = v
+		}
+		d.Set("tags", tags)
+	} else {
+		d.Set("tags", nil)
+	}
 
 	d.Set("replace_on_service_plan_change", false)
 	d.Set("replace_on_params_change", false)
@@ -287,38 +409,6 @@ func resourceServiceInstanceImport(ctx context.Context, d *schema.ResourceData, 
 	return ImportReadContext(resourceServiceInstanceRead)(ctx, d, meta)
 }
 
-func resourceServiceInstanceStateFunc(serviceInstanceID string, operationType string, meta interface{}) resource.StateRefreshFunc {
-	return func() (interface{}, string, error) {
-		session := meta.(*managers.Session)
-		serviceInstance, _, err := session.ClientV2.GetServiceInstance(serviceInstanceID)
-		if err != nil {
-			// We should get a 404 if the resource doesn't exist (eg. it has been deleted)
-			// In this case, the refresh code is expecting a nil object
-			if IsErrNotFound(err) {
-				return nil, "", nil
-			}
-			return nil, "", err
-		}
-
-		if serviceInstance.LastOperation.Type == operationType {
-			stateStr := string(serviceInstance.LastOperation.State)
-			switch serviceInstance.LastOperation.State {
-			case constant.LastOperationSucceeded:
-				return serviceInstance, stateStr, nil
-			case constant.LastOperationFailed:
-				return nil, stateStr, fmt.Errorf("%s", serviceInstance.LastOperation.Description)
-			}
-			return serviceInstance, stateStr, nil
-		}
-
-		return serviceInstance, "wrong operation", nil
-	}
-}
-
-var resourceServiceInstancePendingStates = []string{
-	"in progress",
-}
-
-var resourceServiceInstanceSuccessStates = []string{
-	"succeeded",
+func isServiceInstanceUpdateRequired(d ResourceChanger) bool {
+	return d.HasChange("name") || d.HasChange("service_plan") || d.HasChange("json_params") || d.HasChange("tags")
 }

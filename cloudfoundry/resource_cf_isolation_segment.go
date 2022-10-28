@@ -1,13 +1,14 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
+	resources "code.cloudfoundry.org/cli/resources"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -71,7 +72,7 @@ func resourceSegmentCreate(ctx context.Context, d *schema.ResourceData, meta int
 	name := d.Get("name").(string)
 
 	sm := session.ClientV3
-	seg, _, err := sm.CreateIsolationSegment(ccv3.IsolationSegment{
+	seg, _, err := sm.CreateIsolationSegment(resources.IsolationSegment{
 		Name: name,
 	})
 	if err != nil {

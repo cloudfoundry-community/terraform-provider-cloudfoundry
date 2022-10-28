@@ -11,13 +11,15 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/hashcode"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/v3appdeployers"
 )
 
 // schema.BasicMapReader
@@ -112,7 +114,7 @@ func resourceApp() *schema.Resource {
 				Optional:     true,
 				Default:      "none",
 				Description:  "Deployment strategy, default to none but accept blue-green strategy",
-				ValidateFunc: validateStrategy,
+				ValidateFunc: validateV3Strategy,
 			},
 			"path": &schema.Schema{
 				Type:          schema.TypeString,
@@ -215,7 +217,7 @@ func resourceApp() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "port",
-				ValidateFunc: validateAppHealthCheckType,
+				ValidateFunc: validateAppV3HealthCheckType,
 			},
 			"health_check_timeout": &schema.Schema{
 				Type:     schema.TypeInt,
@@ -257,7 +259,7 @@ func resourceApp() *schema.Resource {
 	}
 }
 
-func validateAppHealthCheckType(v interface{}, k string) (ws []string, errs []error) {
+func validateAppV3HealthCheckType(v interface{}, k string) (ws []string, errs []error) {
 	value := v.(string)
 	if value != "port" && value != "process" && value != "http" && value != "none" {
 		errs = append(errs, fmt.Errorf("%q must be one of 'port', 'process', 'http' or 'none'", k))
@@ -265,12 +267,12 @@ func validateAppHealthCheckType(v interface{}, k string) (ws []string, errs []er
 	return ws, errs
 }
 
-func validateStrategy(v interface{}, k string) (ws []string, errs []error) {
+func validateV3Strategy(v interface{}, k string) (ws []string, errs []error) {
 	value := strings.ToLower(v.(string))
 	if value == "none" {
 		return ws, errs
 	}
-	if names, ok := appdeployers.ValidStrategy(value); !ok {
+	if names, ok := v3appdeployers.ValidStrategy(value); !ok {
 		errs = append(errs,
 			fmt.Errorf("%q must be one of '%s' or 'none'", k, strings.Join(names, "', '")))
 	}
@@ -279,10 +281,11 @@ func validateStrategy(v interface{}, k string) (ws []string, errs []error) {
 
 func resourceAppCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
-	log.Printf("[INFO] Use deploy strategy %s", deployer.Names()[0])
 
-	appDeploy, err := ResourceDataToAppDeploy(d)
+	deployer := session.V3Deployer.Strategy(d.Get("strategy").(string))
+	// log.Printf("[INFO] Use deploy strategy %s", deployer.Names()[0])
+
+	appDeploy, err := ResourceDataToAppDeployV3(d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -291,7 +294,7 @@ func resourceAppCreate(ctx context.Context, d *schema.ResourceData, meta interfa
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	AppDeployToResourceData(d, appResp)
+	AppDeployV3ToResourceData(d, appResp)
 	err = metadataCreate(appMetadata, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -302,31 +305,47 @@ func resourceAppCreate(ctx context.Context, d *schema.ResourceData, meta interfa
 func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
-	app, _, err := session.ClientV2.GetApplication(d.Id())
+	query := ccv3.Query{
+		Key:    ccv3.GUIDFilter,
+		Values: []string{d.Id()},
+	}
+	apps, _, err := session.ClientV3.GetApplications(query)
 	if err != nil {
-		if IsErrNotFound(err) {
-			d.SetId("")
-			return nil
-		}
 		return diag.FromErr(err)
 	}
+
+	if len(apps) == 0 {
+		d.SetId("")
+		return nil
+	}
+
+	app := apps[0]
+
 	if idBg, ok := d.GetOk("id_bg"); !ok || idBg == "" {
 		_ = d.Set("id_bg", d.Id())
 	}
-	mappings, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.AppGUIDFilter, d.Id()))
+	mappings, _, err := session.ClientV3.GetApplicationRoutes(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	bindings, _, err := session.ClientV2.GetServiceBindings(ccv2.FilterEqual(constant.AppGUIDFilter, d.Id()))
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	bindings = reorderBindings(bindings, d.Get("service_binding").([]interface{}))
-	AppDeployToResourceData(d, appdeployers.AppDeployResponse{
-		App:             app,
-		RouteMapping:    mappings,
-		ServiceBindings: bindings,
+	bindings, _, err := session.ClientV3.GetServiceCredentialBindings(ccv3.Query{
+		Key:    ccv3.AppGUIDFilter,
+		Values: []string{d.Id()},
 	})
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	bindings = ReorderBindings(bindings, d.Get("service_binding").([]interface{}))
+	AppDeployV3ToResourceData(d, v3appdeployers.AppDeployResponse{
+		App:             app,
+		Mappings:        mappings,
+		ServiceBindings: bindings,
+		// Buildpacks apps have a default port set to 8080. Custom port for app process and route is not yet supported
+		// Default port for docker apps is 9000, this case is not handled
+		Ports: []int{DefaultAppPort},
+	})
+
 	// droplet sync through V3 API
 	droplet, _, err := session.ClientV3.GetApplicationDropletCurrent(d.Id())
 	if err != nil {
@@ -338,40 +357,15 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface
 	}
 	DropletToResourceData(d, droplet)
 
+	// Fetch process information
+	proc, _, err := session.ClientV3.GetApplicationProcessByType(d.Id(), constant.ProcessTypeWeb)
+	ProcessToResourceData(d, proc)
+
 	err = metadataRead(appMetadata, d, meta, false)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
-}
-
-func getServiceBindingFromList(guid string, bindings []ccv2.ServiceBinding) (ccv2.ServiceBinding, bool) {
-	for _, binding := range bindings {
-		if binding.ServiceInstanceGUID == guid {
-			return binding, true
-		}
-	}
-	return ccv2.ServiceBinding{}, false
-}
-
-func reorderBindings(bindings []ccv2.ServiceBinding, currentBindings []interface{}) []ccv2.ServiceBinding {
-	finalBindings := make([]ccv2.ServiceBinding, 0)
-	for _, currentBindings := range currentBindings {
-		if currentBindings == nil {
-			continue
-		}
-		item := currentBindings.(map[string]interface{})
-		if binding, ok := getServiceBindingFromList(item["service_instance"].(string), bindings); ok {
-			finalBindings = append(finalBindings, binding)
-		}
-	}
-	for _, binding := range bindings {
-		if _, ok := getServiceBindingFromList(binding.ServiceInstanceGUID, finalBindings); ok {
-			continue
-		}
-		finalBindings = append(finalBindings, binding)
-	}
-	return finalBindings
 }
 
 func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -380,7 +374,7 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	defer func() {
 		d.Set("id_bg", d.Id())
 	}()
-	deployer := session.Deployer.Strategy(d.Get("strategy").(string))
+	deployer := session.V3Deployer.Strategy(d.Get("strategy").(string))
 
 	// sanitize any empty port under 1024
 	// this means that we are using not predefined port by user
@@ -395,39 +389,50 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	}
 	d.Set("ports", finalPorts)
 
+	// Route mappings change
 	if d.HasChange("routes") {
 		oldRoutes, newRoutes := d.GetChange("routes")
+
+		// getListMapChanges returns the routes to remove and the new routes to be added
+		// new routes are handled later so we only remove deleted routes here
 		remove, _ := getListMapChanges(oldRoutes, newRoutes, func(source, item map[string]interface{}) bool {
 			return source["route"] == item["route"] && source["port"] == item["port"]
 		})
+
 		for _, r := range remove {
-			mappings, _, err := session.ClientV2.GetRouteMappings(filterAppGuid(d.Id()), filterRouteGuid(r["route"].(string)))
+			// r contains route_id and port but port is always 0 as we don't support appPort in v3
+			// Get list of destinations for each route to remove and delete the destination with matching app GUID
+			routeGUID := r["route"].(string)
+			destinations, _, err := session.ClientV3.GetRouteDestinations(routeGUID)
 			if err != nil {
 				return diag.FromErr(err)
 			}
-			for _, mapping := range mappings {
-				// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
-				if mapping.AppPort <= 0 {
-					mapping.AppPort = (d.Get("ports").(*schema.Set).List()[0]).(int)
-				}
-				if mapping.AppPort != r["port"] {
-					continue
-				}
-				_, err := session.ClientV2.DeleteRouteMapping(mapping.GUID)
-				if err != nil && !IsErrNotFound(err) {
-					return diag.FromErr(err)
+
+			// Loop through the list of destinations to find the one with matching appGUID
+			for _, destination := range destinations {
+				if destination.App.GUID == d.Id() {
+					_, err := session.ClientV3.UnmapRoute(routeGUID, destination.GUID)
+					// If the destination is not found, we continue instead of raising the error
+					if err != nil && !IsErrNotFound(err) {
+						return diag.FromErr(err)
+					}
 				}
 			}
 		}
 	}
 
+	// Service bindings change
 	if d.HasChange("service_binding") {
 		oldBindings, newBindings := d.GetChange("service_binding")
+
+		// getListMapChanges returns the service credential bindings to remove and new ones to be added
+		// new service credential bindings are handled later so we only remove deleted ones here
 		remove, _ := getListMapChanges(oldBindings, newBindings, func(source, item map[string]interface{}) bool {
-			matchId := source["service_instance"] == item["service_instance"]
-			if !matchId {
+			matchID := source["service_instance"] == item["service_instance"]
+			if !matchID {
 				return false
 			}
+			// if binding parameters are different, delete the binding
 			isDiff, err := isDiffAppParamsBinding(source, item)
 			if err != nil {
 				panic(err)
@@ -436,12 +441,25 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 		})
 
 		for _, r := range remove {
-			bindings, _, err := session.ClientV2.GetServiceBindings(filterAppGuid(d.Id()), filterServiceInstanceGuid(r["service_instance"].(string)))
+			// r contains service_instance_id and params as map[string]interface{} or params_json as string
+			// We simply get all service credential bindings between this app and the service instance then delete
+			bindings, _, err := session.ClientV3.GetServiceCredentialBindings(
+				ccv3.Query{
+					Key:    ccv3.AppGUIDFilter,
+					Values: []string{d.Id()},
+				},
+				ccv3.Query{
+					Key:    ccv3.QueryKey("service_instance_guids"),
+					Values: []string{r["service_instance"].(string)},
+				},
+			)
 			if err != nil {
 				return diag.FromErr(err)
 			}
 			for _, binding := range bindings {
-				_, _, err := session.ClientV2.DeleteServiceBinding(binding.GUID, true)
+				// We don't wait for async job to complete, TODO: discuss on this
+				_, _, err := session.ClientV3.DeleteServiceCredentialBinding(binding.GUID)
+				// If the binding is not found, we continue instead of raising the error
 				if err != nil && !IsErrNotFound(err) {
 					return diag.FromErr(err)
 				}
@@ -450,7 +468,8 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 		}
 	}
 
-	appDeploy, err := ResourceDataToAppDeploy(d)
+	// Parse tfstate to appDeploy struct for deployer
+	appDeploy, err := ResourceDataToAppDeployV3(d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -463,12 +482,13 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 			return diag.FromErr(err)
 		}
 		d.Partial(false)
-		AppDeployToResourceData(d, appResp)
+		AppDeployV3ToResourceData(d, appResp)
 		return nil
 	}
 
+	// Redo route mappings
 	if d.HasChange("routes") {
-		mappings, err := session.RunBinder.MapRoutes(appDeploy)
+		mappings, err := session.V3RunBinder.MapRoutes(appDeploy)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -476,84 +496,88 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	}
 
 	if d.HasChange("service_binding") {
-		bindings, err := session.RunBinder.BindServiceInstances(appDeploy)
+		bindings, err := session.V3RunBinder.BindServiceInstances(appDeploy)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 		appDeploy.ServiceBindings = bindings
 	}
 
-	appUpdate := ccv2.Application{
-		GUID: appDeploy.App.GUID,
-	}
+	// appUpdate := resources.Application{
+	// 	GUID: appDeploy.App.GUID,
+	// }
+
+	// packageUpdate := resources.Package{}
+	// processUpdate := resources.Process{}
+	// sshUpdate := resources.ApplicationFeature{}
+	// envVarUpdate := make(resources.EnvironmentVariables)
 
 	if d.HasChange("name") {
-		appUpdate.Name = d.Get("name").(string)
+		appDeploy.App.Name = d.Get("name").(string)
 	}
 	if d.HasChange("ports") {
 		ports := make([]int, 0)
 		for _, vv := range d.Get("ports").(*schema.Set).List() {
 			ports = append(ports, vv.(int))
 		}
-		appUpdate.Ports = ports
+		appDeploy.Ports = ports
+		log.Printf("[WARN] Ports have changed but not yet supported in v3 provider")
 	}
 	if d.HasChange("instances") {
-		appUpdate.Instances = IntToNullInt(d.Get("instances").(int))
+		appDeploy.Process.Instances = IntToNullInt(d.Get("instances").(int))
 	}
 	if d.HasChange("memory") {
-		appUpdate.Memory = IntToNullByteSizeZero(d.Get("memory").(int))
+		appDeploy.Process.MemoryInMB = IntToNullUint64Zero(d.Get("memory").(int))
 	}
 	if d.HasChange("disk_quota") {
-		appUpdate.DiskQuota = IntToNullByteSizeZero(d.Get("disk_quota").(int))
+		appDeploy.Process.DiskInMB = IntToNullUint64Zero(d.Get("disk_quota").(int))
 	}
 	if d.HasChange("stack") {
-		appUpdate.StackGUID = d.Get("stack").(string)
+		appDeploy.App.StackName = d.Get("stack").(string)
 	}
 	if d.HasChange("buildpack") {
-		appUpdate.Buildpack = StringToFilteredString(d.Get("buildpack").(string))
+		appDeploy.App.LifecycleBuildpacks = []string{d.Get("buildpack").(string)}
 	}
 	if d.HasChange("command") {
-		appUpdate.Command = StringToFilteredString(d.Get("command").(string))
+		appDeploy.Process.Command = StringToFilteredString(d.Get("command").(string))
 	}
 	if d.HasChange("enable_ssh") {
-		appUpdate.EnableSSH = BoolToNullBool(d.Get("enable_ssh").(bool))
+		appDeploy.EnableSSH.Enabled = d.Get("enable_ssh").(bool)
 	}
 	if d.HasChange("stopped") {
 		state := constant.ApplicationStarted
 		if d.Get("stopped").(bool) {
 			state = constant.ApplicationStopped
 		}
-		appUpdate.State = state
+		appDeploy.App.State = state
 	}
 	if d.HasChange("docker_image") {
-		appUpdate.DockerImage = d.Get("docker_image").(string)
+		appDeploy.AppPackage.DockerImage = d.Get("docker_image").(string)
 		if v, ok := d.GetOk("docker_credentials"); ok {
 			vv := v.(map[string]interface{})
-			appUpdate.DockerCredentials = ccv2.DockerCredentials{
-				Username: vv["username"].(string),
-				Password: vv["password"].(string),
-			}
+			appDeploy.AppPackage.DockerUsername = vv["username"].(string)
+			appDeploy.AppPackage.DockerPassword = vv["password"].(string)
 		}
 	}
 	if d.HasChange("health_check_http_endpoint") {
-		appUpdate.HealthCheckHTTPEndpoint = d.Get("health_check_http_endpoint").(string)
+		appDeploy.Process.HealthCheckEndpoint = d.Get("health_check_http_endpoint").(string)
 	}
 	if d.HasChange("health_check_type") {
-		appUpdate.HealthCheckType = constant.ApplicationHealthCheckType(d.Get("health_check_type").(string))
+		appDeploy.Process.HealthCheckType = constant.HealthCheckType(d.Get("health_check_type").(string))
 	}
 	if d.HasChange("health_check_timeout") {
-		appUpdate.HealthCheckTimeout = uint64(d.Get("health_check_timeout").(int))
+		appDeploy.Process.HealthCheckTimeout = int64(d.Get("health_check_timeout").(int))
 	}
 	if d.HasChange("environment") {
 		if v, ok := d.GetOk("environment"); ok {
 			vv := v.(map[string]interface{})
-			envVars := make(map[string]string)
 			for k, v := range vv {
-				envVars[k] = fmt.Sprint(v)
+				appDeploy.EnvVars[k] = *types.NewFilteredString(fmt.Sprint(v))
 			}
-			appUpdate.EnvironmentVariables = envVars
 		}
+
 		// Remove stale / externally set variables
+		// Already implemented in v3 so we don't touch
 		if currentEnv, _, err := session.ClientV3.GetApplicationEnvironment(appDeploy.App.GUID); err == nil {
 			var staleVars []string
 			var vv map[string]interface{}
@@ -582,11 +606,43 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 		}
 	}
 
+	// appDeploy.AppPackage = packageUpdate
+	// appDeploy.Process = processUpdate
+	// appDeploy.EnableSSH = sshUpdate
+	// appDeploy.EnvVars = envVarUpdate
+
 	if IsAppUpdateOnly(d) || (IsAppRestageNeeded(d) && !deployer.IsCreateNewApp()) || (IsAppRestartNeeded(d) && !deployer.IsCreateNewApp()) {
-		app, _, err := session.ClientV2.UpdateApplication(appUpdate)
+		app, _, err := session.ClientV3.UpdateApplication(appDeploy.App)
 		if err != nil {
 			return diag.FromErr(err)
 		}
+
+		if d.HasChange("instances") {
+			// Scale only web process type
+			procScale := resources.Process{
+				Type:      constant.ProcessTypeWeb,
+				Instances: IntToNullInt(d.Get("instances").(int)),
+			}
+			// log.Printf("scale proc : %+v", procScale)
+			_, _, err := session.ClientV3.CreateApplicationProcessScale(d.Id(), procScale)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+		if d.HasChange("stopped") {
+			var f func(appGUID string) (resources.Application, ccv3.Warnings, error)
+			if d.Get("stopped").(bool) {
+				f = session.ClientV3.UpdateApplicationStart
+			} else {
+				f = session.ClientV3.UpdateApplicationStop
+			}
+			app, _, err = f(d.Id())
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
 		appDeploy.App = app
 	}
 
@@ -596,12 +652,12 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 			return diag.FromErr(err)
 		}
 		d.Partial(false)
-		AppDeployToResourceData(d, appResp)
+		AppDeployV3ToResourceData(d, appResp)
 		return nil
 	}
 
 	if IsAppRestartNeeded(d) {
-		err := session.RunBinder.Restart(appDeploy, DefaultStageTimeout)
+		err := session.V3RunBinder.Restart(appDeploy, DefaultStageTimeout)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -672,6 +728,17 @@ func isDiffAppParamsBinding(oldBinding, currentBinding map[string]interface{}) (
 
 func resourceAppDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-	_, err := session.ClientV2.DeleteApplication(d.Id())
+	appGUID := d.Id()
+	_, _, err := session.ClientV3.UpdateApplicationStop(appGUID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	jobURL, _, err := session.ClientV3.DeleteApplication(appGUID)
+
+	err = PollAsyncJob(PollingConfig{
+		session: session,
+		jobURL:  jobURL,
+	})
 	return diag.FromErr(err)
 }
