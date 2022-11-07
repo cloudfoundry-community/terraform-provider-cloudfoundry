@@ -572,69 +572,69 @@ func TestMain(m *testing.M) {
 			}
 		})
 	}
-	if os.Getenv("DISABLE_ISOLATION_SEGMENTS") == "" {
-		fmt.Println("Creating isolation segment segment-acc-tf ...")
-		segment, _, err := testSession().ClientV3.CreateIsolationSegment(ccv3.IsolationSegment{
-			Name: "segment-acc-tf",
-		})
+	// if os.Getenv("DISABLE_ISOLATION_SEGMENTS") == "" {
+	// 	fmt.Println("Creating isolation segment segment-acc-tf ...")
+	// 	segment, _, err := testSession().ClientV3.CreateIsolationSegment(ccv3.IsolationSegment{
+	// 		Name: "segment-acc-tf",
+	// 	})
 
-		if err != nil {
-			if strings.Contains(err.Error(), "must be unique") {
-				segments, _, err := testSession().ClientV3.GetIsolationSegments(ccv3.Query{Key: ccv3.NameFilter, Values: []string{"segment-acc-tf"}})
-				if err != nil {
-					panic(err)
-				}
-				segment = segments[0]
-			} else {
-				panic(err)
-			}
-		}
-		os.Setenv("TEST_DEFAULT_SEGMENT", segment.Name)
-		clean = append(clean, func() {
-			fmt.Println("Deleting isolation segment segment-acc-tf ...")
-			_, err := testSession().ClientV3.DeleteIsolationSegment(segment.GUID)
-			if err != nil {
-				panic(err)
-			}
-		})
-		if os.Getenv("TF_ACC_CREATE") != "" {
-			fmt.Println("Creating org tf-acc-org ...")
-			org, _, err := testSession().ClientV2.CreateOrganization("tf-acc-org", "")
-			if err != nil {
-				panic(err)
-			}
-			os.Setenv("TEST_ORG_NAME", org.Name)
-			clean = append(clean, func() {
-				fmt.Println("Deleting org tf-acc-org ...")
-				j, _, err := testSession().ClientV2.DeleteOrganization(org.GUID)
-				if err != nil {
-					panic(err)
-				}
-				_, err = testSession().ClientV2.PollJob(j)
-				if err != nil {
-					panic(err)
-				}
-			})
+	// 	if err != nil {
+	// 		if strings.Contains(err.Error(), "must be unique") {
+	// 			segments, _, err := testSession().ClientV3.GetIsolationSegments(ccv3.Query{Key: ccv3.NameFilter, Values: []string{"segment-acc-tf"}})
+	// 			if err != nil {
+	// 				panic(err)
+	// 			}
+	// 			segment = segments[0]
+	// 		} else {
+	// 			panic(err)
+	// 		}
+	// 	}
+	// 	os.Setenv("TEST_DEFAULT_SEGMENT", segment.Name)
+	// 	clean = append(clean, func() {
+	// 		fmt.Println("Deleting isolation segment segment-acc-tf ...")
+	// 		_, err := testSession().ClientV3.DeleteIsolationSegment(segment.GUID)
+	// 		if err != nil {
+	// 			panic(err)
+	// 		}
+	// 	})
+	// 	if os.Getenv("TF_ACC_CREATE") != "" {
+	// 		fmt.Println("Creating org tf-acc-org ...")
+	// 		org, _, err := testSession().ClientV2.CreateOrganization("tf-acc-org", "")
+	// 		if err != nil {
+	// 			panic(err)
+	// 		}
+	// 		os.Setenv("TEST_ORG_NAME", org.Name)
+	// 		clean = append(clean, func() {
+	// 			fmt.Println("Deleting org tf-acc-org ...")
+	// 			j, _, err := testSession().ClientV2.DeleteOrganization(org.GUID)
+	// 			if err != nil {
+	// 				panic(err)
+	// 			}
+	// 			_, err = testSession().ClientV2.PollJob(j)
+	// 			if err != nil {
+	// 				panic(err)
+	// 			}
+	// 		})
 
-			fmt.Println("Creating space tf-acc-space ...")
-			space, _, err := testSession().ClientV2.CreateSpace("tf-acc-space", org.GUID)
-			if err != nil {
-				panic(err)
-			}
-			os.Setenv("TEST_SPACE_NAME", space.Name)
-			clean = append(clean, func() {
-				fmt.Println("Deleting space tf-acc-space ...")
-				j, _, err := testSession().ClientV2.DeleteSpace(space.GUID)
-				if err != nil {
-					panic(err)
-				}
-				_, err = testSession().ClientV2.PollJob(j)
-				if err != nil {
-					panic(err)
-				}
-			})
-		}
-	}
+	// 		fmt.Println("Creating space tf-acc-space ...")
+	// 		space, _, err := testSession().ClientV2.CreateSpace("tf-acc-space", org.GUID)
+	// 		if err != nil {
+	// 			panic(err)
+	// 		}
+	// 		os.Setenv("TEST_SPACE_NAME", space.Name)
+	// 		clean = append(clean, func() {
+	// 			fmt.Println("Deleting space tf-acc-space ...")
+	// 			j, _, err := testSession().ClientV2.DeleteSpace(space.GUID)
+	// 			if err != nil {
+	// 				panic(err)
+	// 			}
+	// 			_, err = testSession().ClientV2.PollJob(j)
+	// 			if err != nil {
+	// 				panic(err)
+	// 			}
+	// 		})
+	// 	}
+	// }
 	fmt.Println("Finished running pre-hook.")
 	exitCode := m.Run()
 	fmt.Println("Running post-hook...")
