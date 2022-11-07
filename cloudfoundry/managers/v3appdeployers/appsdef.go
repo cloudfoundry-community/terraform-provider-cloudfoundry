@@ -13,7 +13,7 @@ type AppDeploy struct {
 	Process         resources.Process
 	Mappings        []resources.Route
 	ServiceBindings []resources.ServiceCredentialBinding
-	EnvVars         resources.EnvironmentVariables
+	EnvVars         map[string]interface{}
 	Path            string
 	BindTimeout     time.Duration
 	StageTimeout    time.Duration
@@ -30,7 +30,7 @@ type AppDeployResponse struct {
 	EnableSSH       resources.ApplicationFeature
 	AppPackage      resources.Package
 	Process         resources.Process
-	EnvVars         resources.EnvironmentVariables
+	EnvVars         map[string]interface{}
 	Mappings        []resources.Route
 	ServiceBindings []resources.ServiceCredentialBinding
 	Ports           []int

@@ -6,6 +6,9 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	constantV3 "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/appdeployers"
@@ -57,7 +60,7 @@ resource "cloudfoundry_app" "dummy-app" {
   disk_quota = "512"
   timeout = 1800
   path = "%s"
-	
+  enable_ssh = true
 %%s
 }
 `
@@ -105,6 +108,7 @@ resource "cloudfoundry_app" "dummy-app" {
   memory = "64"
   disk_quota = "512"
   timeout = 1800
+  enable_ssh = true
 
   path = "%s"
 
@@ -148,6 +152,7 @@ resource "cloudfoundry_app" "dummy-app" {
   strategy = "blue-green"
   source_code_hash = "%s"
   path = "%s"
+  enable_ssh = true
 
   routes {
     route = "${cloudfoundry_route.dummy-app.id}"
@@ -204,6 +209,7 @@ resource "cloudfoundry_app" "dummy-app" {
   memory = "128"
   disk_quota = "1024"
   timeout = 1800
+  enable_ssh = true
 
   path = "%s"
 
@@ -250,6 +256,8 @@ resource "cloudfoundry_app" "test-docker-app" {
   space = "${data.cloudfoundry_space.space.id}"
   docker_image = "cloudfoundry/diego-docker-app:latest"
   timeout = 900
+  enable_ssh = true
+
   routes {
     route = "${cloudfoundry_route.test-docker-app.id}"
   }
@@ -283,6 +291,8 @@ resource "cloudfoundry_app" "test-app" {
   buildpack = "binary_buildpack"
   memory = "64"
   path = "%s"
+  enable_ssh = true
+
 }
 `
 
@@ -314,6 +324,8 @@ resource "cloudfoundry_app" "test-app" {
   memory = "128"
 
   path = "%s"
+  enable_ssh = true
+
 }
 `
 
@@ -516,7 +528,8 @@ func setEnvironmentVariables(resApp string, m map[string]interface{}) resource.T
 		}
 		id := rs.Primary.ID
 
-		return session.BitsManager.SetAppEnvironmentVariables(id, m)
+		_, _, err := session.BitsManager.UpdateAppEnvironment(id, m)
+		return err
 	}
 }
 
@@ -737,12 +750,14 @@ func TestAccResApp_dockerApp(t *testing.T) {
 							refApp, "name", "test-docker-app"),
 						resource.TestCheckResourceAttr(
 							refApp, "space", spaceID),
+						// For docker apps, ports are not set (not supported in v3)
 						resource.TestCheckResourceAttr(
-							refApp, "ports.#", "1"),
+							refApp, "ports.#", "0"),
 						resource.TestCheckResourceAttr(
 							refApp, "instances", "1"),
-						resource.TestCheckResourceAttrSet(
-							refApp, "stack"),
+						// For docker apps, stack is ""
+						resource.TestCheckResourceAttr(
+							refApp, "stack", ""),
 						resource.TestCheckResourceAttr(
 							refApp, "environment.%", "0"),
 						resource.TestCheckResourceAttr(
@@ -861,10 +876,52 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 		id := rs.Primary.ID
 		attributes := rs.Primary.Attributes
 
-		app, _, err := session.ClientV2.GetApplication(id)
+		// app, _, err := session.ClientV2.GetApplication(id)
+		// if err != nil {
+		// 	return err
+		// }
+
+		query := ccv3.Query{
+			Key:    ccv3.GUIDFilter,
+			Values: []string{id},
+		}
+		apps, _, err := session.ClientV3.GetApplications(query)
+		if err != nil || len(apps) == 0 {
+			return err
+		}
+
+		app := apps[0]
+
+		// Get enabled_ssh
+		enableSSH, _, err := session.ClientV3.GetAppFeature(app.GUID, "ssh")
 		if err != nil {
 			return err
 		}
+
+		// Get environment variables
+		env, err := session.BitsManager.GetAppEnvironmentVariables(app.GUID)
+		if err != nil {
+			return err
+		}
+
+		// Get route mapping
+		mappings, _, err := session.ClientV3.GetApplicationRoutes(app.GUID)
+		if err != nil {
+			return err
+		}
+
+		// Get service bindings
+		bindings, _, err := session.ClientV3.GetServiceCredentialBindings(ccv3.Query{
+			Key:    ccv3.AppGUIDFilter,
+			Values: []string{app.GUID},
+		})
+		if err != nil {
+			return err
+		}
+
+		// Fetch process information
+		proc, _, err := session.ClientV3.GetApplicationProcessByType(app.GUID, constantV3.ProcessTypeWeb)
+		// ProcessToResourceData(d, proc)
 
 		if err = assertEquals(attributes, "name", app.Name); err != nil {
 			return err
@@ -872,51 +929,47 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 		if err = assertEquals(attributes, "space", app.SpaceGUID); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "instances", app.Instances.Value); err != nil {
+		if err = assertEquals(attributes, "instances", proc.Instances.Value); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "memory", app.Memory.Value); err != nil {
+		if err = assertEquals(attributes, "memory", proc.MemoryInMB.Value); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "disk_quota", app.DiskQuota.Value); err != nil {
+		if err = assertEquals(attributes, "disk_quota", proc.DiskInMB.Value); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "stack", app.StackGUID); err != nil {
+		if err = assertEquals(attributes, "stack", app.StackName); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "buildpack", app.Buildpack.Value); err != nil {
+		if app.LifecycleType == constantV3.AppLifecycleTypeBuildpack {
+			if err = assertEquals(attributes, "buildpack", app.LifecycleBuildpacks[0]); err != nil {
+				return err
+			}
+		}
+		if err = assertEquals(attributes, "command", proc.Command.Value); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "command", app.Command.Value); err != nil {
+		if err = assertEquals(attributes, "enable_ssh", enableSSH.Enabled); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "enable_ssh", app.EnableSSH.Value); err != nil {
+		if err = assertEquals(attributes, "health_check_http_endpoint", proc.HealthCheckEndpoint); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "health_check_http_endpoint", app.HealthCheckHTTPEndpoint); err != nil {
+		if err = assertEquals(attributes, "health_check_type", proc.HealthCheckType); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "health_check_type", string(app.HealthCheckType)); err != nil {
+		if err = assertEquals(attributes, "health_check_timeout", proc.HealthCheckTimeout); err != nil {
 			return err
 		}
-		if err = assertEquals(attributes, "health_check_timeout", app.HealthCheckTimeout); err != nil {
+
+		if err = assertMapEquals("environment", attributes, env); err != nil {
 			return err
 		}
-		envVars := make(map[string]interface{})
-		for k, v := range app.EnvironmentVariables {
-			envVars[k] = v
-		}
-		if err = assertMapEquals("environment", attributes, envVars); err != nil {
-			return err
-		}
-		serviceBindings, _, err := session.ClientV2.GetServiceBindings(ccv2.FilterEqual(constant.AppGUIDFilter, id))
-		if err != nil {
-			return err
-		}
-		if err = assertListEquals(attributes, "service_binding", len(serviceBindings),
+
+		if err = assertListEquals(attributes, "service_binding", len(bindings),
 			func(values map[string]string, i int) (match bool) {
 				found := false
-				for _, b := range serviceBindings {
+				for _, b := range bindings {
 					if values["service_instance"] == b.ServiceInstanceGUID {
 						found = true
 						break
@@ -927,15 +980,12 @@ func testAccCheckAppExists(resApp string, validate func() error) resource.TestCh
 			}); err != nil {
 			return err
 		}
-		routeMappingsC, _, err := session.ClientV2.GetRouteMappings(ccv2.FilterEqual(constant.AppGUIDFilter, id))
-		if err != nil {
-			return err
-		}
+
 		routeMappings := make([]map[string]interface{}, 0)
-		for _, mapping := range routeMappingsC {
+		for _, mapping := range mappings {
 			curMapping := make(map[string]interface{})
-			curMapping["route"] = mapping.RouteGUID
-			curMapping["port"] = mapping.AppPort
+			curMapping["route"] = mapping.GUID
+			curMapping["port"] = mapping.Port
 			routeMappings = append(routeMappings, curMapping)
 		}
 		if err = validateRouteMappings(attributes, routeMappings); err != nil {

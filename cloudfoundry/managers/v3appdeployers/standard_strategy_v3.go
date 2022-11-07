@@ -6,6 +6,7 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+
 	"code.cloudfoundry.org/cli/resources"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/bits"
@@ -57,6 +58,8 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 
 				if appDeploy.IsDockerImage() {
 					app.LifecycleType = constant.AppLifecycleTypeDocker
+				} else {
+					app.LifecycleType = constant.AppLifecycleTypeBuildpack
 				}
 
 				app, _, err := deployFunc(app)
@@ -64,17 +67,27 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					return ctx, err
 				}
 
-				// Set envars
-				createdEnv, _, err := s.client.UpdateApplicationEnvironmentVariables(app.GUID, appDeploy.EnvVars)
+				createdEnv, _, err := s.bitsManager.UpdateAppEnvironment(app.GUID, appDeploy.EnvVars)
 				if err != nil {
 					return ctx, err
 				}
+
+				// Set ssh_enabled
+				_, err = s.client.UpdateAppFeature(app.GUID, appDeploy.EnableSSH.Enabled, "ssh")
+				if err != nil {
+					return ctx, err
+				}
+				enabledSSH, _, err := s.client.GetAppFeature(app.GUID, "ssh")
+				if err != nil {
+					return ctx, err
+				}
+
 				ctx["app_response"] = AppDeployResponse{
 					App:        app,
-					Process:    appDeploy.Process,
-					EnableSSH:  appDeploy.EnableSSH,
-					AppPackage: appDeploy.AppPackage,
+					EnableSSH:  enabledSSH,
 					EnvVars:    createdEnv,
+					Process:    appDeploy.Process,
+					AppPackage: appDeploy.AppPackage,
 				}
 				return ctx, nil
 			},
@@ -88,17 +101,15 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					StageTimeout: appDeploy.StageTimeout,
 					BindTimeout:  appDeploy.BindTimeout,
 					StartTimeout: appDeploy.StartTimeout,
-					Process:      appDeploy.Process,
-					EnableSSH:    appDeploy.EnableSSH,
-					AppPackage:   appDeploy.AppPackage,
-					EnvVars:      appDeploy.EnvVars,
 				})
 				if err != nil {
 					return ctx, err
 				}
 				ctx["app_response"] = AppDeployResponse{
-					App:      appResp.App,
-					Mappings: mappings,
+					App:       appResp.App,
+					EnableSSH: appResp.EnableSSH,
+					EnvVars:   appResp.EnvVars,
+					Mappings:  mappings,
 				}
 				return ctx, nil
 			},
@@ -120,6 +131,8 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 
 				ctx["app_response"] = AppDeployResponse{
 					App:             appResp.App,
+					EnableSSH:       appResp.EnableSSH,
+					EnvVars:         appResp.EnvVars,
 					Mappings:        appResp.Mappings,
 					ServiceBindings: bindings,
 				}
@@ -148,6 +161,8 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				}
 				ctx["app_response"] = AppDeployResponse{
 					App:             appResp.App,
+					EnableSSH:       appResp.EnableSSH,
+					EnvVars:         appResp.EnvVars,
 					Mappings:        appResp.Mappings,
 					ServiceBindings: appResp.ServiceBindings,
 					AppPackage:      pkg,
@@ -182,12 +197,12 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 
 				ctx["app_response"] = AppDeployResponse{
 					App:             app,
-					Mappings:        appResp.Mappings,
-					ServiceBindings: appResp.ServiceBindings,
 					Process:         proc,
-					EnableSSH:       appDeploy.EnableSSH,
+					ServiceBindings: appResp.ServiceBindings,
+					Mappings:        appResp.Mappings,
 					AppPackage:      appResp.AppPackage,
-					EnvVars:         appDeploy.EnvVars,
+					EnableSSH:       appResp.EnableSSH,
+					EnvVars:         appResp.EnvVars,
 				}
 				return ctx, err
 			},
@@ -255,35 +270,41 @@ func (s Standard) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 		return AppDeployResponse{}, err
 	}
 
+	createdBuild, _, err := s.client.GetBuild(build.GUID)
+	if err != nil {
+		return AppDeployResponse{}, err
+	}
+
 	// Stop the app
 	app, _, err := s.client.UpdateApplicationStop(appDeploy.App.GUID)
 	if err != nil {
 		return AppDeployResponse{}, err
 	}
+	appDeploy.App = app
 
 	// Set droplet
-	_, _, err = s.client.SetApplicationDroplet(appDeploy.App.GUID, build.DropletGUID)
+	_, _, err = s.client.SetApplicationDroplet(appDeploy.App.GUID, createdBuild.DropletGUID)
 	if err != nil {
 		return AppDeployResponse{}, err
 	}
 
 	// Start application
-	app, _, err = s.client.UpdateApplicationStart(appDeploy.App.GUID)
+	app, proc, err := s.runBinder.Start(appDeploy)
 	if err != nil {
 		return AppDeployResponse{}, err
 	}
-
 	appDeploy.App = app
+
 	appResp := AppDeployResponse{
 		App:             app,
+		Process:         proc,
 		Mappings:        appDeploy.Mappings,
 		ServiceBindings: appDeploy.ServiceBindings,
+		AppPackage:      appDeploy.AppPackage,
+		EnableSSH:       appDeploy.EnableSSH,
+		EnvVars:         appDeploy.EnvVars,
 	}
 
-	err = s.runBinder.WaitStart(appDeploy)
-	if err != nil {
-		return appResp, err
-	}
 	if appDeploy.App.State == constant.ApplicationStopped {
 		err := s.runBinder.Stop(appDeploy)
 		return appResp, err

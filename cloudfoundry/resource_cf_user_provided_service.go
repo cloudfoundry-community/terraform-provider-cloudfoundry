@@ -3,8 +3,10 @@ package cloudfoundry
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -171,7 +173,12 @@ func resourceUserProvidedServiceRead(ctx context.Context, d *schema.ResourceData
 
 	userProvidedServiceInstance, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
 	if err != nil {
-		if IsErrNotFound(err) {
+		// error instance needs to be exactly the same as the one threw by CC
+		// Is() won't return true otherwise
+		if errors.Is(err, ccerror.ServiceInstanceNotFoundError{
+			Name:      name,
+			SpaceGUID: space,
+		}) {
 			d.SetId("")
 			return nil
 		}
@@ -211,6 +218,9 @@ func resourceUserProvidedServiceRead(ctx context.Context, d *schema.ResourceData
 	}
 
 	credentials, _, err := session.ClientV3.GetUserProvidedServiceInstanceCredentails(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	if _, hasJSON := d.GetOk("credentials_json"); hasJSON {
 		bytes, _ := json.Marshal(credentials)

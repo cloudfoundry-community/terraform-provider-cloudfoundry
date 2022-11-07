@@ -115,7 +115,7 @@ func dataSourceDomainRead(ctx context.Context, d *schema.ResourceData, meta inte
 	d.Set("sub_domain", domainParts[0])
 	d.Set("domain", strings.Join(domainParts[1:], "."))
 	d.Set("org", domain.OrganizationGUID)
-	d.Set("internal", domain.Internal)
+	d.Set("internal", domain.Internal.Value)
 	d.SetId(domain.GUID)
 	return diag.FromErr(err)
 }

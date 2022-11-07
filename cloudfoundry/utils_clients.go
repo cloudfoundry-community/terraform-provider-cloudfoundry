@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	constantV3 "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/api/uaa"
+	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
@@ -92,6 +93,26 @@ func UsersToIDs(users []ccv2.User) []interface{} {
 	return ids
 }
 
+// MapToEnvironmentVariables :
+// Convert map[string]string to resources.EnvironmentVariables
+func MapToEnvironmentVariables(env map[string]string) resources.EnvironmentVariables {
+	envVars := make(resources.EnvironmentVariables, len(env))
+	for k, v := range env {
+		envVars[k] = StringToFilteredString(v)
+	}
+	return envVars
+}
+
+// EnvironmentVariablesToMap :
+// Convert resources.EnvironmentVariables to map[string]string
+func EnvironmentVariablesToMap(vars resources.EnvironmentVariables) map[string]string {
+	env := make(map[string]string, len(vars))
+	for k, v := range vars {
+		env[k] = v.String()
+	}
+	return env
+}
+
 func IsErrNotAuthorized(err error) bool {
 	if _, ok := err.(ccerror.ForbiddenError); ok {
 		return true
@@ -144,7 +165,8 @@ func PollAsyncJob(config PollingConfig) error {
 		// Stop polling and return error if job failed
 		if job.State == constantV3.JobFailed {
 			return true, fmt.Errorf(
-				"Operation failed",
+				"Operation failed, reason: %+v",
+				job.Errors(),
 			)
 		}
 

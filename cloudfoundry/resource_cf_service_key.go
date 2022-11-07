@@ -104,8 +104,9 @@ func resourceServiceKeyCreate(ctx context.Context, d *schema.ResourceData, meta 
 		// Stop polling and return error if job failed
 		if job.State == constant.JobFailed {
 			return true, fmt.Errorf(
-				"ServiceKey creation failed for key %s, reason: async job failed",
+				"ServiceKey creation failed for key %s, reason: %+v",
 				serviceInstance,
+				job.Errors(),
 			)
 		}
 
@@ -135,8 +136,9 @@ func resourceServiceKeyCreate(ctx context.Context, d *schema.ResourceData, meta 
 
 			if createdKeys[0].LastOperation.State == resources.OperationFailed {
 				return true, fmt.Errorf(
-					"ServiceKey creation failed for key %s, reason: async job failed",
+					"Service key creation failed for key %s, reason: %+v",
 					serviceInstance,
+					job.Errors(),
 				)
 			}
 		}
@@ -144,6 +146,9 @@ func resourceServiceKeyCreate(ctx context.Context, d *schema.ResourceData, meta 
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
 	}, 5*time.Second, 60*time.Second)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	credentials, _, err := session.ClientV3.GetServiceCredentialBindingDetails(serviceKey.GUID)
 	if err != nil {
@@ -166,11 +171,11 @@ func resourceServiceKeyRead(ctx context.Context, d *schema.ResourceData, meta in
 		},
 	)
 	if err != nil {
-		if IsErrNotFound(err) {
-			d.SetId("")
-			return nil
-		}
 		return diag.FromErr(err)
+	}
+	if len(serviceKeys) == 0 {
+		d.SetId("")
+		return nil
 	}
 	if len(serviceKeys) != 1 {
 		return diag.FromErr(fmt.Errorf("Some thing went wrong"))
@@ -211,7 +216,8 @@ func resourceServiceKeyDelete(ctx context.Context, d *schema.ResourceData, meta 
 		// Stop polling and return error if job failed
 		if job.State == constant.JobFailed {
 			return true, fmt.Errorf(
-				"Service key deletion failed",
+				"Service key deletion failed, reason: %+v",
+				job.Errors(),
 			)
 		}
 
