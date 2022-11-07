@@ -280,6 +280,7 @@ func (s Standard) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 	if err != nil {
 		return AppDeployResponse{}, err
 	}
+	appDeploy.App = app
 
 	// Set droplet
 	_, _, err = s.client.SetApplicationDroplet(appDeploy.App.GUID, createdBuild.DropletGUID)

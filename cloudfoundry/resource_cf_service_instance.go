@@ -3,6 +3,7 @@ package cloudfoundry
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -190,7 +191,12 @@ func resourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, me
 
 	serviceInstance, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
 	if err != nil {
-		if _, ok := err.(ccerror.ServiceInstanceNotFoundError); ok {
+		// error instance needs to be exactly the same as the one threw by CC
+		// Is() won't return true otherwise
+		if errors.Is(err, ccerror.ServiceInstanceNotFoundError{
+			Name:      name,
+			SpaceGUID: space,
+		}) {
 			d.SetId("")
 			return nil
 		}

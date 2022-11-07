@@ -146,6 +146,9 @@ func resourceServiceKeyCreate(ctx context.Context, d *schema.ResourceData, meta 
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
 	}, 5*time.Second, 60*time.Second)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	credentials, _, err := session.ClientV3.GetServiceCredentialBindingDetails(serviceKey.GUID)
 	if err != nil {

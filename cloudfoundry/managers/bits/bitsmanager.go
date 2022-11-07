@@ -161,7 +161,7 @@ func (m BitsManager) GetAppEnvironmentVariables(appGUID string) (map[string]inte
 	return responseBody.Var, nil
 }
 
-// SetAppEnvironmentVariables - Update application's enviroment variable
+// SetAppEnvironmentVariables - Update application's environment variable
 // DOES NOT remove empty string variables
 func (m BitsManager) SetAppEnvironmentVariables(appGUID string, env map[string]interface{}) error {
 	apiURL := fmt.Sprintf("/v3/apps/%s/environment_variables", appGUID)

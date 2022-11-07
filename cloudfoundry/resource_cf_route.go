@@ -305,6 +305,9 @@ func resourceRouteUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 			}
 		}
 		_, _, err := session.ClientV3.DeleteRoute(d.Id())
+		if err != nil && !IsErrNotFound(err) {
+			return diag.FromErr(err)
+		}
 
 		operation := func() error {
 			var err error
@@ -373,6 +376,10 @@ func resourceRouteDelete(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	jobURL, _, err := session.ClientV3.DeleteRoute(d.Id())
+	if err != nil && !IsErrNotFound(err) {
+		return diag.FromErr(err)
+	}
+
 	err = PollAsyncJob(PollingConfig{
 		session: session,
 		jobURL:  jobURL,

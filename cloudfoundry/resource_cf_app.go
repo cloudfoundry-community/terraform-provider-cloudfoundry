@@ -358,15 +358,14 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface
 
 	// Fetch process information
 	proc, _, err := session.ClientV3.GetApplicationProcessByType(d.Id(), constant.ProcessTypeWeb)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	// ProcessToResourceData(d, proc)
 
 	// droplet sync through V3 API
 	droplet, _, err := session.ClientV3.GetApplicationDropletCurrent(d.Id())
 	if err != nil {
-		if IsErrNotFound(err) {
-			d.SetId("")
-			return nil
-		}
 		return diag.FromErr(err)
 	}
 
@@ -581,7 +580,10 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 			// Update application's environment variables
 			// Remove stale / externally set variables
 			if currentEnv, err := session.BitsManager.GetAppEnvironmentVariables(appDeploy.App.GUID); err == nil {
-				RemoveStaleEnviromentVariables(d, session, appDeploy.App.GUID, currentEnv)
+				err := RemoveStaleEnviromentVariables(d, session, appDeploy.App.GUID, currentEnv)
+				if err != nil {
+					return diag.FromErr(err)
+				}
 			}
 
 			// Set new environment variables
@@ -690,6 +692,9 @@ func resourceAppDelete(ctx context.Context, d *schema.ResourceData, meta interfa
 	}
 
 	jobURL, _, err := session.ClientV3.DeleteApplication(appGUID)
+	if err != nil && !IsErrNotFound(err) {
+		return diag.FromErr(err)
+	}
 
 	err = PollAsyncJob(PollingConfig{
 		session: session,

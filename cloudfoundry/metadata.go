@@ -85,11 +85,11 @@ func resourceToMetadata(d *schema.ResourceData) Metadata {
 //
 // note: we *should* construct payload in a way where only new/changed value
 //
-//	are present, but re-giving existing values clarifies the code
+// are present, but re-giving existing values clarifies the code
 //
-//  1. construct payload as requested by "new" value
-//  2. find delete keys and create { "key" : nil } in payload
-//     ie: keys existing in "old" but not in "new"
+// 1. construct payload as requested by "new" value
+// 2. find delete keys and create { "key" : nil } in payload
+// ie: keys existing in "old" but not in "new"
 func resourceToPayload(d *schema.ResourceData, key string) map[string]*string {
 	res := map[string]*string{}
 	old, new := d.GetChange(key)
