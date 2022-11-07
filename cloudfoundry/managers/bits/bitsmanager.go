@@ -138,7 +138,7 @@ func (m BitsManager) UploadBuildpack(buildpackGUID string, bpPath string) error 
 }
 
 // GetAppEnvironmentVariables - Get app environment variables
-func (m BitsManager) GetAppEnvironmentVariables(appGUID string) (map[string]string, error) {
+func (m BitsManager) GetAppEnvironmentVariables(appGUID string) (map[string]interface{}, error) {
 	apiURL := fmt.Sprintf("/v3/apps/%s/environment_variables", appGUID)
 
 	req, err := m.rawClient.NewRequest("GET", apiURL, nil)
@@ -147,7 +147,7 @@ func (m BitsManager) GetAppEnvironmentVariables(appGUID string) (map[string]stri
 	}
 	req.Header.Set("Content-Type", "application/json")
 	var responseBody = struct {
-		Var map[string]string `json:"var"`
+		Var map[string]interface{} `json:"var"`
 	}{}
 	resp, err := m.rawClient.Do(req)
 	if err != nil {
@@ -161,7 +161,8 @@ func (m BitsManager) GetAppEnvironmentVariables(appGUID string) (map[string]stri
 	return responseBody.Var, nil
 }
 
-// SetAppEnvironmentVariables - Remove app environment variables
+// SetAppEnvironmentVariables - Update application's enviroment variable
+// DOES NOT remove empty string variables
 func (m BitsManager) SetAppEnvironmentVariables(appGUID string, env map[string]interface{}) error {
 	apiURL := fmt.Sprintf("/v3/apps/%s/environment_variables", appGUID)
 
@@ -187,6 +188,28 @@ func (m BitsManager) SetAppEnvironmentVariables(appGUID string, env map[string]i
 	}
 	defer resp.Body.Close()
 	return nil
+}
+
+// UpdateAppEnvironment behaves the same as clientV3.UpdateApplicationEnvironments
+// But does not auto-remove empty environment variables
+func (m BitsManager) UpdateAppEnvironment(appGUID string, env map[string]interface{}) (map[string]interface{}, ccv3.Warnings, error) {
+	var responseBody struct {
+		Var map[string]interface{} `json:"var"`
+	}
+
+	_, warnings, err := m.clientV3.MakeRequest(ccv3.RequestParams{
+		RequestName: "PatchApplicationEnvironmentVariables",
+		URIParams:   map[string]string{"app_guid": appGUID},
+		RequestBody: struct {
+			Var map[string]interface{} `json:"var"`
+		}{
+			Var: env,
+		},
+		ResponseBody: &responseBody,
+	})
+
+	return responseBody.Var, warnings, err
+
 }
 
 // UploadApp - Upload a zip file containing app code to cloud foundry in full stream

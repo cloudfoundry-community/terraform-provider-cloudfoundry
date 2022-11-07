@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -171,7 +172,7 @@ func resourceUserProvidedServiceRead(ctx context.Context, d *schema.ResourceData
 
 	userProvidedServiceInstance, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
 	if err != nil {
-		if IsErrNotFound(err) {
+		if _, ok := err.(ccerror.ServiceInstanceNotFoundError); ok {
 			d.SetId("")
 			return nil
 		}

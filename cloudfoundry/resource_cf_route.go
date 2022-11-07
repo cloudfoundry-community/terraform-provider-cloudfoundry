@@ -125,7 +125,7 @@ func addRouteDestinationV3(id string, add []map[string]interface{}, session *man
 	for _, t := range add {
 		appID := t["app"].(string)
 
-		_, err := session.ClientV3.MapRoute(appID, id)
+		_, err := session.ClientV3.MapRoute(id, appID)
 		if err != nil {
 			return targets, err
 		}
@@ -233,15 +233,15 @@ func resourceRouteRead(ctx context.Context, d *schema.ResourceData, meta interfa
 		Values: []string{id},
 	})
 	if err != nil {
-		if IsErrNotFound(err) {
-			d.SetId("")
-			return nil
-		}
 		return diag.FromErr(err)
 	}
 
+	if len(routes) == 0 {
+		d.SetId("")
+		return nil
+	}
 	if len(routes) != 1 {
-		return diag.FromErr(fmt.Errorf("Unexpected error reading route (more than 1 match)"))
+		return diag.FromErr(fmt.Errorf("Unexpected error reading route (different than 1 match)"))
 	}
 
 	route := routes[0]

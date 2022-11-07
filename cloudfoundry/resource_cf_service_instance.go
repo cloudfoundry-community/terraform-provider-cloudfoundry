@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
@@ -157,9 +157,10 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 		// Stop polling and return error if job failed
 		if job.State == constant.JobFailed {
 			return true, fmt.Errorf(
-				"Service Instance %s failed %s, reason: async job failed",
+				"Service Instance %s failed %s, reason: %+v",
 				name,
 				space,
+				job.Errors(),
 			)
 		}
 		// If job completed, check if the service instance is created
@@ -189,7 +190,7 @@ func resourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, me
 
 	serviceInstance, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
 	if err != nil {
-		if IsErrNotFound(err) {
+		if _, ok := err.(ccerror.ServiceInstanceNotFoundError); ok {
 			d.SetId("")
 			return nil
 		}
@@ -216,9 +217,9 @@ func resourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, me
 			return diag.FromErr(err)
 		}
 
-		d.Set("jsonParameters", params)
+		d.Set("json_params", params)
 	} else {
-		d.Set("jsonParameters", nil)
+		d.Set("json_params", nil)
 	}
 
 	return nil
@@ -260,7 +261,7 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 		}
 	}
 	tags = make([]string, 0)
-	log.Printf("Tags : %+v", tags)
+	// log.Printf("Tags : %+v", tags)
 
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
@@ -293,7 +294,7 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	jobURL, _, err := session.ClientV3.UpdateServiceInstance(id, serviceInstanceUpdate)
-	log.Printf("Service Instance Object Job URL : %+v", jobURL)
+	// log.Printf("Service Instance Object Job URL : %+v", jobURL)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -308,9 +309,10 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 		// Stop polling and return error if job failed
 		if job.State == constant.JobFailed {
 			return true, fmt.Errorf(
-				"Instance %s failed %s, reason: async job failed",
+				"Instance %s failed %s, reason: %+v",
 				name,
 				space,
+				job.Errors(),
 			)
 		}
 		// If job completed, check if the service instance exists
@@ -356,9 +358,10 @@ func resourceServiceInstanceDelete(ctx context.Context, d *schema.ResourceData, 
 		// Stop polling and return error if job failed
 		if job.State == constant.JobFailed {
 			return true, fmt.Errorf(
-				"Instance %s failed %s, reason: async job failed",
+				"Instance %s failed %s, reason: %+v",
 				name,
 				space,
+				job.Errors(),
 			)
 		}
 

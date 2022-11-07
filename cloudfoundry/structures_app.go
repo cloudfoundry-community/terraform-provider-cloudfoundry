@@ -3,7 +3,6 @@ package cloudfoundry
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
@@ -223,7 +222,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 	app := resources.Application{
 		GUID:                d.Id(),
 		StackName:           d.Get("stack").(string),
-		LifecycleBuildpacks: [](string){d.Get("buildpack").(string)},
+		LifecycleBuildpacks: []string{d.Get("buildpack").(string)},
 		Metadata:            &metadata,
 		Name:                d.Get("name").(string),
 		SpaceGUID:           d.Get("space").(string),
@@ -254,10 +253,14 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 				return v3appdeployers.AppDeploy{}, err
 			}
 		}
-		bindings = append(bindings, resources.ServiceCredentialBinding{
+
+		parsedBinding := resources.ServiceCredentialBinding{
 			ServiceInstanceGUID: r["service_instance"].(string),
-			Parameters:          types.NewOptionalObject(params),
-		})
+		}
+		if len(params) != 0 {
+			parsedBinding.Parameters = types.NewOptionalObject(params)
+		}
+		bindings = append(bindings, parsedBinding)
 	}
 
 	process := resources.Process{
@@ -298,13 +301,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		Enabled: d.Get("enable_ssh").(bool),
 	}
 
-	envVars := make(resources.EnvironmentVariables)
-	if v, ok := d.GetOk("environment"); ok {
-		vv := v.(map[string]interface{})
-		for k, v := range vv {
-			envVars[k] = *types.NewFilteredString(fmt.Sprint(v))
-		}
-	}
+	envVars := d.Get("environment").(map[string]interface{})
 
 	return v3appdeployers.AppDeploy{
 		App:             app,
@@ -327,27 +324,21 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 	_ = d.Set("name", appDeploy.App.Name)
 	_ = d.Set("space", appDeploy.App.SpaceGUID)
 	_ = d.Set("ports", appDeploy.Ports)
-	_ = d.Set("instances", appDeploy.Process.Instances.Value)
-	_ = d.Set("memory", appDeploy.Process.MemoryInMB.Value)
-	_ = d.Set("disk_quota", appDeploy.Process.DiskInMB.Value)
 	_ = d.Set("stack", appDeploy.App.StackName)
 	if bpkg := appDeploy.App.LifecycleBuildpacks; len(bpkg) > 0 {
 		_ = d.Set("buildpack", bpkg[0])
 	}
 
-	commandTrimmed := strings.TrimSpace(appDeploy.Process.Command.Value)
-	_ = d.Set("command", commandTrimmed)
 	_ = d.Set("enable_ssh", appDeploy.EnableSSH.Enabled)
 	_ = d.Set("stopped", appDeploy.App.State == v3Constants.ApplicationStopped)
 	_ = d.Set("docker_image", appDeploy.AppPackage.DockerImage)
-	_ = d.Set("health_check_http_endpoint", appDeploy.Process.HealthCheckEndpoint)
-	_ = d.Set("health_check_type", string(appDeploy.Process.HealthCheckType))
-	_ = d.Set("health_check_timeout", int(appDeploy.Process.HealthCheckTimeout))
 	_ = d.Set("environment", appDeploy.EnvVars)
 	// Ensure id_bg is set
 	if idBg, ok := d.GetOk("id_bg"); !ok || idBg == "" {
 		_ = d.Set("id_bg", d.Id())
 	}
+
+	ProcessToResourceData(d, appDeploy.Process)
 
 	bindingsTf := getListOfStructs(d.Get("service_binding"))
 	finalBindings := make([]map[string]interface{}, 0)
@@ -373,7 +364,7 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 				curBinding["params"] = binding.Parameters
 			}
 			if binding.Parameters.IsSet && (curBinding["params_json"].(string) != "" || len(curBinding["params"].(map[string]interface{})) == 0) {
-				// error can't happen and skip it when sure there is no error is the way of life in go
+				// If for whatever reason the CAPI returns the service binding parameters, we unmarshal it and set it here
 				b, _ := json.Marshal(binding.Parameters)
 				curBinding["params_json"] = string(b)
 			}
@@ -389,6 +380,7 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 	for _, mapping := range appDeploy.Mappings {
 
 		// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
+		// Not used
 		if mapping.Port <= 0 && len(appDeploy.Ports) > 0 {
 			mapping.Port = appDeploy.Ports[0]
 		}
@@ -435,7 +427,8 @@ func ProcessToResourceData(d *schema.ResourceData, proc resources.Process) {
 	_ = d.Set("health_check_http_endpoint", proc.HealthCheckEndpoint)
 	_ = d.Set("health_check_timeout", proc.HealthCheckTimeout)
 
-	// cloudcontroller sometimes returns command field with a trailling whitespace
-	commandTrimmed := strings.TrimSpace(proc.Command.Value)
-	_ = d.Set("command", commandTrimmed)
+	// Only set command if present already in tfstate
+	if _, ok := d.GetOk("command"); ok {
+		_ = d.Set("command", proc.Command.Value)
+	}
 }
