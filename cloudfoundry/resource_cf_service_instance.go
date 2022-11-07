@@ -224,9 +224,8 @@ func resourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, me
 		}
 
 		d.Set("json_params", params)
-	} else {
-		d.Set("json_params", nil)
 	}
+	// Keep state as-is if the cloudcontroller does not return any Parameters (99% of the time)
 
 	return nil
 }
