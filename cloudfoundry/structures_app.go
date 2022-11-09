@@ -296,19 +296,22 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		ports = []int{DefaultAppPort}
 	}
 
-	enableSSH := resources.ApplicationFeature{
-		Name:    "enable_ssh",
-		Enabled: d.Get("enable_ssh").(bool),
-	}
-
 	envVars := d.Get("environment").(map[string]interface{})
 
-	return v3appdeployers.AppDeploy{
+	enableSSH := types.NullBool{
+		IsSet: false,
+	}
+	if schemaEnableSSH, ok := d.GetOk("enable_ssh"); ok {
+		enableSSH.Value = schemaEnableSSH.(bool)
+		enableSSH.IsSet = true
+	}
+
+	appDeploy := v3appdeployers.AppDeploy{
 		App:             app,
 		AppPackage:      appPackage,
 		Process:         process,
-		Mappings:        mappings,
 		EnableSSH:       enableSSH,
+		Mappings:        mappings,
 		ServiceBindings: bindings,
 		Path:            d.Get("path").(string),
 		BindTimeout:     DefaultBindTimeout,
@@ -316,7 +319,9 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		StartTimeout:    time.Duration(d.Get("timeout").(int)) * time.Second,
 		EnvVars:         envVars,
 		Ports:           ports,
-	}, nil
+	}
+
+	return appDeploy, nil
 }
 
 func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.AppDeployResponse) {
@@ -329,7 +334,7 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 		_ = d.Set("buildpack", bpkg[0])
 	}
 
-	_ = d.Set("enable_ssh", appDeploy.EnableSSH.Enabled)
+	_ = d.Set("enable_ssh", appDeploy.EnableSSH.Value)
 	_ = d.Set("stopped", appDeploy.App.State == v3Constants.ApplicationStopped)
 	_ = d.Set("docker_image", appDeploy.AppPackage.DockerImage)
 	_ = d.Set("environment", appDeploy.EnvVars)
