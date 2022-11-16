@@ -614,13 +614,20 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	if IsAppRestartNeeded(d) {
 		log.Printf("\n--------------\n Restarting app \n--------------\n")
 
-		err := session.V3RunBinder.Restart(appDeploy, DefaultStageTimeout)
+		var err error
+		if d, ok := deployer.(v3appdeployers.CustomRestartStrategy); ok {
+			err = d.Restart(appDeploy)
+		} else {
+			err = session.V3RunBinder.Restart(appDeploy, DefaultStageTimeout)
+		}
 		if err != nil {
 			return diag.FromErr(err)
 		}
+
 		d.Partial(false)
 		return nil
 	}
+
 	err = metadataUpdate(appMetadata, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
