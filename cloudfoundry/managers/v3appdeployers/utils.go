@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
 )
 
 func venerableAppName(appName string) string {
@@ -27,4 +28,11 @@ func clearBindingId(bindings []resources.ServiceCredentialBinding) []resources.S
 		bindings[i] = binding
 	}
 	return bindings
+}
+
+func AppFeatureToNullBool(appFeature resources.ApplicationFeature) types.NullBool {
+	return types.NullBool{
+		IsSet: true,
+		Value: appFeature.Enabled,
+	}
 }

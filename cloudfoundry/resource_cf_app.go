@@ -373,7 +373,7 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface
 		App:             app,
 		Mappings:        mappings,
 		ServiceBindings: bindings,
-		EnableSSH:       enableSSH,
+		EnableSSH:       v3appdeployers.AppFeatureToNullBool(enableSSH),
 		EnvVars:         env,
 		Process:         proc,
 		// Set docker image
@@ -562,8 +562,8 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 
 		if d.HasChange("enable_ssh") {
 			// Update enable SSH feature
-			enableSSH := d.Get("enable_ssh").(bool)
-			_, err := session.ClientV3.UpdateAppFeature(appUpdate.GUID, enableSSH, "ssh")
+			enableSSH := BoolToNullBool(d.Get("enable_ssh").(bool))
+			_, err := session.ClientV3.UpdateAppFeature(appUpdate.GUID, enableSSH.Value, "ssh")
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -573,7 +573,7 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 			if err != nil {
 				return diag.FromErr(err)
 			}
-			appDeploy.EnableSSH = enabled
+			appDeploy.EnableSSH = v3appdeployers.AppFeatureToNullBool(enabled)
 		}
 
 		if d.HasChange("environment") {
@@ -614,13 +614,20 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	if IsAppRestartNeeded(d) {
 		log.Printf("\n--------------\n Restarting app \n--------------\n")
 
-		err := session.V3RunBinder.Restart(appDeploy, DefaultStageTimeout)
+		var err error
+		if d, ok := deployer.(v3appdeployers.CustomRestartStrategy); ok {
+			err = d.Restart(appDeploy)
+		} else {
+			err = session.V3RunBinder.Restart(appDeploy, DefaultStageTimeout)
+		}
 		if err != nil {
 			return diag.FromErr(err)
 		}
+
 		d.Partial(false)
 		return nil
 	}
+
 	err = metadataUpdate(appMetadata, d, meta)
 	if err != nil {
 		return diag.FromErr(err)

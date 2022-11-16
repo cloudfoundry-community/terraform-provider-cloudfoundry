@@ -4,11 +4,12 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
 )
 
 type AppDeploy struct {
 	App             resources.Application
-	EnableSSH       resources.ApplicationFeature
+	EnableSSH       types.NullBool
 	AppPackage      resources.Package
 	Process         resources.Process
 	Mappings        []resources.Route
@@ -27,7 +28,7 @@ func (a AppDeploy) IsDockerImage() bool {
 
 type AppDeployResponse struct {
 	App             resources.Application
-	EnableSSH       resources.ApplicationFeature
+	EnableSSH       types.NullBool
 	AppPackage      resources.Package
 	Process         resources.Process
 	EnvVars         map[string]interface{}

@@ -61,6 +61,9 @@ type Session struct {
 	// Deployer is used to deploy an frim different strategy
 	V3Deployer *v3appdeployers.Deployer
 
+	// Actor is a new type of deployer using v3 API and composable actions
+	Actor *v3appdeployers.Actor
+
 	// RunBinder is used to to manage start stop of an app
 	RunBinder *appdeployers.RunBinder
 
@@ -404,7 +407,13 @@ func (s *Session) loadDeployer() {
 	s.V3RunBinder = v3appdeployers.NewRunBinder(s.ClientV3, s.NOAAClient)
 	v3std := v3appdeployers.NewStandard(s.BitsManager, s.ClientV3, s.V3RunBinder)
 	v3bg := v3appdeployers.NewBlueGreen(s.BitsManager, s.ClientV3, s.RawClient, s.V3RunBinder, v3std)
-	s.V3Deployer = v3appdeployers.NewDeployer(v3std, v3bg)
+
+	// Initialize deployer for rolling
+	s.Actor = v3appdeployers.NewActor(s.BitsManager, s.ClientV3, s.RawClient, s.V3RunBinder)
+	rolling := v3appdeployers.NewRolling(s.Actor)
+
+	s.V3Deployer = v3appdeployers.NewDeployer(v3std, v3bg, rolling)
+
 }
 
 func (s *Session) loadDefaultQuotaGuid(quotaName string) error {

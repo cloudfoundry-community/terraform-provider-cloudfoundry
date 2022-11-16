@@ -73,9 +73,11 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				}
 
 				// Set ssh_enabled
-				_, err = s.client.UpdateAppFeature(app.GUID, appDeploy.EnableSSH.Enabled, "ssh")
-				if err != nil {
-					return ctx, err
+				if appDeploy.EnableSSH.IsSet {
+					_, err = s.client.UpdateAppFeature(app.GUID, appDeploy.EnableSSH.Value, "ssh")
+					if err != nil {
+						return ctx, err
+					}
 				}
 				enabledSSH, _, err := s.client.GetAppFeature(app.GUID, "ssh")
 				if err != nil {
@@ -84,7 +86,7 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 
 				ctx["app_response"] = AppDeployResponse{
 					App:        app,
-					EnableSSH:  enabledSSH,
+					EnableSSH:  AppFeatureToNullBool(enabledSSH),
 					EnvVars:    createdEnv,
 					Process:    appDeploy.Process,
 					AppPackage: appDeploy.AppPackage,
