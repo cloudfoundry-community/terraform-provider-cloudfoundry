@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
@@ -390,13 +391,24 @@ func resourceServiceInstanceDelete(ctx context.Context, d *schema.ResourceData, 
 func resourceServiceInstanceImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	session := meta.(*managers.Session)
 
-	name := d.Get("name").(string)
-	space := d.Get("space").(string)
-	serviceInstance, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
+	log.Printf("!!!! Importing state : %+v", d)
+	GUID := d.Id()
+	serviceInstances, _, _, err := session.ClientV3.GetServiceInstances(ccv3.Query{
+		Key:    ccv3.GUIDFilter,
+		Values: []string{GUID},
+	})
+
+	log.Printf("!!!! Found service instance : %+v", serviceInstances)
 
 	if err != nil {
 		return nil, err
 	}
+
+	if len(serviceInstances) == 0 {
+		return nil, fmt.Errorf("Service instance with guid: %s not found", GUID)
+	}
+
+	serviceInstance := serviceInstances[0]
 
 	d.Set("name", serviceInstance.Name)
 	d.Set("service_plan", serviceInstance.ServicePlanGUID)
