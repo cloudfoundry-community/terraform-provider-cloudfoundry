@@ -1,7 +1,6 @@
 package v3appdeployers
 
 import (
-	"fmt"
 	"time"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
@@ -39,19 +38,13 @@ func (a Actor) CreateApplicationDeployment(appDeploy AppDeploy, reverse Fallback
 				return ctx, err
 			}
 
-			apps, _, err := a.client.GetApplications(ccv3.Query{
-				Key:    ccv3.GUIDFilter,
-				Values: []string{appResp.App.GUID},
-			})
+			app, _, err := a.client.UpdateApplicationStart(appResp.App.GUID)
 
 			if err != nil {
 				return ctx, err
 			}
-			if len(apps) == 0 {
-				return ctx, fmt.Errorf("App with guid %s not found after succesful deployment", appResp.App.GUID)
-			}
 
-			appResp.App = apps[0]
+			appResp.App = app
 			ctx["app_response"] = appResp
 			ctx["deployment"] = deploymentGUID
 
