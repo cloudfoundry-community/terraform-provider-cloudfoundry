@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	constantV3 "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/bits"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
 )
@@ -168,18 +169,46 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 	appDeploy.ServiceBindings = clearBindingId(appDeploy.ServiceBindings)
 	defaultReverse := func(ctx Context) error {
 		appResp := ctx["app_response"].(AppDeployResponse)
+		// Delete the new app
 		if appResp.App.GUID != "" {
-			_, _, err := s.client.DeleteApplication(appResp.App.GUID)
+			jobURL, _, err := s.client.DeleteApplication(appResp.App.GUID)
+			if err != nil {
+				return err
+			}
+
+			err = common.PollingWithTimeout(func() (bool, error) {
+				job, _, err := s.client.GetJob(jobURL)
+				if err != nil {
+					return true, err
+				}
+
+				// Stop polling and return error if job failed
+				if job.State == constantV3.JobFailed {
+					return true, fmt.Errorf(
+						"Operation failed, reason: %+v",
+						job.Errors(),
+					)
+				}
+
+				if job.State == constantV3.JobComplete {
+					return true, nil
+				}
+
+				return false, nil
+			}, 5*time.Second, 1*time.Minute)
+
 			if err != nil {
 				return err
 			}
 		}
+		// rename the venerable app
 		_, _, err := s.client.UpdateApplication(resources.Application{
 			GUID: appDeploy.App.GUID,
 			Name: appDeploy.App.Name,
 		})
 		return err
 	}
+
 	actions := Actions{
 		{
 			Forward: func(ctx Context) (Context, error) {
@@ -212,7 +241,15 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 				ctx["app_response"] = appResp
 				return ctx, err
 			},
-			ReversePrevious: defaultReverse,
+			ReversePrevious: func(ctx Context) error {
+				// if in error app must be already deleted by standard deployer
+				// we only need to rename old app to its actual name
+				_, _, err := s.client.UpdateApplication(resources.Application{
+					GUID: appDeploy.App.GUID,
+					Name: appDeploy.App.Name,
+				})
+				return err
+			},
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {

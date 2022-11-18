@@ -6,6 +6,7 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	constantV3 "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 
 	"code.cloudfoundry.org/cli/resources"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
@@ -42,7 +43,34 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		if appResp.App.GUID == "" {
 			return nil
 		}
-		_, _, err := s.client.DeleteApplication(appResp.App.GUID)
+		// Stop app then delete
+		app, _, err := s.client.UpdateApplicationStop(appResp.App.GUID)
+		if err != nil {
+			return err
+		}
+
+		jobURL, _, err := s.client.DeleteApplication(app.GUID)
+
+		err = common.PollingWithTimeout(func() (bool, error) {
+			job, _, err := s.client.GetJob(jobURL)
+			if err != nil {
+				return true, err
+			}
+
+			// Stop polling and return error if job failed
+			if job.State == constantV3.JobFailed {
+				return true, fmt.Errorf(
+					"Operation failed, reason: %+v",
+					job.Errors(),
+				)
+			}
+
+			if job.State == constantV3.JobComplete {
+				return true, nil
+			}
+
+			return false, nil
+		}, 5*time.Second, 1*time.Minute)
 		return err
 	}
 	actions := Actions{
