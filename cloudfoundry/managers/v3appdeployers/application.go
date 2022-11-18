@@ -1,6 +1,7 @@
 package v3appdeployers
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
 )
@@ -10,17 +11,18 @@ func (a Actor) CreateApplication(appDeploy AppDeploy, reverse FallbackFunction) 
 
 	return Action{
 		Forward: func(ctx Context) (Context, error) {
-
-			var appResp AppDeployResponse
-			appRespInterface := ctx["app_response"]
-			if appRespInterface != nil {
-				appResp = ctx["app_response"].(AppDeployResponse)
-			} else {
-				appResp = AppDeployResponse{}
-			}
+			var deployFunc func(app resources.Application) (resources.Application, ccv3.Warnings, error)
+			appResp := ctx["app_response"].(AppDeployResponse)
 
 			app := appDeploy.App
 			app.State = constant.ApplicationStopped
+
+			if app.GUID != "" {
+				deployFunc = a.client.UpdateApplication
+				app.SpaceGUID = ""
+			} else {
+				deployFunc = a.client.CreateApplication
+			}
 
 			if appDeploy.IsDockerImage() {
 				app.LifecycleType = constant.AppLifecycleTypeDocker
@@ -32,19 +34,11 @@ func (a Actor) CreateApplication(appDeploy AppDeploy, reverse FallbackFunction) 
 				app.LifecycleType = constant.AppLifecycleTypeBuildpack
 			}
 
-			createdApp, _, err := a.client.CreateApplication(
-				resources.Application{
-					LifecycleType:       app.LifecycleType,
-					LifecycleBuildpacks: app.LifecycleBuildpacks,
-					StackName:           app.StackName,
-					Name:                app.Name,
-					SpaceGUID:           app.SpaceGUID,
-				},
-			)
+			application, _, err := deployFunc(app)
 			if err != nil {
 				return ctx, err
 			}
-			appResp.App = createdApp
+			appResp.App = application
 
 			ctx["app_response"] = appResp
 			return ctx, nil

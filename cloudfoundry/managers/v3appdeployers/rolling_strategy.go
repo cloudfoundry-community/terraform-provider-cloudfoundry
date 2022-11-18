@@ -14,8 +14,15 @@ func NewRolling(actor *Actor) *Rolling {
 
 // Deploy : deploy an app using the rolling strategy
 func (s Rolling) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
-	actions := s.actor.PrepareActions([]ChangeApplicationFunction{
-		s.actor.Initalize,
+	reverseAction := s.actor.ReverseActionDeleteApp
+	steps := []ChangeApplicationFunction{s.actor.Initalize}
+
+	if appDeploy.App.GUID != "" {
+		steps = append(steps, s.actor.SetCurrentRevision)
+		reverseAction = s.actor.ReverseActionDeployRevision
+	}
+
+	steps = append(steps, []ChangeApplicationFunction{
 		s.actor.CreateApplication,
 		s.actor.SetApplicationEnvironment,
 		s.actor.SetApplicationSSHEnabled,
@@ -26,7 +33,8 @@ func (s Rolling) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		s.actor.ScaleApplicationProcess,
 		s.actor.UpdateApplicationProcess,
 		s.actor.CreateApplicationDeployment,
-	}, appDeploy, s.actor.ReverseActionDeleteApp)
+	}...)
+	actions := s.actor.PrepareActions(steps, appDeploy, reverseAction)
 
 	var appResp AppDeployResponse
 	ctx, err := actions.Execute()
