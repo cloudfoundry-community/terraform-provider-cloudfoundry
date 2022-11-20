@@ -637,7 +637,7 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 }
 
 func IsAppCodeChange(d ResourceChanger) bool {
-	return d.HasChange("path") || d.HasChange("source_code_hash")
+	return d.HasChange("path") || d.HasChange("source_code_hash") || d.HasChange("docker_image")
 }
 
 func IsAppUpdateOnly(d ResourceChanger) bool {
@@ -655,8 +655,7 @@ func IsAppRestageNeeded(d ResourceChanger) bool {
 
 func IsAppRestartNeeded(d ResourceChanger) bool {
 	return d.HasChange("memory") || d.HasChange("disk_quota") ||
-		d.HasChange("command") || d.HasChange("health_check_http_endpoint") ||
-		d.HasChange("docker_image") || d.HasChange("health_check_type") ||
+		d.HasChange("command") || d.HasChange("health_check_http_endpoint") || d.HasChange("health_check_type") ||
 		d.HasChange("environment")
 }
 
