@@ -83,19 +83,19 @@ func isDeployed(d resources.Deployment) bool {
 	return d.StatusValue == constant.DeploymentStatusValueFinalized && d.StatusReason == constant.DeploymentStatusReasonDeployed
 }
 
-func (a Actor) getProcesses(deployment resources.Deployment, appGUID string) ([]resources.Process, ccv3.Warnings, error) {
-	// if the deployment is deployed we know web are all running and PollProcesses will see those as stable
-	// so just getting all processes is equivalent to just getting non-web ones and polling those
-	if isDeployed(deployment) {
-		processes, warnings, err := a.client.GetApplicationProcesses(appGUID)
-		if err != nil {
-			return processes, warnings, err
-		}
-		return processes, warnings, nil
-	}
+// func (a Actor) getProcesses(deployment resources.Deployment, appGUID string) ([]resources.Process, ccv3.Warnings, error) {
+// 	// if the deployment is deployed we know web are all running and PollProcesses will see those as stable
+// 	// so just getting all processes is equivalent to just getting non-web ones and polling those
+// 	if isDeployed(deployment) {
+// 		processes, warnings, err := a.client.GetApplicationProcesses(appGUID)
+// 		if err != nil {
+// 			return processes, warnings, err
+// 		}
+// 		return processes, warnings, nil
+// 	}
 
-	return nil, nil, nil
-}
+// 	return nil, nil, nil
+// }
 
 // PollProcesses - return true if there's no need to keep polling
 func (a Actor) PollProcesses(processes []resources.Process) (bool, error) {
