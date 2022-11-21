@@ -24,8 +24,8 @@ func NewActor(bitsManager *bits.BitsManager, client *ccv3.Client, rawClient *raw
 	}
 }
 
-// Initalize : First in sequence, initalize context
-func (a Actor) Initalize(appDeploy AppDeploy, _ FallbackFunction) Action {
+// Initialize : First in sequence, Initialize context
+func (a Actor) Initialize(appDeploy AppDeploy, _ FallbackFunction) Action {
 	return Action{
 		Forward: func(ctx Context) (Context, error) {
 			ctx["app_response"] = AppDeployResponse{
