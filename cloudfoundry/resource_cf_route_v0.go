@@ -13,9 +13,8 @@ func patchRouteV0(ctx context.Context, rawState map[string]interface{}, meta int
 		rawState = map[string]interface{}{}
 	}
 	// random_port is no more
-	if _, ok := rawState["random_port"]; ok {
-		delete(rawState, "random_port")
-	}
+	delete(rawState, "random_port")
+
 	return rawState, nil
 }
 
