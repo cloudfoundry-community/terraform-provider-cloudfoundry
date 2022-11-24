@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
@@ -132,7 +131,7 @@ func Provider() *schema.Provider {
 			"cloudfoundry_service_key":                   resourceServiceKey(),
 			"cloudfoundry_user_provided_service":         resourceUserProvidedService(),
 			"cloudfoundry_buildpack":                     resourceBuildpack(),
-			"cloudfoundry_route":                         resourceRoute(),
+			"cloudfoundry_route":                         ResourceRoute(),
 			"cloudfoundry_route_service_binding":         resourceRouteServiceBinding(),
 			"cloudfoundry_app":                           resourceApp(),
 			"cloudfoundry_isolation_segment":             resourceSegment(),

@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/cenkalti/backoff/v4"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
@@ -17,14 +16,21 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
-func resourceRoute() *schema.Resource {
+func ResourceRoute() *schema.Resource {
 
 	return &schema.Resource{
-
+		SchemaVersion: 1,
 		CreateContext: resourceRouteCreate,
 		ReadContext:   resourceRouteRead,
 		UpdateContext: resourceRouteUpdate,
 		DeleteContext: resourceRouteDelete,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    ResourceRouteV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: patchRouteV0,
+				Version: 0,
+			},
+		},
 
 		Importer: &schema.ResourceImporter{
 			StateContext: ImportReadContext(resourceRouteRead),
@@ -32,35 +38,35 @@ func resourceRoute() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 
-			"domain": &schema.Schema{
+			"domain": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"space": &schema.Schema{
+			"space": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"hostname": &schema.Schema{
+			"hostname": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"port": &schema.Schema{
+			"port": {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Computed: true,
 			},
-			"path": &schema.Schema{
+			"path": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
-			"endpoint": &schema.Schema{
+			"endpoint": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"target": &schema.Schema{
+			"target": {
 				Type: schema.TypeSet,
 				Set: func(v interface{}) int {
 					elem := v.(map[string]interface{})
@@ -73,11 +79,11 @@ func resourceRoute() *schema.Resource {
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"app": &schema.Schema{
+						"app": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"port": &schema.Schema{
+						"port": {
 							Type:       schema.TypeInt,
 							ConfigMode: schema.SchemaConfigModeAttr,
 							Optional:   true,
@@ -91,15 +97,15 @@ func resourceRoute() *schema.Resource {
 }
 
 func setRouteStateV3(session *managers.Session, route resources.Route, d *schema.ResourceData) (err error) {
-	d.Set("domain", route.DomainGUID)
-	d.Set("space", route.SpaceGUID)
-	d.Set("hostname", route.Host)
+	_ = d.Set("domain", route.DomainGUID)
+	_ = d.Set("space", route.SpaceGUID)
+	_ = d.Set("hostname", route.Host)
 
 	if route.Port != 0 {
-		d.Set("port", route.Port)
+		_ = d.Set("port", route.Port)
 	}
 
-	d.Set("path", route.Path)
+	_ = d.Set("path", route.Path)
 
 	// In v3 shared domains and private domains are managed by the same endpoint, differenciating on whether
 	// a relationship with an org is set
@@ -213,10 +219,10 @@ func resourceRouteCreate(ctx context.Context, d *schema.ResourceData, meta inter
 	// Separate call to add destinations
 	if v, ok := d.GetOk("target"); ok {
 		var t interface{}
-		if t, err = addRouteDestinationV3(route.GUID, getListOfStructs(v.(*schema.Set).List()), session); err != nil {
+		if t, err = addRouteDestinationV3(route.GUID, GetListOfStructs(v.(*schema.Set).List()), session); err != nil {
 			return diag.FromErr(err)
 		}
-		d.Set("target", t)
+		_ = d.Set("target", t)
 	}
 
 	d.SetId(route.GUID)
@@ -299,7 +305,7 @@ func resourceRouteUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 		var route = resources.Route{}
 
 		if targets, ok := d.GetOk("target"); ok {
-			err := removeRouteDestinationV3(d.Id(), getListOfStructs(targets.(*schema.Set).List()), session)
+			err := removeRouteDestinationV3(d.Id(), GetListOfStructs(targets.(*schema.Set).List()), session)
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -353,10 +359,10 @@ func resourceRouteUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 		// Separate call to add destinations
 		if v, ok := d.GetOk("target"); ok {
 			var t interface{}
-			if t, err = addRouteDestinationV3(route.GUID, getListOfStructs(v.(*schema.Set).List()), session); err != nil {
+			if t, err = addRouteDestinationV3(route.GUID, GetListOfStructs(v.(*schema.Set).List()), session); err != nil {
 				return diag.FromErr(err)
 			}
-			d.Set("target", t)
+			_ = d.Set("target", t)
 		}
 
 		d.SetId(route.GUID)
@@ -369,7 +375,7 @@ func resourceRouteDelete(ctx context.Context, d *schema.ResourceData, meta inter
 	session := meta.(*managers.Session)
 
 	if targets, ok := d.GetOk("target"); ok {
-		err := removeRouteDestinationV3(d.Id(), getListOfStructs(targets.(*schema.Set).List()), session)
+		err := removeRouteDestinationV3(d.Id(), GetListOfStructs(targets.(*schema.Set).List()), session)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -381,8 +387,8 @@ func resourceRouteDelete(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	err = PollAsyncJob(PollingConfig{
-		session: session,
-		jobURL:  jobURL,
+		Session: session,
+		JobURL:  jobURL,
 	})
 	return diag.FromErr(err)
 }

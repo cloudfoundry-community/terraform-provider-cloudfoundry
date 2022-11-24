@@ -33,7 +33,6 @@ The following arguments are supported:
 The following arguments apply only to TCP routes.
 
 * `port` - (Optional, Int) The port to associate with the route for a TCP route. Conflicts with `random_port`.
-* `random_port` - (Optional, Bool) Set to 'true' to create a random port. Conflicts with `port` and defaults to false.
 
 The following argument applies only to HTTP routes.
 

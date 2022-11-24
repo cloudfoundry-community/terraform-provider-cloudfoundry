@@ -1202,7 +1202,7 @@ func validateRouteMappings(attributes map[string]string, routeMappings []map[str
 	if err != nil {
 		return err
 	}
-	routesTf := getListOfStructs(result.Value)
+	routesTf := GetListOfStructs(result.Value)
 	for _, routeTf := range routesTf {
 		match := func(object interface{}) bool {
 			routeMapping := object.(map[string]interface{})

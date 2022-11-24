@@ -162,7 +162,7 @@ func checkShareDomainExists(resource string) resource.TestCheckFunc {
 			return NotFound
 		}
 		if id != domains[0].GUID {
-			return fmt.Errorf("expecting domain guid to be '%s' but got '%session'", id, domains[0].GUID)
+			return fmt.Errorf("expecting domain guid to be '%s' but got '%s'", id, domains[0].GUID)
 		}
 		return nil
 	}
@@ -192,7 +192,7 @@ func checkPrivateDomainExists(resource string) resource.TestCheckFunc {
 			return NotFound
 		}
 		if id != domains[0].GUID {
-			return fmt.Errorf("expecting domain guid to be '%s' but got '%session'", id, domains[0].GUID)
+			return fmt.Errorf("expecting domain guid to be '%s' but got '%s'", id, domains[0].GUID)
 		}
 		return nil
 	}
