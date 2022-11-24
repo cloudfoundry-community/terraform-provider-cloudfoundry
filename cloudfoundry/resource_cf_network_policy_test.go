@@ -1,13 +1,14 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/cfnetv1"
 	"fmt"
+	"testing"
+
+	"code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/cfnetv1"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
-	"testing"
 )
 
 const netPolicyResource = `
@@ -196,7 +197,7 @@ func testAccCheckNetworkPoliciesExists(ref string, validate func() error) resour
 		if err != nil {
 			return err
 		}
-		policiesTf := getListOfStructs(result.Value)
+		policiesTf := GetListOfStructs(result.Value)
 		idsMap := make(map[string]bool)
 		for _, p := range policiesTf {
 			idsMap[p["source_app"].(string)] = true

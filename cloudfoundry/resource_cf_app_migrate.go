@@ -152,7 +152,7 @@ func migrateAppStateV3toV4(is *terraform.InstanceState, meta interface{}) (*terr
 	bindings := make([]map[string]interface{}, 0)
 	result, err = reader.ReadField([]string{"service_binding"})
 	if err == nil && result.Exists {
-		oldBindings := getListOfStructs(result.Value)
+		oldBindings := GetListOfStructs(result.Value)
 		for _, b := range oldBindings {
 			bindings = append(bindings, map[string]interface{}{
 				"service_instance": b["service_instance"],
@@ -220,7 +220,7 @@ func migrateAppStateV2toV3(is *terraform.InstanceState, meta interface{}) (*terr
 		return is, err
 	}
 	if result.Exists {
-		oldRoute := getListOfStructs(result.Value)
+		oldRoute := GetListOfStructs(result.Value)
 		if len(oldRoute) > 0 && oldRoute[0]["default_route_mapping_id"].(string) != "" {
 			routes = append(routes, map[string]interface{}{
 				"route": oldRoute[0]["default_route_mapping_id"].(string),
@@ -231,7 +231,7 @@ func migrateAppStateV2toV3(is *terraform.InstanceState, meta interface{}) (*terr
 
 	result, err = reader.ReadField([]string{"routes"})
 	if err == nil && result.Exists {
-		oldRoutes := getListOfStructs(result.Value)
+		oldRoutes := GetListOfStructs(result.Value)
 		for _, r := range oldRoutes {
 			if port, ok := r["port"]; ok && port.(int) > 0 {
 				routes = append(routes, map[string]interface{}{
@@ -252,7 +252,7 @@ func migrateAppStateV2toV3(is *terraform.InstanceState, meta interface{}) (*terr
 	bindings := make([]map[string]interface{}, 0)
 	result, err = reader.ReadField([]string{"service_binding"})
 	if err == nil && result.Exists {
-		oldBindings := getListOfStructs(result.Value)
+		oldBindings := GetListOfStructs(result.Value)
 		for _, b := range oldBindings {
 			bindings = append(bindings, map[string]interface{}{
 				"service_instance": b["service_instance"],

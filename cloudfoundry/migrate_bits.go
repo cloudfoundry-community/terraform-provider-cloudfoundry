@@ -3,10 +3,6 @@ package cloudfoundry
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/ArthurHlt/zipper"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"io"
 	"io/ioutil"
 	"log"
@@ -15,6 +11,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/ArthurHlt/zipper"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
 var folderBits = "bits"
@@ -150,7 +151,7 @@ func migrateBitsStateV2toV3(is *terraform.InstanceState, meta interface{}) (*ter
 		return is, err
 	}
 	git := make(map[string]interface{})
-	gitElems := getListOfStructs(result.Value)
+	gitElems := GetListOfStructs(result.Value)
 	if len(gitElems) > 0 {
 		git = gitElems[0]
 	}
@@ -160,7 +161,7 @@ func migrateBitsStateV2toV3(is *terraform.InstanceState, meta interface{}) (*ter
 		return is, err
 	}
 	github := make(map[string]interface{})
-	githubElems := getListOfStructs(result.Value)
+	githubElems := GetListOfStructs(result.Value)
 	if len(githubElems) > 0 {
 		github = githubElems[0]
 	}
@@ -169,7 +170,7 @@ func migrateBitsStateV2toV3(is *terraform.InstanceState, meta interface{}) (*ter
 	if err != nil {
 		return is, err
 	}
-	addContents := getListOfStructs(result.Value)
+	addContents := GetListOfStructs(result.Value)
 	if len(addContents) > 0 {
 		log.Printf("[WARN] Non-empty add_content attribute found. Skipping, but you might wanna migrate it's contentns manually: %#v", addContents)
 	}

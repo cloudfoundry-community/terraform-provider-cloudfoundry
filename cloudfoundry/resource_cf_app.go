@@ -703,8 +703,8 @@ func resourceAppDelete(ctx context.Context, d *schema.ResourceData, meta interfa
 	}
 
 	err = PollAsyncJob(PollingConfig{
-		session: session,
-		jobURL:  jobURL,
+		Session: session,
+		JobURL:  jobURL,
 	})
 	return diag.FromErr(err)
 }

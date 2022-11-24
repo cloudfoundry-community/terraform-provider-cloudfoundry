@@ -3,10 +3,11 @@ package cloudfoundry
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"reflect"
 	"strings"
+
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -15,8 +16,7 @@ const (
 	importStateKey = "is_import_state"
 )
 
-// getListOfStructs
-func getListOfStructs(v interface{}) []map[string]interface{} {
+func GetListOfStructs(v interface{}) []map[string]interface{} {
 	if vvSet, ok := v.(*schema.Set); ok {
 		v = vvSet.List()
 	}
@@ -32,8 +32,8 @@ func getListOfStructs(v interface{}) []map[string]interface{} {
 
 // getResourceChange -
 func getResourceChange(key string, d *schema.ResourceData) (bool, string, string) {
-	old, new := d.GetChange(key)
-	return old != new, old.(string), new.(string)
+	old, n := d.GetChange(key)
+	return old != n, old.(string), n.(string)
 }
 
 // getListChanges -

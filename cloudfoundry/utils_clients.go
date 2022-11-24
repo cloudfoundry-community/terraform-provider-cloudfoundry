@@ -140,24 +140,24 @@ func IsErrNotFound(err error) bool {
 }
 
 type PollingConfig struct {
-	session  *managers.Session
-	jobURL   ccv3.JobURL
-	interval time.Duration
-	timeout  time.Duration
+	Session  *managers.Session
+	JobURL   ccv3.JobURL
+	Interval time.Duration
+	Timeout  time.Duration
 }
 
-// PollAsyncJob periodically check the state of the async job, return when the job failed / completed or timeout is reached
+// PollAsyncJob periodically check the state of the async job, return when the job failed / completed or Timeout is reached
 func PollAsyncJob(config PollingConfig) error {
-	s := config.session
+	s := config.Session
 
-	if config.interval == 0 {
-		config.interval = 5 * time.Second
+	if config.Interval == 0 {
+		config.Interval = 5 * time.Second
 	}
-	if config.timeout == 0 {
-		config.timeout = 60 * time.Second
+	if config.Timeout == 0 {
+		config.Timeout = 60 * time.Second
 	}
 	return common.PollingWithTimeout(func() (bool, error) {
-		job, _, err := s.ClientV3.GetJob(config.jobURL)
+		job, _, err := s.ClientV3.GetJob(config.JobURL)
 		if err != nil {
 			return true, err
 		}
@@ -176,5 +176,5 @@ func PollAsyncJob(config PollingConfig) error {
 		}
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, config.interval, config.timeout)
+	}, config.Interval, config.Timeout)
 }

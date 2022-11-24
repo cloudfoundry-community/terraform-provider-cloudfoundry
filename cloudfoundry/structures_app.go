@@ -70,7 +70,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 	}
 
 	mappings := make([]ccv2.RouteMapping, 0)
-	for _, r := range getListOfStructs(d.Get("routes")) {
+	for _, r := range GetListOfStructs(d.Get("routes")) {
 		mappings = append(mappings, ccv2.RouteMapping{
 			RouteGUID: r["route"].(string),
 			AppPort:   r["port"].(int),
@@ -78,7 +78,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 	}
 
 	bindings := make([]ccv2.ServiceBinding, 0)
-	for _, r := range getListOfStructs(d.Get("service_binding")) {
+	for _, r := range GetListOfStructs(d.Get("service_binding")) {
 		params := r["params"].(map[string]interface{})
 		paramJson := r["params_json"].(string)
 		if len(params) == 0 && paramJson != "" {
@@ -98,7 +98,7 @@ func ResourceDataToAppDeploy(d *schema.ResourceData) (appdeployers.AppDeploy, er
 		ServiceBindings: bindings,
 		Mappings:        mappings,
 		Path:            d.Get("path").(string),
-		StartTimeout:    time.Duration(d.Get("timeout").(int)) * time.Second,
+		StartTimeout:    time.Duration(d.Get("Timeout").(int)) * time.Second,
 		BindTimeout:     DefaultBindTimeout,
 		StageTimeout:    DefaultStageTimeout,
 	}, nil
@@ -131,7 +131,7 @@ func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppD
 		_ = d.Set("id_bg", d.Id())
 	}
 
-	bindingsTf := getListOfStructs(d.Get("service_binding"))
+	bindingsTf := GetListOfStructs(d.Get("service_binding"))
 	finalBindings := make([]map[string]interface{}, 0)
 	for _, binding := range appDeploy.ServiceBindings {
 		if IsImportState(d) {
@@ -165,7 +165,7 @@ func AppDeployToResourceData(d *schema.ResourceData, appDeploy appdeployers.AppD
 	}
 	_ = d.Set("service_binding", finalBindings)
 
-	mappingsTf := getListOfStructs(d.Get("routes"))
+	mappingsTf := GetListOfStructs(d.Get("routes"))
 	finalMappings := make([]map[string]interface{}, 0)
 	for _, mapping := range appDeploy.RouteMapping {
 		// if 0 it mean app port has been set to null which means it takes the first port found in app port definition
@@ -234,7 +234,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 	}
 
 	mappings := make([]resources.Route, 0)
-	for _, r := range getListOfStructs(d.Get("routes")) {
+	for _, r := range GetListOfStructs(d.Get("routes")) {
 		mappings = append(mappings, resources.Route{
 			GUID: r["route"].(string),
 			URL:  r["route"].(string),
@@ -243,7 +243,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 	}
 
 	bindings := make([]resources.ServiceCredentialBinding, 0)
-	for _, r := range getListOfStructs(d.Get("service_binding")) {
+	for _, r := range GetListOfStructs(d.Get("service_binding")) {
 		params := r["params"].(map[string]interface{})
 		paramJson := r["params_json"].(string)
 		if len(params) == 0 && paramJson != "" {
@@ -264,7 +264,7 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 	}
 
 	process := resources.Process{
-		Command:             StringToFilteredString((d.Get("command").(string))),
+		Command:             StringToFilteredString(d.Get("command").(string)),
 		HealthCheckType:     v3Constants.HealthCheckType(d.Get("health_check_type").(string)),
 		HealthCheckEndpoint: d.Get("health_check_http_endpoint").(string),
 		HealthCheckTimeout:  int64(d.Get("health_check_timeout").(int)),
@@ -345,7 +345,7 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 
 	ProcessToResourceData(d, appDeploy.Process)
 
-	bindingsTf := getListOfStructs(d.Get("service_binding"))
+	bindingsTf := GetListOfStructs(d.Get("service_binding"))
 	finalBindings := make([]map[string]interface{}, 0)
 	for _, binding := range appDeploy.ServiceBindings {
 		if IsImportState(d) {
@@ -379,7 +379,7 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 	}
 	_ = d.Set("service_binding", finalBindings)
 
-	mappingsTf := getListOfStructs(d.Get("routes"))
+	mappingsTf := GetListOfStructs(d.Get("routes"))
 	finalMappings := make([]map[string]interface{}, 0)
 
 	for _, mapping := range appDeploy.Mappings {

@@ -300,7 +300,7 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	jobURL, _, err := session.ClientV3.UpdateServiceInstance(id, serviceInstanceUpdate)
-	// log.Printf("Service Instance Object Job URL : %+v", jobURL)
+	// log.Printf("Service Instance Object Job URL : %+v", JobURL)
 	if err != nil {
 		return diag.FromErr(err)
 	}

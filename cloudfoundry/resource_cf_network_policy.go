@@ -3,6 +3,7 @@ package cloudfoundry
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/cfnetv1"
@@ -77,7 +78,7 @@ func resourceNetworkPolicyCreate(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 	d.SetId(guid)
-	policiesTf := getListOfStructs(d.Get("policy"))
+	policiesTf := GetListOfStructs(d.Get("policy"))
 	err = session.NetClient.CreatePolicies(resourceNetworkPoliciesToPolicies(policiesTf))
 	if err != nil {
 		return diag.FromErr(err)
@@ -88,7 +89,7 @@ func resourceNetworkPolicyCreate(ctx context.Context, d *schema.ResourceData, me
 func resourceNetworkPolicyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
 
-	policiesTf := getListOfStructs(d.Get("policy"))
+	policiesTf := GetListOfStructs(d.Get("policy"))
 
 	idsMap := make(map[string]bool)
 	for _, p := range policiesTf {
@@ -151,7 +152,7 @@ func resourceNetworkPolicyUpdate(ctx context.Context, d *schema.ResourceData, me
 
 func resourceNetworkPolicyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-	policiesTf := getListOfStructs(d.Get("policy"))
+	policiesTf := GetListOfStructs(d.Get("policy"))
 	err := session.NetClient.RemovePolicies(resourceNetworkPoliciesToPolicies(policiesTf))
 	if err != nil {
 		return diag.FromErr(err)
