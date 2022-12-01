@@ -64,17 +64,17 @@ func resourceApp() *schema.Resource {
 			"instances": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
-				Default:  1,
+				Computed: true,
 			},
 			"memory": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
-				Default:  1024,
+				Computed: true,
 			},
 			"disk_quota": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
-				Default:  1024,
+				Computed: true,
 			},
 			"stack": &schema.Schema{
 				Type:     schema.TypeString,
