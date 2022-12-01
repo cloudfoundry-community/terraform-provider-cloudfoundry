@@ -475,6 +475,7 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	}
 
 	// Process scale
+	processScaleRequired := d.HasChange("instances") || d.HasChange("memory") || d.HasChange("disk_quota")
 	processScale := resources.Process{
 		Type: constant.ProcessTypeWeb,
 	}
@@ -489,6 +490,7 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	}
 
 	// Process update
+	processUpdateRequired := d.HasChange("command") || d.HasChange("health_check_http_endpoint") || d.HasChange("health_check_type") || d.HasChange("health_check_timeout")
 	processUpdate := resources.Process{
 		Type: constant.ProcessTypeWeb,
 	}
@@ -524,9 +526,13 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 		}
 
 		// Update process scale
-		proc, _, err := session.ClientV3.CreateApplicationProcessScale(appUpdate.GUID, processScale)
-		if err != nil {
-			return diag.FromErr(err)
+		if processScaleRequired {
+			proc, _, err := session.ClientV3.CreateApplicationProcessScale(appUpdate.GUID, processScale)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+
+			appDeploy.Process = proc
 		}
 
 		// Service bindings change
@@ -595,8 +601,25 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 			appDeploy.EnvVars = createdEnv
 		}
 
+		if processUpdateRequired {
+			// Get process guid
+			currentAppProcess, _, err := session.ClientV3.GetApplicationProcessByType(appDeploy.App.GUID, constant.ProcessTypeWeb)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+
+			processUpdate.GUID = currentAppProcess.GUID
+
+			// Update application process
+			proc, _, err := session.ClientV3.UpdateProcess(processUpdate)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+
+			appDeploy.Process = proc
+		}
+
 		appDeploy.App = app
-		appDeploy.Process = proc
 	}
 
 	if IsAppRestageNeeded(d) || (deployer.IsCreateNewApp() && IsAppRestartNeeded(d)) {
