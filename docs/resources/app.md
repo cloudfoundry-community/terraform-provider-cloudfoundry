@@ -135,7 +135,7 @@ resource "cloudfoundry_app" "java-spring" {
 ### Health Checks
 
 * `health_check_http_endpoint` -(Optional, String) The endpoint for the http health check type. The default is '/'.
-* `health_check_type` - (Optional, String) The health check type which can be one of "`port`", "`process`", "`http`" or "`none`". Default is "`port`".
+* `health_check_type` - (Optional, String) The health check type which can be one of "`port`", "`process`", "`http`". Default is "`port`".
 * `health_check_timeout` - (Optional, Number) The timeout in seconds for the health check.
 
 ## Attributes Reference
