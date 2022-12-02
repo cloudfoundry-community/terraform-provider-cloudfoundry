@@ -13,7 +13,6 @@ import (
 	"code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/cfnetv1"
 	netWrapper "code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/wrapper"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	ccv2cons "code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	ccWrapper "code.cloudfoundry.org/cli/api/cloudcontroller/wrapper"
 	"code.cloudfoundry.org/cli/api/router"
@@ -416,7 +415,14 @@ func (s *Session) loadDeployer() {
 }
 
 func (s *Session) loadDefaultQuotaGuid(quotaName string) error {
-	quotas, _, err := s.ClientV2.GetQuotas(ccv2cons.OrgQuota, ccv2.FilterByName(quotaName))
+	// quotas, _, err := s.ClientV2.GetQuotas(ccv2cons.OrgQuota, ccv2.FilterByName(quotaName))
+	// if err != nil {
+	// 	return err
+	// }
+	quotas, _, err := s.ClientV3.GetOrganizationQuotas(ccv3.Query{
+		Key:    ccv3.NameFilter,
+		Values: []string{quotaName},
+	})
 	if err != nil {
 		return err
 	}
