@@ -64,7 +64,7 @@ func resourceApp() *schema.Resource {
 			"instances": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
-				Computed: true,
+				Default:  1,
 			},
 			"memory": &schema.Schema{
 				Type:     schema.TypeInt,
