@@ -27,7 +27,7 @@ resource "cloudfoundry_service_instance" "redis1" {
 
 resource "cloudfoundry_service_key" "redis1-key1" {
   name = "pricing-grid-key1"
-  service_instance = cloudfoundry_service_instance.redis.id
+  service_instance = cloudfoundry_service_instance.redis1.id
 }
 ```
 
