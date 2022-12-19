@@ -1,12 +1,14 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"context"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/resources"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 )
 
@@ -47,35 +49,58 @@ func dataSourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, 
 	session := meta.(*managers.Session)
 
 	var (
-		nameOrId        string
-		space           string
-		serviceInstance ccv2.ServiceInstance
+		nameOrId          string
+		space             string
+		serviceInstanceV3 resources.ServiceInstance
+		query             ccv3.Query
 	)
 
 	nameOrId = d.Get("name_or_id").(string)
 	space = d.Get("space").(string)
 	isUUID := uuid.FromStringOrNil(nameOrId)
 	if uuid.Equal(isUUID, uuid.Nil) {
-		serviceInstances, _, err := session.ClientV2.GetServiceInstances(ccv2.FilterByName(nameOrId), ccv2.FilterEqual(constant.SpaceGUIDFilter, space))
+		serviceInstance, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(nameOrId, space)
+
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if len(serviceInstances) == 0 {
-			return diag.FromErr(NotFound)
-		}
-		serviceInstance = serviceInstances[0]
+
+		serviceInstanceV3 = serviceInstance
+
 	} else {
-		var err error
-		serviceInstance, _, err = session.ClientV2.GetServiceInstance(nameOrId)
+		query = ccv3.Query{
+			Key:    ccv3.GUIDFilter,
+			Values: []string{nameOrId},
+		}
+
+		serviceInstances, _, _, err := session.ClientV3.GetServiceInstances(query)
+
 		if err != nil {
 			return diag.FromErr(err)
 		}
+
+		if len(serviceInstances) == 0 {
+			return diag.FromErr(ccerror.ServiceInstanceNotFoundError{
+				Name:      nameOrId,
+				SpaceGUID: space,
+			})
+		}
+
+		serviceInstanceV3 = serviceInstances[0]
 	}
 
-	d.SetId(serviceInstance.GUID)
-	d.Set("name", serviceInstance.Name)
-	d.Set("service_plan_id", serviceInstance.ServicePlanGUID)
-	d.Set("tags", serviceInstance.Tags)
+	d.SetId(serviceInstanceV3.GUID)
+	d.Set("name", serviceInstanceV3.Name)
+	d.Set("service_plan_id", serviceInstanceV3.ServicePlanGUID)
+	if serviceInstanceV3.Tags.IsSet {
+		tags := make([]interface{}, len(serviceInstanceV3.Tags.Value))
+		for i, v := range serviceInstanceV3.Tags.Value {
+			tags[i] = v
+		}
+		d.Set("tags", tags)
+	} else {
+		d.Set("tags", nil)
+	}
 
 	return nil
 }
