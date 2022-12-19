@@ -66,7 +66,7 @@ func dataSourceUserProvidedServiceRead(ctx context.Context, d *schema.ResourceDa
 
 	serviceInstance = serviceInstanceV3
 	credentials, _, err = session.ClientV3.GetUserProvidedServiceInstanceCredentails(serviceInstanceV3.GUID)
-	
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
