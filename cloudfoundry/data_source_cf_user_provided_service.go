@@ -3,8 +3,8 @@ package cloudfoundry
 import (
 	"context"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/resources"
+	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
@@ -52,26 +52,43 @@ func dataSourceUserProvidedServiceRead(ctx context.Context, d *schema.ResourceDa
 	var (
 		name            string
 		space           string
-		serviceInstance ccv2.UserProvidedServiceInstance
+		serviceInstance resources.ServiceInstance
+		credentials     types.JSONObject
 	)
 
 	name = d.Get("name").(string)
 	space = d.Get("space").(string)
-	serviceInstances, _, err := session.ClientV2.GetUserProvServiceInstances(ccv2.FilterByName(name), ccv2.FilterEqual(constant.SpaceGUIDFilter, space))
+	serviceInstanceV3, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if len(serviceInstances) == 0 {
-		return diag.FromErr(NotFound)
-	}
-	serviceInstance = serviceInstances[0]
+
+	serviceInstance = serviceInstanceV3
+	credentials, _, err = session.ClientV3.GetUserProvidedServiceInstanceCredentails(serviceInstanceV3.GUID)
 
 	d.SetId(serviceInstance.GUID)
 	d.Set("name", serviceInstance.Name)
-	d.Set("credentials", serviceInstance.Credentials)
-	d.Set("route_service_url", serviceInstance.RouteServiceUrl)
-	d.Set("syslog_drain_url", serviceInstance.SyslogDrainUrl)
-	d.Set("tags", serviceInstance.Tags)
+	d.Set("credentials", credentials)
+	if serviceInstanceV3.RouteServiceURL.IsSet {
+		d.Set("route_service_url", serviceInstanceV3.RouteServiceURL.Value)
+	} else {
+		d.Set("route_service_url", "")
+	}
+	if serviceInstanceV3.SyslogDrainURL.IsSet {
+		d.Set("syslog_drain_url", serviceInstanceV3.SyslogDrainURL.Value)
+	} else {
+		d.Set("syslog_drain_url", "")
+	}
+	if serviceInstanceV3.Tags.IsSet {
+		tags := make([]interface{}, len(serviceInstanceV3.Tags.Value))
+		for i, v := range serviceInstanceV3.Tags.Value {
+			tags[i] = v
+		}
+		d.Set("tags", tags)
+	} else {
+		d.Set("tags", nil)
+	}
 
 	return nil
 }
