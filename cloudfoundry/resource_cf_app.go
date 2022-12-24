@@ -646,7 +646,7 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 		if d, ok := deployer.(v3appdeployers.CustomRestartStrategy); ok {
 			err = d.Restart(appDeploy)
 		} else {
-			err = session.V3RunBinder.Restart(appDeploy, DefaultStageTimeout)
+			_, _, err = session.V3RunBinder.Restart(appDeploy)
 		}
 		if err != nil {
 			return diag.FromErr(err)

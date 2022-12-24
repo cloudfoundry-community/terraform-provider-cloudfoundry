@@ -180,7 +180,7 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				}
 
 				appResp := ctx["app_response"].(AppDeployResponse)
-				app, proc, err := s.runBinder.Start(AppDeploy{
+				app, proc, err := s.runBinder.Restart(AppDeploy{
 					App:          appResp.App,
 					Process:      appDeploy.Process,
 					EnableSSH:    appDeploy.EnableSSH,

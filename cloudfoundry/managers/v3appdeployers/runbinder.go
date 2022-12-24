@@ -437,16 +437,16 @@ func (r RunBinder) Stop(appDeploy AppDeploy) error {
 }
 
 // Restart simply runs Stop and Start.
-func (r RunBinder) Restart(appDeploy AppDeploy, stageTimeout time.Duration) error {
+func (r RunBinder) Restart(appDeploy AppDeploy) (resources.Application, resources.Process, error) {
 	err := r.Stop(appDeploy)
 	if err != nil {
-		return err
+		return resources.Application{}, resources.Process{}, err
 	}
-	_, _, err = r.Start(appDeploy)
+	app, proc, err := r.Start(appDeploy)
 	if err != nil {
-		return err
+		return resources.Application{}, resources.Process{}, err
 	}
-	return nil
+	return app, proc, nil
 }
 
 func (r RunBinder) processDeployErr(origErr error, appDeploy AppDeploy) error {
