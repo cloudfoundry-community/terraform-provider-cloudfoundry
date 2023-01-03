@@ -223,6 +223,11 @@ func resourceApp() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"health_check_invocation_timeout": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Computed: true,
+			},
 			"id_bg": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,

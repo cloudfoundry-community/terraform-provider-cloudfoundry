@@ -45,11 +45,12 @@ func (a Actor) UpdateApplicationProcess(appDeploy AppDeploy, reverse FallbackFun
 			}
 
 			updatedProcess, _, err := a.client.UpdateProcess(resources.Process{
-				GUID:                process.GUID,
-				Command:             appDeploy.Process.Command,
-				HealthCheckType:     appDeploy.Process.HealthCheckType,
-				HealthCheckEndpoint: appDeploy.Process.HealthCheckEndpoint,
-				HealthCheckTimeout:  appDeploy.Process.HealthCheckTimeout,
+				GUID:                         process.GUID,
+				Command:                      appDeploy.Process.Command,
+				HealthCheckType:              appDeploy.Process.HealthCheckType,
+				HealthCheckEndpoint:          appDeploy.Process.HealthCheckEndpoint,
+				HealthCheckTimeout:           appDeploy.Process.HealthCheckTimeout,
+				HealthCheckInvocationTimeout: appDeploy.Process.HealthCheckInvocationTimeout,
 			})
 			if err != nil {
 				return ctx, err

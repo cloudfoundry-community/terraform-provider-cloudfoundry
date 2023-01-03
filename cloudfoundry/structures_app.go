@@ -264,13 +264,14 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 	}
 
 	process := resources.Process{
-		Command:             StringToFilteredString(d.Get("command").(string)),
-		HealthCheckType:     v3Constants.HealthCheckType(d.Get("health_check_type").(string)),
-		HealthCheckEndpoint: d.Get("health_check_http_endpoint").(string),
-		HealthCheckTimeout:  int64(d.Get("health_check_timeout").(int)),
-		Instances:           IntToNullInt(d.Get("instances").(int)),
-		MemoryInMB:          IntToNullUint64Zero(d.Get("memory").(int)),
-		DiskInMB:            IntToNullUint64Zero(d.Get("disk_quota").(int)),
+		Command:                      StringToFilteredString((d.Get("command").(string))),
+		HealthCheckType:              v3Constants.HealthCheckType(d.Get("health_check_type").(string)),
+		HealthCheckEndpoint:          d.Get("health_check_http_endpoint").(string),
+		HealthCheckTimeout:           int64(d.Get("health_check_timeout").(int)),
+		HealthCheckInvocationTimeout: int64(d.Get("health_check_invocation_timeout").(int)),
+		Instances:                    IntToNullInt(d.Get("instances").(int)),
+		MemoryInMB:                   IntToNullUint64Zero(d.Get("memory").(int)),
+		DiskInMB:                     IntToNullUint64Zero(d.Get("disk_quota").(int)),
 	}
 
 	var DockerUsername string
@@ -431,6 +432,7 @@ func ProcessToResourceData(d *schema.ResourceData, proc resources.Process) {
 	_ = d.Set("health_check_type", proc.HealthCheckType)
 	_ = d.Set("health_check_http_endpoint", proc.HealthCheckEndpoint)
 	_ = d.Set("health_check_timeout", proc.HealthCheckTimeout)
+	_ = d.Set("health_check_invocation_timeout", proc.HealthCheckInvocationTimeout)
 
 	// Only set command if present already in tfstate
 	if _, ok := d.GetOk("command"); ok {

@@ -387,12 +387,14 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, resources.
 		return resources.Application{}, resources.Process{}, err
 	}
 
+	// Process update info
 	updatedProcess, _, err := r.client.UpdateProcess(resources.Process{
-		GUID:                scaledProcess.GUID,
-		Command:             appDeploy.Process.Command,
-		HealthCheckType:     appDeploy.Process.HealthCheckType,
-		HealthCheckEndpoint: appDeploy.Process.HealthCheckEndpoint,
-		HealthCheckTimeout:  appDeploy.Process.HealthCheckTimeout,
+		GUID:                         scaledProcess.GUID,
+		Command:                      appDeploy.Process.Command,
+		HealthCheckType:              appDeploy.Process.HealthCheckType,
+		HealthCheckEndpoint:          appDeploy.Process.HealthCheckEndpoint,
+		HealthCheckTimeout:           appDeploy.Process.HealthCheckTimeout,
+		HealthCheckInvocationTimeout: appDeploy.Process.HealthCheckInvocationTimeout,
 	})
 	if err != nil {
 		return resources.Application{}, resources.Process{}, err
