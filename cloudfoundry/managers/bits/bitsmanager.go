@@ -487,10 +487,40 @@ func (m BitsManager) CopyAppV3(origAppGUID string, newAppGUID string) error {
 
 	latestPkg := srcPkgs[0]
 
-	_, _, err = m.clientV3.CopyPackage(latestPkg.GUID, newAppGUID)
-
+	pkg, _, err := m.clientV3.CopyPackage(latestPkg.GUID, newAppGUID)
 	if err != nil {
 		return err
 	}
+
+	// How long copying takes depends on diego
+	// So for now we fix timeout at 15 minutes (default staging timeout)
+	timeout := 15 * time.Minute
+	err = m.PackageWaitReady(pkg.GUID, timeout)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// PackageWaitReady : Poll only for READY state
+func (m BitsManager) PackageWaitReady(packageGUID string, timeout time.Duration) error {
+	return common.PollingWithTimeout(func() (bool, error) {
+
+		ccPkg, _, err := m.clientV3.GetPackage(packageGUID)
+		if err != nil {
+			return true, err
+		}
+
+		if ccPkg.State == constant.PackageReady {
+			return true, nil
+		}
+
+		if ccPkg.State == constant.PackageFailed || ccPkg.State == constant.PackageExpired {
+			return true, fmt.Errorf("Package %s, state: %s", ccPkg.GUID, ccPkg.State)
+		}
+
+		// Continue on any other states
+		return false, nil
+	}, 5*time.Second, timeout)
 }

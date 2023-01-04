@@ -393,6 +393,38 @@ resource "cloudfoundry_app" "app_1" {
 }
 `
 
+const appResourceDockerInvocationTimeout = `
+
+data "cloudfoundry_domain" "local" {
+	name = "%s"
+}
+data "cloudfoundry_org" "org" {
+	name = "%s"
+}
+data "cloudfoundry_space" "space" {
+	name = "%s"
+  org = "${data.cloudfoundry_org.org.id}"
+}
+
+resource "cloudfoundry_route" "app_route_test_timeout" {
+  domain = "${data.cloudfoundry_domain.local.id}"
+  space = "${data.cloudfoundry_space.space.id}"
+  hostname = "app_route_test_timeout"
+}
+resource "cloudfoundry_app" "test-docker-app" {
+  name = "test-docker-app"
+  space = "${data.cloudfoundry_space.space.id}"
+  docker_image = "cloudfoundry/diego-docker-app:latest"
+  timeout = 900
+  enable_ssh = true
+  health_check_invocation_timeout = %d
+
+  routes {
+    route = "${cloudfoundry_route.app_route_test_timeout.id}"
+  }
+}
+`
+
 var appPath = asset("dummy-app.zip")
 
 func TestAccResAppVersions_app1(t *testing.T) {
@@ -960,6 +992,56 @@ func TestAccResApp_dockerApp(t *testing.T) {
 							refApp, "enable_ssh", "true"),
 						resource.TestCheckResourceAttr(
 							refApp, "docker_image", "cloudfoundry/diego-docker-app:latest"),
+					),
+				},
+			},
+		})
+}
+
+func TestAccResApp_dockerAppInvocationTimeout(t *testing.T) {
+
+	_, orgName := defaultTestOrg(t)
+	spaceID, spaceName := defaultTestSpace(t)
+
+	refApp := "cloudfoundry_app.test-docker-app"
+	invocationTimeout := 10
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckAppDestroyed([]string{"test-docker-app"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceDockerInvocationTimeout, defaultAppDomain(), orgName, spaceName, invocationTimeout),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+
+							if err = assertHTTPResponse("https://app_route_test_timeout."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						resource.TestCheckResourceAttr(
+							refApp, "name", "test-docker-app"),
+						resource.TestCheckResourceAttr(
+							refApp, "space", spaceID),
+						// For docker apps, ports are not set (not supported in v3)
+						resource.TestCheckResourceAttr(
+							refApp, "ports.#", "0"),
+						resource.TestCheckResourceAttr(
+							refApp, "instances", "1"),
+						// For docker apps, stack is ""
+						resource.TestCheckResourceAttr(
+							refApp, "stack", ""),
+						resource.TestCheckResourceAttr(
+							refApp, "environment.%", "0"),
+						resource.TestCheckResourceAttr(
+							refApp, "enable_ssh", "true"),
+						resource.TestCheckResourceAttr(
+							refApp, "docker_image", "cloudfoundry/diego-docker-app:latest"),
+						resource.TestCheckResourceAttr(
+							refApp, "health_check_invocation_timeout", fmt.Sprintf("%d", invocationTimeout)),
 					),
 				},
 			},

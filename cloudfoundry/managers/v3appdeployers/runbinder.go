@@ -387,12 +387,14 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, resources.
 		return resources.Application{}, resources.Process{}, err
 	}
 
+	// Process update info
 	updatedProcess, _, err := r.client.UpdateProcess(resources.Process{
-		GUID:                scaledProcess.GUID,
-		Command:             appDeploy.Process.Command,
-		HealthCheckType:     appDeploy.Process.HealthCheckType,
-		HealthCheckEndpoint: appDeploy.Process.HealthCheckEndpoint,
-		HealthCheckTimeout:  appDeploy.Process.HealthCheckTimeout,
+		GUID:                         scaledProcess.GUID,
+		Command:                      appDeploy.Process.Command,
+		HealthCheckType:              appDeploy.Process.HealthCheckType,
+		HealthCheckEndpoint:          appDeploy.Process.HealthCheckEndpoint,
+		HealthCheckTimeout:           appDeploy.Process.HealthCheckTimeout,
+		HealthCheckInvocationTimeout: appDeploy.Process.HealthCheckInvocationTimeout,
 	})
 	if err != nil {
 		return resources.Application{}, resources.Process{}, err
@@ -435,16 +437,16 @@ func (r RunBinder) Stop(appDeploy AppDeploy) error {
 }
 
 // Restart simply runs Stop and Start.
-func (r RunBinder) Restart(appDeploy AppDeploy, stageTimeout time.Duration) error {
+func (r RunBinder) Restart(appDeploy AppDeploy) (resources.Application, resources.Process, error) {
 	err := r.Stop(appDeploy)
 	if err != nil {
-		return err
+		return resources.Application{}, resources.Process{}, err
 	}
-	_, _, err = r.Start(appDeploy)
+	app, proc, err := r.Start(appDeploy)
 	if err != nil {
-		return err
+		return resources.Application{}, resources.Process{}, err
 	}
-	return nil
+	return app, proc, nil
 }
 
 func (r RunBinder) processDeployErr(origErr error, appDeploy AppDeploy) error {

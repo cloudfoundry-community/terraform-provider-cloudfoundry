@@ -64,7 +64,7 @@ func resourceApp() *schema.Resource {
 			"instances": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
-				Computed: true,
+				Default:  1,
 			},
 			"memory": &schema.Schema{
 				Type:     schema.TypeInt,
@@ -219,6 +219,11 @@ func resourceApp() *schema.Resource {
 				ValidateFunc: validateAppV3HealthCheckType,
 			},
 			"health_check_timeout": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Computed: true,
+			},
+			"health_check_invocation_timeout": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
 				Computed: true,
@@ -641,7 +646,7 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 		if d, ok := deployer.(v3appdeployers.CustomRestartStrategy); ok {
 			err = d.Restart(appDeploy)
 		} else {
-			err = session.V3RunBinder.Restart(appDeploy, DefaultStageTimeout)
+			_, _, err = session.V3RunBinder.Restart(appDeploy)
 		}
 		if err != nil {
 			return diag.FromErr(err)
