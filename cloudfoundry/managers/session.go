@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/cfnetv1"
 	netWrapper "code.cloudfoundry.org/cfnetworking-cli-api/cfnetworking/wrapper"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	ccv2cons "code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	ccWrapper "code.cloudfoundry.org/cli/api/cloudcontroller/wrapper"
 	"code.cloudfoundry.org/cli/api/router"
@@ -416,19 +416,12 @@ func (s *Session) loadDeployer() {
 }
 
 func (s *Session) loadDefaultQuotaGuid(quotaName string) error {
-	// quotas, _, err := s.ClientV2.GetQuotas(ccv2cons.OrgQuota, ccv2.FilterByName(quotaName))
-	// if err != nil {
-	// 	return err
-	// }
-	quotas, _, err := s.ClientV3.GetOrganizationQuotas(ccv3.Query{
-		Key:    ccv3.NameFilter,
-		Values: []string{quotaName},
-	})
+	quotas, _, err := s.ClientV2.GetQuotas(ccv2cons.OrgQuota, ccv2.FilterByName(quotaName))
 	if err != nil {
 		return err
 	}
 	if len(quotas) == 0 {
-		return fmt.Errorf("Can't found default quota '%s'", quotaName)
+		return fmt.Errorf("can't found default quota '%s'", quotaName)
 	}
 	s.defaultQuotaGuid = quotas[0].GUID
 	return nil
@@ -438,7 +431,7 @@ func (s *Session) loadTokFromStoreIfNeed(storePath string, refresher func(refres
 	if storePath == "" {
 		return CFTokens{}
 	}
-	b, err := ioutil.ReadFile(storePath)
+	b, err := os.ReadFile(storePath)
 	if err != nil {
 		return CFTokens{}
 	}
@@ -465,7 +458,7 @@ func (s *Session) saveTokToStoreIfNeed(storePath, accessToken, refreshToken stri
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, "", "  ")
-	return ioutil.WriteFile(storePath, b, 0644)
+	return os.WriteFile(storePath, b, 0644)
 }
 
 // IsDefaultGroup -
