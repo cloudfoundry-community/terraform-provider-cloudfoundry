@@ -1,4 +1,5 @@
 # Cloud Foundry Terraform Provider [![Build Status](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry.svg?branch=master)](https://travis-ci.org/cloudfoundry-community/terraform-provider-cloudfoundry)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fcloudfoundry-community%2Fterraform-provider-cloudfoundry.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fcloudfoundry-community%2Fterraform-provider-cloudfoundry?ref=badge_shield)
 
 
 Overview
@@ -134,3 +135,7 @@ Terraform Links
 - Website: https://www.terraform.io
 - [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.svg)](https://gitter.im/hashicorp-terraform/Lobby)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fcloudfoundry-community%2Fterraform-provider-cloudfoundry.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fcloudfoundry-community%2Fterraform-provider-cloudfoundry?ref=badge_large)
