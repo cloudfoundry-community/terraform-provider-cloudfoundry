@@ -59,8 +59,9 @@ func resourceServiceKey() *schema.Resource {
 				ValidateFunc:  validation.StringIsJSON,
 			},
 			"credentials": &schema.Schema{
-				Type:     schema.TypeMap,
-				Computed: true,
+				Type:      schema.TypeMap,
+				Computed:  true,
+				Sensitive: true,
 			},
 		},
 	}
