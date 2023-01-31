@@ -1,0 +1,9 @@
+language: go
+go:
+  - "1.12"
+
+install:
+  - go get github.com/onsi/ginkgo/ginkgo
+  - go get github.com/onsi/gomega
+  - export GO111MODULE=on
+script: go test -v ./... -args -ginkgo.randomizeAllSpecs -ginkgo.trace
