@@ -12,12 +12,20 @@ func (a Actor) ScaleApplicationProcess(appDeploy AppDeploy, reverse FallbackFunc
 			appResp := ctx["app_response"].(AppDeployResponse)
 
 			// Action code
-			scaledProcess, _, err := a.client.CreateApplicationProcessScale(appResp.App.GUID, resources.Process{
-				Type:       constant.ProcessTypeWeb,
-				Instances:  appDeploy.Process.Instances,
-				MemoryInMB: appDeploy.Process.MemoryInMB,
-				DiskInMB:   appDeploy.Process.DiskInMB,
-			})
+			processScaleInfo := resources.Process{
+				Type:      constant.ProcessTypeWeb,
+				Instances: appDeploy.Process.Instances,
+			}
+
+			if appDeploy.Process.MemoryInMB.IsSet && appDeploy.Process.MemoryInMB.Value > 0 {
+				processScaleInfo.MemoryInMB = appDeploy.Process.MemoryInMB
+			}
+
+			if appDeploy.Process.DiskInMB.IsSet && appDeploy.Process.DiskInMB.Value > 0 {
+				processScaleInfo.DiskInMB = appDeploy.Process.DiskInMB
+			}
+
+			scaledProcess, _, err := a.client.CreateApplicationProcessScale(appResp.App.GUID, processScaleInfo)
 			if err != nil {
 				return ctx, err
 			}
