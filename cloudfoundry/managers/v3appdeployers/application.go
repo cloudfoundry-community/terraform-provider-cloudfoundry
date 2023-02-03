@@ -1,9 +1,14 @@
 package v3appdeployers
 
 import (
+	"fmt"
+	"time"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	constantV3 "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 )
 
 // CreateApplication : return a create application action
@@ -124,6 +129,50 @@ func (a Actor) SetApplicationSSHEnabled(appDeploy AppDeploy, reverse FallbackFun
 			}
 
 			appResp.EnableSSH = AppFeatureToNullBool(enabledSSH)
+
+			ctx["app_response"] = appResp
+			return ctx, nil
+		},
+		ReversePrevious: reverse,
+	}
+}
+
+// DeleteApplicationWithPolling : delete
+func (a Actor) DeleteApplicationWithPolling(appDeploy AppDeploy, reverse FallbackFunction) Action {
+	return Action{
+		Forward: func(ctx Context) (Context, error) {
+			appResp := ctx["app_response"].(AppDeployResponse)
+
+			// Action code
+			jobURL, _, err := a.client.DeleteApplication(appResp.App.GUID)
+			if err != nil {
+				return ctx, err
+			}
+
+			err = common.PollingWithTimeout(func() (bool, error) {
+				job, _, err := a.client.GetJob(jobURL)
+				if err != nil {
+					return true, err
+				}
+
+				// Stop polling and return error if job failed
+				if job.State == constantV3.JobFailed {
+					return true, fmt.Errorf(
+						"Operation failed, reason: %+v",
+						job.Errors(),
+					)
+				}
+
+				if job.State == constantV3.JobComplete {
+					return true, nil
+				}
+
+				return false, nil
+			}, 5*time.Second, 1*time.Minute)
+
+			if err != nil {
+				return ctx, err
+			}
 
 			ctx["app_response"] = appResp
 			return ctx, nil
