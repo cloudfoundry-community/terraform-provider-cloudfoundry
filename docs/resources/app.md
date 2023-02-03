@@ -30,7 +30,7 @@ The following arguments are supported:
 * `instances` - (Optional, Number) The number of app instances that you want to start. Defaults to 1.
 * `memory` - (Optional, Number) The memory limit for each application instance in megabytes. If not provided, value is computed and retreived from Cloud Foundry.
 * `disk_quota` - (Optional, Number) The disk space to be allocated for each application instance in megabytes. If not provided, default disk quota is retrieved from Cloud Foundry and assigned.
-* `stack` - (Optional) The GUID of the stack the application will be deployed to. Use the [`cloudfoundry_stack`](website/docs/d/stack.html.markdown) data resource to lookup the stack GUID to override Cloud Foundry default.
+* `stack` - (Optional) The name of the stack the application will be deployed to. Use the [`cloudfoundry_stack`](website/docs/d/stack.html.markdown) data resource to lookup the available stack names to override Cloud Foundry default.
 * `buildpack` - (Optional, String) The buildpack used to stage the application. There are multiple options to choose from:
   * a Git URL (e.g. [https://github.com/cloudfoundry/java-buildpack.git](https://github.com/cloudfoundry/java-buildpack.git)) or a Git URL with a branch or tag (e.g. [https://github.com/cloudfoundry/java-buildpack.git#v3.3.0](https://github.com/cloudfoundry/java-buildpack.git#v3.3.0) for v3.3.0 tag)
   * an installed admin buildpack name (e.g. my-buildpack)
