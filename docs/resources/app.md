@@ -35,6 +35,9 @@ The following arguments are supported:
   * a Git URL (e.g. [https://github.com/cloudfoundry/java-buildpack.git](https://github.com/cloudfoundry/java-buildpack.git)) or a Git URL with a branch or tag (e.g. [https://github.com/cloudfoundry/java-buildpack.git#v3.3.0](https://github.com/cloudfoundry/java-buildpack.git#v3.3.0) for v3.3.0 tag)
   * an installed admin buildpack name (e.g. my-buildpack)
   * an empty blank string to use built-in buildpacks (i.e. autodetection)
+* `buildpacks` - (Optional, List) Multiple `buildpacks` used to stage the application. When both `buildpack` and `buildpacks` are set, `buildpacks` wins. There are multiple options to choose from:
+  * a Git URL (e.g. [https://github.com/cloudfoundry/java-buildpack.git](https://github.com/cloudfoundry/java-buildpack.git)) or a Git URL with a branch or tag (e.g. [https://github.com/cloudfoundry/java-buildpack.git#v3.3.0](https://github.com/cloudfoundry/java-buildpack.git#v3.3.0) for v3.3.0 tag)
+  * an installed admin buildpack name (e.g. my-buildpack)
 * `command` - (Optional, String) A custom start command for the application. This overrides the start command provided by the buildpack.
 * `enable_ssh` - (Optional, Boolean) Whether to enable or disable SSH access to the container. Default is `true` unless disabled globally.
 * `timeout` - (Optional, Number) Max wait time for app instance startup, in seconds. Defaults to 60 seconds.
