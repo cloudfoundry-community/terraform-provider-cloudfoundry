@@ -220,13 +220,23 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 	}
 
 	app := resources.Application{
-		GUID:                d.Id(),
-		StackName:           d.Get("stack").(string),
-		LifecycleBuildpacks: []string{d.Get("buildpack").(string)},
-		Metadata:            &metadata,
-		Name:                d.Get("name").(string),
-		SpaceGUID:           d.Get("space").(string),
-		State:               stateAsk,
+		GUID:      d.Id(),
+		StackName: d.Get("stack").(string),
+		Metadata:  &metadata,
+		Name:      d.Get("name").(string),
+		SpaceGUID: d.Get("space").(string),
+		State:     stateAsk,
+	}
+
+	if bpkg, ok := d.GetOk("buildpack"); ok {
+		app.LifecycleBuildpacks = []string{bpkg.(string)}
+	}
+	if bpkgs, ok := d.GetOk("buildpacks"); ok {
+		buildpacks := make([]string, 0)
+		for _, bpkg := range bpkgs.([]interface{}) {
+			buildpacks = append(buildpacks, bpkg.(string))
+		}
+		app.LifecycleBuildpacks = buildpacks
 	}
 
 	if d.Get("stopped").(bool) {
@@ -333,6 +343,7 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 	_ = d.Set("stack", appDeploy.App.StackName)
 	if bpkg := appDeploy.App.LifecycleBuildpacks; len(bpkg) > 0 {
 		_ = d.Set("buildpack", bpkg[0])
+		_ = d.Set("buildpacks", bpkg)
 	}
 
 	_ = d.Set("enable_ssh", appDeploy.EnableSSH.Value)

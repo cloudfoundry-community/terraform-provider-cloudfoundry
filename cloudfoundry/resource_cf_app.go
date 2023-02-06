@@ -83,9 +83,17 @@ func resourceApp() *schema.Resource {
 				Computed: true,
 			},
 			"buildpack": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				ConflictsWith: []string{"buildpacks"},
+			},
+			"buildpacks": &schema.Schema{
+				Type:          schema.TypeList,
+				Optional:      true,
+				Computed:      true,
+				Elem:          &schema.Schema{Type: schema.TypeString},
+				ConflictsWith: []string{"buildpack"},
 			},
 			"command": &schema.Schema{
 				Type:     schema.TypeString,
@@ -466,6 +474,13 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 	if d.HasChange("buildpack") {
 		appUpdate.LifecycleBuildpacks = []string{d.Get("buildpack").(string)}
 	}
+	if d.HasChange("buildpacks") {
+		buildpacks := make([]string, 0)
+		for _, bpkg := range d.Get("buildpacks").([]interface{}) {
+			buildpacks = append(buildpacks, bpkg.(string))
+		}
+		appUpdate.LifecycleBuildpacks = buildpacks
+	}
 	if d.HasChange("stack") {
 		appUpdate.StackName = d.Get("stack").(string)
 	}
@@ -677,7 +692,7 @@ func IsAppUpdateOnly(d ResourceChanger) bool {
 }
 
 func IsAppRestageNeeded(d ResourceChanger) bool {
-	return d.HasChange("buildpack") || d.HasChange("stack") ||
+	return d.HasChange("buildpack") || d.HasChange("buildpacks") || d.HasChange("stack") ||
 		d.HasChange("service_binding") || d.HasChange("environment")
 }
 
