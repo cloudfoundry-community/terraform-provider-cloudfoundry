@@ -427,46 +427,60 @@ resource "cloudfoundry_app" "test-docker-app" {
 
 var appPath = asset("dummy-app.zip")
 
+var appPaths = []struct {
+	typeOfPath string
+	path       string
+}{
+	{typeOfPath: "local", path: asset("dummy-app.zip")},
+	{typeOfPath: "remote", path: "https://raw.githubusercontent.com/cloudfoundry-community/terraform-provider-cloudfoundry/main/tests/cf-acceptance-tests/assets/dummy-app.zip"},
+}
+
 func TestAccResAppVersions_app1(t *testing.T) {
 
 	_, orgName := defaultTestOrg(t)
 	_, spaceName := defaultTestSpace(t)
 	refRoute := "cloudfoundry_route.test-app"
 
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:          func() { testAccPreCheck(t) },
-			ProviderFactories: testAccProvidersFactories,
-			CheckDestroy:      testAccCheckAppDestroyed([]string{"test-app"}),
-			Steps: []resource.TestStep{
+	for _, app := range appPaths {
+		appPath = app.path
 
-				resource.TestStep{
-					Config: fmt.Sprintf(multipleVersion, defaultAppDomain(), orgName, spaceName, appPath),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckRouteExists(refRoute, func() (err error) {
+		t.Run(fmt.Sprintf("AppSource=%s", app.typeOfPath), func(t *testing.T) {
+			resource.Test(t,
+				resource.TestCase{
+					PreCheck:          func() { testAccPreCheck(t) },
+					ProviderFactories: testAccProvidersFactories,
+					CheckDestroy:      testAccCheckAppDestroyed([]string{"test-app"}),
+					Steps: []resource.TestStep{
 
-							if err = assertHTTPResponse("https://test-app-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-					),
-				},
+						resource.TestStep{
+							Config: fmt.Sprintf(multipleVersion, defaultAppDomain(), orgName, spaceName, appPath),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckRouteExists(refRoute, func() (err error) {
 
-				resource.TestStep{
-					Config: fmt.Sprintf(multipleVersionUpdate, defaultAppDomain(), orgName, spaceName, appPath),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckRouteExists(refRoute, func() (err error) {
+									if err = assertHTTPResponse("https://test-app-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+							),
+						},
 
-							if err = assertHTTPResponse("https://test-app-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-					),
-				},
-			},
+						resource.TestStep{
+							Config: fmt.Sprintf(multipleVersionUpdate, defaultAppDomain(), orgName, spaceName, appPath),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckRouteExists(refRoute, func() (err error) {
+
+									if err = assertHTTPResponse("https://test-app-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+							),
+						},
+					},
+				})
 		})
+	}
 }
 
 func TestAccDefaultValues_app1(t *testing.T) {
@@ -480,59 +494,66 @@ func TestAccDefaultValues_app1(t *testing.T) {
 	defaultInstances := 1
 	defaultPort := 8080
 	// Change this value if ssh is enabled globally
-	globalSSHEnabled := "false"
+	globalSSHEnabled := "true"
 
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:          func() { testAccPreCheck(t) },
-			ProviderFactories: testAccProvidersFactories,
-			CheckDestroy:      testAccCheckAppDestroyed([]string{"app-1"}),
-			Steps: []resource.TestStep{
+	for _, app := range appPaths {
+		appPath = app.path
 
-				resource.TestStep{
-					Config: fmt.Sprintf(defaultValues, defaultAppDomain(), orgName, spaceName, appPath, "standard"),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
+		t.Run(fmt.Sprintf("AppSource=%s", app.typeOfPath), func(t *testing.T) {
+			resource.Test(t,
+				resource.TestCase{
+					PreCheck:          func() { testAccPreCheck(t) },
+					ProviderFactories: testAccProvidersFactories,
+					CheckDestroy:      testAccCheckAppDestroyed([]string{"app-1"}),
+					Steps: []resource.TestStep{
 
-							if err = assertHTTPResponse("https://app-1-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "app-1"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.0", fmt.Sprint(defaultPort)),
-						resource.TestCheckResourceAttr(refApp, "instances", fmt.Sprint(defaultInstances)),
-						resource.TestCheckResourceAttr(refApp, "memory", fmt.Sprint(defaultMemory)),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", fmt.Sprint(defaultDiskQuota)),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", globalSSHEnabled),
-					),
-				},
+						resource.TestStep{
+							Config: fmt.Sprintf(defaultValues, defaultAppDomain(), orgName, spaceName, appPath, "standard"),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckAppExists(refApp, func() (err error) {
 
-				resource.TestStep{
-					Config: fmt.Sprintf(overrideDefaultValues, defaultAppDomain(), orgName, spaceName, appPath, "standard"),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
-							if err = assertHTTPResponse("https://app-1-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "app-1-update"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "2"),
-						resource.TestCheckResourceAttr(refApp, "memory", "128"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "64"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-					),
-				},
-			},
+									if err = assertHTTPResponse("https://app-1-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+								resource.TestCheckResourceAttr(refApp, "name", "app-1"),
+								resource.TestCheckResourceAttr(refApp, "space", spaceID),
+								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
+								resource.TestCheckResourceAttr(refApp, "ports.0", fmt.Sprint(defaultPort)),
+								resource.TestCheckResourceAttr(refApp, "instances", fmt.Sprint(defaultInstances)),
+								resource.TestCheckResourceAttr(refApp, "memory", fmt.Sprint(defaultMemory)),
+								resource.TestCheckResourceAttr(refApp, "disk_quota", fmt.Sprint(defaultDiskQuota)),
+								resource.TestCheckResourceAttrSet(refApp, "stack"),
+								resource.TestCheckResourceAttr(refApp, "enable_ssh", globalSSHEnabled),
+							),
+						},
+
+						resource.TestStep{
+							Config: fmt.Sprintf(overrideDefaultValues, defaultAppDomain(), orgName, spaceName, appPath, "standard"),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckAppExists(refApp, func() (err error) {
+									if err = assertHTTPResponse("https://app-1-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+								resource.TestCheckResourceAttr(refApp, "name", "app-1-update"),
+								resource.TestCheckResourceAttr(refApp, "space", spaceID),
+								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
+								resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
+								resource.TestCheckResourceAttr(refApp, "instances", "2"),
+								resource.TestCheckResourceAttr(refApp, "memory", "128"),
+								resource.TestCheckResourceAttr(refApp, "disk_quota", "64"),
+								resource.TestCheckResourceAttrSet(refApp, "stack"),
+								resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
+							),
+						},
+					},
+				})
+
 		})
+	}
 }
 
 func TestAccDefaultValuesRolling_app1(t *testing.T) {
@@ -546,59 +567,65 @@ func TestAccDefaultValuesRolling_app1(t *testing.T) {
 	defaultInstances := 1
 	defaultPort := 8080
 	// Change this value if ssh is enabled globally
-	globalSSHEnabled := "false"
+	globalSSHEnabled := "true"
 
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:          func() { testAccPreCheck(t) },
-			ProviderFactories: testAccProvidersFactories,
-			CheckDestroy:      testAccCheckAppDestroyed([]string{"app-1"}),
-			Steps: []resource.TestStep{
+	for _, app := range appPaths {
+		appPath = app.path
 
-				resource.TestStep{
-					Config: fmt.Sprintf(defaultValues, defaultAppDomain(), orgName, spaceName, appPath, "rolling"),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
+		t.Run(fmt.Sprintf("AppSource=%s", app.typeOfPath), func(t *testing.T) {
+			resource.Test(t,
+				resource.TestCase{
+					PreCheck:          func() { testAccPreCheck(t) },
+					ProviderFactories: testAccProvidersFactories,
+					CheckDestroy:      testAccCheckAppDestroyed([]string{"app-1"}),
+					Steps: []resource.TestStep{
 
-							if err = assertHTTPResponse("https://app-1-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "app-1"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.0", fmt.Sprint(defaultPort)),
-						resource.TestCheckResourceAttr(refApp, "instances", fmt.Sprint(defaultInstances)),
-						resource.TestCheckResourceAttr(refApp, "memory", fmt.Sprint(defaultMemory)),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", fmt.Sprint(defaultDiskQuota)),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", globalSSHEnabled),
-					),
-				},
+						resource.TestStep{
+							Config: fmt.Sprintf(defaultValues, defaultAppDomain(), orgName, spaceName, appPath, "rolling"),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckAppExists(refApp, func() (err error) {
 
-				resource.TestStep{
-					Config: fmt.Sprintf(overrideDefaultValues, defaultAppDomain(), orgName, spaceName, appPath, "rolling"),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
-							if err = assertHTTPResponse("https://app-1-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "app-1-update"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "2"),
-						resource.TestCheckResourceAttr(refApp, "memory", "128"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "64"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-					),
-				},
-			},
+									if err = assertHTTPResponse("https://app-1-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+								resource.TestCheckResourceAttr(refApp, "name", "app-1"),
+								resource.TestCheckResourceAttr(refApp, "space", spaceID),
+								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
+								resource.TestCheckResourceAttr(refApp, "ports.0", fmt.Sprint(defaultPort)),
+								resource.TestCheckResourceAttr(refApp, "instances", fmt.Sprint(defaultInstances)),
+								resource.TestCheckResourceAttr(refApp, "memory", fmt.Sprint(defaultMemory)),
+								resource.TestCheckResourceAttr(refApp, "disk_quota", fmt.Sprint(defaultDiskQuota)),
+								resource.TestCheckResourceAttrSet(refApp, "stack"),
+								resource.TestCheckResourceAttr(refApp, "enable_ssh", globalSSHEnabled),
+							),
+						},
+
+						resource.TestStep{
+							Config: fmt.Sprintf(overrideDefaultValues, defaultAppDomain(), orgName, spaceName, appPath, "rolling"),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckAppExists(refApp, func() (err error) {
+									if err = assertHTTPResponse("https://app-1-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+								resource.TestCheckResourceAttr(refApp, "name", "app-1-update"),
+								resource.TestCheckResourceAttr(refApp, "space", spaceID),
+								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
+								resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
+								resource.TestCheckResourceAttr(refApp, "instances", "2"),
+								resource.TestCheckResourceAttr(refApp, "memory", "128"),
+								resource.TestCheckResourceAttr(refApp, "disk_quota", "64"),
+								resource.TestCheckResourceAttrSet(refApp, "stack"),
+								resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
+							),
+						},
+					},
+				})
 		})
+	}
 }
 
 func TestAccResApp_app1(t *testing.T) {
@@ -609,95 +636,102 @@ func TestAccResApp_app1(t *testing.T) {
 
 	refApp := "cloudfoundry_app.dummy-app"
 
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:          func() { testAccPreCheck(t) },
-			ProviderFactories: testAccProvidersFactories,
-			CheckDestroy:      testAccCheckAppDestroyed([]string{"dummy-app"}),
-			Steps: []resource.TestStep{
+	for _, app := range appPaths {
+		appPath = app.path
 
-				resource.TestStep{
-					Config: fmt.Sprintf(appResource,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan,
-						appPath,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
+		t.Run(fmt.Sprintf("AppSource=%s", app.typeOfPath), func(t *testing.T) {
 
-							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "64"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "2"),
-						resource.TestCheckResourceAttr(refApp, "environment.TEST_VAR_1", "testval1"),
-						resource.TestCheckResourceAttr(refApp, "environment.TEST_VAR_2", "testval2"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckResourceAttr(refApp, "service_binding.#", "2"),
-					),
-				},
+			resource.Test(t,
+				resource.TestCase{
+					PreCheck:          func() { testAccPreCheck(t) },
+					ProviderFactories: testAccProvidersFactories,
+					CheckDestroy:      testAccCheckAppDestroyed([]string{"dummy-app"}),
+					Steps: []resource.TestStep{
 
-				resource.TestStep{
-					Config: fmt.Sprintf(appResource,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan,
-						appPath,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						setEnvironmentVariables(refApp, map[string]interface{}{
-							"TEST_VAR_3": "testval3",
-						}),
-					),
-					ExpectNonEmptyPlan: true,
-				},
+						resource.TestStep{
+							Config: fmt.Sprintf(appResource,
+								defaultAppDomain(),
+								orgName, spaceName,
+								serviceName1, serviceName2, servicePlan, servicePlan,
+								appPath,
+							),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckAppExists(refApp, func() (err error) {
 
-				resource.TestStep{
-					Config: fmt.Sprintf(appResourceUpdate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan, servicePlan,
-						appPath,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
+									if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+								resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
+								resource.TestCheckResourceAttr(refApp, "space", spaceID),
+								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
+								resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
+								resource.TestCheckResourceAttr(refApp, "instances", "1"),
+								resource.TestCheckResourceAttr(refApp, "memory", "64"),
+								resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
+								resource.TestCheckResourceAttrSet(refApp, "stack"),
+								resource.TestCheckResourceAttr(refApp, "environment.%", "2"),
+								resource.TestCheckResourceAttr(refApp, "environment.TEST_VAR_1", "testval1"),
+								resource.TestCheckResourceAttr(refApp, "environment.TEST_VAR_2", "testval2"),
+								resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
+								resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
+								resource.TestCheckResourceAttr(refApp, "service_binding.#", "2"),
+							),
+						},
 
-							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						testAccCheckEnvironmentVariableSet(refApp, "TEST_VAR_1"),
-						testAccCheckEnvironmentVariableNotSet(refApp, "TEST_VAR_2"),
-						testAccCheckEnvironmentVariableNotSet(refApp, "TEST_VAR_3"),
-						resource.TestCheckResourceAttr(refApp, "name", "dummy-app-updated"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "2"),
-						resource.TestCheckResourceAttr(refApp, "memory", "128"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "1024"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "1"),
-						resource.TestCheckResourceAttr(refApp, "environment.TEST_VAR_1", "testval1"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckResourceAttr(refApp, "service_binding.#", "3"),
-					),
-				},
-			},
+						resource.TestStep{
+							Config: fmt.Sprintf(appResource,
+								defaultAppDomain(),
+								orgName, spaceName,
+								serviceName1, serviceName2, servicePlan, servicePlan,
+								appPath,
+							),
+							Check: resource.ComposeTestCheckFunc(
+								setEnvironmentVariables(refApp, map[string]interface{}{
+									"TEST_VAR_3": "testval3",
+								}),
+							),
+							ExpectNonEmptyPlan: true,
+						},
+
+						resource.TestStep{
+							Config: fmt.Sprintf(appResourceUpdate,
+								defaultAppDomain(),
+								orgName, spaceName,
+								serviceName1, serviceName2, servicePlan, servicePlan, servicePlan,
+								appPath,
+							),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckAppExists(refApp, func() (err error) {
+
+									if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+								testAccCheckEnvironmentVariableSet(refApp, "TEST_VAR_1"),
+								testAccCheckEnvironmentVariableNotSet(refApp, "TEST_VAR_2"),
+								testAccCheckEnvironmentVariableNotSet(refApp, "TEST_VAR_3"),
+								resource.TestCheckResourceAttr(refApp, "name", "dummy-app-updated"),
+								resource.TestCheckResourceAttr(refApp, "space", spaceID),
+								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
+								resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
+								resource.TestCheckResourceAttr(refApp, "instances", "2"),
+								resource.TestCheckResourceAttr(refApp, "memory", "128"),
+								resource.TestCheckResourceAttr(refApp, "disk_quota", "1024"),
+								resource.TestCheckResourceAttrSet(refApp, "stack"),
+								resource.TestCheckResourceAttr(refApp, "environment.%", "1"),
+								resource.TestCheckResourceAttr(refApp, "environment.TEST_VAR_1", "testval1"),
+								resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
+								resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
+								resource.TestCheckResourceAttr(refApp, "service_binding.#", "3"),
+							),
+						},
+					},
+				})
 		})
+	}
 }
 
 func testAccCheckEnvironmentVariableSet(resApp string, envVar string) resource.TestCheckFunc {
@@ -769,185 +803,191 @@ func TestAccResApp_Routes_updateToAndmore(t *testing.T) {
 
 	refApp := "cloudfoundry_app.dummy-app"
 
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:          func() { testAccPreCheck(t) },
-			ProviderFactories: testAccProvidersFactories,
-			CheckDestroy:      testAccCheckAppDestroyed([]string{"dummy-app"}),
-			Steps: []resource.TestStep{
+	for _, app := range appPaths {
+		appPath = app.path
 
-				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan, appPath),
-						``,
-						`routes {
-              route = "${cloudfoundry_route.dummy-app.id}"
-            }`,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
+		t.Run(fmt.Sprintf("AppSource=%s", app.typeOfPath), func(t *testing.T) {
+			resource.Test(t,
+				resource.TestCase{
+					PreCheck:          func() { testAccPreCheck(t) },
+					ProviderFactories: testAccProvidersFactories,
+					CheckDestroy:      testAccCheckAppDestroyed([]string{"dummy-app"}),
+					Steps: []resource.TestStep{
 
-							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "64"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckResourceAttr(refApp, "routes.#", "1"),
-					),
-				},
+						resource.TestStep{
+							Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
+								defaultAppDomain(),
+								orgName, spaceName,
+								serviceName1, serviceName2, servicePlan, servicePlan, appPath),
+								``,
+								`routes {
+					  route = "${cloudfoundry_route.dummy-app.id}"
+					}`,
+							),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckAppExists(refApp, func() (err error) {
 
-				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan, appPath),
-						`resource "cloudfoundry_route" "dummy-app-2" {
-              domain = "${data.cloudfoundry_domain.local.id}"
-              space = "${data.cloudfoundry_space.space.id}"
-              hostname = "dummy-app-2"
-            }`,
-						`routes {
-              route = "${cloudfoundry_route.dummy-app.id}"
-            }
-            routes {
-              route = "${cloudfoundry_route.dummy-app-2.id}"
-            }`,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
+									if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+								resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
+								resource.TestCheckResourceAttr(refApp, "space", spaceID),
+								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
+								resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
+								resource.TestCheckResourceAttr(refApp, "instances", "1"),
+								resource.TestCheckResourceAttr(refApp, "memory", "64"),
+								resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
+								resource.TestCheckResourceAttrSet(refApp, "stack"),
+								resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
+								resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
+								resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
+								resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
+								resource.TestCheckResourceAttr(refApp, "routes.#", "1"),
+							),
+						},
 
-							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "64"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckResourceAttr(refApp, "routes.#", "2"),
-					),
-				},
+						resource.TestStep{
+							Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
+								defaultAppDomain(),
+								orgName, spaceName,
+								serviceName1, serviceName2, servicePlan, servicePlan, appPath),
+								`resource "cloudfoundry_route" "dummy-app-2" {
+					  domain = "${data.cloudfoundry_domain.local.id}"
+					  space = "${data.cloudfoundry_space.space.id}"
+					  hostname = "dummy-app-2"
+					}`,
+								`routes {
+					  route = "${cloudfoundry_route.dummy-app.id}"
+					}
+					routes {
+					  route = "${cloudfoundry_route.dummy-app-2.id}"
+					}`,
+							),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckAppExists(refApp, func() (err error) {
 
-				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan, appPath),
-						`resource "cloudfoundry_route" "dummy-app-2" {
-              domain = "${data.cloudfoundry_domain.local.id}"
-              space = "${data.cloudfoundry_space.space.id}"
-              hostname = "dummy-app-2"
-            }`,
-						`routes {
-              route = "${cloudfoundry_route.dummy-app.id}"
-            }`,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
+									if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+								resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
+								resource.TestCheckResourceAttr(refApp, "space", spaceID),
+								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
+								resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
+								resource.TestCheckResourceAttr(refApp, "instances", "1"),
+								resource.TestCheckResourceAttr(refApp, "memory", "64"),
+								resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
+								resource.TestCheckResourceAttrSet(refApp, "stack"),
+								resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
+								resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
+								resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
+								resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
+								resource.TestCheckResourceAttr(refApp, "routes.#", "2"),
+							),
+						},
 
-							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 404, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "64"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckResourceAttr(refApp, "routes.#", "1"),
-					),
-				},
+						resource.TestStep{
+							Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
+								defaultAppDomain(),
+								orgName, spaceName,
+								serviceName1, serviceName2, servicePlan, servicePlan, appPath),
+								`resource "cloudfoundry_route" "dummy-app-2" {
+					  domain = "${data.cloudfoundry_domain.local.id}"
+					  space = "${data.cloudfoundry_space.space.id}"
+					  hostname = "dummy-app-2"
+					}`,
+								`routes {
+					  route = "${cloudfoundry_route.dummy-app.id}"
+					}`,
+							),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckAppExists(refApp, func() (err error) {
 
-				resource.TestStep{
-					Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
-						defaultAppDomain(),
-						orgName, spaceName,
-						serviceName1, serviceName2, servicePlan, servicePlan, appPath),
-						`resource "cloudfoundry_route" "dummy-app-2" {
-              domain = "${data.cloudfoundry_domain.local.id}"
-              space = "${data.cloudfoundry_space.space.id}"
-              hostname = "dummy-app-2"
-            }
-            resource "cloudfoundry_route" "dummy-app-3" {
-              domain = "${data.cloudfoundry_domain.local.id}"
-              space = "${data.cloudfoundry_space.space.id}"
-              hostname = "dummy-app-3"
-            }`,
-						`routes {
-              route = "${cloudfoundry_route.dummy-app-2.id}"
-            }
-            routes {
-              route = "${cloudfoundry_route.dummy-app-3.id}"
-            }`,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExists(refApp, func() (err error) {
+									if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 404, nil); err != nil {
+										return err
+									}
+									return
+								}),
+								resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
+								resource.TestCheckResourceAttr(refApp, "space", spaceID),
+								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
+								resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
+								resource.TestCheckResourceAttr(refApp, "instances", "1"),
+								resource.TestCheckResourceAttr(refApp, "memory", "64"),
+								resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
+								resource.TestCheckResourceAttrSet(refApp, "stack"),
+								resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
+								resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
+								resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
+								resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
+								resource.TestCheckResourceAttr(refApp, "routes.#", "1"),
+							),
+						},
 
-							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 404, nil); err != nil {
-								return err
-							}
-							if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							if err = assertHTTPResponse("https://dummy-app-3."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-						resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
-						resource.TestCheckResourceAttr(refApp, "space", spaceID),
-						resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
-						resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
-						resource.TestCheckResourceAttr(refApp, "instances", "1"),
-						resource.TestCheckResourceAttr(refApp, "memory", "64"),
-						resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
-						resource.TestCheckResourceAttrSet(refApp, "stack"),
-						resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
-						resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
-						resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
-						resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
-						resource.TestCheckResourceAttr(refApp, "routes.#", "2"),
-					),
-				},
-			},
+						resource.TestStep{
+							Config: fmt.Sprintf(fmt.Sprintf(appResourceTemplate,
+								defaultAppDomain(),
+								orgName, spaceName,
+								serviceName1, serviceName2, servicePlan, servicePlan, appPath),
+								`resource "cloudfoundry_route" "dummy-app-2" {
+					  domain = "${data.cloudfoundry_domain.local.id}"
+					  space = "${data.cloudfoundry_space.space.id}"
+					  hostname = "dummy-app-2"
+					}
+					resource "cloudfoundry_route" "dummy-app-3" {
+					  domain = "${data.cloudfoundry_domain.local.id}"
+					  space = "${data.cloudfoundry_space.space.id}"
+					  hostname = "dummy-app-3"
+					}`,
+								`routes {
+					  route = "${cloudfoundry_route.dummy-app-2.id}"
+					}
+					routes {
+					  route = "${cloudfoundry_route.dummy-app-3.id}"
+					}`,
+							),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckAppExists(refApp, func() (err error) {
+
+									if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 404, nil); err != nil {
+										return err
+									}
+									if err = assertHTTPResponse("https://dummy-app-2."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									if err = assertHTTPResponse("https://dummy-app-3."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+								resource.TestCheckResourceAttr(refApp, "name", "dummy-app"),
+								resource.TestCheckResourceAttr(refApp, "space", spaceID),
+								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
+								resource.TestCheckResourceAttr(refApp, "ports.0", "8080"),
+								resource.TestCheckResourceAttr(refApp, "instances", "1"),
+								resource.TestCheckResourceAttr(refApp, "memory", "64"),
+								resource.TestCheckResourceAttr(refApp, "disk_quota", "512"),
+								resource.TestCheckResourceAttrSet(refApp, "stack"),
+								resource.TestCheckResourceAttr(refApp, "environment.%", "0"),
+								resource.TestCheckResourceAttr(refApp, "enable_ssh", "true"),
+								resource.TestCheckResourceAttr(refApp, "health_check_type", "port"),
+								resource.TestCheckNoResourceAttr(refApp, "service_binding.#"),
+								resource.TestCheckResourceAttr(refApp, "routes.#", "2"),
+							),
+						},
+					},
+				})
 		})
+	}
 }
 
 func TestAccResApp_dockerApp(t *testing.T) {
@@ -1053,60 +1093,67 @@ func TestAccResApp_app_bluegreen(t *testing.T) {
 	spaceID, _ := defaultTestSpace(t)
 
 	refApp := "cloudfoundry_app.dummy-app"
-	appDeploy := &appdeployers.AppDeploy{}
-	resource.Test(t,
-		resource.TestCase{
-			PreCheck:          func() { testAccPreCheck(t) },
-			ProviderFactories: testAccProvidersFactories,
-			CheckDestroy:      testAccCheckAppDestroyed([]string{"dummy-app"}),
-			Steps: []resource.TestStep{
 
-				resource.TestStep{
-					Config: fmt.Sprintf(appResourceBlueGreen,
-						defaultAppDomain(),
-						spaceID, spaceID,
-						"1",
-						appPath,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						testAccCheckAppExistsInject(refApp, appDeploy, func() (err error) {
+	for _, app := range appPaths {
+		appPath = app.path
 
-							if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
-								return err
-							}
-							return
-						}),
-					),
-				},
+		t.Run(fmt.Sprintf("AppSource=%s", app.typeOfPath), func(t *testing.T) {
+			appDeploy := &appdeployers.AppDeploy{}
+			resource.Test(t,
+				resource.TestCase{
+					PreCheck:          func() { testAccPreCheck(t) },
+					ProviderFactories: testAccProvidersFactories,
+					CheckDestroy:      testAccCheckAppDestroyed([]string{"dummy-app"}),
+					Steps: []resource.TestStep{
 
-				resource.TestStep{
-					Config: fmt.Sprintf(appResourceBlueGreen,
-						defaultAppDomain(),
-						spaceID, spaceID,
-						"2",
-						appPath,
-					),
-					Check: resource.ComposeTestCheckFunc(
-						func(s *terraform.State) error {
-							err := assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil)
-							if err != nil {
-								return err
-							}
-							rs, ok := s.RootModule().Resources[refApp]
-							if !ok {
-								return fmt.Errorf("app '%s' not found in terraform state", refApp)
-							}
+						resource.TestStep{
+							Config: fmt.Sprintf(appResourceBlueGreen,
+								defaultAppDomain(),
+								spaceID, spaceID,
+								"1",
+								appPath,
+							),
+							Check: resource.ComposeTestCheckFunc(
+								testAccCheckAppExistsInject(refApp, appDeploy, func() (err error) {
 
-							id := rs.Primary.ID
-							if id == appDeploy.App.GUID {
-								return fmt.Errorf("After blue green deployment, app must have changed but GUID are the same between previous and update")
-							}
-							return nil
+									if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
+										return err
+									}
+									return
+								}),
+							),
 						},
-					),
-				},
-			},
+
+						resource.TestStep{
+							Config: fmt.Sprintf(appResourceBlueGreen,
+								defaultAppDomain(),
+								spaceID, spaceID,
+								"2",
+								appPath,
+							),
+							Check: resource.ComposeTestCheckFunc(
+								func(s *terraform.State) error {
+									err := assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil)
+									if err != nil {
+										return err
+									}
+									rs, ok := s.RootModule().Resources[refApp]
+									if !ok {
+										return fmt.Errorf("app '%s' not found in terraform state", refApp)
+									}
+
+									id := rs.Primary.ID
+									if id == appDeploy.App.GUID {
+										return fmt.Errorf("After blue green deployment, app must have changed but GUID are the same between previous and update")
+									}
+									return nil
+								},
+							),
+						},
+					},
+				})
 		})
+	}
 }
 
 func testAccCheckAppExistsInject(resApp string, appDeploy *appdeployers.AppDeploy, validate func() error) resource.TestCheckFunc {
