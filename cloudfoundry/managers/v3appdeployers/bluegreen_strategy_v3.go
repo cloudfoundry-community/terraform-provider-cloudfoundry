@@ -308,7 +308,7 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 				appResp := ctx["app_response"].(AppDeployResponse)
 
 				// Action code
-				jobURL, _, err := s.client.DeleteApplication(appResp.App.GUID)
+				jobURL, _, err := s.client.DeleteApplication(appDeploy.App.GUID)
 				if err != nil {
 					return ctx, err
 				}
