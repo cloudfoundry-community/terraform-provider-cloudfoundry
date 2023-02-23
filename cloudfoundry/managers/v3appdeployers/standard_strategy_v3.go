@@ -49,7 +49,10 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 			return err
 		}
 
-		jobURL, _, _ := s.client.DeleteApplication(app.GUID)
+		jobURL, _, err := s.client.DeleteApplication(app.GUID)
+		if err != nil {
+			return err
+		}
 
 		err = common.PollingWithTimeout(func() (bool, error) {
 			job, _, err := s.client.GetJob(jobURL)
