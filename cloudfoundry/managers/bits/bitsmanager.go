@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime"
 	"mime/multipart"
 	"net/http"
@@ -417,6 +418,45 @@ func (m BitsManager) CreateAndUploadBitsPackage(appGUID string, path string, sta
 
 	if err != nil {
 		return resources.Package{}, warnings, err
+	}
+
+	// get zip from remote artifactory
+	if strings.HasPrefix(path, "http") {
+		zipFile, err := m.RetrieveZip(path)
+		if err != nil {
+			return resources.Package{}, warnings, err
+		}
+
+		tempDir, err := ioutil.TempDir("", "temp-")
+		if err != nil {
+			return resources.Package{}, warnings, err
+		}
+
+		defer func() {
+			if err := os.RemoveAll(tempDir); err != nil {
+				log.Printf("Error removing temp dir %s: %v", tempDir, err)
+			}
+		}()
+
+		outputFile, err := os.Create(filepath.Join(tempDir, zipFile.baseName))
+		if err != nil {
+			return resources.Package{}, warnings, err
+		}
+
+		_, err = io.Copy(outputFile, zipFile.r)
+		if err != nil {
+			return resources.Package{}, warnings, err
+		}
+
+		if err := outputFile.Sync(); err != nil {
+			return resources.Package{}, warnings, err
+		}
+
+		if err := outputFile.Close(); err != nil {
+			return resources.Package{}, warnings, err
+		}
+
+		path = outputFile.Name()
 	}
 
 	_, warnings, err = m.clientV3.UploadPackage(pkg, path)
