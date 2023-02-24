@@ -91,7 +91,6 @@ func resourceApp() *schema.Resource {
 			"buildpacks": &schema.Schema{
 				Type:          schema.TypeList,
 				Optional:      true,
-				Computed:      true,
 				Elem:          &schema.Schema{Type: schema.TypeString},
 				ConflictsWith: []string{"buildpack"},
 			},

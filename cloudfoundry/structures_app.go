@@ -228,15 +228,14 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		State:     stateAsk,
 	}
 
-	if bpkg, ok := d.GetOk("buildpack"); ok {
-		app.LifecycleBuildpacks = []string{bpkg.(string)}
-	}
 	if bpkgs, ok := d.GetOk("buildpacks"); ok {
 		buildpacks := make([]string, 0)
 		for _, bpkg := range bpkgs.([]interface{}) {
 			buildpacks = append(buildpacks, bpkg.(string))
 		}
 		app.LifecycleBuildpacks = buildpacks
+	} else if bpkg, ok := d.GetOk("buildpack"); ok {
+		app.LifecycleBuildpacks = []string{bpkg.(string)}
 	}
 
 	if d.Get("stopped").(bool) {
@@ -341,9 +340,13 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 	_ = d.Set("space", appDeploy.App.SpaceGUID)
 	_ = d.Set("ports", appDeploy.Ports)
 	_ = d.Set("stack", appDeploy.App.StackName)
+
 	if bpkg := appDeploy.App.LifecycleBuildpacks; len(bpkg) > 0 {
-		_ = d.Set("buildpack", bpkg[0])
-		_ = d.Set("buildpacks", bpkg)
+		if _, ok := d.GetOk("buildpacks"); ok {
+			_ = d.Set("buildpacks", bpkg)
+		} else {
+			_ = d.Set("buildpack", bpkg[0])
+		}
 	}
 
 	_ = d.Set("enable_ssh", appDeploy.EnableSSH.Value)
