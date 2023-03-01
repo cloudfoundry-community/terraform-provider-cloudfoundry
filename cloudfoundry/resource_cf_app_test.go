@@ -425,6 +425,35 @@ resource "cloudfoundry_app" "test-docker-app" {
 }
 `
 
+const multipleBuildpacks = `
+data "cloudfoundry_domain" "local" {
+    name = "%s"
+}
+data "cloudfoundry_org" "org" {
+	name = "%s"
+}
+data "cloudfoundry_space" "space" {
+	name = "%s"
+	org = "${data.cloudfoundry_org.org.id}"
+}
+resource "cloudfoundry_route" "app_1" {
+	domain = "${data.cloudfoundry_domain.local.id}"
+	space = "${data.cloudfoundry_space.space.id}"
+	hostname = "app-1-tf"
+	target {
+		app = "${cloudfoundry_app.app_1.id}"
+	}
+}
+resource "cloudfoundry_app" "app_1" {
+	name = "app-1"
+	space = "${data.cloudfoundry_space.space.id}"
+	buildpacks = ["binary_buildpack", "tomee_buildpack"]
+
+	path = "%s"
+	strategy = "%s"
+}
+`
+
 var appPath = asset("dummy-app.zip")
 
 var appPaths = []struct {
@@ -1363,4 +1392,36 @@ func testAccCheckAppDestroyed(apps []string) resource.TestCheckFunc {
 		}
 		return nil
 	}
+}
+
+func TestAccMultipleBuildpacks(t *testing.T) {
+
+	_, orgName := defaultTestOrg(t)
+	_, spaceName := defaultTestSpace(t)
+	refApp := "cloudfoundry_app.app_1"
+
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckAppDestroyed([]string{"app-1"}),
+			Steps: []resource.TestStep{
+
+				resource.TestStep{
+					Config: fmt.Sprintf(multipleBuildpacks, defaultAppDomain(), orgName, spaceName, appPath, "standard"),
+					Check: resource.ComposeTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
+							if err = assertHTTPResponse("https://app-1-tf."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						resource.TestCheckResourceAttr(refApp, "name", "app-1"),
+						resource.TestCheckResourceAttr(refApp, "buildpacks.#", "2"),
+						resource.TestCheckResourceAttr(refApp, "buildpacks.0", "binary_buildpack"),
+						resource.TestCheckResourceAttr(refApp, "buildpacks.1", "tomee_buildpack"),
+					),
+				},
+			},
+		})
 }
