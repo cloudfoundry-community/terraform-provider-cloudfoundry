@@ -79,7 +79,6 @@ func resourceApp() *schema.Resource {
 			"stack": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
-				ForceNew: true,
 				Computed: true,
 			},
 			"buildpack": &schema.Schema{
@@ -244,7 +243,10 @@ func resourceApp() *schema.Resource {
 		},
 
 		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
-			if diff.HasChange("docker_image") || diff.HasChange("path") {
+			session := meta.(*managers.Session)
+			deployer := session.Deployer.Strategy(diff.Get("strategy").(string))
+
+			if (diff.HasChange("docker_image") || diff.HasChange("path")) && !deployer.IsCreateNewApp() {
 				oldImg, newImg := diff.GetChange("docker_image")
 				oldPath, newPath := diff.GetChange("path")
 				if oldImg == "" && newImg != "" && newPath == "" {
@@ -257,12 +259,16 @@ func resourceApp() *schema.Resource {
 			if diff.Id() == "" {
 				return nil
 			}
-			session := meta.(*managers.Session)
-			deployer := session.Deployer.Strategy(diff.Get("strategy").(string))
+
 			if IsAppRestageNeeded(diff) ||
 				(deployer.IsCreateNewApp() && IsAppRestartNeeded(diff)) ||
 				(deployer.IsCreateNewApp() && IsAppCodeChange(diff)) {
 				diff.SetNewComputed("id_bg")
+			}
+
+			if diff.HasChange("stack") && !deployer.IsCreateNewApp() {
+				// Not b/g
+				diff.ForceNew("stack")
 			}
 
 			return nil
