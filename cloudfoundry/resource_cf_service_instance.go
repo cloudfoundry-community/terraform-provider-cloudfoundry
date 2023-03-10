@@ -96,7 +96,7 @@ func resourceServiceInstance() *schema.Resource {
 					return false
 				}),
 			customdiff.ForceNewIf(
-				"params", func(_ context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+				"json_params", func(_ context.Context, d *schema.ResourceDiff, meta interface{}) bool {
 					if ok := d.Get("replace_on_params_change").(bool); ok {
 						return true
 					}
