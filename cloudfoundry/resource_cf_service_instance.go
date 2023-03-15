@@ -8,7 +8,6 @@ import (
 	"log"
 	"time"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	"code.cloudfoundry.org/cli/resources"
@@ -187,22 +186,22 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 
 func resourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-	name := d.Get("name").(string)
-	space := d.Get("space").(string)
+	serviceInstances, _, _, err := session.ClientV3.GetServiceInstances(ccv3.Query{
+		Key:    ccv3.GUIDFilter,
+		Values: []string{d.Id()},
+	})
 
-	serviceInstance, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
-	if err != nil {
-		// error instance needs to be exactly the same as the one threw by CC
-		// Is() won't return true otherwise
-		if errors.Is(err, ccerror.ServiceInstanceNotFoundError{
-			Name:      name,
-			SpaceGUID: space,
-		}) {
-			d.SetId("")
-			return nil
-		}
+	if len(serviceInstances) > 1 {
+		err = fmt.Errorf("GUID filter for service instance %s returned more than one result", d.Id())
 		return diag.FromErr(err)
 	}
+
+	if len(serviceInstances) == 0 {
+		d.SetId("")
+		return nil
+	}
+
+	serviceInstance := serviceInstances[0]
 
 	d.Set("name", serviceInstance.Name)
 	d.Set("service_plan", serviceInstance.ServicePlanGUID)
