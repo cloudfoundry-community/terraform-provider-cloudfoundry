@@ -3,10 +3,9 @@ package cloudfoundry
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -27,7 +26,7 @@ func resourceUserProvidedService() *schema.Resource {
 		DeleteContext: resourceUserProvidedServiceDelete,
 
 		Importer: &schema.ResourceImporter{
-			StateContext: ImportReadContext(resourceUserProvidedServiceRead),
+			State: schema.ImportStatePassthrough,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -167,23 +166,25 @@ func resourceUserProvidedServiceCreate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceUserProvidedServiceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	session := meta.(*managers.Session)
-	name := d.Get("name").(string)
-	space := d.Get("space").(string)
+	var userProvidedServiceInstance resources.ServiceInstance
 
-	userProvidedServiceInstance, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
+	session := meta.(*managers.Session)
+	GUID := d.Id()
+	userProvidedServiceInstances, _, _, err := session.ClientV3.GetServiceInstances(ccv3.Query{
+		Key:    ccv3.GUIDFilter,
+		Values: []string{GUID},
+	})
+
 	if err != nil {
-		// error instance needs to be exactly the same as the one threw by CC
-		// Is() won't return true otherwise
-		if errors.Is(err, ccerror.ServiceInstanceNotFoundError{
-			Name:      name,
-			SpaceGUID: space,
-		}) {
-			d.SetId("")
-			return nil
-		}
 		return diag.FromErr(err)
 	}
+
+	if len(userProvidedServiceInstances) == 0 {
+		d.SetId("")
+		return nil
+	}
+
+	userProvidedServiceInstance = userProvidedServiceInstances[0]
 
 	d.Set("name", userProvidedServiceInstance.Name)
 	d.Set("space", userProvidedServiceInstance.SpaceGUID)
