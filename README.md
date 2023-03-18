@@ -96,8 +96,7 @@ export CF_SKIP_SSL_VALIDATION=true
 You can export the following environment variables to enable detail debug logs.
 
 ```
-export CF_DEBUG=true
-export CF_TRACE=debug.log
+export TF_LOG=debug
 ```
 
 In order to run the tests locally, run.
