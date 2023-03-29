@@ -438,7 +438,8 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 
 	// we are on the case where app code change so we can run directly deploy
 	// which will do all mapping and binding and update the app
-	if IsAppCodeChange(d) {
+	// If the application uses b/g deployment method (IsCreateNewApp), and the app has changes that require restart/restage, simply use b/g deployment instead of simple updating the application.
+	if IsAppCodeChange(d) || (deployer.IsCreateNewApp() && IsAppRestartNeeded(d)) || (deployer.IsCreateNewApp() && IsAppRestageNeeded(d)) {
 		appResp, err := deployer.Deploy(appDeploy)
 		if err != nil {
 			return diag.FromErr(err)
