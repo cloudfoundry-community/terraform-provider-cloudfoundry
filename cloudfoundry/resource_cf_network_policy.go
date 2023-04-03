@@ -151,13 +151,20 @@ func resourceNetworkPolicyUpdate(ctx context.Context, d *schema.ResourceData, me
 }
 
 func resourceNetworkPolicyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	session := meta.(*managers.Session)
 	policiesTf := GetListOfStructs(d.Get("policy"))
+	if len(policiesTf) == 0 { // Policies already removed
+		d.SetId("")
+		return diags
+	}
+	id := d.Id()
 	err := session.NetClient.RemovePolicies(resourceNetworkPoliciesToPolicies(policiesTf))
 	if err != nil {
-		return diag.FromErr(err)
+		return diag.FromErr(fmt.Errorf("delete network policy %s: %w", id, err))
 	}
-	return nil
+	return diags
 }
 
 func resourceNetworkPoliciesToPolicies(policiesTf []map[string]interface{}) []cfnetv1.Policy {
