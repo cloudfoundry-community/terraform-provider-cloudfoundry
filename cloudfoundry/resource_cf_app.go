@@ -62,19 +62,22 @@ func resourceApp() *schema.Resource {
 				Set:      resourceIntegerSet,
 			},
 			"instances": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  1,
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          1,
+				DiffSuppressFunc: diffSuppressOnStoppedApps,
 			},
 			"memory": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				Computed: true,
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Computed:         true,
+				DiffSuppressFunc: diffSuppressOnStoppedApps,
 			},
 			"disk_quota": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				Computed: true,
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Computed:         true,
+				DiffSuppressFunc: diffSuppressOnStoppedApps,
 			},
 			"stack": &schema.Schema{
 				Type:     schema.TypeString,
@@ -220,10 +223,11 @@ func resourceApp() *schema.Resource {
 				Computed: true,
 			},
 			"health_check_type": &schema.Schema{
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "port",
-				ValidateFunc: validateAppV3HealthCheckType,
+				Type:             schema.TypeString,
+				Optional:         true,
+				Default:          "port",
+				ValidateFunc:     validateAppV3HealthCheckType,
+				DiffSuppressFunc: diffSuppressOnStoppedApps,
 			},
 			"health_check_timeout": &schema.Schema{
 				Type:     schema.TypeInt,
@@ -262,7 +266,11 @@ func resourceApp() *schema.Resource {
 			if IsAppRestageNeeded(diff) ||
 				(deployer.IsCreateNewApp() && IsAppRestartNeeded(diff)) ||
 				(deployer.IsCreateNewApp() && IsAppCodeChange(diff)) {
-				diff.SetNewComputed("id_bg")
+				if stopped, ok := diff.GetOk("stopped"); ok {
+					if !stopped.(bool) {
+						diff.SetNewComputed("id_bg")
+					}
+				}
 			}
 
 			return nil
@@ -288,6 +296,16 @@ func validateV3Strategy(v interface{}, k string) (ws []string, errs []error) {
 			fmt.Errorf("%q must be one of '%s' or 'none'", k, strings.Join(names, "', '")))
 	}
 	return ws, errs
+}
+
+func diffSuppressOnStoppedApps(k, old, new string, d *schema.ResourceData) bool {
+	log.Printf("[INFO] test supp diff %T", d.Get("stopped"))
+	if stopped, ok := d.GetOk("stopped"); ok {
+		if stopped.(bool) {
+			return true
+		}
+	}
+	return false
 }
 
 func resourceAppCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -376,8 +394,9 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface
 	// ProcessToResourceData(d, proc)
 
 	// droplet sync through V3 API
+	// Do nothing if droplet is not found
 	droplet, _, err := session.ClientV3.GetApplicationDropletCurrent(d.Id())
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "Droplet not found") {
 		return diag.FromErr(err)
 	}
 
@@ -570,6 +589,7 @@ func resourceAppUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 			appDeploy.ServiceBindings = bindings
 		}
 
+		// TODO: poll for app state after starting/stopping
 		if d.HasChange("stopped") {
 			// Update application state
 			stopApplication := d.Get("stopped").(bool)

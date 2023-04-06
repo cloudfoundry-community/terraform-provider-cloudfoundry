@@ -100,6 +100,13 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					return ctx, err
 				}
 
+				// When created, apps will always be in stopped state
+				// During update, apps will be stopped and restarted after staging
+				app, _, err = s.client.UpdateApplicationStop(app.GUID)
+				if err != nil {
+					return ctx, err
+				}
+
 				createdEnv, _, err := s.bitsManager.UpdateAppEnvironment(app.GUID, appDeploy.EnvVars)
 				if err != nil {
 					return ctx, err
