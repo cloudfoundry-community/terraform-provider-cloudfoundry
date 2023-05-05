@@ -83,16 +83,18 @@ resource "cloudfoundry_app" "gobis-server" {
 }
 ```
 
-### Application Deployment strategy (Blue-Green deploy)
+### Application Deployment strategy
 
-* `strategy` - (Required) Strategy to use for creating/updating application. Default to `none`
-Following are supported:
+* `strategy` - (Required) Strategy to use for creating/updating application. Defaults to `none`
+Supported options:
   * `none`:
     * Alias: `standard`, `v2`
-    * Description: This is the default strategy, it will restage/create/restart app with interruption
+    * Description: perform restage/create/restart **with** interruption
   * `blue-green`:
     * Alias: `blue-green-v2`
-    * Description: It will restage and create app without interruption and rollback if an error occurred.
+    * Description: perform restage and create app **without** interruption and rollback if an error occurred (using the "venerable" blue-green pattern commonly used with CAPI v2, requires double the overall app memory available in quota)
+  * `rolling`:
+    * Description: perform restage and create app **without** interruption and rollback if an error occurred (using the `rolling` strategy provided in CAPI v3, requires memory for a single app instance available in quota)
 
 ### Service bindings
 
