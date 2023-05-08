@@ -107,12 +107,9 @@ Supported options:
 
 ### Routing
 
-* `routes` - (Optional, Set) The routes to map to the application to control its ingress traffic. Each route mapping is represented by its `route` block which supports fields documented below.
-
-The `route` block supports
-
-* `route` - (Required, String) The route id. Route can be defined using the `cloudfoundry_route` resource
-* `port` - (Number) The port of the application to map the tcp route to.~
+* `routes` - (Optional, block) The routes to map to the application to control its ingress traffic.
+  * `route` - (Required, String) The route id. Route can be defined using the `cloudfoundry_route` resource
+  * `port` - (Number) The port of the application to map the tcp route to.
 
 ~> **NOTE:** in the future, the `route` block will support the `port` attribute illustrated above to allow mapping of tcp routes, and listening on custom or multiple ports.  
 ~> **NOTE:** Route mappings can be controlled from either the `cloudfoundry_app.routes` or the `cloudfoundry_routes.target` attributes. Using both syntaxes will cause conflicts and result in unpredictable behavior.  
@@ -124,10 +121,12 @@ The `route` block supports
 ```hcl
 resource "cloudfoundry_app" "java-spring" {
 # [...]
- routes = [
-    { route = cloudfoundry_route.java-spring.id },
-    { route = cloudfoundry_route.java-spring-2.id }
-  ]
+ routes {
+    route = cloudfoundry_route.java-spring.id
+ }
+ routes {
+    route = cloudfoundry_route.java-spring-2.id
+ }
 }
 ```
 
