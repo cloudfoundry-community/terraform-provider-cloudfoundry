@@ -167,7 +167,7 @@ func resourceServiceKeyRead(ctx context.Context, d *schema.ResourceData, meta in
 	if d.Id() != "" {
 		serviceKeys, _, err = session.ClientV3.GetServiceCredentialBindings(
 			ccv3.Query{
-				Key:    ccv3.QueryKey("guids"),
+				Key:    ccv3.GUIDFilter,
 				Values: []string{d.Id()},
 			},
 		)
