@@ -162,15 +162,26 @@ func resourceServiceKeyCreate(ctx context.Context, d *schema.ResourceData, meta 
 
 func resourceServiceKeyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-	serviceKeys, _, err := session.ClientV3.GetServiceCredentialBindings(
-		ccv3.Query{
-			Key:    ccv3.QueryKey("service_instance_guids"),
-			Values: []string{d.Get("service_instance").(string)},
-		}, ccv3.Query{
-			Key:    ccv3.NameFilter,
-			Values: []string{d.Get("name").(string)},
-		},
-	)
+	var serviceKeys []resources.ServiceCredentialBinding
+	var err error
+	if d.Id() != "" {
+		serviceKeys, _, err = session.ClientV3.GetServiceCredentialBindings(
+			ccv3.Query{
+				Key:    ccv3.QueryKey("guids"),
+				Values: []string{d.Id()},
+			},
+		)
+	} else {
+		serviceKeys, _, err = session.ClientV3.GetServiceCredentialBindings(
+			ccv3.Query{
+				Key:    ccv3.QueryKey("service_instance_guids"),
+				Values: []string{d.Get("service_instance").(string)},
+			}, ccv3.Query{
+				Key:    ccv3.NameFilter,
+				Values: []string{d.Get("name").(string)},
+			},
+		)
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -183,6 +194,7 @@ func resourceServiceKeyRead(ctx context.Context, d *schema.ResourceData, meta in
 	}
 	d.Set("name", serviceKeys[0].Name)
 	d.Set("service_instance", serviceKeys[0].ServiceInstanceGUID)
+	d.SetId(serviceKeys[0].GUID)
 	serviceKeyDetails, _, err := session.ClientV3.GetServiceCredentialBindingDetails(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
