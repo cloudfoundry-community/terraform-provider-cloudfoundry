@@ -1,8 +1,10 @@
 package cloudfoundry
 
 import (
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"context"
+	"fmt"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -234,33 +236,6 @@ func resourceSpaceUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 		}
 	}
 	var err error
-	removeAsgs, addAsgs := getListChanges(d.GetChange("asgs"))
-	for _, asgID := range removeAsgs {
-		_, err = session.ClientV2.DeleteSecurityGroupSpace(asgID, spaceID)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	for _, asgID := range addAsgs {
-		_, err = session.ClientV2.UpdateSecurityGroupSpace(asgID, spaceID)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	removeStagingAsgs, addStagingAsgs := getListChanges(d.GetChange("staging_asgs"))
-	for _, asgID := range removeStagingAsgs {
-		_, err = session.ClientV2.DeleteSecurityGroupStagingSpace(asgID, spaceID)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	for _, asgID := range addStagingAsgs {
-		_, err = session.ClientV2.UpdateSecurityGroupStagingSpace(asgID, spaceID)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
 
 	for t, r := range typeToSpaceRoleMap {
 		remove, add := getListChanges(d.GetChange(t))
@@ -287,6 +262,47 @@ func resourceSpaceUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 		}
 	}
 
+	// Hint: In the last version asgs were managed via the v2 client like
+	//  session.ClientV2.DeleteSecurityGroupSpace(asgID, spaceID)
+	// Unfortunately this can only be done by an admin. I guess this is because the primary object of change
+	// is an asg which can only be changed by an admin.
+	//
+	// However this can be fixed by using the api call /v2/spaces/:s_guid/asgs/[staging_]security_groups/:asg_guid
+	// Unfortunately there is no high level fuction in the v2 clint for this. Therefore I used the raw client.
+	//
+	// Also it was necessary to first assign the user roles for the space and than manage asgs. Otherwise the user
+	// used by terraform itself does not have authorization on the space.
+
+	removeAsgs, addAsgs := getListChanges(d.GetChange("asgs"))
+	for _, asgID := range removeAsgs {
+		err := updateSpaceRemoveRunningAsg(spaceID, asgID, session)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	for _, asgID := range addAsgs {
+		err := updateSpaceAddRunningAsg(spaceID, asgID, session)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	removeStagingAsgs, addStagingAsgs := getListChanges(d.GetChange("staging_asgs"))
+	for _, asgID := range removeStagingAsgs {
+		err := updateSpaceRemoveStagingAsg(spaceID, asgID, session)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	for _, asgID := range addStagingAsgs {
+		err := updateSpaceAddStagingAsg(spaceID, asgID, session)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	segID := d.Get("isolation_segment").(string)
 	if segID != "" && d.IsNewResource() {
 		_, _, err := session.ClientV3.UpdateSpaceIsolationSegmentRelationship(spaceID, segID)
@@ -306,6 +322,48 @@ func resourceSpaceUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	return nil
+}
+
+func updateSpaceAddRunningAsg(spaceID string, asgID string, session *managers.Session) error {
+	return updateSpaceAsg("PUT", "", spaceID, asgID, session)
+}
+
+func updateSpaceRemoveRunningAsg(spaceID string, asgID string, session *managers.Session) error {
+	return updateSpaceAsg("DELETE", "", spaceID, asgID, session)
+}
+
+func updateSpaceAddStagingAsg(spaceID string, asgID string, session *managers.Session) error {
+	return updateSpaceAsg("PUT", "staging_", spaceID, asgID, session)
+}
+
+func updateSpaceRemoveStagingAsg(spaceID string, asgID string, session *managers.Session) error {
+	return updateSpaceAsg("DELETE", "staging_", spaceID, asgID, session)
+}
+
+func updateSpaceAsg(method string, lifecycle string, spaceID string, asgID string, session *managers.Session) error {
+	path := fmt.Sprintf("/v2/spaces/%s/%ssecurity_groups/%s", spaceID, lifecycle, asgID)
+
+	req, err := session.RawClient.NewRequest(method, path, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := session.RawClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode >= 400 {
+		err = ccerror.RawHTTPStatusError{
+			StatusCode: resp.StatusCode,
+		}
+		return err
+	}
+
+	defer func() {
+		resp.Body.Close()
+	}()
 	return nil
 }
 
