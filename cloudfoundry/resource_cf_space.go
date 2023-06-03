@@ -3,6 +3,7 @@ package cloudfoundry
 import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"context"
 	"fmt"
 	"github.com/hashicorp/go-uuid"
@@ -115,6 +116,18 @@ func resourceSpaceCreate(ctx context.Context, d *schema.ResourceData, meta inter
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	// Making the current acting user (used by terrafor itself) space manager and developer in order to avoid
+	// UNAUTHERIZED in subsequent modifications like setting asgs.
+	err = updateSpaceUserByRole(session, constant.SpaceManager, space.GUID, session.Config.User, true)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = updateSpaceUserByRole(session, constant.SpaceDeveloper, space.GUID, session.Config.User, true)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	d.SetId(space.GUID)
 	dg := resourceSpaceUpdate(ctx, d, meta)
 	if dg.HasError() {
@@ -237,41 +250,13 @@ func resourceSpaceUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 	var err error
 
-	for t, r := range typeToSpaceRoleMap {
-		remove, add := getListChanges(d.GetChange(t))
-		for _, uid := range remove {
-			_, err = session.ClientV2.DeleteSpaceUserByRole(r, spaceID, uid)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		}
-		for _, uidOrUsername := range add {
-			byUsername := true
-			_, err := uuid.ParseUUID(uidOrUsername)
-			if err == nil {
-				byUsername = false
-			}
-			err = addOrNothingUserInOrgBySpace(session, orgID, uidOrUsername, byUsername)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-			err = updateSpaceUserByRole(session, r, spaceID, uidOrUsername, byUsername)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		}
-	}
-
-	// Hint: In the last version asgs were managed via the v2 client like
-	//  session.ClientV2.DeleteSecurityGroupSpace(asgID, spaceID)
-	// Unfortunately this can only be done by an admin. I guess this is because the primary object of change
-	// is an asg which can only be changed by an admin.
-	//
-	// However this can be fixed by using the api call /v2/spaces/:s_guid/asgs/[staging_]security_groups/:asg_guid
-	// Unfortunately there is no high level fuction in the v2 clint for this. Therefore I used the raw client.
-	//
-	// Also it was necessary to first assign the user roles for the space and than manage asgs. Otherwise the user
-	// used by terraform itself does not have authorization on the space.
+	// Hint: Switching implementation from
+	//  	session.ClientV2.DeleteSecurityGroupSpace(asgID, spaceID)
+	// which uses something like
+	// 		/v2/security_groups/:sg_guid/....
+	// to
+	// 		/v2/spaces/:s_guid/asgs/[staging_]security_groups/:asg_guid
+	// the fist variant can only be done with full admin. The latter can be done as space manager
 
 	removeAsgs, addAsgs := getListChanges(d.GetChange("asgs"))
 	for _, asgID := range removeAsgs {
@@ -303,6 +288,31 @@ func resourceSpaceUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 		}
 	}
 
+	for t, r := range typeToSpaceRoleMap {
+		remove, add := getListChanges(d.GetChange(t))
+		for _, uid := range remove {
+			_, err = session.ClientV2.DeleteSpaceUserByRole(r, spaceID, uid)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		for _, uidOrUsername := range add {
+			byUsername := true
+			_, err := uuid.ParseUUID(uidOrUsername)
+			if err == nil {
+				byUsername = false
+			}
+			err = addOrNothingUserInOrgBySpace(session, orgID, uidOrUsername, byUsername)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			err = updateSpaceUserByRole(session, r, spaceID, uidOrUsername, byUsername)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
 	segID := d.Get("isolation_segment").(string)
 	if segID != "" && d.IsNewResource() {
 		_, _, err := session.ClientV3.UpdateSpaceIsolationSegmentRelationship(spaceID, segID)
@@ -325,26 +335,52 @@ func resourceSpaceUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 	return nil
 }
 
+func resourceSpaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	session := meta.(*managers.Session)
+
+	// Making the current acting user (used by terrafor itself) space manager and developer in order to avoid
+	// UNAUTHERIZED in subsequent modifications like setting asgs.
+	err := updateSpaceUserByRole(session, constant.SpaceManager, d.Id(), session.Config.User, true)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = updateSpaceUserByRole(session, constant.SpaceDeveloper, d.Id(), session.Config.User, true)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	j, _, err := session.ClientV2.DeleteSpace(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	_, err = session.ClientV2.PollJob(j)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return diag.FromErr(err)
+}
+
+// helper functions
+// These should go to the ClientV2; would someone like to raise a change request?
 func updateSpaceAddRunningAsg(spaceID string, asgID string, session *managers.Session) error {
-	return updateSpaceAsg("PUT", "", spaceID, asgID, session)
+	return updateSpaceAsg("PUT", "/v2/spaces/%s/security_groups/%s", spaceID, asgID, session)
 }
 
 func updateSpaceRemoveRunningAsg(spaceID string, asgID string, session *managers.Session) error {
-	return updateSpaceAsg("DELETE", "", spaceID, asgID, session)
+	return updateSpaceAsg("DELETE", "/v2/spaces/%s/security_groups/%s", spaceID, asgID, session)
 }
 
 func updateSpaceAddStagingAsg(spaceID string, asgID string, session *managers.Session) error {
-	return updateSpaceAsg("PUT", "staging_", spaceID, asgID, session)
+	return updateSpaceAsg("PUT", "/v2/spaces/%s/staging_security_groups/%s", spaceID, asgID, session)
 }
 
 func updateSpaceRemoveStagingAsg(spaceID string, asgID string, session *managers.Session) error {
-	return updateSpaceAsg("DELETE", "staging_", spaceID, asgID, session)
+	return updateSpaceAsg("DELETE", "/v2/spaces/%s/staging_security_groups/%s", spaceID, asgID, session)
 }
 
-func updateSpaceAsg(method string, lifecycle string, spaceID string, asgID string, session *managers.Session) error {
-	path := fmt.Sprintf("/v2/spaces/%s/%ssecurity_groups/%s", spaceID, lifecycle, asgID)
+func updateSpaceAsg(method string, path string, spaceID string, asgID string, session *managers.Session) error {
+	p := fmt.Sprintf(path, spaceID, asgID)
 
-	req, err := session.RawClient.NewRequest(method, path, nil)
+	req, err := session.RawClient.NewRequest(method, p, nil)
 	if err != nil {
 		return err
 	}
@@ -365,17 +401,4 @@ func updateSpaceAsg(method string, lifecycle string, spaceID string, asgID strin
 		resp.Body.Close()
 	}()
 	return nil
-}
-
-func resourceSpaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	session := meta.(*managers.Session)
-	j, _, err := session.ClientV2.DeleteSpace(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	_, err = session.ClientV2.PollJob(j)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	return diag.FromErr(err)
 }
