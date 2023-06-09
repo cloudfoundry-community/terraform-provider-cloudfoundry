@@ -18,14 +18,16 @@ type Standard struct {
 	bitsManager *bits.BitsManager
 	client      *ccv3.Client
 	runBinder   *RunBinder
+	actor       *Actor
 }
 
 // NewStandard initializes a v3 standard deployment strategy
-func NewStandard(bitsManager *bits.BitsManager, client *ccv3.Client, runBinder *RunBinder) *Standard {
+func NewStandard(bitsManager *bits.BitsManager, client *ccv3.Client, runBinder *RunBinder, actor *Actor) *Standard {
 	return &Standard{
 		bitsManager: bitsManager,
 		client:      client,
 		runBinder:   runBinder,
+		actor:       actor,
 	}
 }
 
@@ -204,6 +206,8 @@ func (s Standard) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 			},
 			ReversePrevious: defaultReverse,
 		},
+		s.actor.ScaleApplicationProcess(appDeploy, defaultReverse),
+		s.actor.UpdateApplicationProcess(appDeploy, defaultReverse),
 		{
 			Forward: func(ctx Context) (Context, error) {
 				if stateAsk == constant.ApplicationStopped {

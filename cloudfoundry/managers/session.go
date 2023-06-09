@@ -396,6 +396,8 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 }
 
 func (s *Session) loadDeployer() {
+	s.Actor = v3appdeployers.NewActor(s.BitsManager, s.ClientV3, s.RawClient, s.V3RunBinder)
+
 	s.RunBinder = appdeployers.NewRunBinder(s.ClientV2, s.NOAAClient)
 	stdStrategy := appdeployers.NewStandard(s.BitsManager, s.ClientV2, s.RunBinder)
 	bgStrategy := appdeployers.NewBlueGreenV2(s.BitsManager, s.ClientV2, s.ClientV3, s.RawClient, s.RunBinder, stdStrategy)
@@ -403,11 +405,10 @@ func (s *Session) loadDeployer() {
 
 	// Initialize deployment strategies in v3
 	s.V3RunBinder = v3appdeployers.NewRunBinder(s.ClientV3, s.NOAAClient)
-	v3std := v3appdeployers.NewStandard(s.BitsManager, s.ClientV3, s.V3RunBinder)
+	v3std := v3appdeployers.NewStandard(s.BitsManager, s.ClientV3, s.V3RunBinder, s.Actor)
 	v3bg := v3appdeployers.NewBlueGreen(s.BitsManager, s.ClientV3, s.RawClient, s.V3RunBinder, v3std)
 
 	// Initialize deployer for rolling
-	s.Actor = v3appdeployers.NewActor(s.BitsManager, s.ClientV3, s.RawClient, s.V3RunBinder)
 	rolling := v3appdeployers.NewRolling(s.Actor)
 
 	s.V3Deployer = v3appdeployers.NewDeployer(v3std, v3bg, rolling)
