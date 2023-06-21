@@ -38,8 +38,8 @@ type metadata struct {
 
 const (
 	appMetadata          metadataType  = "apps"
-	stopAppTimeout       time.Duration = 15 // CF SHOULD send a SIGKILL if an app is not stopped after 10 seconds
-	delayBetweenRequests time.Duration = 1
+	stopAppTimeout       time.Duration = 20 // CF SHOULD send a SIGKILL if an app is not stopped after 10 seconds
+	delayBetweenRequests time.Duration = 2
 )
 
 func NewBlueGreen(bitsManager *bits.BitsManager, client *ccv3.Client, rawClient *raw.RawClient, runBinder *RunBinder, standard *Standard) *BlueGreen {
@@ -448,28 +448,37 @@ func pathMetadata(t metadataType, appGuid string) string {
 }
 
 // Check the app subprocesses state to ensure it is really down.
+// Only return true once all processes are stopped
 // Note: when you ask CF to stop an app, it tries to stop it gracefully, but after a timeout, it sends a SIGKILL
 func isAppStopped(clientV3 *ccv3.Client, appGUID string) (bool, error) {
-	isStopped := false
 	processes, _, err := clientV3.GetApplicationProcesses(appGUID)
 
-	if err == nil {
-		for _, process := range processes {
-			processInstances, _, err := clientV3.GetProcessInstances(process.GUID)
-			if err == nil {
-				for _, processInstance := range processInstances {
-					if processInstance.State == constantV3.ProcessInstanceDown {
-						isStopped = true
-					} else if processInstance.State == constantV3.ProcessInstanceCrashed {
-						isStopped = true
-						log.Print("Process with GUID" + process.GUID + " has crashed. Considered stopped and proceeding with BlueGreen...")
-					}
-				}
+	if err != nil {
+		return false, err
+	}
+
+	for _, process := range processes {
+		processInstances, _, err := clientV3.GetProcessInstances(process.GUID)
+		if err != nil {
+			// Break out and propagate the error
+			break
+		}
+
+		for _, processInstance := range processInstances {
+			if processInstance.State == constantV3.ProcessInstanceDown {
+				// No-op
+			} else if processInstance.State == constantV3.ProcessInstanceCrashed {
+				// No-op
+				log.Print("Process with GUID" + process.GUID + " has crashed. Considered stopped and proceeding with BlueGreen...")
 			} else {
-				break
+				// state == STARTING | RUNNING
+				// Exit directly since at least one instance is still running
+				return false, nil
 			}
 		}
 	}
 
-	return isStopped, err
+	// isStopped = true
+	// All instances stopped
+	return true, err
 }

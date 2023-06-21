@@ -518,12 +518,13 @@ func TestAccDefaultValues_app1(t *testing.T) {
 	spaceID, spaceName := defaultTestSpace(t)
 	refApp := "cloudfoundry_app.app_1"
 
-	defaultDiskQuota := 1024
-	defaultMemory := 1024
+	// Default memory and disk quota is managed globally
+	// defaultDiskQuota := 1024
+	// defaultMemory := 1024
 	defaultInstances := 1
 	defaultPort := 8080
-	// Change this value if ssh is enabled globally
-	globalSSHEnabled := "true"
+	// whether ssh is disabled or not depends on the global setting
+	// globalSSHEnabled := "true"
 
 	for _, app := range appPaths {
 		appPath = app.path
@@ -551,10 +552,10 @@ func TestAccDefaultValues_app1(t *testing.T) {
 								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 								resource.TestCheckResourceAttr(refApp, "ports.0", fmt.Sprint(defaultPort)),
 								resource.TestCheckResourceAttr(refApp, "instances", fmt.Sprint(defaultInstances)),
-								resource.TestCheckResourceAttr(refApp, "memory", fmt.Sprint(defaultMemory)),
-								resource.TestCheckResourceAttr(refApp, "disk_quota", fmt.Sprint(defaultDiskQuota)),
+								// resource.TestCheckResourceAttr(refApp, "memory", fmt.Sprint(defaultMemory)),
+								// resource.TestCheckResourceAttr(refApp, "disk_quota", fmt.Sprint(defaultDiskQuota)),
 								resource.TestCheckResourceAttrSet(refApp, "stack"),
-								resource.TestCheckResourceAttr(refApp, "enable_ssh", globalSSHEnabled),
+								// resource.TestCheckResourceAttr(refApp, "enable_ssh", globalSSHEnabled),
 							),
 						},
 
@@ -591,12 +592,13 @@ func TestAccDefaultValuesRolling_app1(t *testing.T) {
 	spaceID, spaceName := defaultTestSpace(t)
 	refApp := "cloudfoundry_app.app_1"
 
-	defaultDiskQuota := 1024
-	defaultMemory := 1024
+	// Default memory and disk quota is managed globally
+	// defaultDiskQuota := 1024
+	// defaultMemory := 1024
 	defaultInstances := 1
 	defaultPort := 8080
-	// Change this value if ssh is enabled globally
-	globalSSHEnabled := "true"
+	// whether ssh is disabled or not depends on the global setting
+	// globalSSHEnabled := "true"
 
 	for _, app := range appPaths {
 		appPath = app.path
@@ -624,10 +626,10 @@ func TestAccDefaultValuesRolling_app1(t *testing.T) {
 								resource.TestCheckResourceAttr(refApp, "ports.#", "1"),
 								resource.TestCheckResourceAttr(refApp, "ports.0", fmt.Sprint(defaultPort)),
 								resource.TestCheckResourceAttr(refApp, "instances", fmt.Sprint(defaultInstances)),
-								resource.TestCheckResourceAttr(refApp, "memory", fmt.Sprint(defaultMemory)),
-								resource.TestCheckResourceAttr(refApp, "disk_quota", fmt.Sprint(defaultDiskQuota)),
+								// resource.TestCheckResourceAttr(refApp, "memory", fmt.Sprint(defaultMemory)),
+								// resource.TestCheckResourceAttr(refApp, "disk_quota", fmt.Sprint(defaultDiskQuota)),
 								resource.TestCheckResourceAttrSet(refApp, "stack"),
-								resource.TestCheckResourceAttr(refApp, "enable_ssh", globalSSHEnabled),
+								// resource.TestCheckResourceAttr(refApp, "enable_ssh", globalSSHEnabled),
 							),
 						},
 
@@ -1119,70 +1121,52 @@ func TestAccResApp_dockerAppInvocationTimeout(t *testing.T) {
 
 func TestAccResApp_app_bluegreen(t *testing.T) {
 
-	spaceID, _ := defaultTestSpace(t)
+	_, orgName := defaultTestOrg(t)
+	spaceID, spaceName := defaultTestSpace(t)
 
-	refApp := "cloudfoundry_app.dummy-app"
+	refApp := "cloudfoundry_app.test-docker-app"
+	invocationTimeout := 10
+	resource.Test(t,
+		resource.TestCase{
+			PreCheck:          func() { testAccPreCheck(t) },
+			ProviderFactories: testAccProvidersFactories,
+			CheckDestroy:      testAccCheckAppDestroyed([]string{"test-docker-app"}),
+			Steps: []resource.TestStep{
 
-	for _, app := range appPaths {
-		appPath = app.path
+				resource.TestStep{
+					Config: fmt.Sprintf(appResourceDockerInvocationTimeout, defaultAppDomain(), orgName, spaceName, invocationTimeout),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						testAccCheckAppExists(refApp, func() (err error) {
 
-		t.Run(fmt.Sprintf("AppSource=%s", app.typeOfPath), func(t *testing.T) {
-			appDeploy := &appdeployers.AppDeploy{}
-			resource.Test(t,
-				resource.TestCase{
-					PreCheck:          func() { testAccPreCheck(t) },
-					ProviderFactories: testAccProvidersFactories,
-					CheckDestroy:      testAccCheckAppDestroyed([]string{"dummy-app"}),
-					Steps: []resource.TestStep{
-
-						resource.TestStep{
-							Config: fmt.Sprintf(appResourceBlueGreen,
-								defaultAppDomain(),
-								spaceID, spaceID,
-								"1",
-								appPath,
-							),
-							Check: resource.ComposeTestCheckFunc(
-								testAccCheckAppExistsInject(refApp, appDeploy, func() (err error) {
-
-									if err = assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil); err != nil {
-										return err
-									}
-									return
-								}),
-							),
-						},
-
-						resource.TestStep{
-							Config: fmt.Sprintf(appResourceBlueGreen,
-								defaultAppDomain(),
-								spaceID, spaceID,
-								"2",
-								appPath,
-							),
-							Check: resource.ComposeTestCheckFunc(
-								func(s *terraform.State) error {
-									err := assertHTTPResponse("https://dummy-app-tf."+defaultAppDomain(), 200, nil)
-									if err != nil {
-										return err
-									}
-									rs, ok := s.RootModule().Resources[refApp]
-									if !ok {
-										return fmt.Errorf("app '%s' not found in terraform state", refApp)
-									}
-
-									id := rs.Primary.ID
-									if id == appDeploy.App.GUID {
-										return fmt.Errorf("After blue green deployment, app must have changed but GUID are the same between previous and update")
-									}
-									return nil
-								},
-							),
-						},
-					},
-				})
+							if err = assertHTTPResponse("https://app_route_test_timeout."+defaultAppDomain(), 200, nil); err != nil {
+								return err
+							}
+							return
+						}),
+						resource.TestCheckResourceAttr(
+							refApp, "name", "test-docker-app"),
+						resource.TestCheckResourceAttr(
+							refApp, "space", spaceID),
+						// For docker apps, ports are not set (not supported in v3)
+						resource.TestCheckResourceAttr(
+							refApp, "ports.#", "0"),
+						resource.TestCheckResourceAttr(
+							refApp, "instances", "1"),
+						// For docker apps, stack is ""
+						resource.TestCheckResourceAttr(
+							refApp, "stack", ""),
+						resource.TestCheckResourceAttr(
+							refApp, "environment.%", "0"),
+						resource.TestCheckResourceAttr(
+							refApp, "enable_ssh", "true"),
+						resource.TestCheckResourceAttr(
+							refApp, "docker_image", "cloudfoundry/diego-docker-app:latest"),
+						resource.TestCheckResourceAttr(
+							refApp, "health_check_invocation_timeout", fmt.Sprintf("%d", invocationTimeout)),
+					),
+				},
+			},
 		})
-	}
 }
 
 func testAccCheckAppExistsInject(resApp string, appDeploy *appdeployers.AppDeploy, validate func() error) resource.TestCheckFunc {

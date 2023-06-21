@@ -310,7 +310,6 @@ func validateV3Strategy(v interface{}, k string) (ws []string, errs []error) {
 
 // suppress diff on process/droplet related attributes
 func diffSuppressOnStoppedApps(k, old, new string, d *schema.ResourceData) bool {
-	log.Printf("[INFO] test supp diff %T", d.Get("stopped"))
 	if stopped, ok := d.GetOk("stopped"); ok {
 		if stopped.(bool) {
 			return true

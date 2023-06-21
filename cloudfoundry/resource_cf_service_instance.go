@@ -3,7 +3,6 @@ package cloudfoundry
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"time"
