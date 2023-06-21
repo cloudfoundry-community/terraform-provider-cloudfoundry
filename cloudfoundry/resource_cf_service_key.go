@@ -28,7 +28,7 @@ func resourceServiceKey() *schema.Resource {
 		DeleteContext: resourceServiceKeyDelete,
 
 		Importer: &schema.ResourceImporter{
-			StateContext: ImportReadContext(resourceServiceKeyRead),
+			StateContext: resourceServiceKeyImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -242,4 +242,47 @@ func resourceServiceKeyDelete(ctx context.Context, d *schema.ResourceData, meta 
 		return false, nil
 	}, 5*time.Second, 60*time.Second)
 	return diag.FromErr(err)
+}
+
+func resourceServiceKeyImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	session := meta.(*managers.Session)
+
+	GUID := d.Id()
+	var serviceKeys []resources.ServiceCredentialBinding
+	var err error
+	if GUID != "" {
+		serviceKeys, _, err = session.ClientV3.GetServiceCredentialBindings(
+			ccv3.Query{
+				Key:    ccv3.GUIDFilter,
+				Values: []string{GUID},
+			},
+		)
+	} else {
+		serviceKeys, _, err = session.ClientV3.GetServiceCredentialBindings(
+			ccv3.Query{
+				Key:    ccv3.QueryKey("service_instance_guids"),
+				Values: []string{d.Get("service_instance").(string)},
+			}, ccv3.Query{
+				Key:    ccv3.NameFilter,
+				Values: []string{d.Get("name").(string)},
+			},
+		)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(serviceKeys) != 1 {
+		return nil, fmt.Errorf("Error importing service key, cloudcontroller returned more than one results")
+	}
+	d.Set("name", serviceKeys[0].Name)
+	d.Set("service_instance", serviceKeys[0].ServiceInstanceGUID)
+	d.SetId(serviceKeys[0].GUID)
+	serviceKeyDetails, _, err := session.ClientV3.GetServiceCredentialBindingDetails(d.Id())
+	if err != nil {
+		return nil, err
+	}
+	d.Set("credentials", normalizeMap(serviceKeyDetails.Credentials, make(map[string]interface{}), "", "_"))
+	return ImportReadContext(resourceServiceInstanceRead)(ctx, d, meta)
 }
