@@ -224,7 +224,7 @@ func (actions Actions) Execute() (Context, error) {
 
 			reverseError := action.ReversePrevious(ctx)
 			if reverseError != nil {
-				return ctx, fmt.Errorf("%s: %s", RewindFailureMsg, reverseError)
+				return ctx, fmt.Errorf("%s: %s, Nested error: %s", RewindFailureMsg, reverseError, err)
 			}
 			return ctx, err
 		}
