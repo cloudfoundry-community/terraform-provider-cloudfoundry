@@ -208,8 +208,12 @@ type ResourceChanger interface {
 // V3
 func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy, error) {
 
+	labels := d.Get(labelsKey).(map[string]types.NullString)
 	metadata := resources.Metadata{
 		Labels: map[string]types.NullString{},
+	}
+	for labelKey, label := range labels {
+		metadata.Labels[labelKey] = label
 	}
 
 	stateAsk := v3Constants.ApplicationStarted
@@ -307,7 +311,6 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 	}
 
 	envVars := d.Get("environment").(map[string]interface{})
-
 	enableSSH := types.NullBool{
 		IsSet: false,
 	}
@@ -348,6 +351,7 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 			_ = d.Set("buildpack", bpkg[0])
 		}
 	}
+	_ = d.Set(labelsKey, appDeploy.App.Metadata.Labels)
 
 	_ = d.Set("enable_ssh", appDeploy.EnableSSH.Value)
 	_ = d.Set("stopped", appDeploy.App.State == v3Constants.ApplicationStopped)
