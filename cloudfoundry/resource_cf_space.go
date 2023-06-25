@@ -1,11 +1,8 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
 	"context"
-	"fmt"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -116,18 +113,6 @@ func resourceSpaceCreate(ctx context.Context, d *schema.ResourceData, meta inter
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	// Making the current acting user (used by terrafor itself) space manager and developer in order to avoid
-	// UNAUTHORIZED in subsequent modifications like setting asgs.
-	err = updateSpaceUserByRole(session, constant.SpaceManager, space.GUID, session.Config.User, true)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = updateSpaceUserByRole(session, constant.SpaceDeveloper, space.GUID, session.Config.User, true)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
 	d.SetId(space.GUID)
 	dg := resourceSpaceUpdate(ctx, d, meta)
 	if dg.HasError() {
@@ -249,25 +234,15 @@ func resourceSpaceUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 		}
 	}
 	var err error
-
-	// Hint: Switching implementation from
-	//  	session.ClientV2.DeleteSecurityGroupSpace(asgID, spaceID)
-	// which uses something like
-	// 		/v2/security_groups/:sg_guid/....
-	// to
-	// 		/v2/spaces/:s_guid/asgs/[staging_]security_groups/:asg_guid
-	// the fist variant can only be done with full admin. The latter can be done as space manager
-
 	removeAsgs, addAsgs := getListChanges(d.GetChange("asgs"))
 	for _, asgID := range removeAsgs {
-		err := updateSpaceRemoveRunningAsg(spaceID, asgID, session)
+		_, err = session.ClientV2.DeleteSecurityGroupSpace(asgID, spaceID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
-
 	for _, asgID := range addAsgs {
-		err := updateSpaceAddRunningAsg(spaceID, asgID, session)
+		_, err = session.ClientV2.UpdateSecurityGroupSpace(asgID, spaceID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -275,14 +250,13 @@ func resourceSpaceUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 
 	removeStagingAsgs, addStagingAsgs := getListChanges(d.GetChange("staging_asgs"))
 	for _, asgID := range removeStagingAsgs {
-		err := updateSpaceRemoveStagingAsg(spaceID, asgID, session)
+		_, err = session.ClientV2.DeleteSecurityGroupStagingSpace(asgID, spaceID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
-
 	for _, asgID := range addStagingAsgs {
-		err := updateSpaceAddStagingAsg(spaceID, asgID, session)
+		_, err = session.ClientV2.UpdateSecurityGroupStagingSpace(asgID, spaceID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -346,48 +320,4 @@ func resourceSpaceDelete(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 	return diag.FromErr(err)
-}
-
-// helper functions
-// These should go to the ClientV2; would someone like to raise a change request?
-func updateSpaceAddRunningAsg(spaceID string, asgID string, session *managers.Session) error {
-	return updateSpaceAsg("PUT", "/v2/spaces/%s/security_groups/%s", spaceID, asgID, session)
-}
-
-func updateSpaceRemoveRunningAsg(spaceID string, asgID string, session *managers.Session) error {
-	return updateSpaceAsg("DELETE", "/v2/spaces/%s/security_groups/%s", spaceID, asgID, session)
-}
-
-func updateSpaceAddStagingAsg(spaceID string, asgID string, session *managers.Session) error {
-	return updateSpaceAsg("PUT", "/v2/spaces/%s/staging_security_groups/%s", spaceID, asgID, session)
-}
-
-func updateSpaceRemoveStagingAsg(spaceID string, asgID string, session *managers.Session) error {
-	return updateSpaceAsg("DELETE", "/v2/spaces/%s/staging_security_groups/%s", spaceID, asgID, session)
-}
-
-func updateSpaceAsg(method string, path string, spaceID string, asgID string, session *managers.Session) error {
-	p := fmt.Sprintf(path, spaceID, asgID)
-
-	req, err := session.RawClient.NewRequest(method, p, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := session.RawClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode >= 400 {
-		err = ccerror.RawHTTPStatusError{
-			StatusCode: resp.StatusCode,
-		}
-		return err
-	}
-
-	defer func() {
-		resp.Body.Close()
-	}()
-	return nil
 }
