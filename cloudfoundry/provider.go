@@ -124,6 +124,7 @@ func Provider() *schema.Provider {
 			"cloudfoundry_org":                           resourceOrg(),
 			"cloudfoundry_space":                         resourceSpace(),
 			"cloudfoundry_space_users":                   resourceSpaceUsers(),
+			"cloudfoundry_space_asgs":                    resourceSpaceAsgs(),
 			"cloudfoundry_org_users":                     resourceOrgUsers(),
 			"cloudfoundry_service_broker":                resourceServiceBroker(),
 			"cloudfoundry_service_plan_access":           resourceServicePlanAccess(),
