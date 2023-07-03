@@ -82,9 +82,13 @@ func resourceServiceInstance() *schema.Resource {
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 			"recursive_delete": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
+				Type:       schema.TypeBool,
+				Optional:   true,
+				Deprecated: "Since CF API v3, recursive delete is always done on the cloudcontroller side. This will be removed in future releases",
+				// Supressing all diffs on this attribute
+				DiffSuppressFunc: func(k, oldValue, newValue string, d *schema.ResourceData) bool {
+					return true
+				},
 			},
 		},
 		CustomizeDiff: customdiff.All(
