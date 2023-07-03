@@ -49,7 +49,7 @@ The following attributes are exported:
 An existing Service Instance can be imported using its guid, e.g.
 
 ```bash
-terraform import cloudfoundry_service.redis a-guid
+terraform import cloudfoundry_service_instance.redis a-guid
 ```
 
 ### Timeouts
