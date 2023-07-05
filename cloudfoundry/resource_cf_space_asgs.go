@@ -206,7 +206,12 @@ func updateSpaceAsgs(c context.Context, method string, path string, spaceID stri
 		err = ccerror.RawHTTPStatusError{
 			StatusCode: resp.StatusCode,
 		}
+		return err
 	}
-	err = resp.Body.Close()
+
+	defer func() {
+		err = resp.Body.Close()
+	}()
+
 	return err
 }

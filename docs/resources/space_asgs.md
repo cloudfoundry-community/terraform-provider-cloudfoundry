@@ -32,9 +32,3 @@ The following arguments are supported:
 * `space` - (Required) The guid of the target space.
 * `running_asgs` - (Optional) List of running [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications running within this space. Defaults to empty list.
 * `staging_asgs` - (Optional) List of staging [application security groups](/docs/providers/cloudfoundry/r/asg.html) to apply to applications being staged for this space. Defaults to empty list.
-
-## Attributes Reference
-Not applicable.
-
-## Import
-Not applicable.
