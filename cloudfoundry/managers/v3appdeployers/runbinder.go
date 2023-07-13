@@ -341,7 +341,7 @@ func (r RunBinder) Start(appDeploy AppDeploy) (resources.Application, resources.
 			}
 
 			if ccBuild.State == constant.BuildFailed {
-				return true, fmt.Errorf("Package staging failed: %s", build.Error)
+				return true, fmt.Errorf("Package staging failed: %s", ccBuild.Error)
 			}
 
 			return false, nil
