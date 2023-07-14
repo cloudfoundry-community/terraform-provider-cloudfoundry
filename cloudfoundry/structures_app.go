@@ -208,12 +208,12 @@ type ResourceChanger interface {
 // V3
 func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy, error) {
 
-	labels := d.Get(labelsKey).(map[string]types.NullString)
+	labels := d.Get(labelsKey).(map[string]interface{})
 	metadata := resources.Metadata{
 		Labels: map[string]types.NullString{},
 	}
 	for labelKey, label := range labels {
-		metadata.Labels[labelKey] = label
+		metadata.Labels[labelKey] = label.(types.NullString)
 	}
 
 	stateAsk := v3Constants.ApplicationStarted
