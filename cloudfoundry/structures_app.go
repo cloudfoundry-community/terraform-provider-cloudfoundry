@@ -213,11 +213,10 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		Labels: map[string]types.NullString{},
 	}
 	for labelKey, label := range labels {
-		switch label.(type) {
+		switch str := label.(type) {
 		case types.NullString:
-			metadata.Labels[labelKey] = label.(types.NullString)
+			metadata.Labels[labelKey] = str
 		case string:
-			str := label.(string)
 			metadata.Labels[labelKey] = types.NullString{
 				Value: str,
 				IsSet: true,
