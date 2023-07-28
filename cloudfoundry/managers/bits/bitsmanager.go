@@ -340,7 +340,7 @@ func (m BitsManager) RetrieveZip(path string) (ZipFile, error) {
 		}
 		fileSize := resp.ContentLength
 		if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-			return ZipFile{}, fmt.Errorf(resp.Status)
+			return ZipFile{}, fmt.Errorf("Failed to download file %s (%s)", path, strings.Trim(resp.Status, " "))
 		}
 		_, params, err := mime.ParseMediaType(resp.Header.Get("Content-Disposition"))
 		if err == nil {
