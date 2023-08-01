@@ -359,7 +359,12 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 			_ = d.Set("buildpack", bpkg[0])
 		}
 	}
-	_ = d.Set(labelsKey, appDeploy.App.Metadata.Labels)
+
+	labels := make(map[string]interface{})
+	for labelKey, label := range appDeploy.App.Metadata.Labels {
+		labels[labelKey] = label.Value
+	}
+	_ = d.Set(labelsKey, labels)
 
 	_ = d.Set("enable_ssh", appDeploy.EnableSSH.Value)
 	_ = d.Set("stopped", appDeploy.App.State == v3Constants.ApplicationStopped)
