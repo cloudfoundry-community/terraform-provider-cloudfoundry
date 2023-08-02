@@ -408,6 +408,11 @@ func resourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface
 
 	AppDeployV3ToResourceData(d, appDeployResponse)
 
+	err = metadataRead(appMetadata, d, meta, false)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	
 	return nil
 }
 
