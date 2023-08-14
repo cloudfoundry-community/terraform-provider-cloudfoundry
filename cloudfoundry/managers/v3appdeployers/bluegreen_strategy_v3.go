@@ -124,10 +124,11 @@ func (s BlueGreen) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				channelIsStopped := make(chan bool, 1)
 				channelError := make(chan error, 1)
 				var err error
+				var timedout = false
 
 				go func() {
 					isStopped := false
-					for !isStopped {
+					for !isStopped && !timedout {
 						isStopped, err = isAppStopped(s.client, appDeploy.App.GUID)
 						time.Sleep(delayBetweenRequests * time.Second)
 					}
@@ -140,6 +141,7 @@ func (s BlueGreen) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 				case <-time.After(stopAppTimeout * time.Second):
 					// App is not in expected state (stopped) after waiting for the timeout
 					log.Print("Timeout reached while waiting for application to stop.")
+					timedout = true
 				case <-channelError:
 					return ctx, err
 				}
