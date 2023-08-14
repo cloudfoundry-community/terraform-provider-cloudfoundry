@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 )
 
 func resourceServiceKey() *schema.Resource {
@@ -88,69 +89,89 @@ func resourceServiceKeyCreate(ctx context.Context, d *schema.ResourceData, meta 
 		Type:                resources.ServiceCredentialBindingType("key"),
 	}
 
-	jobURL, _, err := session.ClientV3.CreateServiceCredentialBinding(binding)
+	err := retry.RetryContext(ctx, 5*time.Minute, func() *retry.RetryError {
+		jobURL, _, err := session.ClientV3.CreateServiceCredentialBinding(binding)
+		if err != nil {
+			return retry.NonRetryableError(err)
+		}
+		// Poll the state of the async job
+		err = common.PollingWithTimeout(func() (bool, error) {
+			job, _, err := session.ClientV3.GetJob(jobURL)
+			if err != nil {
+				return true, err
+			}
+
+			// Stop polling and return error if job failed
+			if job.State == constant.JobFailed {
+				return true, fmt.Errorf(
+					"ServiceKey creation failed for key %s, reason: %+v",
+					serviceInstance,
+					job.Errors(),
+				)
+			}
+
+			// Check binding state if job completed
+			if job.State == constant.JobComplete {
+				createdKeys, _, err := session.ClientV3.GetServiceCredentialBindings(
+					ccv3.Query{
+						Key:    ccv3.QueryKey("service_instance_guids"),
+						Values: []string{binding.ServiceInstanceGUID},
+					}, ccv3.Query{
+						Key:    ccv3.NameFilter,
+						Values: []string{name},
+					},
+				)
+				if err != nil {
+					return true, err
+				}
+
+				if len(createdKeys) == 0 {
+					return false, nil
+				}
+
+				if createdKeys[0].LastOperation.State == resources.OperationSucceeded {
+					return true, nil
+				}
+
+				if createdKeys[0].LastOperation.State == resources.OperationFailed {
+					return true, fmt.Errorf(
+						"Service key creation failed for key %s, reason: %+v",
+						serviceInstance,
+						job.Errors(),
+					)
+				}
+			}
+
+			// Last operation initial or inprogress or job not completed, continue polling
+			return false, nil
+		}, 5*time.Second, 60*time.Second)
+		if err != nil {
+			return retry.RetryableError(err)
+		}
+		return nil
+	})
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	var serviceKey resources.ServiceCredentialBinding
-
-	// Poll the state of the async job
-	err = common.PollingWithTimeout(func() (bool, error) {
-		job, _, err := session.ClientV3.GetJob(jobURL)
-		if err != nil {
-			return true, err
-		}
-
-		// Stop polling and return error if job failed
-		if job.State == constant.JobFailed {
-			return true, fmt.Errorf(
-				"ServiceKey creation failed for key %s, reason: %+v",
-				serviceInstance,
-				job.Errors(),
-			)
-		}
-
-		// Check binding state if job completed
-		if job.State == constant.JobComplete {
-			createdKeys, _, err := session.ClientV3.GetServiceCredentialBindings(
-				ccv3.Query{
-					Key:    ccv3.QueryKey("service_instance_guids"),
-					Values: []string{binding.ServiceInstanceGUID},
-				}, ccv3.Query{
-					Key:    ccv3.NameFilter,
-					Values: []string{name},
-				},
-			)
-			if err != nil {
-				return true, err
-			}
-
-			if len(createdKeys) == 0 {
-				return false, nil
-			}
-
-			if createdKeys[0].LastOperation.State == resources.OperationSucceeded {
-				serviceKey = createdKeys[0]
-				return true, nil
-			}
-
-			if createdKeys[0].LastOperation.State == resources.OperationFailed {
-				return true, fmt.Errorf(
-					"Service key creation failed for key %s, reason: %+v",
-					serviceInstance,
-					job.Errors(),
-				)
-			}
-		}
-
-		// Last operation initial or inprogress or job not completed, continue polling
-		return false, nil
-	}, 5*time.Second, 60*time.Second)
+	createdKeys, _, err := session.ClientV3.GetServiceCredentialBindings(
+		ccv3.Query{
+			Key:    ccv3.QueryKey("service_instance_guids"),
+			Values: []string{binding.ServiceInstanceGUID},
+		}, ccv3.Query{
+			Key:    ccv3.NameFilter,
+			Values: []string{name},
+		},
+	)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
+	if len(createdKeys) == 0 {
+		return diag.FromErr(fmt.Errorf("Async job finished but no keys found with LIST v3/service_keys request"))
+	}
+	serviceKey = createdKeys[0]
 	credentials, _, err := session.ClientV3.GetServiceCredentialBindingDetails(serviceKey.GUID)
 	if err != nil {
 		return diag.FromErr(err)
