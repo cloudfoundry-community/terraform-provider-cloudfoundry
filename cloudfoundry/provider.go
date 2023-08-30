@@ -89,6 +89,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("CF_FORCE_BROKER_NOT_FAIL_CATALOG", false),
 				Description: "Set to true to not trigger fail on catalog on service broker",
 			},
+			"delete_recursive_allowed": &schema.Schema{
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("CF_DELETE_RECURSIVE_ALLOWED", true),
+				Description: "Set to false to disallow recurive deletion",
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -159,6 +165,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		DefaultQuotaName:          d.Get("default_quota_name").(string),
 		StoreTokensPath:           d.Get("store_tokens_path").(string),
 		ForceNotFailBrokerCatalog: d.Get("force_broker_not_fail_when_catalog_not_accessible").(bool),
+		DeleteRecursiveAllowed:    d.Get("delete_recursive_allowed").(bool),
 	}
 	session, err := managers.NewSession(c)
 	return session, diag.FromErr(err)

@@ -1,8 +1,10 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"context"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
@@ -62,6 +64,12 @@ func resourceOrg() *schema.Resource {
 			},
 			labelsKey:      labelsSchema(),
 			annotationsKey: annotationsSchema(),
+			"delete_recursive_allowed": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Allow recursive deletion of spaces.",
+			},
 		},
 	}
 }
@@ -170,13 +178,18 @@ func resourceOrgUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 
 func resourceOrgDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-	client := session.ClientV2
+	client := session.ClientV3
 
 	id := d.Id()
-	spaces, _, err := client.GetSpaces(ccv2.FilterByOrg(id))
-
+	spaces, _, _, err := session.ClientV3.GetSpaces(ccv3.Query{
+		Key:    ccv3.OrganizationGUIDFilter,
+		Values: []string{d.Id()},
+	})
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	if !session.Config.DeleteRecursiveAllowed && len(spaces) > 0 {
+		return diag.Errorf("Organization %s has %d spaces. Please delete them first or set delete_recursive_allowed to true", id, len(spaces))
 	}
 	for _, s := range spaces {
 		j, _, err := client.DeleteSpace(s.GUID)
