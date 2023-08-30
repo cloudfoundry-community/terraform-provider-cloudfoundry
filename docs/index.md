@@ -82,3 +82,8 @@ The following arguments are supported:
   
 * `force_broker_not_fail_when_catalog_not_accessible` (Optional) Set to true to enforce `fail_when_catalog_not_accessible` to `true` to all broker for avoiding being
   stuck if broker has been deleted for example. This can also be specified with the `CF_FORCE_BROKER_NOT_FAIL_CATALOG` shell environment variable.
+
+* `allow_recursive_org_deletion` (Optional, Default: `true`) Set to false to disallow recursive deletion of ressources inside concerned org. This can also be specified with the `CF_ALLOW_RECURSIVE_ORG_DELETION` shell environment variable.
+
+* `allow_recursive_space_deletion` (Optional, Default: `true`) Set to false to disallow recursive deletion of ressources inside concerned space. This can also be specified with the `CF_ALLOW_RECURSIVE_SPACE_DELETION` shell environment variable.
+

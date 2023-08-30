@@ -1,8 +1,10 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"context"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -311,11 +313,51 @@ func resourceSpaceUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 
 func resourceSpaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-	j, _, err := session.ClientV2.DeleteSpace(d.Id())
+
+	// Check if recursive deletion is allowed
+	if !session.Config.AllowRecursiveSpaceDeletion {
+		// Search for apps
+		apps, _, err := session.ClientV3.GetApplications(ccv3.Query{
+			Key:    ccv3.SpaceGUIDFilter,
+			Values: []string{d.Id()},
+		})
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if len(apps) > 0 {
+			return diag.Errorf("space %s has %d applications", d.Id(), len(apps))
+		}
+
+		// Search for routes
+		routes, _, err := session.ClientV3.GetRoutes(ccv3.Query{
+			Key:    ccv3.SpaceGUIDFilter,
+			Values: []string{d.Id()},
+		})
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if len(routes) > 0 {
+			return diag.Errorf("space %s has %d routes", d.Id(), len(routes))
+		}
+
+		// Search for service instances
+		servicesInstances, _, _, err := session.ClientV3.GetServiceInstances(ccv3.Query{
+			Key:    ccv3.SpaceGUIDFilter,
+			Values: []string{d.Id()},
+		})
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if len(servicesInstances) > 0 {
+			return diag.Errorf("space %s has %d service instances", d.Id(), len(servicesInstances))
+		}
+	}
+
+	j, _, err := session.ClientV3.DeleteSpace(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	_, err = session.ClientV2.PollJob(j)
+	_, err = session.ClientV3.PollJob(j)
 	if err != nil {
 		return diag.FromErr(err)
 	}

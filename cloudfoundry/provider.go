@@ -89,6 +89,18 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("CF_FORCE_BROKER_NOT_FAIL_CATALOG", false),
 				Description: "Set to true to not trigger fail on catalog on service broker",
 			},
+			"allow_recursive_org_deletion": &schema.Schema{
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("CF_ALLOW_RECURSIVE_ORG_DELETION", true),
+				Description: "Set to false to disallow recursive deletion of organization",
+			},
+			"allow_recursive_space_deletion": &schema.Schema{
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("CF_ALLOW_RECURSIVE_SPACE_DELETION", true),
+				Description: "Set to false to disallow recursive deletion of space",
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -146,19 +158,21 @@ func Provider() *schema.Provider {
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	c := managers.Config{
-		Endpoint:                  strings.TrimSuffix(d.Get("api_url").(string), "/"),
-		User:                      d.Get("user").(string),
-		Password:                  d.Get("password").(string),
-		SSOPasscode:               d.Get("sso_passcode").(string),
-		CFClientID:                d.Get("cf_client_id").(string),
-		CFClientSecret:            d.Get("cf_client_secret").(string),
-		UaaClientID:               d.Get("uaa_client_id").(string),
-		UaaClientSecret:           d.Get("uaa_client_secret").(string),
-		SkipSslValidation:         d.Get("skip_ssl_validation").(bool),
-		AppLogsMax:                d.Get("app_logs_max").(int),
-		DefaultQuotaName:          d.Get("default_quota_name").(string),
-		StoreTokensPath:           d.Get("store_tokens_path").(string),
-		ForceNotFailBrokerCatalog: d.Get("force_broker_not_fail_when_catalog_not_accessible").(bool),
+		Endpoint:                    strings.TrimSuffix(d.Get("api_url").(string), "/"),
+		User:                        d.Get("user").(string),
+		Password:                    d.Get("password").(string),
+		SSOPasscode:                 d.Get("sso_passcode").(string),
+		CFClientID:                  d.Get("cf_client_id").(string),
+		CFClientSecret:              d.Get("cf_client_secret").(string),
+		UaaClientID:                 d.Get("uaa_client_id").(string),
+		UaaClientSecret:             d.Get("uaa_client_secret").(string),
+		SkipSslValidation:           d.Get("skip_ssl_validation").(bool),
+		AppLogsMax:                  d.Get("app_logs_max").(int),
+		DefaultQuotaName:            d.Get("default_quota_name").(string),
+		StoreTokensPath:             d.Get("store_tokens_path").(string),
+		ForceNotFailBrokerCatalog:   d.Get("force_broker_not_fail_when_catalog_not_accessible").(bool),
+		AllowRecursiveOrgDeletion:   d.Get("allow_recursive_org_deletion").(bool),
+		AllowRecursiveSpaceDeletion: d.Get("allow_recursive_space_deletion").(bool),
 	}
 	session, err := managers.NewSession(c)
 	return session, diag.FromErr(err)

@@ -175,6 +175,13 @@ func resourceOrgDelete(ctx context.Context, d *schema.ResourceData, meta interfa
 	id := d.Id()
 	spaces, _, err := client.GetSpaces(ccv2.FilterByOrg(id))
 
+	// Check if we are allowed to recursively delete spaces
+	if !session.Config.AllowRecursiveOrgDeletion {
+		if len(spaces) > 0 {
+			return diag.Errorf("Organization %s has %d spaces. Please delete them first.", id, len(spaces))
+		}
+	}
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
