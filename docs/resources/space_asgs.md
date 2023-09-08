@@ -10,8 +10,8 @@ description: |-
 
 Provides a Cloud Foundry resource for managing Cloud Foundry application security groups for a space.
 
-~> **NOTE:** This resource requires the acting user of terreform to be autherized as space developer for the target space. If the target space is managed be terraform use the resource cloudfoundry_space_users to add the acting user as developer first.
-~> **NOTE:** This resource only modifies asgs managed in the resource itself. It ignores any existing default asgs (asgs defined on platform level).
+~> **NOTE:** This resource requires the acting user of Terraform to be authorized as space developer for the target space. If the target space is managed by terraform, use the resource cloudfoundry_space_users to add the acting user as developer first.
+~> **NOTE:** This resource only modifies asgs managed in the resource itself. It ignores any existing default asgs (asgs defined at the platform level).
 
 ## Example Usage
 
