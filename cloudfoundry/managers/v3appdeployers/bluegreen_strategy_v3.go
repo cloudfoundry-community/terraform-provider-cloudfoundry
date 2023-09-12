@@ -37,7 +37,6 @@ type metadata struct {
 }
 
 const (
-	appMetadata          metadataType  = "apps"
 	stopAppTimeout       time.Duration = 20 // CF SHOULD send a SIGKILL if an app is not stopped after 10 seconds
 	delayBetweenRequests time.Duration = 2
 )
