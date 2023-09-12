@@ -100,19 +100,6 @@ func (s BlueGreen) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				// copy metadata from original app since they do
-				// not carry over in the ccv2.Application data structure
-				appResp := ctx["app_response"].(AppDeployResponse)
-
-				metadata, err := metadataRetrieve(appDeploy.App.GUID, appMetadata, s.rawClient)
-				if err == nil {
-					_ = metadataUpdate(appResp.App.GUID, appMetadata, s.rawClient, metadata)
-				}
-				return ctx, nil
-			},
-		},
-		{
-			Forward: func(ctx Context) (Context, error) {
 				// Ask CF to stop application (desired state)
 				_, _, err := s.client.UpdateApplicationStop(appDeploy.App.GUID)
 				return ctx, err
