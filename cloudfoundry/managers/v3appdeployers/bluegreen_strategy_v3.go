@@ -37,7 +37,6 @@ type metadata struct {
 }
 
 const (
-	appMetadata          metadataType  = "apps"
 	stopAppTimeout       time.Duration = 20 // CF SHOULD send a SIGKILL if an app is not stopped after 10 seconds
 	delayBetweenRequests time.Duration = 2
 )
@@ -96,19 +95,6 @@ func (s BlueGreen) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 					Name: appDeploy.App.Name,
 				})
 				return err
-			},
-		},
-		{
-			Forward: func(ctx Context) (Context, error) {
-				// copy metadata from original app since they do
-				// not carry over in the ccv2.Application data structure
-				appResp := ctx["app_response"].(AppDeployResponse)
-
-				metadata, err := metadataRetrieve(appDeploy.App.GUID, appMetadata, s.rawClient)
-				if err == nil {
-					_ = metadataUpdate(appResp.App.GUID, appMetadata, s.rawClient, metadata)
-				}
-				return ctx, nil
 			},
 		},
 		{
