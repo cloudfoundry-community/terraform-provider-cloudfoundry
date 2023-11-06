@@ -44,6 +44,9 @@ The following arguments are supported:
 * `api_url` - (Required) API endpoint (e.g. [https://api.local.pcfdev.io](https://api.local.pcfdev.io)). This can also be specified
   with the `CF_API_URL` shell environment variable.
 
+* `origin` - (Optional) Indicates the identity provider to be used for login. This can also be specified
+  with the `CF_ORIGIN` shell environment variable.
+
 * `user` - (Optional) Cloud Foundry user. Defaults to "admin". This can also be specified
   with the `CF_USER` shell environment variable. Unless mentionned explicitly in a resource, CF admin permissions are not required.
 

@@ -3,6 +3,7 @@ package managers
 // Config -
 type Config struct {
 	Endpoint                  string
+	Origin                    string
 	User                      string
 	Password                  string
 	SSOPasscode               string
