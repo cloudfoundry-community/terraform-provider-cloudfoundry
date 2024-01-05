@@ -19,6 +19,11 @@ func Provider() *schema.Provider {
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CF_API_URL", ""),
 			},
+			"origin": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("CF_ORIGIN", ""),
+			},
 			"user": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -147,6 +152,7 @@ func Provider() *schema.Provider {
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	c := managers.Config{
 		Endpoint:                  strings.TrimSuffix(d.Get("api_url").(string), "/"),
+		Origin:                    d.Get("origin").(string),
 		User:                      d.Get("user").(string),
 		Password:                  d.Get("password").(string),
 		SSOPasscode:               d.Get("sso_passcode").(string),

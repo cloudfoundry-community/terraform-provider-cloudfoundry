@@ -230,20 +230,20 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 		// try connecting with SSO passcode to retrieve access token and refresh token
 		accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
 			"passcode": configSess.SSOPasscode,
-		}, "", constant.GrantTypePassword)
+		}, configSess.Origin, constant.GrantTypePassword)
 		errType = "SSO passcode"
 	} else if config.CFUsername() != "" {
 		// try connecting with pair given on uaa to retrieve access token and refresh token
 		accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
 			"username": config.CFUsername(),
 			"password": config.CFPassword(),
-		}, "", constant.GrantTypePassword)
+		}, configSess.Origin, constant.GrantTypePassword)
 		errType = "username/password"
 	} else if config.UAAOAuthClient() != "cf" {
 		accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
 			"client_id":     config.UAAOAuthClient(),
 			"client_secret": config.UAAOAuthClientSecret(),
-		}, "", constant.GrantTypeClientCredentials)
+		}, configSess.Origin, constant.GrantTypeClientCredentials)
 		errType = "client_id/client_secret"
 	}
 	if err != nil {
@@ -295,7 +295,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 			accessTokenSess, refreshTokenSess, err = uaaClientSess.Authenticate(map[string]string{
 				"client_id":     configUaa.UAAOAuthClient(),
 				"client_secret": configUaa.UAAOAuthClientSecret(),
-			}, "", constant.GrantTypeClientCredentials)
+			}, configSess.Origin, constant.GrantTypeClientCredentials)
 		}
 
 		if err != nil {
