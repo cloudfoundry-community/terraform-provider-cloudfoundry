@@ -2,10 +2,12 @@ package cloudfoundry
 
 import (
 	"fmt"
+	"log"
 	"testing"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -22,6 +24,9 @@ resource "cloudfoundry_service_instance" "test-service-instance" {
   space = "%s"
   service_plan = "${data.cloudfoundry_service.test-service.service_plans["%s"]}"
   tags = [ "tag-1" , "tag-2" ]
+  labels = {
+	instance-name = "test-service-instance"
+  }
 }
 `
 
@@ -35,6 +40,9 @@ resource "cloudfoundry_service_instance" "test-service-instance" {
   space = "%s"
   service_plan = "${data.cloudfoundry_service.test-service.service_plans["%s"]}"
   tags = [ "tag-2", "tag-3", "tag-4" ]
+  labels = {
+	instance-name = "%s"
+  }
 }
 `
 
@@ -97,6 +105,7 @@ func TestAccResServiceInstance_normal(t *testing.T) {
 
 	spaceId, _ := defaultTestSpace(t)
 	serviceName1, _, servicePlan := getTestServiceBrokers(t)
+	labelVal := "new-service-label-updated"
 
 	ref := "cloudfoundry_service_instance.test-service-instance"
 
@@ -125,12 +134,14 @@ func TestAccResServiceInstance_normal(t *testing.T) {
 							ref, "tags.0", "tag-1"),
 						resource.TestCheckResourceAttr(
 							ref, "tags.1", "tag-2"),
+						resource.TestCheckResourceAttr(
+							ref, "labels.instance-name", "test-service-instance"),
 					),
 				},
 
 				resource.TestStep{
 					Config: fmt.Sprintf(serviceInstanceResourceUpdate,
-						serviceName1, spaceId, servicePlan,
+						serviceName1, spaceId, servicePlan, labelVal,
 					),
 					Check: resource.ComposeTestCheckFunc(
 						testAccCheckServiceInstanceExists(ref),
@@ -144,7 +155,15 @@ func TestAccResServiceInstance_normal(t *testing.T) {
 							ref, "tags.1", "tag-3"),
 						resource.TestCheckResourceAttr(
 							ref, "tags.2", "tag-4"),
+						resource.TestCheckResourceAttr(
+							ref, "labels.instance-name", labelVal),
 					),
+				},
+				resource.TestStep{
+					Config: fmt.Sprintf(serviceInstanceResourceCreate,
+						serviceName1, spaceId, servicePlan,
+					),
+					Check: testAccCheckServiceInstanceMetadataExists(ref),
 				},
 			},
 		})
@@ -184,6 +203,52 @@ func TestAccResServiceInstances_withFakePlans(t *testing.T) {
 				},
 			},
 		})
+}
+
+func testAccCheckServiceInstanceMetadataExists(resource string) resource.TestCheckFunc {
+
+	return func(s *terraform.State) error {
+		// Retrieve the currently active session object
+		session := testAccProvider.Meta().(*managers.Session)
+
+		// rs : represents the resource from Terraform statefile
+		rs, ok := s.RootModule().Resources[resource]
+
+		if !ok {
+			return fmt.Errorf("service instance '%s' not found in terraform state", resource)
+		}
+
+		// It retrieves the ID of the resource from the Terraform state.
+		GUID := rs.Primary.ID
+
+		serviceInstances, _, _, err := session.ClientV3.GetServiceInstances(ccv3.Query{
+			Key:    ccv3.GUIDFilter,
+			Values: []string{GUID},
+		})
+		if err != nil {
+			return err
+		}
+
+		if len(serviceInstances) == 0 {
+			return fmt.Errorf("Service instance with guid: %s not found", GUID)
+		} else {
+			// _ is used to ignore the i of this loop
+			for _, instance := range serviceInstances {
+				metadata := instance.Metadata
+				labelVal, found := metadata.Labels["instance-name"]
+				log.Printf("!!!! Found service instance : %+v", serviceInstances)
+				if found {
+					fmt.Printf("Label 'Instance-name' is: %v\n", labelVal)
+					return nil
+				} else {
+					return fmt.Errorf("Label 'instance-name' does not exist in this resource\n")
+				}
+			}
+
+		}
+
+		return fmt.Errorf("Unexpected condition, no return hit")
+	}
 }
 
 func testAccCheckServiceInstanceExists(resource string) resource.TestCheckFunc {
