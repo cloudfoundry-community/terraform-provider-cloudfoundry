@@ -88,6 +88,8 @@ func resourceServiceInstance() *schema.Resource {
 					return true
 				},
 			},
+			labelsKey:      labelsSchema(),
+			annotationsKey: annotationsSchema(),
 		},
 		CustomizeDiff: customdiff.All(
 			customdiff.ForceNewIf(
@@ -117,6 +119,23 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 	space := d.Get("space").(string)
 	jsonParameters := d.Get("json_params").(string)
 	tags := make([]string, 0)
+	labels := d.Get("labels").(map[string]interface{})
+	metadata := resources.Metadata{
+		Labels: map[string]types.NullString{},
+	}
+
+	for key, label := range labels {
+		switch label.(type) {
+		case types.NullString:
+			metadata.Labels[key] = label.(types.NullString)
+		case string:
+			str := label.(string)
+			metadata.Labels[key] = types.NullString{
+				Value: str,
+				IsSet: true,
+			}
+		}
+	}
 
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
@@ -145,6 +164,7 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 	serviceInstance.ServicePlanGUID = servicePlan
 	serviceInstance.Tags = tagsFormatted
 	serviceInstance.Parameters = paramsFormatted
+	serviceInstance.Metadata = &metadata
 
 	jobURL, _, err := session.ClientV3.CreateServiceInstance(serviceInstance)
 	if err != nil {
@@ -219,6 +239,15 @@ func resourceServiceInstanceRead(ctx context.Context, d *schema.ResourceData, me
 	d.Set("service_plan", serviceInstance.ServicePlanGUID)
 	d.Set("space", serviceInstance.SpaceGUID)
 
+	labels := make(map[string]string)
+
+	for key, label := range serviceInstance.Metadata.Labels {
+		if label.IsSet {
+			labels[key] = label.Value
+		}
+	}
+	d.Set("labels", labels)
+
 	if serviceInstance.Tags.IsSet {
 		tags := make([]interface{}, len(serviceInstance.Tags.Value))
 		for i, v := range serviceInstance.Tags.Value {
@@ -270,6 +299,10 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 	id = d.Id()
 	jsonParameters := d.Get("json_params").(string)
 	space := d.Get("space").(string)
+	labels := d.Get("labels").(map[string]interface{})
+	metadata := resources.Metadata{
+		Labels: map[string]types.NullString{},
+	}
 
 	if len(jsonParameters) > 0 {
 		err := json.Unmarshal([]byte(jsonParameters), &params)
@@ -279,6 +312,19 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 	}
 	tags = make([]string, 0)
 	// log.Printf("Tags : %+v", tags)
+
+	for key, label := range labels {
+		switch label.(type) {
+		case types.NullString:
+			metadata.Labels[key] = label.(types.NullString)
+		case string:
+			str := label.(string)
+			metadata.Labels[key] = types.NullString{
+				Value: str,
+				IsSet: true,
+			}
+		}
+	}
 
 	for _, v := range d.Get("tags").([]interface{}) {
 		tags = append(tags, v.(string))
@@ -304,6 +350,7 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 		Name:       name,
 		Parameters: paramsFormatted,
 		Tags:       tagsFormatted,
+		Metadata:   &metadata,
 	}
 	// Some services don't support changing service plan, so we only add it to request body only if changed by user
 	if d.HasChange("service_plan") {
@@ -441,5 +488,5 @@ func resourceServiceInstanceImport(ctx context.Context, d *schema.ResourceData, 
 }
 
 func isServiceInstanceUpdateRequired(d ResourceChanger) bool {
-	return d.HasChange("name") || d.HasChange("service_plan") || d.HasChange("json_params") || d.HasChange("tags")
+	return d.HasChange("name") || d.HasChange("service_plan") || d.HasChange("json_params") || d.HasChange("tags") || d.HasChange("labels")
 }
