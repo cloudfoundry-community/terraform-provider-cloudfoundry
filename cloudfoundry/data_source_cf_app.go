@@ -129,7 +129,7 @@ func dataSourceAppRead(ctx context.Context, d *schema.ResourceData, meta interfa
 	} else {
 		query = []ccv3.Query{
 			{
-				Key:    ccv3.GUIDFilter,
+				Key:    ccv3.NameFilter,
 				Values: []string{nameOrId},
 			},
 		}
