@@ -137,8 +137,36 @@ func (s BlueGreen) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				_, _, err := s.client.DeleteApplication(appDeploy.App.GUID)
-				return ctx, err
+				jobURL, _, err := s.client.DeleteApplication(appDeploy.App.GUID)
+				if err != nil {
+					return ctx, err
+				}
+
+				err = common.PollingWithTimeout(func() (bool, error) {
+					job, _, err := s.client.GetJob(jobURL)
+					if err != nil {
+						return true, err
+					}
+
+					// Stop polling and return error if job failed
+					if job.State == constantV3.JobFailed {
+						return true, fmt.Errorf(
+							"Venerable app deletion failed, reason: %+v",
+							job.Errors(),
+						)
+					}
+
+					if job.State == constantV3.JobComplete {
+						return true, nil
+					}
+
+					return false, nil
+				}, 5*time.Second, 1*time.Minute)
+
+				if err != nil {
+					return ctx, err
+				}
+				return ctx, nil
 			},
 		},
 	}
