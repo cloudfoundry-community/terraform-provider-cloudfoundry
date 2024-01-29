@@ -125,13 +125,12 @@ func resourceServiceInstanceCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	for key, label := range labels {
-		switch label.(type) {
+		switch v := label.(type) {
 		case types.NullString:
-			metadata.Labels[key] = label.(types.NullString)
+			metadata.Labels[key] = v
 		case string:
-			str := label.(string)
 			metadata.Labels[key] = types.NullString{
-				Value: str,
+				Value: v,
 				IsSet: true,
 			}
 		}
@@ -314,13 +313,12 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 	// log.Printf("Tags : %+v", tags)
 
 	for key, label := range labels {
-		switch label.(type) {
+		switch v := label.(type) {
 		case types.NullString:
-			metadata.Labels[key] = label.(types.NullString)
+			metadata.Labels[key] = v
 		case string:
-			str := label.(string)
 			metadata.Labels[key] = types.NullString{
-				Value: str,
+				Value: v,
 				IsSet: true,
 			}
 		}
