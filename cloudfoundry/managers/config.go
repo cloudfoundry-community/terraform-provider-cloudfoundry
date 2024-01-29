@@ -17,4 +17,5 @@ type Config struct {
 	DefaultQuotaName          string
 	StoreTokensPath           string
 	ForceNotFailBrokerCatalog bool
+	DeleteRecursiveAllowed    bool
 }
