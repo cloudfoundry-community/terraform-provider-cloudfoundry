@@ -34,6 +34,7 @@ The following arguments are supported:
   Works only on cloud foundry with api >= v3.63.
 * `annotations` - (Optional, map string of string) Add annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object).
   Works only on cloud foundry with api >= v3.63.
+* `delete_recursive_allowed` - (Optional, bool) Allow recursive delete of spaces within the organization. Default: `true`.
 
 ## Attributes Reference
 

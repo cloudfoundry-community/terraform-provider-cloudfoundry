@@ -3,7 +3,9 @@ package cloudfoundry
 import (
 	"context"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
+	"code.cloudfoundry.org/cli/resources"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	uuid "github.com/satori/go.uuid"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
@@ -51,6 +53,12 @@ func dataSourceApp() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"buildpacks": &schema.Schema{
+				Type:          schema.TypeList,
+				Optional:      true,
+				Elem:          &schema.Schema{Type: schema.TypeString},
+				ConflictsWith: []string{"buildpack"},
+			},
 			"command": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
@@ -96,7 +104,7 @@ func dataSourceAppRead(ctx context.Context, d *schema.ResourceData, meta interfa
 	var (
 		nameOrId string
 		space    string
-		app      ccv2.Application
+		app      resources.Application
 		err      error
 	)
 
@@ -104,37 +112,99 @@ func dataSourceAppRead(ctx context.Context, d *schema.ResourceData, meta interfa
 	space = d.Get("space").(string)
 
 	isUUID := uuid.FromStringOrNil(nameOrId)
+
+	var query []ccv3.Query
+
 	if uuid.Equal(isUUID, uuid.Nil) {
-		apps, _, err := session.ClientV2.GetApplications(ccv2.FilterByName(nameOrId), ccv2.FilterBySpace(space))
-		if err != nil {
-			return diag.FromErr(err)
+		query = []ccv3.Query{
+			{
+				Key:    ccv3.NameFilter,
+				Values: []string{nameOrId},
+			},
+			{
+				Key:    ccv3.SpaceGUIDFilter,
+				Values: []string{space},
+			},
 		}
-		if len(apps) == 0 {
-			return diag.FromErr(NotFound)
-		}
-		app = apps[0]
 	} else {
-		app, _, err = session.ClientV2.GetApplication(nameOrId)
-		if err != nil {
-			return diag.FromErr(err)
+		query = []ccv3.Query{
+			{
+				Key:    ccv3.GUIDFilter,
+				Values: []string{nameOrId},
+			},
+			{
+				Key:    ccv3.SpaceGUIDFilter,
+				Values: []string{space},
+			},
 		}
 	}
+
+	apps, _, err := session.ClientV3.GetApplications(query...)
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if len(apps) == 0 {
+		return diag.FromErr(NotFound)
+	}
+	app = apps[0]
 
 	d.SetId(app.GUID)
 	d.Set("name", app.Name)
 	d.Set("space", app.SpaceGUID)
-	d.Set("instances", app.Instances.Value)
-	d.Set("memory", app.Memory.Value)
-	d.Set("disk_quota", app.DiskQuota.Value)
-	d.Set("stack", app.StackGUID)
-	d.Set("buildpack", app.Buildpack.Value)
-	d.Set("command", app.Command.Value)
-	d.Set("enable_ssh", app.EnableSSH.Value)
-	d.Set("environment", app.EnvironmentVariables)
+
+	proc, _, err := session.ClientV3.GetApplicationProcessByType(d.Id(), constant.ProcessTypeWeb)
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if proc.Instances.IsSet {
+		d.Set("instances", proc.Instances.Value)
+	}
+
+	if proc.MemoryInMB.IsSet {
+		d.Set("memory", proc.MemoryInMB.Value)
+	}
+	if proc.DiskInMB.IsSet {
+		d.Set("disk_quota", proc.DiskInMB.Value)
+	}
+
+	d.Set("stack", app.StackName)
+	if bpkg := app.LifecycleBuildpacks; len(bpkg) > 0 {
+		d.Set("buildpacks", bpkg)
+		d.Set("buildpack", bpkg[0])
+	}
+
+	if proc.Command.IsSet {
+		d.Set("command", proc.Command.Value)
+	}
+
+	enableSSH, _, err := session.ClientV3.GetAppFeature(d.Id(), "ssh")
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.Set("enable_ssh", enableSSH.Enabled)
+
+	env, err := session.BitsManager.GetAppEnvironmentVariables(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	d.Set("environment", env)
+
 	d.Set("state", app.State)
-	d.Set("health_check_http_endpoint", app.HealthCheckHTTPEndpoint)
-	d.Set("health_check_type", app.HealthCheckType)
-	d.Set("health_check_timeout", app.HealthCheckTimeout)
+
+	if proc.HealthCheckEndpoint != "" {
+		d.Set("health_check_http_endpoint", proc.HealthCheckEndpoint)
+	}
+	if proc.HealthCheckTimeout != 0 {
+		d.Set("health_check_timeout", proc.HealthCheckTimeout)
+	}
+	if proc.HealthCheckType != "" {
+		d.Set("health_check_type", proc.HealthCheckType)
+	}
 
 	err = metadataRead(appMetadata, d, meta, true)
 	if err != nil {
