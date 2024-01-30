@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"regexp"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
@@ -137,8 +138,7 @@ func (s BlueGreen) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				_, _, err := s.client.DeleteApplication(appDeploy.App.GUID)
-				return ctx, err
+				return ctx, SafeAppDeletion(*s.client, appDeploy.App.GUID, 5)
 			},
 		},
 	}
@@ -293,41 +293,7 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
-				appResp := ctx["app_response"].(AppDeployResponse)
-
-				// Action code
-				jobURL, _, err := s.client.DeleteApplication(appDeploy.App.GUID)
-				if err != nil {
-					return ctx, err
-				}
-
-				err = common.PollingWithTimeout(func() (bool, error) {
-					job, _, err := s.client.GetJob(jobURL)
-					if err != nil {
-						return true, err
-					}
-
-					// Stop polling and return error if job failed
-					if job.State == constantV3.JobFailed {
-						return true, fmt.Errorf(
-							"Venerable app deletion failed, reason: %+v",
-							job.Errors(),
-						)
-					}
-
-					if job.State == constantV3.JobComplete {
-						return true, nil
-					}
-
-					return false, nil
-				}, 5*time.Second, 1*time.Minute)
-
-				if err != nil {
-					return ctx, err
-				}
-
-				ctx["app_response"] = appResp
-				return ctx, nil
+				return ctx, SafeAppDeletion(*s.client, appDeploy.App.GUID, 5)
 			},
 		},
 	}
@@ -469,4 +435,49 @@ func isAppStopped(clientV3 *ccv3.Client, appGUID string) (bool, error) {
 	// isStopped = true
 	// All instances stopped
 	return true, err
+}
+
+func SafeAppDeletion(client ccv3.Client, appGuid string, remainingAttempts int) error {
+	// start deletion job
+	jobURL, _, err := client.DeleteApplication(appGuid)
+	if err != nil {
+		return err
+	}
+
+	// poll completion
+	err = common.PollingWithTimeout(func() (bool, error) {
+		job, _, err := client.GetJob(jobURL)
+		if err != nil {
+			return true, err
+		}
+
+		if job.State == constantV3.JobFailed {
+			return true, fmt.Errorf(
+				"App deletion failed, reason: %+v",
+				job.Errors(),
+			)
+		}
+
+		if job.State == constantV3.JobComplete {
+			return true, nil
+		}
+
+		return false, nil
+	}, 5*time.Second, 1*time.Minute)
+
+	// error handling
+	if err != nil {
+		// https://github.com/cloudfoundry/cloud_controller_ng/issues/3589 -> Delete app when bound to service fails with async service brokers -> Retry that
+		specialError, _ := regexp.MatchString("An operation for the service binding between app .* and service instance .* is in progress.", err.Error())
+		if specialError {
+			if remainingAttempts > 0 {
+				time.Sleep(5 * time.Second)
+				return SafeAppDeletion(client, appGuid, remainingAttempts-1)
+			}
+			return fmt.Errorf("Retries for app deletion exhausted: %+v", err)
+		}
+		return err
+	}
+
+	return nil
 }

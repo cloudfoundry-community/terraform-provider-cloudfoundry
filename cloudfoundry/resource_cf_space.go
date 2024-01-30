@@ -1,8 +1,10 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"context"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -86,6 +88,12 @@ func resourceSpace() *schema.Resource {
 			},
 			labelsKey:      labelsSchema(),
 			annotationsKey: annotationsSchema(),
+			"delete_recursive_allowed": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Allow recursive deletion of apps, routes, service instances.",
+			},
 		},
 	}
 }
@@ -311,11 +319,48 @@ func resourceSpaceUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 
 func resourceSpaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
-	j, _, err := session.ClientV2.DeleteSpace(d.Id())
+
+	if !session.Config.DeleteRecursiveAllowed {
+		// Check for apps
+		apps, _, err := session.ClientV3.GetApplications(ccv3.Query{
+			Key:    ccv3.SpaceGUIDFilter,
+			Values: []string{d.Id()},
+		})
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if len(apps) > 0 {
+			return diag.Errorf("Space %s has %d apps. Please delete them first or set delete_recursive_allowed to true", d.Id(), len(apps))
+		}
+		// Check routes
+		routes, _, err := session.ClientV3.GetRoutes(ccv3.Query{
+			Key:    ccv3.SpaceGUIDFilter,
+			Values: []string{d.Id()},
+		})
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if len(routes) > 0 {
+			return diag.Errorf("Space %s has %d routes. Please delete them first or set delete_recursive_allowed to true", d.Id(), len(routes))
+		}
+		// Check service instances
+		serviceInstances, _, _, err := session.ClientV3.GetServiceInstances(ccv3.Query{
+			Key:    ccv3.SpaceGUIDFilter,
+			Values: []string{d.Id()},
+		})
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if len(serviceInstances) > 0 {
+			return diag.Errorf("Space %s has %d service instances. Please delete them first or set delete_recursive_allowed to true", d.Id(), len(serviceInstances))
+		}
+	}
+
+	j, _, err := session.ClientV3.DeleteSpace(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	_, err = session.ClientV2.PollJob(j)
+	_, err = session.ClientV3.PollJob(j)
 	if err != nil {
 		return diag.FromErr(err)
 	}
