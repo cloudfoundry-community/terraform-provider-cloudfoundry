@@ -4,7 +4,7 @@ go 1.21
 
 toolchain go1.21.6
 
-replace code.cloudfoundry.org/cli => github.com/cloudfoundry-community/cloudfoundry-cli v6.44.1-0.20230105092217-5241fbe25735+incompatible
+replace code.cloudfoundry.org/cli => github.com/cloudfoundry-community/cloudfoundry-cli v6.44.1-0.20240130060226-cda5ed8e89a5+incompatible
 
 require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20231017140541-3b893ed0421b // indirect
