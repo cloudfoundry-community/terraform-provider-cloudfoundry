@@ -44,7 +44,7 @@ require (
 
 require (
 	github.com/ArthurHlt/zipper v1.3.2
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.6.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 )
 
