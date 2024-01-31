@@ -37,6 +37,16 @@ The following arguments are supported:
 * `recursive_delete` - DEPRECATED, Since CF API v3, recursive delete is done automatically by the cloudcontroller. This will be removed in future releases.
 * `replace_on_params_change` - (Optional, Bool) Default: `false`. If set `true`, Cloud Foundry will replace the resource on any params change. This is useful if the service does not support parameter updates.
 * `replace_on_service_plan_change` - (Optional, Bool) Default: `false`. If set `true`, Cloud Foundry will replace the resource on any service plan changes. Some brokered services do not support plan changes and this allows the provider to handle those cases.
+* `labels` - (Optional, map string of string) Add labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object). Works only on cloud foundry with api >= v3.63. Below is an example usage.
+
+```hcl
+resource "cf_service_instance" "my-cloud" {
+  name   = "service-in-my-cloud"
+  labels = {
+    instance-name = "service-in-my-cloud"
+    instance-type = "my-type"
+  }
+```
 
 ## Attributes Reference
 
