@@ -346,13 +346,19 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 
 	serviceInstanceUpdate := resources.ServiceInstance{
 		Name:       name,
-		Parameters: paramsFormatted,
-		Tags:       tagsFormatted,
-		Metadata:   &metadata,
 	}
-	// Some services don't support changing service plan, so we only add it to request body only if changed by user
+	// Only add in the request body what has changed, because some services don't support updating multiple attributes at the same time
 	if d.HasChange("service_plan") {
 		serviceInstanceUpdate.ServicePlanGUID = d.Get("service_plan").(string)
+	}
+	if d.HasChange("tags") {
+		serviceInstanceUpdate.Tags = tagsFormatted
+	}
+	if d.HasChange("json_params") {
+		serviceInstanceUpdate.Parameters = paramsFormatted
+	}
+	if d.HasChange("labels") {
+		serviceInstanceUpdate.Metadata = &metadata
 	}
 
 	jobURL, _, err := session.ClientV3.UpdateServiceInstance(id, serviceInstanceUpdate)
