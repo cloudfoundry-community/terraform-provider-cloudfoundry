@@ -347,7 +347,7 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 	serviceInstanceUpdate := resources.ServiceInstance{
 		Name:       name,
 	}
-	// Only add in the request body what has changed, because some services don't support updating multiple attribute at the same time
+	// Only add in the request body what has changed, because some services don't support updating multiple attributes at the same time
 	if d.HasChange("service_plan") {
 		serviceInstanceUpdate.ServicePlanGUID = d.Get("service_plan").(string)
 	}
