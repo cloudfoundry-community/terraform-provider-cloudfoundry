@@ -345,7 +345,7 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	serviceInstanceUpdate := resources.ServiceInstance{
-		Name:       name,
+		Name: name,
 	}
 	// Only add in the request body what has changed, because some services don't support updating multiple attributes at the same time
 	if d.HasChange("service_plan") {
@@ -367,38 +367,42 @@ func resourceServiceInstanceUpdate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	// Poll the state of the async job
-	err = common.PollingWithTimeout(func() (bool, error) {
-		job, _, err := session.ClientV3.GetJob(jobURL)
-		if err != nil {
-			return true, err
-		}
-
-		// Stop polling and return error if job failed
-		if job.State == constant.JobFailed {
-			return true, fmt.Errorf(
-				"Instance %s failed %s, reason: %+v",
-				name,
-				space,
-				job.Errors(),
-			)
-		}
-		// If job completed, check if the service instance exists
-		if job.State == constant.JobComplete {
-			si, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
+	// jobURL is empty if no update is required or if the updates were done synchronously
+	if jobURL != "" {
+		// Poll the state of the async job
+		err = common.PollingWithTimeout(func() (bool, error) {
+			job, _, err := session.ClientV3.GetJob(jobURL)
 			if err != nil {
 				return true, err
 			}
-			d.SetId(si.GUID)
-			return true, nil
-		}
 
-		// Last operation initial or inprogress or job not completed, continue polling
-		return false, nil
-	}, 5*time.Second, d.Timeout(schema.TimeoutUpdate))
-	if err != nil {
-		return diag.FromErr(err)
+			// Stop polling and return error if job failed
+			if job.State == constant.JobFailed {
+				return true, fmt.Errorf(
+					"Instance %s failed %s, reason: %+v",
+					name,
+					space,
+					job.Errors(),
+				)
+			}
+			// If job completed, check if the service instance exists
+			if job.State == constant.JobComplete {
+				si, _, _, err := session.ClientV3.GetServiceInstanceByNameAndSpace(name, space)
+				if err != nil {
+					return true, err
+				}
+				d.SetId(si.GUID)
+				return true, nil
+			}
+
+			// Last operation initial or inprogress or job not completed, continue polling
+			return false, nil
+		}, 5*time.Second, d.Timeout(schema.TimeoutUpdate))
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
+
 	// We succeeded, disable partial mode
 	d.Partial(false)
 	return nil
