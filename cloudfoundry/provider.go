@@ -142,6 +142,7 @@ func Provider() *schema.Provider {
 			"cloudfoundry_service_instance":              resourceServiceInstance(),
 			"cloudfoundry_service_key":                   resourceServiceKey(),
 			"cloudfoundry_user_provided_service":         resourceUserProvidedService(),
+			"cloudfoundry_service_instance_sharing":      resourceServiceInstanceSharing(),
 			"cloudfoundry_buildpack":                     resourceBuildpack(),
 			"cloudfoundry_route":                         ResourceRoute(),
 			"cloudfoundry_route_service_binding":         resourceRouteServiceBinding(),
