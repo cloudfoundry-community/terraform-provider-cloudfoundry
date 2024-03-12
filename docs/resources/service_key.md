@@ -54,3 +54,11 @@ An existing Service Key can be imported using its guid , e.g.
 ```bash
 terraform import cloudfoundry_service_key.redis1-key1 a-guid
 ```
+
+### Timeouts
+
+`cloudfoundry_service_key` provides the following
+[Timeouts](https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts) configuration options:
+
+* `create` - (Default `60 seconds`) Used for Creating Instance.
+* `delete` - (Default `60 seconds`) Used for Destroying Instance.
