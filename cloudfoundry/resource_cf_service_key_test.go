@@ -28,6 +28,11 @@ resource "cloudfoundry_service_key" "test-service-instance-key" {
 		"key1" = "aaaa"
 		"key2" = "bbbb"
 	}
+
+	timeouts {
+		create = "3m"
+		delete = "2m"
+	}
 }
 `
 
