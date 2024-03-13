@@ -42,7 +42,10 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 )
 
-require github.com/hashicorp/terraform-plugin-log v0.9.0
+require (
+	github.com/google/uuid v1.3.1
+	github.com/hashicorp/terraform-plugin-log v0.9.0
+)
 
 require (
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
@@ -101,7 +104,7 @@ require (
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231002182017-d307bd883b97 // indirect
 	google.golang.org/grpc v1.60.0 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
 	gopkg.in/src-d/go-billy.v4 v4.3.2 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
