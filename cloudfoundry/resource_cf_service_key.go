@@ -31,6 +31,11 @@ func resourceServiceKey() *schema.Resource {
 			StateContext: ImportReadContext(resourceServiceKeyRead),
 		},
 
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(60 * time.Second),
+			Delete: schema.DefaultTimeout(60 * time.Second),
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"name": &schema.Schema{
@@ -146,7 +151,7 @@ func resourceServiceKeyCreate(ctx context.Context, d *schema.ResourceData, meta 
 
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, 60*time.Second)
+	}, 5*time.Second, d.Timeout(schema.TimeoutCreate))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -240,6 +245,6 @@ func resourceServiceKeyDelete(ctx context.Context, d *schema.ResourceData, meta 
 		}
 		// Last operation initial or inprogress or job not completed, continue polling
 		return false, nil
-	}, 5*time.Second, 60*time.Second)
+	}, 5*time.Second, d.Timeout(schema.TimeoutDelete))
 	return diag.FromErr(err)
 }
