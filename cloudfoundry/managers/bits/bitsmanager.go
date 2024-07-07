@@ -2,6 +2,7 @@ package bits
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,20 +17,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudfoundry/go-cfclient/v3/client"
+	"github.com/cloudfoundry/go-cfclient/v3/resource"
+
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
-	"code.cloudfoundry.org/cli/resources"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
 )
 
 // Manage upload bits like app and buildpack in full stream
 type BitsManager struct {
-	clientV2   *ccv2.Client
-	clientV3   *ccv3.Client
-	rawClient  *raw.RawClient
-	httpClient *http.Client
+	client *client.Client
 }
 
 type job struct {
@@ -45,25 +44,27 @@ type ZipFile struct {
 }
 
 // NewBitsManager -
-func NewBitsManager(clientV2 *ccv2.Client, clientV3 *ccv3.Client, rawClient *raw.RawClient, httpClient *http.Client) *BitsManager {
+func NewBitsManager(client *client.Client) *BitsManager {
 	return &BitsManager{
-		clientV2:   clientV2,
-		clientV3:   clientV3,
-		rawClient:  rawClient,
-		httpClient: httpClient,
+		client: client,
 	}
 }
 
 // CopyApp - Copy one app to another by using only api
 func (m BitsManager) CopyApp(origAppGuid string, newAppGuid string) error {
+	// Construct the request URL and data
 	path := fmt.Sprintf("/v2/apps/%s/copy_bits", newAppGuid)
-	data := []byte(fmt.Sprintf(`{"source_app_guid":"%s"}`, origAppGuid))
+	data := strings.NewReader(fmt.Sprintf(`{"source_app_guid":"%s"}`, origAppGuid))
 
-	req, err := m.rawClient.NewRequest("POST", path, data)
+	// Create a new HTTP request
+	req, err := http.NewRequest("POST", m.client.ApiURL(path), data)
 	if err != nil {
 		return err
 	}
-	resp, err := m.rawClient.Do(req)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Perform the HTTP request
+	resp, err := m.client.ExecuteRequest(req)
 	if err != nil {
 		return err
 	}
@@ -72,13 +73,14 @@ func (m BitsManager) CopyApp(origAppGuid string, newAppGuid string) error {
 	err = json.NewDecoder(resp.Body).Decode(&j)
 	if err != nil {
 		return err
+
 	}
-	_, err = m.clientV2.PollJob(ccv2.Job{
-		GUID: j.Entity.GUID,
-	})
-	if err != nil {
-		return err
-	}
+	// poll job
+
+	opts := client.NewPollingOptions()
+	jobGUID := ccv2.Job{GUID: j.Entity.GUID}
+	jobGUID_str := fmt.Sprintf("%+v", jobGUID)
+	m.client.Jobs.PollComplete(context.Background(), jobGUID_str, opts)
 	return nil
 }
 
@@ -121,7 +123,7 @@ func (m BitsManager) UploadBuildpack(buildpackGUID string, bpPath string) error 
 		mpw.Close()
 	}()
 
-	req, err := m.rawClient.NewRequest("PUT", apiURL, nil)
+	req, err := http.NewRequest("PUT", apiURL, nil)
 	if err != nil {
 		return err
 	}
@@ -130,7 +132,7 @@ func (m BitsManager) UploadBuildpack(buildpackGUID string, bpPath string) error 
 	req.ContentLength = m.predictPartBuildpack(baseName, fileSize, mpw.Boundary())
 	req.Body = r
 
-	resp, err := m.rawClient.Do(req)
+	resp, err := m.client.ExecuteRequest(req)
 	if err != nil {
 		panic(err)
 	}
@@ -142,7 +144,7 @@ func (m BitsManager) UploadBuildpack(buildpackGUID string, bpPath string) error 
 func (m BitsManager) GetAppEnvironmentVariables(appGUID string) (map[string]interface{}, error) {
 	apiURL := fmt.Sprintf("/v3/apps/%s/environment_variables", appGUID)
 
-	req, err := m.rawClient.NewRequest("GET", apiURL, nil)
+	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +152,7 @@ func (m BitsManager) GetAppEnvironmentVariables(appGUID string) (map[string]inte
 	var responseBody = struct {
 		Var map[string]interface{} `json:"var"`
 	}{}
-	resp, err := m.rawClient.Do(req)
+	resp, err := m.client.ExecuteRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +169,7 @@ func (m BitsManager) GetAppEnvironmentVariables(appGUID string) (map[string]inte
 func (m BitsManager) SetAppEnvironmentVariables(appGUID string, env map[string]interface{}) error {
 	apiURL := fmt.Sprintf("/v3/apps/%s/environment_variables", appGUID)
 
-	req, err := m.rawClient.NewRequest("PATCH", apiURL, nil)
+	req, err := http.NewRequest("PATCH", apiURL, nil)
 	if err != nil {
 		return err
 	}
@@ -183,7 +185,7 @@ func (m BitsManager) SetAppEnvironmentVariables(appGUID string, env map[string]i
 	req.Header.Set("Content-Type", "application/json")
 	req.Body = ioutil.NopCloser(body)
 
-	resp, err := m.rawClient.Do(req)
+	resp, err := m.client.ExecuteRequest(req)
 	if err != nil {
 		return err
 	}
@@ -191,26 +193,38 @@ func (m BitsManager) SetAppEnvironmentVariables(appGUID string, env map[string]i
 	return nil
 }
 
-// UpdateAppEnvironment behaves the same as clientV3.UpdateApplicationEnvironments
-// But does not auto-remove empty environment variables
-func (m BitsManager) UpdateAppEnvironment(appGUID string, env map[string]interface{}) (map[string]interface{}, ccv3.Warnings, error) {
-	var responseBody struct {
-		Var map[string]interface{} `json:"var"`
+// UpdateAppEnvVars updates environment variables for an application identified by appGUID
+func (m *BitsManager) UpdateAppEnvVars(appGUID string, env map[string]interface{}) (map[string]interface{}, error) {
+	// Creating the environment variables request body
+	envVars := make(map[string]string)
+	for key, value := range env {
+		if strValue, ok := value.(string); ok {
+			envVars[key] = strValue
+		} else {
+			return nil, fmt.Errorf("environment variable values must be strings")
+		}
 	}
 
-	_, warnings, err := m.clientV3.MakeRequest(ccv3.RequestParams{
-		RequestName: "PatchApplicationEnvironmentVariables",
-		URIParams:   map[string]string{"app_guid": appGUID},
-		RequestBody: struct {
-			Var map[string]interface{} `json:"var"`
-		}{
-			Var: env,
-		},
-		ResponseBody: &responseBody,
-	})
+	requestBody := &resource.EnvVarGroupUpdate{
+		Var: envVars,
+	}
 
-	return responseBody.Var, warnings, err
+	// Context for the request
+	ctx := context.Background()
 
+	// Sending the request to update the environment variables
+	req, err := m.client.EnvVarGroups.Update(ctx, appGUID, requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert map[string]string to map[string]interface{}
+	updatedEnvVars := make(map[string]interface{})
+	for key, value := range req.Var {
+		updatedEnvVars[key] = value
+	}
+	// Return the updated environment variables
+	return updatedEnvVars, err
 }
 
 // UploadApp - Upload a zip file containing app code to cloud foundry in full stream
@@ -255,7 +269,7 @@ func (m BitsManager) UploadApp(appGUID string, path string) error {
 		}
 		mpw.Close()
 	}()
-	req, err := m.rawClient.NewRequest("PUT", apiURL, nil)
+	req, err := http.NewRequest("PUT", apiURL, nil)
 	if err != nil {
 		return err
 	}
@@ -264,7 +278,7 @@ func (m BitsManager) UploadApp(appGUID string, path string) error {
 	req.ContentLength = m.predictPartApp(fileSize, mpw.Boundary())
 	req.Body = r
 
-	resp, err := m.rawClient.Do(req)
+	resp, err := m.client.ExecuteRequest(req)
 	if err != nil {
 		panic(err)
 	}
@@ -334,7 +348,7 @@ func (m BitsManager) RetrieveZip(path string) (ZipFile, error) {
 	path = strings.TrimPrefix(path, "file://")
 	baseName := filepath.Base(path)
 	if strings.HasPrefix(path, "http") {
-		resp, err := m.httpClient.Get(path)
+		resp, err := m.client.HTTPClient().Get(path)
 		if err != nil {
 			return ZipFile{}, err
 		}
@@ -394,44 +408,62 @@ func (m BitsManager) RetrieveZip(path string) (ZipFile, error) {
 // v3
 
 // CreateDockerPackage creates a package from a docker image
-func (m BitsManager) CreateDockerPackage(appGUID string, dockerImage string, dockerUsername string, dockerPassword string) (resources.Package, ccv3.Warnings, error) {
-	pkg, warnings, err := m.clientV3.CreatePackage(resources.Package{
-		Type: constant.PackageTypeDocker,
-		Relationships: resources.Relationships{
-			constant.RelationshipTypeApplication: resources.Relationship{GUID: appGUID},
-		},
-		DockerImage:    dockerImage,
-		DockerUsername: dockerUsername,
-		DockerPassword: dockerPassword,
-	})
+func (m *BitsManager) CreateDockerPackage(appGUID string, dockerImage string, dockerUsername string, dockerPassword string) (*resource.Package, error) {
+	// Create a Docker package request body using the provided function
+	pkgCreateRequest := resource.NewDockerPackageCreate(appGUID, dockerImage, dockerUsername, dockerPassword)
 
+	// Context for the request
+	ctx := context.Background()
+
+	// Send the request to create the package
+	createdPackage, err := m.client.Packages.Create(ctx, pkgCreateRequest)
 	if err != nil {
-		return resources.Package{}, warnings, err
+		return nil, err
 	}
 
-	return pkg, warnings, nil
+	return createdPackage, nil
 }
 
-// CreateAndUploadBitsPackage creates a new package and upload bits to the application
-func (m BitsManager) CreateAndUploadBitsPackage(appGUID string, path string, stageTimeout time.Duration) (resources.Package, ccv3.Warnings, error) {
-	pkg, warnings, err := m.CreateBitsPackageByApplication(appGUID)
-
+// UploadBits uploads the application bits to the given package
+func (m *BitsManager) UploadBits(pkg resource.Package, bitsPath string) (*resource.Package, error) {
+	// Open the bits file
+	file, err := os.Open(bitsPath)
 	if err != nil {
-		return resources.Package{}, warnings, err
+		return nil, err
+	}
+	defer file.Close()
+
+	// Context for the request
+	ctx := context.Background()
+
+	// Assuming cfclient has a method for uploading bits to a package
+	updatedPackage, err := m.client.Packages.Upload(ctx, pkg.GUID, file)
+	if err != nil {
+		return nil, err
 	}
 
-	// get zip from remote artifactory
+	return updatedPackage, nil
+}
+
+// CreateAndUploadBitsPackage creates a new package and uploads bits to the application
+func (m *BitsManager) CreateAndUploadBitsPackage(appGUID string, path string, stageTimeout time.Duration) (*resource.Package, ccv3.Warnings, error) {
+	// Create a new package for the application
+	pkg, warnings, err := m.CreateBitsPackageByApplication(appGUID)
+	if err != nil {
+		return nil, warnings, err
+	}
+
+	// If path starts with "http", retrieve the zip file from remote artifactory
 	if strings.HasPrefix(path, "http") {
 		zipFile, err := m.RetrieveZip(path)
 		if err != nil {
-			return resources.Package{}, warnings, err
+			return nil, warnings, err
 		}
 
 		tempDir, err := ioutil.TempDir("", "temp-")
 		if err != nil {
-			return resources.Package{}, warnings, err
+			return nil, warnings, err
 		}
-
 		defer func() {
 			if err := os.RemoveAll(tempDir); err != nil {
 				log.Printf("Error removing temp dir %s: %v", tempDir, err)
@@ -440,45 +472,42 @@ func (m BitsManager) CreateAndUploadBitsPackage(appGUID string, path string, sta
 
 		outputFile, err := os.Create(filepath.Join(tempDir, zipFile.baseName))
 		if err != nil {
-			return resources.Package{}, warnings, err
+			return nil, warnings, err
 		}
+		defer outputFile.Close()
 
 		_, err = io.Copy(outputFile, zipFile.r)
 		if err != nil {
-			return resources.Package{}, warnings, err
+			return nil, warnings, err
 		}
 
 		if err := outputFile.Sync(); err != nil {
-			return resources.Package{}, warnings, err
-		}
-
-		if err := outputFile.Close(); err != nil {
-			return resources.Package{}, warnings, err
+			return nil, warnings, err
 		}
 
 		path = outputFile.Name()
 	}
 
-	_, warnings, err = m.clientV3.UploadPackage(pkg, path)
+	// Upload the bits to the package
+	uploadedPackage, err := m.UploadBits(pkg, path)
 	if err != nil {
-		return resources.Package{}, warnings, err
+		return nil, warnings, err
 	}
 
-	// Poll once every 5 sec, timeout ${stageTimeout} fixed by appDeploy
+	// Poll the package status until it's ready or failed
+	ctx := context.Background()
 	err = common.PollingWithTimeout(func() (bool, error) {
-
-		ccPkg, _, err := m.clientV3.GetPackage(pkg.GUID)
+		ccPkg, err := m.client.Packages.Get(ctx, pkg.GUID)
 		if err != nil {
 			return true, err
 		}
 
-		if ccPkg.State == constant.PackageReady {
+		switch ccPkg.State {
+		case resource.PackageStateReady:
 			return true, nil
-		}
-
-		if ccPkg.State == constant.PackageFailed {
+		case resource.PackageStateFailed:
 			return true, fmt.Errorf("Package processing failed")
-		} else if ccPkg.State == constant.PackageExpired {
+		case resource.PackageStateExpired:
 			return true, fmt.Errorf("Package expired")
 		}
 
@@ -486,37 +515,52 @@ func (m BitsManager) CreateAndUploadBitsPackage(appGUID string, path string, sta
 	}, 5*time.Second, stageTimeout)
 
 	if err != nil {
-		return resources.Package{}, warnings, err
+		return nil, warnings, err
 	}
 
-	return pkg, warnings, nil
+	// Return the uploaded package, warnings, and no error
+	return uploadedPackage, warnings, nil
 }
 
 // CreateBitsPackageByApplication creates a new package for an app to upload bits
-func (m BitsManager) CreateBitsPackageByApplication(appGUID string) (resources.Package, ccv3.Warnings, error) {
-	inputPackage := resources.Package{
-		Type: constant.PackageTypeBits,
-		Relationships: resources.Relationships{
-			constant.RelationshipTypeApplication: resources.Relationship{GUID: appGUID},
+func (m *BitsManager) CreateBitsPackageByApplication(appGUID string) (*resource.Package, ccv3.Warnings, error) {
+	inputPackage := &resource.PackageCreate{
+		Type: string(constant.PackageTypeBits),
+		Relationships: resource.AppRelationship{
+			App: resource.ToOneRelationship{
+				Data: &resource.Relationship{
+					GUID: appGUID,
+				},
+			},
 		},
 	}
 
-	pkg, warnings, err := m.clientV3.CreatePackage(inputPackage)
+	// Context for the request
+	ctx := context.Background()
+
+	// Call the client method to create the package
+	createdPackage, err := m.client.Packages.Create(ctx, inputPackage)
 	if err != nil {
-		return resources.Package{}, warnings, err
+		return nil, nil, err
 	}
 
-	return pkg, warnings, err
+	// Return the created package, warnings (if any), and no error
+	return createdPackage, nil, nil
 }
 
-// CopyAppV3 - Copy one app to another by using only api
-func (m BitsManager) CopyAppV3(origAppGUID string, newAppGUID string) error {
-	srcPkgs, _, err := m.clientV3.GetPackages(
-		ccv3.Query{Key: ccv3.AppGUIDFilter, Values: []string{origAppGUID}},
-		ccv3.Query{Key: ccv3.StatesFilter, Values: []string{"READY"}},
-		ccv3.Query{Key: ccv3.OrderBy, Values: []string{"-created_at"}},
-	)
+// CopyAppV3 - Copy one app to another by using only API
+func (m *BitsManager) CopyAppV3(origAppGUID string, newAppGUID string) error {
+	// Create the context for the requests
+	ctx := context.Background()
 
+	// Define the options for listing packages
+	packageListOptions := &client.PackageListOptions{
+		GUIDs:  client.Filter{Values: []string{origAppGUID}},
+		States: client.Filter{Values: []string{"READY"}},
+	}
+
+	// Get the packages for the original app
+	srcPkgs, err := m.client.Packages.ListAll(ctx, packageListOptions)
 	if err != nil {
 		return err
 	}
@@ -527,15 +571,21 @@ func (m BitsManager) CopyAppV3(origAppGUID string, newAppGUID string) error {
 
 	latestPkg := srcPkgs[0]
 
-	pkg, _, err := m.clientV3.CopyPackage(latestPkg.GUID, newAppGUID)
+	// Copy the package to the new app
+	pkgCopyRequest := &resource.PackageCopy{
+		Relationships: resource.AppRelationship{
+			App: resource.ToOneRelationship{Data: &resource.Relationship{GUID: newAppGUID}},
+		},
+	}
+
+	copiedPkg, err := m.client.Packages.Copy(ctx, latestPkg.GUID, newAppGUID)
 	if err != nil {
 		return err
 	}
 
-	// How long copying takes depends on diego
-	// So for now we fix timeout at 15 minutes (default staging timeout)
+	// Wait for the package to be ready
 	timeout := 15 * time.Minute
-	err = m.PackageWaitReady(pkg.GUID, timeout)
+	err = m.PackageWaitReady(copiedPkg.GUID, timeout)
 	if err != nil {
 		return err
 	}
@@ -545,18 +595,20 @@ func (m BitsManager) CopyAppV3(origAppGUID string, newAppGUID string) error {
 
 // PackageWaitReady : Poll only for READY state
 func (m BitsManager) PackageWaitReady(packageGUID string, timeout time.Duration) error {
+	// Create the context for the requests
+	ctx := context.Background()
 	return common.PollingWithTimeout(func() (bool, error) {
 
-		ccPkg, _, err := m.clientV3.GetPackage(packageGUID)
+		ccPkg, err := m.client.Packages.Get(ctx, packageGUID)
 		if err != nil {
 			return true, err
 		}
 
-		if ccPkg.State == constant.PackageReady {
+		if ccPkg.State == resource.PackageState(constant.PackageReady) {
 			return true, nil
 		}
 
-		if ccPkg.State == constant.PackageFailed || ccPkg.State == constant.PackageExpired {
+		if ccPkg.State == resource.PackageState(constant.PackageFailed) || ccPkg.State == resource.PackageState(constant.PackageExpired) {
 			return true, fmt.Errorf("Package %s, state: %s", ccPkg.GUID, ccPkg.State)
 		}
 
