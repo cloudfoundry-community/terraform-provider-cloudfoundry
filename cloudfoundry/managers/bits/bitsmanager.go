@@ -489,7 +489,7 @@ func (m *BitsManager) CreateAndUploadBitsPackage(appGUID string, path string, st
 	}
 
 	// Upload the bits to the package
-	uploadedPackage, err := m.UploadBits(pkg, path)
+	uploadedPackage, err := m.UploadBits(*pkg, path)
 	if err != nil {
 		return nil, warnings, err
 	}
@@ -570,13 +570,6 @@ func (m *BitsManager) CopyAppV3(origAppGUID string, newAppGUID string) error {
 	}
 
 	latestPkg := srcPkgs[0]
-
-	// Copy the package to the new app
-	pkgCopyRequest := &resource.PackageCopy{
-		Relationships: resource.AppRelationship{
-			App: resource.ToOneRelationship{Data: &resource.Relationship{GUID: newAppGUID}},
-		},
-	}
 
 	copiedPkg, err := m.client.Packages.Copy(ctx, latestPkg.GUID, newAppGUID)
 	if err != nil {

@@ -1,9 +1,11 @@
 package managers
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudfoundry/go-cfclient/v3/client"
 	"net"
 	"net/http"
 	"os"
@@ -31,8 +33,9 @@ import (
 
 // Session - wraps the available clients from CF cli
 type Session struct {
-	ClientV2  *ccv2.Client
+	client    *client.Client
 	ClientV3  *ccv3.Client
+	ClientV2  *ccv2.Client
 	ClientUAA *uaa.Client
 
 	// Used for direct endpoint calls
@@ -136,7 +139,7 @@ func NewSession(c Config) (s *Session, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error when creating clients: %s", err.Error())
 	}
-	s.BitsManager = bits.NewBitsManager(s.ClientV2, s.ClientV3, s.RawClient, s.HttpClient)
+	s.BitsManager = bits.NewBitsManager(s.client)
 
 	err = s.loadDefaultQuotaGuid(c.DefaultQuotaName)
 	if err != nil {
@@ -193,7 +196,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 		return translatableerror.AuthorizationEndpointNotFoundError{}
 	}
 
-	_, _, err = ccClientV3.TargetCF(ccv3.TargetSettings{
+	_, err = ccClientV3.TargetCF(ccv3.TargetSettings{
 		URL:               config.Target(),
 		SkipSSLValidation: config.SkipSSLValidation(),
 		DialTimeout:       config.DialTimeout(),
@@ -419,10 +422,13 @@ func (s *Session) loadDefaultQuotaGuid(quotaName string) error {
 	// if err != nil {
 	// 	return err
 	// }
-	quotas, _, err := s.ClientV3.GetOrganizationQuotas(ccv3.Query{
-		Key:    ccv3.NameFilter,
-		Values: []string{quotaName},
-	})
+
+	// Define the filter by quota name
+	filters := client.OrganizationQuotaListOptions{
+		Names: client.Filter{Values: []string{quotaName}},
+	}
+
+	quotas, _, err := s.client.OrganizationQuotas.List(context.Background(), &filters)
 	if err != nil {
 		return err
 	}
