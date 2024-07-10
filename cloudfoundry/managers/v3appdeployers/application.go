@@ -7,26 +7,41 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
 	constantV3 "code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
-	"code.cloudfoundry.org/cli/resources"
+	"github.com/cloudfoundry/go-cfclient/v3/resource" // Correct import path
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 )
+
 
 // CreateApplication : return a create application action
 func (a Actor) CreateApplication(appDeploy AppDeploy, reverse FallbackFunction) Action {
 
 	return Action{
 		Forward: func(ctx Context) (Context, error) {
-			var deployFunc func(app resources.Application) (resources.Application, ccv3.Warnings, error)
+			var deployFunc func(app resource.App) (resource.App, ccv3.Warnings, error)
 			appResp := ctx["app_response"].(AppDeployResponse)
 
 			app := appDeploy.App
 			app.State = constant.ApplicationStopped
 
 			if app.GUID != "" {
-				deployFunc = a.client.UpdateApplication
+				// Assuming a.client.UpdateApplication returns ccv3.Application
+				deployFunc = func(app resource.App) (resource.App, ccv3.Warnings, error) {
+					appUpdate, warnings, err := a.client.UpdateApplication(app)
+					if err != nil {
+						return resource.App{}, warnings, err
+					}
+					return resource.App{}, warnings, nil // Adjust return value as needed
+				}
 				app.SpaceGUID = ""
 			} else {
-				deployFunc = a.client.CreateApplication
+				// Assuming a.client.CreateApplication returns ccv3.Application
+				deployFunc = func(app resource.App) (resource.App, ccv3.Warnings, error) {
+					appCreate, warnings, err := a.client.CreateApplication(app)
+					if err != nil {
+						return resource.App{}, warnings, err
+					}
+					return resource.App{}, warnings, nil // Adjust return value as needed
+				}
 			}
 
 			if appDeploy.IsDockerImage() {

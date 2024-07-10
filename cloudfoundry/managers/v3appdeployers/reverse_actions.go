@@ -31,7 +31,7 @@ func (a Actor) ReverseActionDeployRevision(ctx Context) error {
 
 	if ctxRevision != nil {
 		revisionGUID := ctxRevision.(string)
-		deploymentGUID, _, err := a.client.CreateApplicationDeploymentByRevision(appResp.App.GUID, revisionGUID)
+		deploymentGUID, _, err := a.client.CreateApplicationDeployment(appResp.App.GUID, revisionGUID)
 		if err != nil {
 			return err
 		}

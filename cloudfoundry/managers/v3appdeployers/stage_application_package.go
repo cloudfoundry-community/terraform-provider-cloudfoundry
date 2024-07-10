@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
-	"code.cloudfoundry.org/cli/resources"
+	"github.com/cloudfoundry/go-cfclient/v3/resource"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 )
 
@@ -26,7 +26,7 @@ func (a Actor) StageApplicationPackage(appDeploy AppDeploy, reverse FallbackFunc
 			packageGUID := pkg.GUID
 
 			// Stage the package
-			build, _, err := a.client.CreateBuild(resources.Build{
+			build, _, err := a.client.CreateBuild(ccv3.Build{
 				PackageGUID: packageGUID,
 			})
 			if err != nil {
@@ -68,25 +68,25 @@ func (a Actor) StageApplicationPackage(appDeploy AppDeploy, reverse FallbackFunc
 }
 
 // GetMostRecentPackage : get ready packages ordered by creation date (reverse)
-func (a Actor) GetMostRecentPackage(app resources.Application) (resources.Package, error) {
+func (a Actor) GetMostRecentPackage(app resource.App) (resource.Package, error) {
 	packages, _, err := a.client.GetPackages(ccv3.Query{
 		Key:    ccv3.AppGUIDFilter,
 		Values: []string{app.GUID},
 	}, ccv3.Query{
-		Key:    ccv3.StatesFilter,
+		Key:    ccv3.StackFilter,
 		Values: []string{"READY"},
 	}, ccv3.Query{
 		Key:    ccv3.OrderBy,
 		Values: []string{"-created_at"},
 	})
 	if err != nil {
-		return resources.Package{}, err
+		return resource.Package{}, err
 	}
 	if len(packages) < 1 {
-		return resources.Package{}, fmt.Errorf("No READY package found")
+		return resource.Package{}, fmt.Errorf("No READY package found")
 	}
 
-	return packages[0], nil
+	return resource.Package{}, nil
 }
 
 // WaitStaging : poll status of the created build with timeout

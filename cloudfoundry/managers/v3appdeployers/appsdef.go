@@ -3,17 +3,17 @@ package v3appdeployers
 import (
 	"time"
 
-	"code.cloudfoundry.org/cli/resources"
+	"github.com/cloudfoundry/go-cfclient/v3/resource"
 	"code.cloudfoundry.org/cli/types"
 )
 
 type AppDeploy struct {
-	App             resources.Application
+	App             resource.App
 	EnableSSH       types.NullBool
-	AppPackage      resources.Package
-	Process         resources.Process
-	Mappings        []resources.Route
-	ServiceBindings []resources.ServiceCredentialBinding
+	AppPackage      resource.Package
+	Process         resource.Process
+	Mappings        []resource.Route
+	ServiceBindings []resource.ServiceCredentialBinding
 	EnvVars         map[string]interface{}
 	Path            string
 	BindTimeout     time.Duration
@@ -23,16 +23,16 @@ type AppDeploy struct {
 }
 
 func (a AppDeploy) IsDockerImage() bool {
-	return a.AppPackage.DockerImage != ""
+	return a.AppPackage.Data.Docker.Image != ""
 }
 
 type AppDeployResponse struct {
-	App             resources.Application
+	App             resource.App
 	EnableSSH       types.NullBool
-	AppPackage      resources.Package
-	Process         resources.Process
+	AppPackage      resource.Package
+	Process         resource.Process
 	EnvVars         map[string]interface{}
-	Mappings        []resources.Route
-	ServiceBindings []resources.ServiceCredentialBinding
+	Mappings        []resource.Route
+	ServiceBindings []resource.ServiceCredentialBinding
 	Ports           []int
 }

@@ -6,7 +6,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3/constant"
-	"code.cloudfoundry.org/cli/resources"
+	"github.com/cloudfoundry/go-cfclient/v3/resource"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 )
 
@@ -25,7 +25,7 @@ func (a Actor) CreateApplicationDeployment(appDeploy AppDeploy, reverse Fallback
 				}
 				dropletGUID = droplet.GUID
 			} else {
-				dropletGUID = dropletCtx.(resources.Droplet).GUID
+				dropletGUID = dropletCtx.(resource.Droplet).GUID
 			}
 
 			deploymentGUID, _, err := a.client.CreateApplicationDeployment(appResp.App.GUID, dropletGUID)
@@ -56,7 +56,7 @@ func (a Actor) CreateApplicationDeployment(appDeploy AppDeploy, reverse Fallback
 
 // PollStartRolling polls a deploying application's processes until some are started, accounting for rolling deployments and whether
 // they have failed or been canceled during polling.
-func (a Actor) PollStartRolling(app resources.Application, deploymentGUID string, startTimeout time.Duration) error {
+func (a Actor) PollStartRolling(app resource.App, deploymentGUID string, startTimeout time.Duration) error {
 	return common.PollingWithTimeout(func() (bool, error) {
 
 		deployment, _, err := a.client.GetDeployment(deploymentGUID)
@@ -79,8 +79,8 @@ func (a Actor) PollStartRolling(app resources.Application, deploymentGUID string
 	}, 5*time.Second, startTimeout)
 }
 
-func isDeployed(d resources.Deployment) bool {
-	return d.StatusValue == constant.DeploymentStatusValueFinalized && d.StatusReason == constant.DeploymentStatusReasonDeployed
+func isDeployed(d resource.Deployment) bool {
+	return d.Status.Value == string(constant.DeploymentDeployed) && d.Status.Reason == string(constant.DeploymentDeployed)
 }
 
 // func (a Actor) getProcesses(deployment resources.Deployment, appGUID string) ([]resources.Process, ccv3.Warnings, error) {
@@ -98,7 +98,7 @@ func isDeployed(d resources.Deployment) bool {
 // }
 
 // PollProcesses - return true if there's no need to keep polling
-func (a Actor) PollProcesses(processes []resources.Process) (bool, error) {
+func (a Actor) PollProcesses(processes []resource.Process) (bool, error) {
 	numProcesses := len(processes)
 	numStableProcesses := 0
 
