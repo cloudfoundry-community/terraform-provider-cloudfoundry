@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"regexp"
 	"time"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccerror"
