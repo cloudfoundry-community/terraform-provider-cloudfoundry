@@ -102,6 +102,13 @@ func (s BlueGreen) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 			Forward: func(ctx Context) (Context, error) {
 				// Ask CF to stop application (desired state)
 				_, _, err := s.client.UpdateApplicationStop(appDeploy.App.GUID)
+
+				// WORKAROUND of https://github.com/cloudfoundry/cloud_controller_ng/issues/3780
+				// Since CF is showing DOWN on processed that are not stopped,
+				// give them 20 seconds of grace period to shutdown properly before deleting them
+				// (SAP BTP Cloudfoundry implementation actually gives 60 seconds for apps to shutdown)
+				time.Sleep(stopAppTimeout * time.Second)
+
 				return ctx, err
 			},
 		},
