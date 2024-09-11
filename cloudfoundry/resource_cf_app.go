@@ -24,10 +24,11 @@ import (
 // schema.BasicMapReader
 // DefaultAppTimeout - Timeout (in seconds) when pushing apps to CF
 const (
-	DefaultAppTimeout   = 60
-	DefaultBindTimeout  = 5 * time.Minute
-	DefaultStageTimeout = 15 * time.Minute
-	DefaultAppPort      = 8080
+	DefaultAppTimeout                   = 60
+	DefaultBindTimeout                  = 5 * time.Minute
+	DefaultStageTimeout                 = 15 * time.Minute
+	DefaultAppPort                      = 8080
+	DefaultBlueGreenPostStartupWaitTime = 10
 )
 
 func resourceApp() *schema.Resource {
@@ -120,6 +121,11 @@ func resourceApp() *schema.Resource {
 				Default:      "none",
 				Description:  "Deployment strategy, default to none but accept blue-green strategy",
 				ValidateFunc: validateV3Strategy,
+			},
+			"bg_post_startup_wait_time": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  DefaultBlueGreenPostStartupWaitTime,
 			},
 			"path": &schema.Schema{
 				Type:          schema.TypeString,
