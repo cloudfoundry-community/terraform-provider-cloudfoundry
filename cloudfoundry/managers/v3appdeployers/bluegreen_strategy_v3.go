@@ -467,16 +467,11 @@ func SafeAppDeletion(client ccv3.Client, appGuid string, remainingAttempts int) 
 
 	// error handling
 	if err != nil {
-		// https://github.com/cloudfoundry/cloud_controller_ng/issues/3589 -> Delete app when bound to service fails with async service brokers -> Retry that
-		specialError, _ := regexp.MatchString("An operation for the service binding between app .* and service instance .* is in progress.", err.Error())
-		if specialError {
-			if remainingAttempts > 0 {
-				time.Sleep(5 * time.Second)
-				return SafeAppDeletion(client, appGuid, remainingAttempts-1)
-			}
-			return fmt.Errorf("Retries for app deletion exhausted: %+v", err)
+		if remainingAttempts > 0 {
+			time.Sleep(5 * time.Second)
+			return SafeAppDeletion(client, appGuid, remainingAttempts-1)
 		}
-		return err
+		return fmt.Errorf("Retries for app deletion exhausted: %+v", err)
 	}
 
 	return nil
