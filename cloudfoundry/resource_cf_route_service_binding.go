@@ -2,6 +2,10 @@ package cloudfoundry
 
 import (
 	"context"
+	"strings"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
+	"code.cloudfoundry.org/cli/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
@@ -42,15 +46,36 @@ func resourceRouteServiceBinding() *schema.Resource {
 }
 
 func resourceRouteServiceBindingImport(ctx context.Context, d *schema.ResourceData, meta interface{}) (res []*schema.ResourceData, err error) {
-	id := d.Id()
-	if _, _, err = parseID(id); err != nil {
-		return
-	}
 	return ImportReadContext(resourceRouteServiceBindingRead)(ctx, d, meta)
+}
+
+func findRouteServiceBinding(session *managers.Session, query ...ccv3.Query) (*resources.RouteBinding, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	routeBindings, _, warnings, err := session.ClientV3.GetRouteBindings(query...)
+
+	if len(warnings) > 0 {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "API warnings reading Route Service Binding Resource",
+			Detail:   strings.Join(warnings, "\n"),
+		})
+	}
+	if err != nil {
+		return nil, append(diags, diag.FromErr(err)...)
+	}
+	if len(routeBindings) == 0 {
+		return nil, append(diags, diag.Errorf("Route Service Binding not found")...)
+	}
+	if len(routeBindings) > 1 {
+		return nil, append(diags, diag.Errorf("Something bad happened: there are multiple similar route service bindings")...)
+	}
+
+	return &routeBindings[0], diags
 }
 
 func resourceRouteServiceBindingCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
+	var diags diag.Diagnostics
 
 	var data map[string]interface{}
 
@@ -63,48 +88,109 @@ func resourceRouteServiceBindingCreate(ctx context.Context, d *schema.ResourceDa
 			return diag.FromErr(err)
 		}
 	}
-	_, err := session.ClientV2.CreateServiceBindingRoute(serviceID, routeID, data)
+
+	jobURL, warnings, err := session.ClientV3.CreateRouteBinding(resources.RouteBinding{
+		ServiceInstanceGUID: serviceID,
+		RouteGUID:           routeID,
+		Parameters:          types.OptionalObject{IsSet: okParams, Value: data},
+	})
+	if len(warnings) > 0 {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "API warnings creating Route Service Binding Resource",
+			Detail:   strings.Join(warnings, "\n"),
+		})
+	}
 	if err != nil {
-		return diag.FromErr(err)
+		return append(diags, diag.FromErr(err)...)
 	}
 
-	d.SetId(computeID(serviceID, routeID))
-	return nil
+	if jobURL != "" {
+		err = PollAsyncJob(PollingConfig{
+			Session: session,
+			JobURL:  jobURL,
+		})
+		if err != nil {
+			return append(diags, diag.FromErr(err)...)
+		}
+	}
+
+	createdRouteBinding, findDiags := findRouteServiceBinding(session,
+		ccv3.Query{Key: ccv3.ServiceInstanceGUIDFilter, Values: []string{serviceID}},
+		ccv3.Query{Key: ccv3.RouteGUIDFilter, Values: []string{routeID}},
+	)
+
+	if findDiags.HasError() {
+		return append(diags, findDiags...)
+	}
+
+	d.SetId(createdRouteBinding.GUID)
+	return append(diags, resourceRouteServiceBindingRead(ctx, d, meta)...)
 }
 
 func resourceRouteServiceBindingRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
+	var diags diag.Diagnostics
+	id := d.Id()
 
-	serviceID, routeID, err := parseID(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
+	routeBindings, _, warnings, err := session.ClientV3.GetRouteBindings(
+		ccv3.Query{Key: ccv3.GUIDFilter, Values: []string{id}},
+	)
+
+	if len(warnings) > 0 {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "API warnings reading Route Service Binding Resource",
+			Detail:   strings.Join(warnings, "\n"),
+		})
 	}
-	routes, _, err := session.ClientV2.GetServiceBindingRoutes(serviceID)
 	if err != nil {
-		return diag.FromErr(err)
+		return append(diags, diag.FromErr(err)...)
 	}
-	found := false
-	for _, route := range routes {
-		if route.GUID == routeID {
-			found = true
+	var foundRouteBinding *resources.RouteBinding = nil
+	for _, binding := range routeBindings {
+		if binding.GUID == id {
+			foundRouteBinding = &binding
 			break
 		}
 	}
-	if !found {
+	if foundRouteBinding == nil {
 		d.SetId("")
-		return diag.Errorf("Route '%s' not found in service instance '%s'", routeID, serviceID)
+		return diags
 	}
 
-	d.Set("service_instance", serviceID)
-	d.Set("route", routeID)
-	return nil
+	d.Set("service_instance", foundRouteBinding.ServiceInstanceGUID)
+	d.Set("route", foundRouteBinding.RouteGUID)
+	if foundRouteBinding.Parameters.IsSet {
+		d.Set("json_params", foundRouteBinding.Parameters.Value)
+	}
+	return diags
 }
 
 func resourceRouteServiceBindingDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	session := meta.(*managers.Session)
+	var diags diag.Diagnostics
 
-	serviceID := d.Get("service_instance").(string)
-	routeID := d.Get("route").(string)
-	_, err := session.ClientV2.DeleteServiceBindingRoute(serviceID, routeID)
-	return diag.FromErr(err)
+	jobURL, warnings, err := session.ClientV3.DeleteRouteBinding(d.Id())
+
+	if len(warnings) > 0 {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "API warnings deleting Route Service Binding Resource",
+			Detail:   strings.Join(warnings, "\n"),
+		})
+	}
+
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
+	if jobURL != "" {
+		err = PollAsyncJob(PollingConfig{
+			Session: session,
+			JobURL:  jobURL,
+		})
+	}
+
+	return append(diags, diag.FromErr(err)...)
 }
