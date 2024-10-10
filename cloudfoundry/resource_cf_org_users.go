@@ -2,8 +2,9 @@ package cloudfoundry
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
@@ -167,7 +168,13 @@ func resourceOrgUsersDelete(ctx context.Context, d *schema.ResourceData, meta in
 	for t, r := range orgRoleMap {
 		tfUsers := d.Get(t).(*schema.Set).List()
 		for _, uid := range tfUsers {
-			_, err := session.ClientV2.DeleteOrganizationUserByRole(r, orgId, uid.(string))
+			byUsername := true
+			_, err := uuid.ParseUUID(uid.(string))
+			if err == nil {
+				byUsername = false
+			}
+
+			err = deleteOrgUserByRole(session, r, orgId, uid.(string), byUsername)
 			if err != nil {
 				return diag.FromErr(err)
 			}
