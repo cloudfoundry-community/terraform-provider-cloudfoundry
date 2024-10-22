@@ -26,7 +26,7 @@ require (
 	github.com/elazarl/goproxy/ext v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gorilla/websocket v1.4.1 // indirect
-	github.com/hashicorp/go-getter v1.7.3
+	github.com/hashicorp/go-getter v1.7.4
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/hcl v1.0.0
@@ -42,7 +42,10 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 )
 
-require github.com/hashicorp/terraform-plugin-log v0.9.0
+require (
+	github.com/google/uuid v1.3.1
+	github.com/hashicorp/terraform-plugin-log v0.9.0
+)
 
 require (
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
