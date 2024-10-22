@@ -2,6 +2,9 @@ package cloudfoundry
 
 import (
 	"context"
+
+	"github.com/cloudfoundry/go-cfclient/v3/client"
+	"github.com/cloudfoundry/go-cfclient/v3/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
@@ -63,7 +66,32 @@ func resourceRouteServiceBindingCreate(ctx context.Context, d *schema.ResourceDa
 			return diag.FromErr(err)
 		}
 	}
-	_, err := session.ClientV2.CreateServiceBindingRoute(serviceID, routeID, data)
+	jobGUID, _, err := session.ClientGo.ServiceRouteBindings.Create(context.Background(), &resource.ServiceRouteBindingCreate{
+		Relationships: resource.ServiceRouteBindingRelationships{
+			// ServiceInstance ToOneRelationship `json:"service_instance"`
+			// // The route that the service instance is bound to
+			// Route ToOneRelationship `json:"route"`
+			ServiceInstance: resource.ToOneRelationship{
+				Data: &resource.Relationship{
+					GUID: serviceID,
+				},
+			},
+			Route: resource.ToOneRelationship{
+				Data: &resource.Relationship{
+					GUID: routeID,
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if jobGUID != "" {
+		err = session.ClientGo.Jobs.PollComplete(context.Background(), jobGUID, nil)
+	}
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -79,13 +107,17 @@ func resourceRouteServiceBindingRead(ctx context.Context, d *schema.ResourceData
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	routes, _, err := session.ClientV2.GetServiceBindingRoutes(serviceID)
+
+	routeBindings, err := session.ClientGo.ServiceRouteBindings.ListAll(context.Background(), &client.ServiceRouteBindingListOptions{
+		ServiceInstanceGUIDs: client.Filter{Values: []string{serviceID}},
+	})
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
 	found := false
-	for _, route := range routes {
-		if route.GUID == routeID {
+	for _, routeBinding := range routeBindings {
+		if routeBinding.Relationships.Route.Data.GUID == routeID {
 			found = true
 			break
 		}
@@ -105,6 +137,34 @@ func resourceRouteServiceBindingDelete(ctx context.Context, d *schema.ResourceDa
 
 	serviceID := d.Get("service_instance").(string)
 	routeID := d.Get("route").(string)
-	_, err := session.ClientV2.DeleteServiceBindingRoute(serviceID, routeID)
+
+	var err error
+
+	routeBindings, err := session.ClientGo.ServiceRouteBindings.ListAll(context.Background(), &client.ServiceRouteBindingListOptions{
+		ServiceInstanceGUIDs: client.Filter{Values: []string{serviceID}},
+		RouteGUIDs:           client.Filter{Values: []string{routeID}},
+	})
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	routeBindingID := ""
+	for _, routeBinding := range routeBindings {
+		if routeBinding.Relationships.Route.Data.GUID == routeID &&
+			routeBinding.Relationships.ServiceInstance.Data.GUID == serviceID {
+			routeBindingID = routeBinding.GUID
+		}
+	}
+	if routeBindingID != "" {
+		var jobGUID string
+		jobGUID, err = session.ClientGo.ServiceRouteBindings.Delete(context.Background(), routeBindingID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if jobGUID != "" {
+			err = session.ClientGo.Jobs.PollComplete(context.Background(), jobGUID, nil)
+		}
+	}
+
 	return diag.FromErr(err)
 }

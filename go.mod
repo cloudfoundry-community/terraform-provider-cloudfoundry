@@ -43,6 +43,7 @@ require (
 )
 
 require (
+	github.com/cloudfoundry/go-cfclient/v3 v3.0.0-alpha.9
 	github.com/google/uuid v1.3.1
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 )
@@ -55,8 +56,11 @@ require (
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
+	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
+	github.com/go-martini/martini v0.0.0-20170121215854-22fa46961aab // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
@@ -77,6 +81,7 @@ require (
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
+	github.com/martini-contrib/render v0.0.0-20150707142108-ec18f8345a11 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
@@ -87,9 +92,11 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oklog/run v1.0.0 // indirect
+	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/src-d/gcfg v1.4.0 // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
@@ -98,6 +105,7 @@ require (
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/oauth2 v0.21.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
@@ -110,4 +118,5 @@ require (
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
