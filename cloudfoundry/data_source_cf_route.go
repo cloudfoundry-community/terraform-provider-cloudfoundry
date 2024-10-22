@@ -3,10 +3,10 @@ package cloudfoundry
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2/constant"
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -53,34 +53,62 @@ func dataSourceRouteRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.Errorf("client is nil")
 	}
 
-	dm := session.ClientV2
+	queries := []ccv3.Query{{
+		Key:    "domain_guids",
+		Values: []string{d.Get("domain").(string)},
+	}}
 
-	filters := []ccv2.Filter{ccv2.FilterEqual(constant.DomainGUIDFilter, d.Get("domain").(string))}
-	if v, ok := d.GetOk("hostname"); ok {
-		filters = append(filters, ccv2.FilterEqual(constant.HostFilter, v.(string)))
+	if hostname, ok := d.GetOk("hostname"); ok {
+		queries = append(queries,
+			ccv3.Query{
+				Key:    ccv3.HostsFilter,
+				Values: []string{hostname.(string)},
+			},
+		)
 	}
-	if v, ok := d.GetOk("org"); ok {
-		filters = append(filters, ccv2.FilterByOrg(v.(string)))
+	if org, ok := d.GetOk("org"); ok {
+		queries = append(queries,
+			ccv3.Query{
+				Key:    ccv3.OrganizationGUIDFilter,
+				Values: []string{org.(string)},
+			},
+		)
 	}
-	if v, ok := d.GetOk("path"); ok {
-		filters = append(filters, ccv2.FilterEqual(constant.PathFilter, v.(string)))
+	if path, ok := d.GetOk("path"); ok {
+		queries = append(queries,
+			ccv3.Query{
+				Key:    "paths",
+				Values: []string{path.(string)},
+			},
+		)
 	}
-	if v, ok := d.GetOk("port"); ok {
-		filters = append(filters, ccv2.FilterEqual(constant.PortFilter, fmt.Sprintf("%d", v.(int))))
+	if port, ok := d.GetOk("port"); ok {
+		queries = append(queries,
+			ccv3.Query{
+				Key:    "ports",
+				Values: []string{port.(string)},
+			},
+		)
 	}
-	routes, _, err := dm.GetRoutes(filters...)
+
+	routes, _, err := session.ClientV3.GetRoutes(queries...)
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	if len(routes) == 0 {
 		return diag.FromErr(NotFound)
 	}
+	if len(routes) > 1 {
+		return diag.FromErr(fmt.Errorf("Unexpected error reading route (more than 1 match)"))
+	}
+
 	route := routes[0]
 
 	d.Set("hostname", route.Host)
 	d.Set("path", route.Path)
-	if route.Port.IsSet {
-		d.Set("port", route.Port.Value)
+	if route.Port == 0 {
+		d.Set("port", route.Port)
 	}
 	d.SetId(route.GUID)
 	return diag.FromErr(err)
