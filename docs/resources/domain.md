@@ -33,7 +33,7 @@ resource "cloudfoundry_domain" "private" {
 }
 ```
 
-~> **NOTE:** To control sharing of a private domain, use the [cloudfoundry_private_domain](private_domain_access.html) resource.
+~> **NOTE:** To control sharing of a private domain, use the [cloudfoundry_private_domain_access](private_domain_access.html) resource.
 
 ## Argument Reference
 
