@@ -339,7 +339,8 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		StageTimeout:    DefaultStageTimeout,
 		StartTimeout:    time.Duration(d.Get("timeout").(int)) * time.Second,
 		EnvVars:         envVars,
-		Ports:           ports,
+		EnableWaitMaximumGracefulShutdownTimeWorkaround: d.Get("enable_wait_maximum_graceful_shutdown_time_workaround").(bool),
+		Ports: ports,
 	}
 
 	return appDeploy, nil

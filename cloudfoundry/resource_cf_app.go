@@ -104,6 +104,11 @@ func resourceApp() *schema.Resource {
 				Optional:   true,
 				Computed:   true,
 			},
+			"enable_wait_maximum_graceful_shutdown_time_workaround": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 			"timeout": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
