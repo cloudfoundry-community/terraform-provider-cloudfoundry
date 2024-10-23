@@ -8,18 +8,19 @@ import (
 )
 
 type AppDeploy struct {
-	App             resources.Application
-	EnableSSH       types.NullBool
-	AppPackage      resources.Package
-	Process         resources.Process
-	Mappings        []resources.Route
-	ServiceBindings []resources.ServiceCredentialBinding
-	EnvVars         map[string]interface{}
-	Path            string
-	BindTimeout     time.Duration
-	StageTimeout    time.Duration
-	StartTimeout    time.Duration
-	Ports           []int
+	App                          resources.Application
+	EnableSSH                    types.NullBool
+	AppPackage                   resources.Package
+	Process                      resources.Process
+	Mappings                     []resources.Route
+	ServiceBindings              []resources.ServiceCredentialBinding
+	EnvVars                      map[string]interface{}
+	Path                         string
+	BindTimeout                  time.Duration
+	StageTimeout                 time.Duration
+	StartTimeout                 time.Duration
+	BlueGreenPostStartupWaitTime time.Duration
+	Ports                        []int
 }
 
 func (a AppDeploy) IsDockerImage() bool {
