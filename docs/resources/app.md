@@ -92,7 +92,7 @@ Supported options:
     * Description: perform restage/create/restart **with** interruption
   * `blue-green`:
     * Alias: `blue-green-v2`
-    * Description: perform restage and create app **without** interruption and rollback if an error occurred (using the "venerable" blue-green pattern commonly used with CAPI v2, requires double the overall app memory available in quota)
+    * Description: perform restage and create app **without** interruption and rollback if an error occurred (using the "venerable" blue-green pattern commonly used with CAPI v2, requires double the overall app memory available in quota). More details [here](#blue-green-deployment-strategy).
   * `rolling`:
     * Description: perform restage and create app **without** interruption and rollback if an error occurred (using the `rolling` strategy provided in CAPI v3, requires memory for a single app instance available in quota)
 
@@ -166,7 +166,9 @@ The current App can be imported using the `app` GUID, e.g.
 terraform import cloudfoundry_app.spring-music a-guid
 ```
 
-## Update resource using blue-green app id
+## blue-green deployment strategy
+
+### Update resource using blue-green app id
 
 This is an example of usage of `id_bg` attribute to update your resource on a changing app id by blue-green:
 
@@ -204,3 +206,7 @@ resource "cloudfoundry_network_policy" "my-policy" {
 
 # When you change either test-app-bg or test-app-bg2 this will affect my-policy to be updated because it use `id_bg` instead of id
 ```
+
+### Workarounds
+
+* `bg_post_startup_wait_time`: Some apps can take a few moments to be fully up even after Cloudfoundry declared them "started" : database schema migrations, establishing connections to clients... This can cause performance issues if the venerable app is deleted when the new app was not fully "started" (even if Cloudfoundry was showing it started). This adds a preconfigured delay in seconds before killing the venerable app, to let time to the new instance to warmup.
