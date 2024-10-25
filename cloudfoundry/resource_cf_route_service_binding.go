@@ -108,9 +108,10 @@ func resourceRouteServiceBindingRead(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	routeBindings, err := session.ClientGo.ServiceRouteBindings.ListAll(context.Background(), &client.ServiceRouteBindingListOptions{
-		ServiceInstanceGUIDs: client.Filter{Values: []string{serviceID}},
-	})
+	options := client.NewServiceRouteBindingListOptions()
+	options.ServiceInstanceGUIDs = client.Filter{Values: []string{serviceID}}
+
+	routeBindings, err := session.ClientGo.ServiceRouteBindings.ListAll(context.Background(), options)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -140,10 +141,10 @@ func resourceRouteServiceBindingDelete(ctx context.Context, d *schema.ResourceDa
 
 	var err error
 
-	routeBindings, err := session.ClientGo.ServiceRouteBindings.ListAll(context.Background(), &client.ServiceRouteBindingListOptions{
-		ServiceInstanceGUIDs: client.Filter{Values: []string{serviceID}},
-		RouteGUIDs:           client.Filter{Values: []string{routeID}},
-	})
+	options := client.NewServiceRouteBindingListOptions()
+	options.ServiceInstanceGUIDs = client.Filter{Values: []string{serviceID}}
+	options.RouteGUIDs = client.Filter{Values: []string{routeID}}
+	routeBindings, err := session.ClientGo.ServiceRouteBindings.ListAll(context.Background(), options)
 	if err != nil {
 		return diag.FromErr(err)
 	}
