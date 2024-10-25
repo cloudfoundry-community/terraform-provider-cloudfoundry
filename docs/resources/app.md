@@ -207,6 +207,6 @@ resource "cloudfoundry_network_policy" "my-policy" {
 # When you change either test-app-bg or test-app-bg2 this will affect my-policy to be updated because it use `id_bg` instead of id
 ```
 
-### Workarounds
+### Known issues and workarounds
 
 * `bg_post_startup_wait_time`: Some apps can take a few moments to be fully up even after Cloudfoundry declared them "started" : database schema migrations, establishing connections to clients... This can cause performance issues if the venerable app is deleted when the new app was not fully "started" (even if Cloudfoundry was showing it started). This adds a preconfigured delay in seconds before killing the venerable app, to let time to the new instance to warmup.
