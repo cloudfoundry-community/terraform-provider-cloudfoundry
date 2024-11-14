@@ -1,7 +1,6 @@
 package v3appdeployers
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	"code.cloudfoundry.org/cli/resources"
 	"code.cloudfoundry.org/cli/types"
 	goClient "github.com/cloudfoundry/go-cfclient/v3/client"
-	goResource "github.com/cloudfoundry/go-cfclient/v3/resource"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/common"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
 )
@@ -44,14 +42,7 @@ func (r RunBinder) MapRoutes(appDeploy AppDeploy) ([]resources.Route, error) {
 			continue
 		}
 
-		insertOrReplaceDestinations := goResource.RouteDestinationInsertOrReplace{
-			App: goResource.RouteDestinationApp{
-				GUID: &appGUID,
-			},
-			Port: &mappingCur.Port,
-		}
-		_, err = r.clientGo.Routes.InsertDestinations(context.Background(), mappingCur.GUID, []*goResource.RouteDestinationInsertOrReplace{&insertOrReplaceDestinations})
-
+		_, err = r.client.MapRoute(mappingCur.GUID, appGUID)
 		if err != nil {
 			return mappings, err
 		}
@@ -60,10 +51,16 @@ func (r RunBinder) MapRoutes(appDeploy AppDeploy) ([]resources.Route, error) {
 		// mostly due to route emitter to perform its action inside diego
 		time.Sleep(1 * time.Second)
 
-		mappingCreated, err = r.mappingExists(appGUID, mappingCur)
-
+		routeMappings, _, err := r.client.GetRouteDestinations(mappingCur.GUID)
 		if err != nil {
 			return mappings, err
+		}
+
+		for _, mapping := range routeMappings {
+			if mapping.App.GUID == appGUID {
+				mappings = append(mappings, mappingCur)
+				mappingCreated = true
+			}
 		}
 
 		if !mappingCreated {
@@ -75,18 +72,16 @@ func (r RunBinder) MapRoutes(appDeploy AppDeploy) ([]resources.Route, error) {
 }
 
 func (r RunBinder) mappingExists(appGUID string, curMapping resources.Route) (bool, error) {
-	destinations, err := r.clientGo.Routes.GetDestinations(context.Background(), curMapping.GUID)
+	mappings, _, err := r.client.GetRouteDestinations(curMapping.GUID)
 
 	if err != nil {
 		return false, err
 	}
 
-	for _, destination := range destinations.Destinations {
-		if *destination.App.GUID == appGUID &&
-			*destination.Port == curMapping.Port {
+	for _, mapping := range mappings {
+		if mapping.App.GUID == appGUID {
 			return true, nil
 		}
-
 	}
 
 	return false, nil

@@ -231,14 +231,12 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	if tokFromStore.IsSet() {
 		accessToken = tokFromStore.AccessToken
 		refreshToken = tokFromStore.RefreshToken
-		goClientConfigOptions = goConfig.Token(accessToken, refreshToken)
 	} else if configSess.SSOPasscode != "" {
 		// try connecting with SSO passcode to retrieve access token and refresh token
 		accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
 			"passcode": configSess.SSOPasscode,
 		}, configSess.Origin, constant.GrantTypePassword)
 		errType = "SSO passcode"
-		goClientConfigOptions = goConfig.Token(accessToken, refreshToken)
 	} else if config.CFUsername() != "" {
 		// try connecting with pair given on uaa to retrieve access token and refresh token
 		accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
@@ -246,14 +244,12 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 			"password": config.CFPassword(),
 		}, configSess.Origin, constant.GrantTypePassword)
 		errType = "username/password"
-		goClientConfigOptions = goConfig.UserPassword(config.CFUsername(), config.CFPassword())
 	} else if config.UAAOAuthClient() != "cf" {
 		accessToken, refreshToken, err = uaaClient.Authenticate(map[string]string{
 			"client_id":     config.UAAOAuthClient(),
 			"client_secret": config.UAAOAuthClientSecret(),
 		}, configSess.Origin, constant.GrantTypeClientCredentials)
 		errType = "client_id/client_secret"
-		goClientConfigOptions = goConfig.Token(accessToken, refreshToken)
 	}
 	if err != nil {
 		return fmt.Errorf("Error when authenticate on cf using %s: %s", errType, err)
@@ -265,6 +261,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	config.SetAccessToken(fmt.Sprintf("bearer %s", accessToken))
 	config.SetRefreshToken(refreshToken)
 
+	goClientConfigOptions = goConfig.Token(accessToken, refreshToken)
 	goconfig, err := goConfig.New(config.ConfigFile.Target, goClientConfigOptions)
 
 	if err != nil {
