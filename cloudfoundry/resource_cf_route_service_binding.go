@@ -2,14 +2,12 @@ package cloudfoundry
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"strings"
 
 	"github.com/cloudfoundry/go-cfclient/v3/client"
 	"github.com/cloudfoundry/go-cfclient/v3/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"encoding/json"
@@ -46,7 +44,35 @@ func resourceRouteServiceBinding() *schema.Resource {
 			},
 		},
 		SchemaVersion: 1,
-		MigrateState:  resourceRouteServiceBindingMigrateState,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceRouteServiceBindingResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: upgradeStateRouteServiceBindingStateV0toV1ChangeID,
+				Version: 0,
+			},
+		},
+	}
+}
+
+func resourceRouteServiceBindingResourceV0() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"service_instance": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"route": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"json_params": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+		},
 	}
 }
 
@@ -145,39 +171,29 @@ func resourceRouteServiceBindingDelete(ctx context.Context, d *schema.ResourceDa
 	return diag.FromErr(err)
 }
 
-func resourceRouteServiceBindingMigrateState(v int, inst *terraform.InstanceState, meta any) (*terraform.InstanceState, error) {
-	switch v {
-	case 0:
-		log.Println("[INFO] Found Route Service Binding State v0; migrating to v1: change ID from routeID:serviceID to routeServiceBindingID.")
-		return migrateRouteServiceBindingStateV0toV1ChangeID(inst, meta)
-	default:
-		return inst, fmt.Errorf("Unexpected schema version: %d", v)
-	}
-}
-
-func migrateRouteServiceBindingStateV0toV1ChangeID(inst *terraform.InstanceState, meta any) (*terraform.InstanceState, error) {
+func upgradeStateRouteServiceBindingStateV0toV1ChangeID(ctx context.Context, rawState map[string]any, meta any) (map[string]any, error) {
 	session := meta.(*managers.Session)
 
-	if inst.Empty() {
+	if len(rawState) == 0 {
 		log.Println("[DEBUG] Empty RouteServiceBinding; nothing to migrate.")
-		return inst, nil
+		return rawState, nil
 	}
 
-	log.Printf("[DEBUG] Attributes before migration: %#v", inst.Attributes)
+	log.Printf("[DEBUG] Attributes before migration: %#v", rawState)
 	options := client.NewServiceRouteBindingListOptions()
-	options.ServiceInstanceGUIDs = client.Filter{Values: []string{inst.Attributes["service_instance"]}}
-	options.RouteGUIDs = client.Filter{Values: []string{inst.Attributes["route"]}}
+	options.ServiceInstanceGUIDs = client.Filter{Values: []string{rawState["service_instance"].(string)}}
+	options.RouteGUIDs = client.Filter{Values: []string{rawState["route"].(string)}}
 
 	routeBinding, err := session.ClientGo.ServiceRouteBindings.Single(context.Background(), options)
 
 	if err != nil {
 		log.Println("[DEBUG] Failed to migrate RouteServiceBinding id: did not find the route service binding.")
-		return inst, err
+		return rawState, err
 	}
 
-	inst.Attributes["id"] = routeBinding.GUID
+	rawState["id"] = routeBinding.GUID
 
-	log.Printf("[DEBUG] Attributes after migration: %#v", inst.Attributes)
+	log.Printf("[DEBUG] Attributes after migration: %#v", rawState)
 
-	return inst, nil
+	return rawState, nil
 }
