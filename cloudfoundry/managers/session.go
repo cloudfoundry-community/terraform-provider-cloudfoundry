@@ -27,12 +27,16 @@ import (
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/noaa"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/raw"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers/v3appdeployers"
+
+	goClient "github.com/cloudfoundry/go-cfclient/v3/client"
+	goConfig "github.com/cloudfoundry/go-cfclient/v3/config"
 )
 
 // Session - wraps the available clients from CF cli
 type Session struct {
 	ClientV2  *ccv2.Client
 	ClientV3  *ccv3.Client
+	ClientGo  *goClient.Client
 	ClientUAA *uaa.Client
 
 	// Used for direct endpoint calls
@@ -221,6 +225,7 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 	var accessToken string
 	var refreshToken string
 	var errType string
+	var goClientConfigOptions goConfig.Option
 
 	tokFromStore := s.loadTokFromStoreIfNeed(configSess.StoreTokensPath, uaaClient.RefreshAccessToken)
 	if tokFromStore.IsSet() {
@@ -255,6 +260,19 @@ func (s *Session) init(config *configv3.Config, configUaa *configv3.Config, conf
 
 	config.SetAccessToken(fmt.Sprintf("bearer %s", accessToken))
 	config.SetRefreshToken(refreshToken)
+
+	goClientConfigOptions = goConfig.Token(accessToken, refreshToken)
+	goconfig, err := goConfig.New(config.ConfigFile.Target, goClientConfigOptions)
+
+	if err != nil {
+		return fmt.Errorf("Error when creating go-cfconfig: %s", err)
+	}
+
+	goclient, err := goClient.New(goconfig)
+	if err != nil {
+		return fmt.Errorf("Error when creating go-cfclient: %s", err)
+	}
+	s.ClientGo = goclient
 
 	// Write access and refresh tokens to file if needed
 	err = s.saveTokToStoreIfNeed(configSess.StoreTokensPath, accessToken, refreshToken)
@@ -402,7 +420,7 @@ func (s *Session) loadDeployer() {
 	s.Deployer = appdeployers.NewDeployer(stdStrategy, bgStrategy)
 
 	// Initialize deployment strategies in v3
-	s.V3RunBinder = v3appdeployers.NewRunBinder(s.ClientV3, s.NOAAClient)
+	s.V3RunBinder = v3appdeployers.NewRunBinder(s.ClientV3, s.ClientGo, s.NOAAClient)
 	v3std := v3appdeployers.NewStandard(s.BitsManager, s.ClientV3, s.V3RunBinder)
 	v3bg := v3appdeployers.NewBlueGreen(s.BitsManager, s.ClientV3, s.RawClient, s.V3RunBinder, v3std)
 
