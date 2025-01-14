@@ -187,6 +187,10 @@ func upgradeStateRouteServiceBindingStateV0toV1ChangeID(ctx context.Context, raw
 	routeBinding, err := session.ClientGo.ServiceRouteBindings.Single(context.Background(), options)
 
 	if err != nil {
+		if strings.Contains(err.Error(), "CF-ResourceNotFound") {
+			rawState["id"] = ""
+			return rawState, nil
+		}
 		log.Println("[DEBUG] Failed to migrate RouteServiceBinding id: did not find the route service binding.")
 		return rawState, err
 	}
