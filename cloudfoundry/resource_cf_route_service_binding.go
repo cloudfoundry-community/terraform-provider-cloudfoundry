@@ -191,7 +191,7 @@ func upgradeStateRouteServiceBindingStateV0toV1ChangeID(ctx context.Context, raw
 			rawState["id"] = ""
 			return rawState, nil
 		}
-		log.Println("[DEBUG] Failed to migrate RouteServiceBinding id: did not find the route service binding.")
+		log.Println("[DEBUG] Failed to migrate RouteServiceBinding id: error while searching for the route service binding.")
 		return rawState, err
 	}
 
