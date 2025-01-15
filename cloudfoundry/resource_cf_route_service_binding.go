@@ -187,7 +187,7 @@ func upgradeStateRouteServiceBindingStateV0toV1ChangeID(ctx context.Context, raw
 	routeBinding, err := session.ClientGo.ServiceRouteBindings.Single(context.Background(), options)
 
 	if err != nil {
-		if strings.Contains(err.Error(), "expected exactly 1 result, but got less or more than 1") {
+		if err == client.ErrExactlyOneResultNotReturned {
 			rawState["id"] = ""
 			return rawState, nil
 		}
