@@ -26,27 +26,11 @@ func resourceRouteServiceBinding() *schema.Resource {
 			StateContext: resourceRouteServiceBindingImport,
 		},
 
-		Schema: map[string]*schema.Schema{
-			"service_instance": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-			"route": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-			"json_params": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
-		},
+		Schema:        resourceRouteServiceBindingSchema().Schema,
 		SchemaVersion: 1,
 		StateUpgraders: []schema.StateUpgrader{
 			{
-				Type:    resourceRouteServiceBindingResourceV0().CoreConfigSchema().ImpliedType(),
+				Type:    resourceRouteServiceBindingSchema().CoreConfigSchema().ImpliedType(),
 				Upgrade: upgradeStateRouteServiceBindingStateV0toV1ChangeID,
 				Version: 0,
 			},
@@ -54,20 +38,20 @@ func resourceRouteServiceBinding() *schema.Resource {
 	}
 }
 
-func resourceRouteServiceBindingResourceV0() *schema.Resource {
+func resourceRouteServiceBindingSchema() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"service_instance": &schema.Schema{
+			"service_instance": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"route": &schema.Schema{
+			"route": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"json_params": &schema.Schema{
+			"json_params": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
