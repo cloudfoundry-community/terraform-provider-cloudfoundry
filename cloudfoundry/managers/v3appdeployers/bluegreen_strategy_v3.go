@@ -99,6 +99,12 @@ func (s BlueGreen) Deploy(appDeploy AppDeploy) (AppDeployResponse, error) {
 		},
 		{
 			Forward: func(ctx Context) (Context, error) {
+				time.Sleep(appDeploy.BlueGreenPostStartupWaitTime)
+				return ctx, nil
+			},
+		},
+		{
+			Forward: func(ctx Context) (Context, error) {
 				// Ask CF to stop application (desired state)
 				_, _, err := s.client.UpdateApplicationStop(appDeploy.App.GUID)
 				return ctx, err
@@ -287,6 +293,12 @@ func (s BlueGreen) Restage(appDeploy AppDeploy) (AppDeployResponse, error) {
 				if err == nil {
 					_ = metadataUpdate(appResp.App.GUID, "apps", s.rawClient, metadata)
 				}
+				return ctx, nil
+			},
+		},
+		{
+			Forward: func(ctx Context) (Context, error) {
+				time.Sleep(appDeploy.BlueGreenPostStartupWaitTime)
 				return ctx, nil
 			},
 		},

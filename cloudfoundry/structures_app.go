@@ -328,18 +328,19 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 	}
 
 	appDeploy := v3appdeployers.AppDeploy{
-		App:             app,
-		AppPackage:      appPackage,
-		Process:         process,
-		EnableSSH:       enableSSH,
-		Mappings:        mappings,
-		ServiceBindings: bindings,
-		Path:            d.Get("path").(string),
-		BindTimeout:     DefaultBindTimeout,
-		StageTimeout:    DefaultStageTimeout,
-		StartTimeout:    time.Duration(d.Get("timeout").(int)) * time.Second,
-		EnvVars:         envVars,
-		Ports:           ports,
+		App:                          app,
+		AppPackage:                   appPackage,
+		Process:                      process,
+		EnableSSH:                    enableSSH,
+		Mappings:                     mappings,
+		ServiceBindings:              bindings,
+		Path:                         d.Get("path").(string),
+		BindTimeout:                  DefaultBindTimeout,
+		StageTimeout:                 DefaultStageTimeout,
+		StartTimeout:                 time.Duration(d.Get("timeout").(int)) * time.Second,
+		BlueGreenPostStartupWaitTime: time.Duration(d.Get("bg_post_startup_wait_time").(int)) * time.Second,
+		EnvVars:                      envVars,
+		Ports:                        ports,
 	}
 
 	return appDeploy, nil
