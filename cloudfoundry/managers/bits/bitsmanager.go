@@ -459,37 +459,43 @@ func (m BitsManager) CreateAndUploadBitsPackage(appGUID string, path string, sta
 		path = outputFile.Name()
 	}
 
-	_, warnings, err = m.clientV3.UploadPackage(pkg, path)
-	if err != nil {
-		return resources.Package{}, warnings, err
-	}
-
-	// Poll once every 5 sec, timeout ${stageTimeout} fixed by appDeploy
-	err = common.PollingWithTimeout(func() (bool, error) {
-
-		ccPkg, _, err := m.clientV3.GetPackage(pkg.GUID)
+	c := make(chan error, 1)
+	go func() { c <- 
+		_, warnings, err = m.clientV3.UploadPackage(pkg, path)
 		if err != nil {
-			return true, err
+			c <- warnings, err
 		}
 
-		if ccPkg.State == constant.PackageReady {
-			return true, nil
-		}
+		// Poll once every 5 sec
+		c <- common.Polling(func() (bool, error) {
 
-		if ccPkg.State == constant.PackageFailed {
-			return true, fmt.Errorf("Package processing failed")
-		} else if ccPkg.State == constant.PackageExpired {
-			return true, fmt.Errorf("Package expired")
-		}
+			ccPkg, _, err := m.clientV3.GetPackage(pkg.GUID)
+			if err != nil {
+				return true, err
+			}
 
-		return false, nil
-	}, 5*time.Second, stageTimeout)
+			if ccPkg.State == constant.PackageReady {
+				return true, nil
+			}
 
-	if err != nil {
-		return resources.Package{}, warnings, err
+			if ccPkg.State == constant.PackageFailed {
+				return true, fmt.Errorf("Package processing failed")
+			} else if ccPkg.State == constant.PackageExpired {
+				return true, fmt.Errorf("Package expired")
+			}
+
+			return false, nil
+		}, 5*time.Second)
 	}
-
-	return pkg, warnings, nil
+	select {
+		case err := <-c:
+			if err != nil {
+				return resources.Package{}, warnings, err
+			}
+			return pkg, warnings, nil
+		case <-time.After(stageTimeout):
+			return resources.Package{}, fmt.Errorf("Timeout of %s reached", stageTimeout)
+	}
 }
 
 // CreateBitsPackageByApplication creates a new package for an app to upload bits
