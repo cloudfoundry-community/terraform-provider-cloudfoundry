@@ -1,6 +1,6 @@
 module github.com/terraform-providers/terraform-provider-cloudfoundry
 
-go 1.20
+go 1.22.0
 
 replace code.cloudfoundry.org/cli => github.com/cloudfoundry-community/cloudfoundry-cli v6.44.1-0.20240130060226-cda5ed8e89a5+incompatible
 
@@ -55,7 +55,7 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
-	github.com/cloudflare/circl v1.3.7 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
