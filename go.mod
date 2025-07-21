@@ -1,6 +1,6 @@
 module github.com/terraform-providers/terraform-provider-cloudfoundry
 
-go 1.20
+go 1.23.0
 
 replace code.cloudfoundry.org/cli => github.com/cloudfoundry-community/cloudfoundry-cli v6.44.1-0.20240130060226-cda5ed8e89a5+incompatible
 
@@ -105,7 +105,7 @@ require (
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/oauth2 v0.21.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
