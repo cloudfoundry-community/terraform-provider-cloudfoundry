@@ -240,6 +240,13 @@ func resourceApp() *schema.Resource {
 			},
 			labelsKey:      labelsSchema(),
 			annotationsKey: annotationsSchema(),
+			"lifecycle": &schema.Schema{
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ForceNew:     true,
+				ValidateFunc: validateAppLifecycle,
+			},
 		},
 
 		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
@@ -280,6 +287,14 @@ func validateAppV3HealthCheckType(v interface{}, k string) (ws []string, errs []
 	value := v.(string)
 	if value != "port" && value != "process" && value != "http" && value != "none" {
 		errs = append(errs, fmt.Errorf("%q must be one of 'port', 'process', 'http' or 'none'", k))
+	}
+	return ws, errs
+}
+
+func validateAppLifecycle(v interface{}, k string) (ws []string, errs []error) {
+	value := v.(string)
+	if value != "buildpack" && value != "docker" && value != "cnb" {
+		errs = append(errs, fmt.Errorf("%q must be one of 'buildpack', 'docker' or 'cnb'", k))
 	}
 	return ws, errs
 }

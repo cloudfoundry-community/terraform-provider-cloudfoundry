@@ -44,5 +44,6 @@ The following attributes are exported:
 * `health_check_http_endpoint` - The endpoint for the http health check type.
 * `health_check_type` - The health check type which can be one of "`port`", "`process`", "`http`" or "`none`".
 * `health_check_timeout` - The timeout in seconds for the health check.
+* `lifecycle` - The lifecycle type for the application (`buildpack`, `docker`, or `cnb`).
 * `labels` - Labels as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object).
 * `annotations` - Annotations as described [here](https://docs.cloudfoundry.org/adminguide/metadata.html#-view-metadata-for-an-object).

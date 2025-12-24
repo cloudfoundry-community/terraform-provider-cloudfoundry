@@ -240,6 +240,11 @@ func ResourceDataToAppDeployV3(d *schema.ResourceData) (v3appdeployers.AppDeploy
 		State:     stateAsk,
 	}
 
+	// Set lifecycle type if provided
+	if lifecycle, ok := d.GetOk("lifecycle"); ok {
+		app.LifecycleType = v3Constants.AppLifecycleType(lifecycle.(string))
+	}
+
 	if bpkgs, ok := d.GetOk("buildpacks"); ok {
 		buildpacks := make([]string, 0)
 		for _, bpkg := range bpkgs.([]interface{}) {
@@ -451,6 +456,7 @@ func AppDeployV3ToResourceData(d *schema.ResourceData, appDeploy v3appdeployers.
 
 	}
 	_ = d.Set("routes", finalMappings)
+	_ = d.Set("lifecycle", appDeploy.App.LifecycleType)
 
 }
 

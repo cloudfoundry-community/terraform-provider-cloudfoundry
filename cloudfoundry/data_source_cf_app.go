@@ -88,6 +88,10 @@ func dataSourceApp() *schema.Resource {
 				Type:     schema.TypeInt,
 				Computed: true,
 			},
+			"lifecycle": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			labelsKey:      labelsSchema(),
 			annotationsKey: annotationsSchema(),
 		},
@@ -205,6 +209,8 @@ func dataSourceAppRead(ctx context.Context, d *schema.ResourceData, meta interfa
 	if proc.HealthCheckType != "" {
 		d.Set("health_check_type", proc.HealthCheckType)
 	}
+
+	d.Set("lifecycle", app.LifecycleType)
 
 	err = metadataRead(appMetadata, d, meta, true)
 	if err != nil {

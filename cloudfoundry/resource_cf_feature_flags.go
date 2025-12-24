@@ -1,9 +1,10 @@
 package cloudfoundry
 
 import (
-	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"context"
 	"fmt"
+
+	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
@@ -130,6 +131,12 @@ func resourceConfig() *schema.Resource {
 							Computed:     true,
 						},
 						"resource_matching": &schema.Schema{
+							Type:         schema.TypeString,
+							ValidateFunc: validateFeatureFlagValue,
+							Optional:     true,
+							Computed:     true,
+						},
+						"diego_cnb": &schema.Schema{
 							Type:         schema.TypeString,
 							ValidateFunc: validateFeatureFlagValue,
 							Optional:     true,

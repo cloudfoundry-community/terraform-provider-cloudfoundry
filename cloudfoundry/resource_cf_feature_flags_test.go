@@ -2,8 +2,9 @@ package cloudfoundry
 
 import (
 	"fmt"
-	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 	"testing"
+
+	"github.com/terraform-providers/terraform-provider-cloudfoundry/cloudfoundry/managers"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -72,6 +73,10 @@ func TestAccResConfig_normal(t *testing.T) {
 							resConfig, "feature_flags.0.service_instance_sharing", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.hide_marketplace_from_unauthenticated_users", "disabled"),
+						resource.TestCheckResourceAttr(
+							resConfig, "feature_flags.0.resource_matching", "enabled"),
+						resource.TestCheckResourceAttr(
+							resConfig, "feature_flags.0.diego_cnb", "disabled"),
 					),
 				},
 
@@ -109,6 +114,10 @@ func TestAccResConfig_normal(t *testing.T) {
 							resConfig, "feature_flags.0.service_instance_sharing", "enabled"),
 						resource.TestCheckResourceAttr(
 							resConfig, "feature_flags.0.hide_marketplace_from_unauthenticated_users", "disabled"),
+						resource.TestCheckResourceAttr(
+							resConfig, "feature_flags.0.resource_matching", "enabled"),
+						resource.TestCheckResourceAttr(
+							resConfig, "feature_flags.0.diego_cnb", "disabled"),
 					),
 				},
 				resource.TestStep{

@@ -20,19 +20,23 @@ The following is an example updates Cloud Foundry feature flags. Each of the fla
 resource "cloudfoundry_feature_flags" "config" {
 
   feature_flags {
-    user_org_creation                    = false
-    private_domain_creation              = true
-    app_bits_upload                      = true
-    app_scaling                          = true
-    route_creation                       = true
-    service_instance_creation            = true
-    diego_docker                         = false
-    set_roles_by_username                = true
-    unset_roles_by_username              = true
-    task_creation                        = true
-    env_var_visibility                   = true
-    space_scoped_private_broker_creation = true
-    space_developer_env_var_visibility   = true
+    user_org_creation                           = false
+    private_domain_creation                     = true
+    app_bits_upload                             = true
+    app_scaling                                 = true
+    route_creation                              = true
+    service_instance_creation                   = true
+    diego_docker                                = false
+    set_roles_by_username                       = true
+    unset_roles_by_username                     = true
+    task_creation                               = true
+    env_var_visibility                          = true
+    space_scoped_private_broker_creation        = true
+    space_developer_env_var_visibility          = true
+    service_instance_sharing                    = true
+    hide_marketplace_from_unauthenticated_users = false
+    resource_matching                           = true
+    diego_cnb                                   = true
   }
 }
 ```
@@ -55,6 +59,10 @@ The following arguments are supported:
   * `env_var_visibility` - (Optional) All users can view environment variables. Minimum CC API version: 2.58.
   * `space_scoped_private_broker_creation` - (Optional) Space Developers can create space-scoped private service brokers. Minimum CC API version: 2.58.
   * `space_developer_env_var_visibility` - (Optional) Space Developers can view their v2 environment variables. Org Managers and Space Managers can view their v3 environment variables. Minimum CC API version: 2.58.
+  * `service_instance_sharing` - (Optional) Space Developers can share service instances between spaces.
+  * `hide_marketplace_from_unauthenticated_users` - (Optional) Marketplace is hidden from unauthenticated users.
+  * `resource_matching` - (Optional) Enable resource matching when pushing applications.
+  * `diego_cnb` - (Optional) Enable Cloud Native Buildpacks (CNB) support in Diego.
 
 When not provided, optional fields are filled with their actual value in Cloud Foundry.
 
